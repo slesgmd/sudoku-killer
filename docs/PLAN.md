@@ -161,7 +161,7 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
 - Cada comportamiento documentado está marcado como observado o inferido.
 - Las preguntas sin resolver quedan listadas.
 
-**Estado:** hecha el 2026-10-22. `docs/referencia.md` marca cada punto como observado, visto en el código o inferido, cita la evidencia de `evidence/f1-referencia.json` y lista 14 preguntas abiertas. Las notas, deshacer, pistas y pausa no se vieron en ejecución: tras dos cargas fallidas, el usuario decidió no hacer más cargas automáticas de la página. Queda pendiente agregar 3 observaciones manuales del usuario (sección 15 de `referencia.md`).
+**Estado:** hecha el 2026-10-22. `docs/referencia.md` marca cada punto como observado, visto en el código o inferido, cita la evidencia de `evidence/f1-referencia.json` y lista 14 preguntas abiertas. Las notas, deshacer, pistas y pausa no se vieron en ejecución: tras dos cargas fallidas, el usuario decidió no hacer más cargas automáticas de la página. La sección 15 de `referencia.md` (observaciones manuales) se descartó en F2 porque las reglas propias ya cubren esos puntos.
 
 ### F2 — Especificación y arquitectura (6–10 h)
 **Entregables:**

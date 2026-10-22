@@ -7,7 +7,6 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 - **Plan:** versión 1.03
 - **Fase actual:** F2, especificación y arquitectura. Pendiente (F0 y F1 hechas el 2026-10-22).
-- **Pendiente menor de F1:** agregar a `docs/referencia.md` (sección 15) las 3 observaciones manuales del usuario, marcadas como **[Observado manualmente por el usuario]**. Pedírselas si no están en el mensaje.
 - **Próxima tarea exacta:** entrar en modo plan y proponer las subtareas de F2. Esperar aprobación antes de ejecutarlas.
   - Leer F2 en `docs/PLAN.md` (incluye la pregunta abierta sobre pistas) y en `docs/referencia.md` las secciones "Notas para F2" y "Preguntas abiertas".
   - Entregables: `docs/SPEC.md` y los ADR 0001–0005.

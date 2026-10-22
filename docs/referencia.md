@@ -143,7 +143,7 @@ Dos intentos posteriores de cargar la página (para ver un nivel servido por la 
 
 ## 15. Observaciones manuales del usuario
 
-> **Pendiente:** el usuario pidió agregar aquí 3 observaciones manuales marcadas como **[Observado manualmente por el usuario]**, pero no llegaron en el mensaje (quedó el texto de plantilla). Se agregarán cuando las envíe.
+> **Descartada: las reglas propias ya cubren estos puntos** (decisión del usuario, 2026-10-22). Las reglas del proyecto están en `docs/PLAN.md` (sección 2) y `docs/SPEC.md`.
 
 ---
 
