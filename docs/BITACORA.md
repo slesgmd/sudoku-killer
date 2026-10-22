@@ -25,3 +25,8 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 **Tiempo real:** unos 0,1 h, ejecutado en una sola sesión, sin contar la revisión del usuario.
 
 **Siguiente:** F1, estudio de referencia con REA. Hay que empezar en modo plan y proponer las subtareas.
+
+## 2026-10-22 — F0: verificación de criterios de aceptación
+
+- Revisados: `docs/IDEAS_FUTURAS.md` (el modo competitivo es la primera entrada), `docs/adr/README.md` (versionado) y las horas reales de F0 en el plan (~0,1 h). Todo estaba en orden.
+- Corregido: el estado de F0 en el plan decía "Terminada" en lugar de "Hecha". Se cambió en la tabla de fases, en el estado global y en la sección de F0.

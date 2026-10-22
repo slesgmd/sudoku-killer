@@ -1,7 +1,7 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
 Versión del plan: 1.02
-Estado global: F0 terminada (2026-10-22) · F1 pendiente
+Estado global: F0 hecha (2026-10-22) · F1 pendiente
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
 ---
@@ -109,7 +109,7 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 
 | Fase | Nombre | Horas estimadas | Depende de | Estado | Horas reales |
 |---|---|---|---|---|---|
-| F0 | Entorno y arranque | 2–4 | — | Terminada | ~0,1 |
+| F0 | Entorno y arranque | 2–4 | — | Hecha | ~0,1 |
 | F1 | Estudio de referencia con REA | 3–6 | F0 | Pendiente | |
 | F2 | Especificación y arquitectura | 6–10 | F1 | Pendiente | |
 | F3 | Monorepo y calidad | 3–5 | F2 | Pendiente | |
@@ -144,7 +144,7 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
 - `CONTEXTO.md` tiene menos de 120 líneas y apunta a F1.
 - Primer commit hecho.
 
-**Estado:** terminada el 2026-10-22. Se cumplen todos los criterios de aceptación (ver la entrada de `BITACORA.md`).
+**Estado:** hecha el 2026-10-22. Se cumplen todos los criterios de aceptación (ver la entrada de `BITACORA.md`).
 
 ### F1 — Estudio de referencia con REA (3–6 h)
 **Objetivo:** documentar el **comportamiento** de la app de referencia (https://sudoku.com/es/killer), no su diseño visual.
