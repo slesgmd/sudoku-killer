@@ -1,6 +1,6 @@
 # SPEC — Sudoku Killer Multijugador · v1
 
-- Versión del documento: 1.1 (F3, 2026-10-22). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5.
+- Versión del documento: 1.2 (F4, 2026-10-22). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2).
 - Versión del protocolo: **1**
 - Fuente de las reglas: `docs/PLAN.md`, secciones 1 y 2, más las decisiones de producto de F2 (sección 1 de este documento).
 - Decisiones técnicas: `docs/adr/0001`–`0005`.
@@ -646,6 +646,14 @@ Entre corchetes va la fase en que se implementa cada prueba.
 - T-32.3 Un evento que no se confirmó en la base de datos no se difunde. [I, F9]
 - T-32.4 Recalcular los puntajes con otra versión de los parámetros cambia los puntajes sin modificar el registro. [U, F6]
 
+**R-35 Motor del puzzle (F4).** El motor (`packages/engine`) es puro y admite tableros de `size` ≤ 16. Tiene dos solvers independientes: A (propagación y backtracking) y B (Dancing Links), y B no importa código de A. Lo que define que un puzzle es correcto lo confirman los dos.
+- T-35.1 *Dado* un puzzle aleatorio o de referencia, A y B devuelven el mismo número de soluciones (0, 1 o 2 o más) y las mismas soluciones. En 4×4 coinciden además con una fuerza bruta. Una discrepancia bloquea F4. [U, F4]
+- T-35.2 Los puzzles de referencia tienen un resultado esperado que calcularon A y B y confirmó el validador; nunca se escribe de memoria. [U, F4]
+- T-35.3 `validateSolution` acepta solo cuadrículas que cumplen filas, columnas, cajas, sumas de jaula y jaulas sin dígitos repetidos, y respeta los números iniciales. `validateStructure` rechaza jaulas de menos de 2 o más de 5 celdas, no conectadas, solapadas, que no cubren el tablero o con sumas inalcanzables. `checkPlacement` devuelve `correct` solo con el dígito de la solución, e `isEvidentMistake` detecta un dígito repetido en un par bloqueado (R-28). [U, F4]
+- T-35.4 El calificador es correcto: en cada paso de `grade`, el dígito de la solución de cada celda sigue entre sus candidatos. [U, F4]
+- T-35.5 `levelToDeduce(cell, state)` devuelve un nivel entre 1 y `UNRATED`. Vale 1 si la celda es un single, y no sube al agregar celdas bloqueadas correctas. [U, F4]
+- T-35.6 Con la misma semilla y las mismas opciones, el generador produce el mismo puzzle. [U, F4]
+
 ### Reglas del cliente
 
 **R-33 Resaltado de la jaula seleccionada (D10).**
@@ -737,4 +745,4 @@ El inspector está activo por defecto en todas las pruebas I. Las pruebas E2E us
 | Limpieza automática | R-17 | T-17.1–5 |
 | Diseño visual | R-18 | T-18.1 |
 
-Todas las reglas de la visión (R-01 a R-07) y las decisiones de F2 (R-19 a R-34) tienen también sus pruebas en la sección 6.
+Todas las reglas de la visión (R-01 a R-07), las decisiones de F2 (R-19 a R-34) y el motor (R-35) tienen también sus pruebas en la sección 6.

@@ -5,12 +5,14 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.05. **SPEC:** versión 1.1.
-- **Fase actual:** F4, motor del puzzle. Pendiente (F0 a F3 hechas el 2026-10-22).
-- **Próxima tarea exacta:** entrar en modo plan y proponer las subtareas de F4. Esperar aprobación antes de ejecutarlas.
-  - Leer F4 en `docs/PLAN.md` y, en la SPEC, R-17 (`cleanupPeers`) y R-20 (`givensReason`). Ver también el ADR 0005.
-  - Todo va en `packages/engine` (ya existe, con `cellIndex` como ejemplo). Ahí están prohibidos `Date.now()` y `Math.random()`: el azar del generador llega como un generador con semilla.
-  - Criterios: 0 discrepancias entre los dos solvers, 1000 puzzles con solución única y el tiempo medio de generación documentado.
+- **Plan:** versión 1.06. **SPEC:** versión 1.2.
+- **Fase actual:** F4, motor del puzzle, dividida en F4a–F4f (tabla en `docs/PLAN.md`, F4). F4a hecha el 2026-10-22.
+- **Forma de trabajo en F4 (aprobada):** una subfase por sesión, sin pedir confirmación salvo errores. Cada subfase termina así: `pnpm check`, `pnpm test` y `pnpm build` en verde; BITACORA con horas; PLAN marcado; este archivo apuntando a la siguiente; commit, push, CI en verde (`gh run watch`), y aviso al usuario de que puede hacer `/clear`.
+- **Próxima tarea exacta: F4b, solver A.**
+  - En `packages/engine/src/solver-a/`: tabla de combinaciones por jaula (tamaño, suma) → máscaras; candidatos en `Uint16Array`; propagación (singles, hidden singles, filtro por combinaciones de jaula y cotas de suma); backtracking con MRV.
+  - API: `solveA(puzzle, { limit = 2 })` → `{ count: 0 | 1 | 2, solutions, nodes }`. Se detiene en la segunda solución.
+  - Pruebas (T-35.1 y T-35.3): toda solución pasa `validateSolution`; casos con 0, 1 y 2 o más soluciones; fuerza bruta 4×4 (`test/helpers/`) como oráculo. Usar `killerArb` de `test/helpers/grids.ts`.
+  - `solver-a` no puede importar `solver-b` (lint). Documentar el algoritmo en `docs/motor.md`.
 
 ## Reglas clave
 
@@ -50,6 +52,7 @@ docs/BITACORA.md       historial detallado y horas reales
 docs/IDEAS_FUTURAS.md  ideas fuera de la v1
 docs/referencia.md     comportamiento de la app de referencia (F1)
 docs/adr/              decisiones técnicas (README con plantilla e índice)
+docs/motor.md          motor del puzzle: API, algoritmos y mediciones (F4)
 evidence/              evidencia local de REA (ignorada por git)
 packages/engine        motor del puzzle (puro)
 packages/protocol      mensajes y esquemas Zod (nunca la solución, T-31.3)

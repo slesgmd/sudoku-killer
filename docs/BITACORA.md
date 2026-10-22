@@ -114,3 +114,36 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 **Tiempo real:** unos 0,3 h (15:33 a 15:50 aproximadamente), ejecutado en una sesión. No incluye el tiempo de revisión del usuario.
 
 **Siguiente:** F4, motor del puzzle, en modo plan.
+
+## 2026-10-22 — F4: plan por subfases y F4a (modelo, validador y `cleanupPeers`)
+
+**Hecho:**
+- Plan de F4 en modo plan, aprobado sin cambios. Seis subfases (F4a–F4f), una por sesión, cada una cerrada con pruebas, commit, push, CI y `CONTEXTO.md` apuntando a la siguiente. Requisitos del usuario incorporados:
+  - B no reutiliza código de A;
+  - los puzzles de referencia se verifican con los dos solvers;
+  - el corpus de 1000 puzzles va aparte y la CI corre una versión reducida;
+  - el tiempo de generación se mide y se documenta.
+- SPEC 1.2: R-35 «Motor del puzzle» con T-35.1 a T-35.6. Plan 1.06: tabla de subfases en F4.
+- `packages/engine`:
+  - `src/types.ts`: solo tipos; es lo único que comparten los dos solvers.
+  - `src/model/`: `geometry`, `mask`, `structure` (`validateStructure`), `validate` (`validateSolution`, `checkPlacement`, `isEvidentMistake`) y `notes` (`cleanupPeers`, `clearCellNotes`).
+  - Las validaciones devuelven listas de problemas con código. `cleanupPeers` no modifica la entrada y devuelve los candidatos quitados, que necesita el deshacer con comprobación (P7).
+- Ayudas de prueba: cuadrículas válidas por patrón y transformaciones, comprobadas con el validador, sin cuadrículas recordadas; particiones aleatorias en jaulas (`killerArb`).
+- Pruebas:
+  - geometría y máscaras;
+  - T-35.3 (estructura con un caso por cada código de problema, solución, `checkPlacement` e `isEvidentMistake` con un par que solo comparte la jaula);
+  - T-17.1 (propiedad: solo cambian los pares y la celda, y `removed` es exactamente la diferencia).
+  - El ejemplo `cell-index.test.ts` de F3 se reemplazó por `geometry.test.ts`.
+- Lint:
+  - `no-restricted-imports` para que `solver-b` solo importe `../types.ts` y `solver-a` no importe `solver-b`, con su test (T-35.1);
+  - `no-non-null-assertion` desactivada en `packages/engine` (índices sobre arreglos tipados con `noUncheckedIndexedAccess`).
+  - `tests/lint-helpers.ts` se comparte entre los tests de lint.
+- `docs/motor.md` creado (principios y modelo).
+
+**Problemas y soluciones:**
+- Un heredoc largo de Bash con varios archivos falló («unexpected EOF»). Los archivos largos se escriben con la herramienta de escritura, no con heredocs encadenados.
+- Para la regla de aislamiento se usó `regex` en `no-restricted-imports` en lugar de patrones estilo gitignore, que no se llevan bien con rutas que empiezan con `../`.
+
+**Tiempo real:** unos 0,3 h (15:52 a 16:12 aproximadamente), incluida la planificación de F4. Ejecutado en una sesión, sin contar la revisión del usuario.
+
+**Siguiente:** F4b, solver A.

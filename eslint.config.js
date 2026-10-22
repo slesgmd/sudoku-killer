@@ -52,4 +52,42 @@ export default defineConfig(
       ],
     },
   },
+  {
+    // Motor: índices garantizados por construcción en bucles sobre arreglos tipados.
+    files: ["packages/engine/**"],
+    rules: { "@typescript-eslint/no-non-null-assertion": "off" },
+  },
+  {
+    // El solver B no reutiliza código de A ni del modelo: solo los tipos de datos (SPEC R-35).
+    files: ["packages/engine/src/solver-b/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: String.raw`^\.\./(?!types\.ts$)|^@sudoku-killer/`,
+              message: "Solver B: solo puede importar ../types.ts y sus propios módulos (R-35).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["packages/engine/src/solver-a/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "solver-b",
+              message: "Solver A no puede importar el solver B (R-35).",
+            },
+          ],
+        },
+      ],
+    },
+  },
 );
