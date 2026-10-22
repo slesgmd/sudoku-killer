@@ -29,6 +29,7 @@ pnpm-debug.log*
 # Evidencia y capturas locales de REA (no se versionan: pueden contener material de la app de referencia)
 .rea/
 rea-evidence/
+evidence/
 *.har
 
 

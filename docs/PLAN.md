@@ -1,7 +1,7 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.02
-Estado global: F0 hecha (2026-10-22) · F1 pendiente
+Versión del plan: 1.03
+Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 pendiente
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
 ---
@@ -110,7 +110,7 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 | Fase | Nombre | Horas estimadas | Depende de | Estado | Horas reales |
 |---|---|---|---|---|---|
 | F0 | Entorno y arranque | 2–4 | — | Hecha | ~0,1 |
-| F1 | Estudio de referencia con REA | 3–6 | F0 | Pendiente | |
+| F1 | Estudio de referencia con REA | 3–6 | F0 | Hecha | ~0,6 |
 | F2 | Especificación y arquitectura | 6–10 | F1 | Pendiente | |
 | F3 | Monorepo y calidad | 3–5 | F2 | Pendiente | |
 | F4 | Motor del puzzle | 20–35 | F3 | Pendiente | |
@@ -161,6 +161,8 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
 - Cada comportamiento documentado está marcado como observado o inferido.
 - Las preguntas sin resolver quedan listadas.
 
+**Estado:** hecha el 2026-10-22. `docs/referencia.md` marca cada punto como observado, visto en el código o inferido, cita la evidencia de `evidence/f1-referencia.json` y lista 14 preguntas abiertas. Las notas, deshacer, pistas y pausa no se vieron en ejecución: tras dos cargas fallidas, el usuario decidió no hacer más cargas automáticas de la página. Queda pendiente agregar 3 observaciones manuales del usuario (sección 15 de `referencia.md`).
+
 ### F2 — Especificación y arquitectura (6–10 h)
 **Entregables:**
 - **`docs/SPEC.md`** con:
@@ -172,6 +174,9 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
   - Interfaz `GameMode`.
   - Plan de pruebas.
 - **ADRs:** 0001 stack, 0002 comunicación en tiempo real, 0003 persistencia, 0004 registro de eventos, 0005 notas grupales.
+
+**Preguntas abiertas:**
+- Pistas en v1: ¿existen?, ¿cuántas?, ¿individuales o compartidas?, ¿afectan la puntuación?
 
 **Criterios de aceptación:**
 - Cada regla de la sección 2 tiene al menos un caso de prueba definido.
@@ -251,6 +256,7 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
   - Bot veloz: toma siempre la celda más fácil.
   - Bot adivinador: adivina cuando no encuentra deducciones.
   - Variación de la velocidad de cada bot.
+  - Incluir como modelo de comparación (baseline) en la simulación Monte Carlo una fórmula basada en velocidad (base por dificultad, decreciente según el tiempo desde la jugada anterior, con mínimo y multiplicador por completar fila, columna o caja) y demostrar que el modelo propio reduce la ventaja de correr por celdas fáciles.
 - **Métricas y objetivos iniciales:**
   - Correlación de Spearman entre el aporte real (deducciones difíciles) y el puntaje: al menos 0,8.
   - Valor esperado de adivinar: menor que 0.
@@ -379,3 +385,4 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
 
 - **1.01:** versión inicial. Modo Normal para la v1 y modo competitivo movido a ideas futuras. Reglas de sala, notas y puntuación definidas. Diseño propio obligatorio en F7.
 - **1.02:** Referencia de skill corregida a la oficial de REA.
+- **1.03:** F1 marcada como hecha (~0,6 h reales). F2 suma la pregunta abierta sobre las pistas en la v1 (si existen, cuántas, si son individuales o compartidas y si afectan la puntuación). F6 suma, en la simulación Monte Carlo, un modelo de comparación basado en velocidad como el de la app de referencia (ver `docs/referencia.md`, sección 12). Hay que demostrar que el modelo propio reduce la ventaja de correr por celdas fáciles.
