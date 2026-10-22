@@ -1,4 +1,5 @@
 import type { Cage, Geometry } from "../types.ts";
+import { at } from "./at.ts";
 
 export const DEFAULT_BOARD_SIZE = 9;
 export const MAX_BOARD_SIZE = 16;
@@ -72,13 +73,17 @@ export function layoutOf(geometry: Geometry): Layout {
     rowOf[cell] = row;
     colOf[cell] = col;
     boxOf[cell] = box;
-    rows[row]!.push(cell);
-    cols[col]!.push(cell);
-    boxes[box]!.push(cell);
+    at(rows, row).push(cell);
+    at(cols, col).push(cell);
+    at(boxes, box).push(cell);
   }
 
   const peers = Array.from({ length: cellCount }, (_, cell) => {
-    const set = new Set([...rows[rowOf[cell]!]!, ...cols[colOf[cell]!]!, ...boxes[boxOf[cell]!]!]);
+    const set = new Set([
+      ...at(rows, at(rowOf, cell)),
+      ...at(cols, at(colOf, cell)),
+      ...at(boxes, at(boxOf, cell)),
+    ]);
     set.delete(cell);
     return [...set].sort((a, b) => a - b);
   });

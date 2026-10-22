@@ -2,6 +2,7 @@
 // la validez (SPEC R-35). No se usa ninguna cuadrícula recordada: el validador comprueba todas.
 import fc from "fast-check";
 import type { Cage, Geometry, Grid, KillerPuzzle } from "@sudoku-killer/engine";
+import { at } from "../../src/model/at.ts";
 
 export const GEOMETRY_4: Geometry = { size: 4, boxRows: 2, boxCols: 2 };
 export const GEOMETRY_6: Geometry = { size: 6, boxRows: 2, boxCols: 3 };
@@ -45,17 +46,17 @@ export function gridArb(geometry: Geometry): fc.Arbitrary<number[]> {
     .map(({ digits, bandOrder, rowOrders, stackOrder, colOrders, transpose }) => {
       const base = patternGrid(geometry);
       const sourceRow = (row: number): number =>
-        bandOrder[Math.floor(row / boxRows)]! * boxRows +
-        rowOrders[Math.floor(row / boxRows)]![row % boxRows]!;
+        at(bandOrder, Math.floor(row / boxRows)) * boxRows +
+        at(at(rowOrders, Math.floor(row / boxRows)), row % boxRows);
       const sourceCol = (col: number): number =>
-        stackOrder[Math.floor(col / boxCols)]! * boxCols +
-        colOrders[Math.floor(col / boxCols)]![col % boxCols]!;
+        at(stackOrder, Math.floor(col / boxCols)) * boxCols +
+        at(at(colOrders, Math.floor(col / boxCols)), col % boxCols);
       return Array.from({ length: size * size }, (_, cell) => {
         let row = Math.floor(cell / size);
         let col = cell % size;
         if (transpose) [row, col] = [col, row];
-        const digit = base[sourceRow(row) * size + sourceCol(col)]!;
-        return digits[digit - 1]! + 1;
+        const digit = at(base, sourceRow(row) * size + sourceCol(col));
+        return at(digits, digit - 1) + 1;
       });
     });
 }
@@ -99,25 +100,24 @@ export function partitionCages(
         (cell) => owner[cell] === -1 && !used.has(grid[cell]),
       );
       if (frontier.length === 0) break;
-      const next = frontier[pick(frontier.length)]!;
+      const next = at(frontier, pick(frontier.length));
       owner[next] = groups.length;
       group.push(next);
     }
     groups.push(group);
   }
 
-  for (let index = 0; index < groups.length; index++) {
-    const group = groups[index]!;
-    if (group.length !== 1) continue;
-    const cell = group[0]!;
+  for (const [index, group] of groups.entries()) {
+    const [cell] = group;
+    if (group.length !== 1 || cell === undefined) continue;
     const target = neighbours(cell, size)
-      .map((neighbour) => owner[neighbour]!)
+      .map((neighbour) => at(owner, neighbour))
       .find((other) => {
-        const cells = groups[other]!;
+        const cells = at(groups, other);
         return cells.length < maxCage && !cells.some((c) => grid[c] === grid[cell]);
       });
     if (target === undefined) return null;
-    groups[target]!.push(cell);
+    at(groups, target).push(cell);
     owner[cell] = target;
     groups[index] = [];
   }
@@ -127,7 +127,7 @@ export function partitionCages(
     .map((group, id) => ({
       id,
       cells: [...group].sort((a, b) => a - b),
-      sum: group.reduce((total, cell) => total + grid[cell]!, 0),
+      sum: group.reduce((total, cell) => total + at(grid, cell), 0),
     }));
   return { ...geometry, cages, givens: [] };
 }

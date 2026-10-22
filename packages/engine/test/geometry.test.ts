@@ -13,6 +13,7 @@ import {
   popcount,
   singleDigit,
 } from "@sudoku-killer/engine";
+import { at } from "../src/model/at.ts";
 import { GEOMETRIES, GEOMETRY_9 } from "./helpers/grids.ts";
 
 describe("T-35.3 geometry", () => {
@@ -48,14 +49,28 @@ describe("T-35.3 geometry", () => {
       const all = units.flat().sort((a, b) => a - b);
       expect(all).toEqual(Array.from({ length: size * size }, (_, i) => i));
     }
-    for (let cell = 0; cell < layout.cellCount; cell++) {
-      expect(layout.rows[layout.rowOf[cell]!]).toContain(cell);
-      expect(layout.cols[layout.colOf[cell]!]).toContain(cell);
-      expect(layout.boxes[layout.boxOf[cell]!]).toContain(cell);
-      // Fila y columna (2·(size−1)) más el resto de la caja que no está en ellas.
-      expect(layout.peers[cell]).toHaveLength(2 * (size - 1) + (boxRows - 1) * (boxCols - 1));
-      for (const peer of layout.peers[cell]!) expect(layout.peers[peer]).toContain(cell);
+    const indexes = [
+      [layout.rows, layout.rowOf],
+      [layout.cols, layout.colOf],
+      [layout.boxes, layout.boxOf],
+    ] as const;
+    for (const [units, unitOf] of indexes) {
+      units.forEach((cells, unit) => {
+        for (const cell of cells) expect(unitOf[cell]).toBe(unit);
+      });
     }
+    layout.peers.forEach((peers, cell) => {
+      // Fila y columna (2·(size−1)) más el resto de la caja que no está en ellas.
+      expect(peers).toHaveLength(2 * (size - 1) + (boxRows - 1) * (boxCols - 1));
+      for (const peer of peers) expect(layout.peers[peer]).toContain(cell);
+    });
+  });
+
+  it("at returns the element or throws outside the list", () => {
+    expect(at([4, 0], 1)).toBe(0);
+    expect(at(Uint8Array.of(7), 0)).toBe(7);
+    expect(() => at([1, 2], 2)).toThrow(RangeError);
+    expect(() => at([1, 2], -1)).toThrow(RangeError);
   });
 
   it("a 9x9 cell has 20 peers and boxes are 3x3", () => {

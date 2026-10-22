@@ -1,4 +1,5 @@
 import type { KillerPuzzle } from "../types.ts";
+import { at } from "./at.ts";
 import { cageIndexByCell, layoutOf, peersWithCage } from "./geometry.ts";
 import { digitBit, digitsOf } from "./mask.ts";
 
@@ -45,8 +46,9 @@ export function cleanupPeers(
   const removed = [...cleared.removed];
 
   for (const peer of peersWithCage(layout, puzzle.cages[cageIndex], cell)) {
-    if (next[peer]! & bit) {
-      next[peer] = next[peer]! & ~bit;
+    const mask = at(next, peer);
+    if (mask & bit) {
+      next[peer] = mask & ~bit;
       removed.push({ cell: peer, digit });
     }
   }

@@ -1,4 +1,5 @@
 import type { Grid, KillerPuzzle } from "../types.ts";
+import { at } from "./at.ts";
 import { cageIndexByCell, layoutOf, peersWithCage } from "./geometry.ts";
 
 export type SolutionIssue =
@@ -11,7 +12,7 @@ export type SolutionIssue =
 function hasRepeat(grid: Grid, cells: readonly number[]): boolean {
   const seen = new Set<number>();
   for (const cell of cells) {
-    const digit = grid[cell]!;
+    const digit = at(grid, cell);
     if (seen.has(digit)) return true;
     seen.add(digit);
   }
@@ -47,7 +48,7 @@ export function validateSolution(puzzle: KillerPuzzle, grid: Grid): SolutionIssu
   }
   for (const cage of puzzle.cages) {
     if (hasRepeat(grid, cage.cells)) issues.push({ code: "cage-repeat", cageId: cage.id });
-    const sum = cage.cells.reduce((total, cell) => total + grid[cell]!, 0);
+    const sum = cage.cells.reduce((total, cell) => total + at(grid, cell), 0);
     if (sum !== cage.sum) issues.push({ code: "cage-sum", cageId: cage.id });
   }
   for (const { cell, value } of puzzle.givens) {

@@ -13,6 +13,7 @@ import {
   peersWithCage,
   type KillerPuzzle,
 } from "@sudoku-killer/engine";
+import { at } from "../src/model/at.ts";
 import { GEOMETRY_9, anyKillerArb } from "./helpers/grids.ts";
 
 const notesArb = (puzzle: KillerPuzzle): fc.Arbitrary<Uint16Array> =>
@@ -38,22 +39,22 @@ describe("T-17.1 cleanupPeers", () => {
         const before = notes.slice();
         const { notes: after, removed } = cleanupPeers(puzzle, notes, cell, digit);
         const layout = layoutOf(puzzle);
-        const cage = puzzle.cages[cageIndexByCell(layout.cellCount, puzzle.cages)[cell]!];
+        const cage = puzzle.cages[at(cageIndexByCell(layout.cellCount, puzzle.cages), cell)];
         const peers = new Set(peersWithCage(layout, cage, cell));
 
         expect(notes).toEqual(before);
         expect(after[cell]).toBe(0);
         const expected: { cell: number; digit: number }[] = [];
-        for (let other = 0; other < layout.cellCount; other++) {
+        before.forEach((mask, other) => {
           if (other === cell) {
-            for (const d of digitsOf(before[other]!)) expected.push({ cell: other, digit: d });
+            for (const d of digitsOf(mask)) expected.push({ cell: other, digit: d });
           } else if (peers.has(other)) {
-            expect(after[other]).toBe(before[other]! & ~digitBit(digit));
-            if (before[other]! & digitBit(digit)) expected.push({ cell: other, digit });
+            expect(after[other]).toBe(mask & ~digitBit(digit));
+            if (mask & digitBit(digit)) expected.push({ cell: other, digit });
           } else {
-            expect(after[other]).toBe(before[other]);
+            expect(after[other]).toBe(mask);
           }
-        }
+        });
         expected.sort((a, b) => a.cell - b.cell || a.digit - b.digit);
         expect(removed).toEqual(expected);
       }),

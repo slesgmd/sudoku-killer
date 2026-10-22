@@ -7,6 +7,12 @@ import tseslint from "typescript-eslint";
 /** Paquetes puros: el tiempo y el azar llegan desde fuera (ADR 0004, SPEC §5). */
 export const PURE_PACKAGES = ["packages/engine/**", "packages/scoring/**", "packages/game/**"];
 
+/** Código de los solvers: el único lugar del monorepo donde se permite la aserción `!`. */
+export const SOLVER_FILES = [
+  "packages/engine/src/solver-a/**/*.ts",
+  "packages/engine/src/solver-b/**/*.ts",
+];
+
 export default defineConfig(
   globalIgnores(["**/dist/", "**/coverage/", "evidence/"]),
   js.configs.recommended,
@@ -53,8 +59,9 @@ export default defineConfig(
     },
   },
   {
-    // Motor: índices garantizados por construcción en bucles sobre arreglos tipados.
-    files: ["packages/engine/**"],
+    // Solo los solvers: bucles críticos sobre arreglos tipados con índices garantizados por
+    // construcción. El resto del motor usa comprobaciones explícitas (docs/motor.md).
+    files: SOLVER_FILES,
     rules: { "@typescript-eslint/no-non-null-assertion": "off" },
   },
   {

@@ -136,7 +136,7 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
   - El ejemplo `cell-index.test.ts` de F3 se reemplazó por `geometry.test.ts`.
 - Lint:
   - `no-restricted-imports` para que `solver-b` solo importe `../types.ts` y `solver-a` no importe `solver-b`, con su test (T-35.1);
-  - `no-non-null-assertion` desactivada en `packages/engine` (índices sobre arreglos tipados con `noUncheckedIndexedAccess`).
+  - `no-non-null-assertion` desactivada en `packages/engine` (índices sobre arreglos tipados con `noUncheckedIndexedAccess`). Corregido después: solo en los solvers (ver la entrada siguiente).
   - `tests/lint-helpers.ts` se comparte entre los tests de lint.
 - `docs/motor.md` creado (principios y modelo).
 
@@ -145,5 +145,16 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 - Para la regla de aislamiento se usó `regex` en `no-restricted-imports` en lugar de patrones estilo gitignore, que no se llevan bien con rutas que empiezan con `../`.
 
 **Tiempo real:** unos 0,3 h (15:52 a 16:12 aproximadamente), incluida la planificación de F4. Ejecutado en una sesión, sin contar la revisión del usuario.
+
+**Siguiente:** F4b, solver A.
+
+## 2026-10-22 — Corrección de F4a: alcance de la excepción a `no-non-null-assertion`
+
+**Hecho (pedido del usuario):**
+- La excepción a `no-non-null-assertion` ya no cubre todo `packages/engine`. Un override de ESLint la limita a `src/solver-a/**` y `src/solver-b/**` (`SOLVER_FILES`), y `tests/lint-non-null.test.ts` fija ese alcance.
+- Modelo, validador, geometría, tests y ayudas de prueba sin `!`: `for...of`, `forEach` con índice, comprobaciones explícitas y la función `at(list, index)` (`src/model/at.ts`), que lanza `RangeError` si el índice no existe.
+- Justificación en `docs/motor.md` («Aserción de no nulo»).
+
+**Tiempo real:** unos 0,1 h (16:13 a 16:18 aproximadamente).
 
 **Siguiente:** F4b, solver A.

@@ -10,6 +10,7 @@ import {
   type KillerPuzzle,
   type StructureIssue,
 } from "@sudoku-killer/engine";
+import { at } from "../src/model/at.ts";
 import { GEOMETRIES, GEOMETRY_4, GEOMETRY_9, anyKillerArb, patternGrid } from "./helpers/grids.ts";
 
 /** 4x4 con jaulas horizontales de 2 celdas; las sumas salen de la cuadrícula del patrón. */
@@ -18,7 +19,7 @@ function basePuzzle(): { puzzle: KillerPuzzle; grid: number[] } {
   const cages: Cage[] = Array.from({ length: 8 }, (_, id) => ({
     id,
     cells: [2 * id, 2 * id + 1],
-    sum: grid[2 * id]! + grid[2 * id + 1]!,
+    sum: at(grid, 2 * id) + at(grid, 2 * id + 1),
   }));
   return { puzzle: { ...GEOMETRY_4, cages, givens: [] }, grid };
 }
@@ -60,18 +61,18 @@ describe("T-35.3 validateStructure", () => {
     ],
     [
       "cage-cell-out-of-range",
-      (p) => ({ ...p, cages: [{ ...p.cages[0]!, cells: [0, 1, 16] }, ...p.cages.slice(1)] }),
+      (p) => ({ ...p, cages: [{ ...at(p.cages, 0), cells: [0, 1, 16] }, ...p.cages.slice(1)] }),
     ],
     [
       "cage-overlap",
       (p) => ({
         ...p,
-        cages: [p.cages[0]!, { ...p.cages[1]!, cells: [1, 2, 3] }, ...p.cages.slice(2)],
+        cages: [at(p.cages, 0), { ...at(p.cages, 1), cells: [1, 2, 3] }, ...p.cages.slice(2)],
       }),
     ],
     [
       "cage-sum-unreachable",
-      (p) => ({ ...p, cages: [{ ...p.cages[0]!, sum: 2 }, ...p.cages.slice(1)] }),
+      (p) => ({ ...p, cages: [{ ...at(p.cages, 0), sum: 2 }, ...p.cages.slice(1)] }),
     ],
     ["cell-uncovered", (p) => ({ ...p, cages: p.cages.slice(1) })],
     ["given-invalid", (p) => ({ ...p, givens: [{ cell: 0, value: 5 }] })],
@@ -106,7 +107,7 @@ describe("T-35.3 validateStructure", () => {
   it("detects disconnected and oversized cages", () => {
     const grid = patternGrid(GEOMETRY_9);
     const cages: Cage[] = [
-      { id: 0, cells: [0, 2], sum: grid[0]! + grid[2]! },
+      { id: 0, cells: [0, 2], sum: at(grid, 0) + at(grid, 2) },
       { id: 1, cells: [3, 4, 5, 6, 7, 8], sum: 39 },
     ];
     const found = codes(validateStructure({ ...GEOMETRY_9, cages, givens: [] }));
@@ -127,10 +128,10 @@ describe("T-35.3 validateSolution", () => {
 
   it("rejects a grid with one changed cell", () => {
     fc.assert(
-      fc.property(anyKillerArb, fc.nat(), fc.nat(), ({ puzzle, grid }, at, delta) => {
-        const cell = at % grid.length;
+      fc.property(anyKillerArb, fc.nat(), fc.nat(), ({ puzzle, grid }, pick, delta) => {
+        const cell = pick % grid.length;
         const changed = [...grid];
-        changed[cell] = ((grid[cell]! - 1 + 1 + (delta % (puzzle.size - 1))) % puzzle.size) + 1;
+        changed[cell] = ((at(grid, cell) - 1 + 1 + (delta % (puzzle.size - 1))) % puzzle.size) + 1;
         expect(validateSolution(puzzle, changed)).not.toEqual([]);
       }),
       { numRuns: 60 },
@@ -141,10 +142,10 @@ describe("T-35.3 validateSolution", () => {
     const { puzzle, grid } = basePuzzle();
     const wrongSum = {
       ...puzzle,
-      cages: [{ ...puzzle.cages[0]!, sum: 4 }, ...puzzle.cages.slice(1)],
+      cages: [{ ...at(puzzle.cages, 0), sum: 4 }, ...puzzle.cages.slice(1)],
     };
     expect(validateSolution(wrongSum, grid)).toEqual([{ code: "cage-sum", cageId: 0 }]);
-    const wrongGiven = { ...puzzle, givens: [{ cell: 0, value: grid[1]! }] };
+    const wrongGiven = { ...puzzle, givens: [{ cell: 0, value: at(grid, 1) }] };
     expect(validateSolution(wrongGiven, grid)).toEqual([{ code: "given", cell: 0 }]);
     expect(validateSolution(puzzle, grid.slice(1))).toEqual([{ code: "length" }]);
     expect(validateSolution(puzzle, [0, ...grid.slice(1)])).toEqual([{ code: "digit", cell: 0 }]);
@@ -155,9 +156,9 @@ describe("T-35.3 validateSolution", () => {
     // válida, pero la jaula se comprueba aparte de filas y columnas.
     const { puzzle, grid } = basePuzzle();
     const repeated = [...grid];
-    repeated[4] = grid[0]!;
+    repeated[4] = at(grid, 0);
     const issues = validateSolution(
-      { ...puzzle, cages: [{ id: 9, cells: [0, 4], sum: 2 * grid[0]! }] },
+      { ...puzzle, cages: [{ id: 9, cells: [0, 4], sum: 2 * at(grid, 0) }] },
       repeated,
     );
     expect(issues).toContainEqual({ code: "cage-repeat", cageId: 9 });

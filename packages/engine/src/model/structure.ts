@@ -1,4 +1,5 @@
 import type { KillerPuzzle } from "../types.ts";
+import { at } from "./at.ts";
 import { isValidGeometry, layoutOf } from "./geometry.ts";
 
 export const MIN_CAGE_SIZE = 2;
@@ -30,8 +31,7 @@ function isConnected(cells: readonly number[], size: number): boolean {
   if (first === undefined) return false;
   const seen = new Set([first]);
   const stack = [first];
-  while (stack.length > 0) {
-    const cell = stack.pop()!;
+  for (let cell = stack.pop(); cell !== undefined; cell = stack.pop()) {
     const row = Math.floor(cell / size);
     const col = cell % size;
     const neighbours = [
@@ -110,8 +110,8 @@ export function validateStructure(puzzle: KillerPuzzle): StructureIssue[] {
     else givenAt.set(cell, value);
   }
   for (const [cell, value] of givenAt) {
-    const cage = puzzle.cages[owner[cell]!];
-    const peers = new Set([...layout.peers[cell]!, ...(cage?.cells ?? [])]);
+    const cage = puzzle.cages[at(owner, cell)];
+    const peers = new Set([...at(layout.peers, cell), ...(cage?.cells ?? [])]);
     peers.delete(cell);
     if ([...peers].some((peer) => givenAt.get(peer) === value)) {
       issues.push({ code: "given-conflict", cell });
