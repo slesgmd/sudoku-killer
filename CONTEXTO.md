@@ -6,13 +6,14 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 ## Estado
 
 - **Plan:** versión 1.06. **SPEC:** versión 1.2.
-- **Fase actual:** F4, motor del puzzle, dividida en F4a–F4f (tabla en `docs/PLAN.md`, F4). F4a hecha el 2026-10-22.
+- **Fase actual:** F4, motor del puzzle, dividida en F4a–F4f (tabla en `docs/PLAN.md`, F4). F4a y F4b hechas el 2026-10-22.
 - **Forma de trabajo en F4 (aprobada):** una subfase por sesión, sin pedir confirmación salvo errores. Cada subfase termina así: `pnpm check`, `pnpm test` y `pnpm build` en verde; BITACORA con horas; PLAN marcado; este archivo apuntando a la siguiente; commit, push, CI en verde (`gh run watch`), y aviso al usuario de que puede hacer `/clear`.
-- **Próxima tarea exacta: F4b, solver A.**
-  - En `packages/engine/src/solver-a/`: tabla de combinaciones por jaula (tamaño, suma) → máscaras; candidatos en `Uint16Array`; propagación (singles, hidden singles, filtro por combinaciones de jaula y cotas de suma); backtracking con MRV.
-  - API: `solveA(puzzle, { limit = 2 })` → `{ count: 0 | 1 | 2, solutions, nodes }`. Se detiene en la segunda solución.
-  - Pruebas (T-35.1 y T-35.3): toda solución pasa `validateSolution`; casos con 0, 1 y 2 o más soluciones; fuerza bruta 4×4 (`test/helpers/`) como oráculo. Usar `killerArb` de `test/helpers/grids.ts`.
-  - `solver-a` no puede importar `solver-b` (lint). Documentar el algoritmo en `docs/motor.md`.
+- **Próxima tarea exacta: F4c, solver B.**
+  - En `packages/engine/src/solver-b/`: Dancing Links (algoritmo X) propio. Solo puede importar `../types.ts` (lint, T-35.1): ni el modelo ni las máscaras ni la tabla de combinaciones de A.
+  - Formulación sugerida como cobertura exacta: cada opción llena una jaula con una permutación de dígitos distintos que da su suma, respetando los números iniciales; cubre sus celdas y los ítems (fila, dígito), (columna, dígito) y (caja, dígito).
+  - API: `solveB(puzzle, { limit = 2 })` → `{ count: 0 | 1 | 2, solutions }`, con la misma semántica que `solveA` (ver `docs/motor.md`).
+  - Pruebas: T-35.1, A y B dan el mismo `count` y las mismas soluciones (4×4 y 6×6 con `limit: Infinity`; 9×9 con el límite por defecto), y B coincide con `bruteForce4`. T-35.2, puzzles de referencia en `test/` con resultado calculado por A y B y confirmado por el validador, nunca de memoria (por construcción si no hay fuente pública legible). Una discrepancia bloquea F4.
+  - Medir B como A y documentarlo en `docs/motor.md`.
 
 ## Reglas clave
 
@@ -29,6 +30,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 - Código e identificadores en inglés. Documentación e interfaz en español.
 - TypeScript estricto. Textos de la interfaz preparados para i18n.
+- Aserción `!` prohibida salvo en `packages/engine/src/solver-{a,b}/` (`docs/motor.md`); fuera, `for...of`, comprobaciones o `at()` de `src/model/at.ts`.
 - Commits con formato Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `test:`, `refactor:`).
 - Rama principal: `main`.
 

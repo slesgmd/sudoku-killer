@@ -1,7 +1,7 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
 Versión del plan: 1.06
-Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 en curso (F4a hecha)
+Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 en curso (F4a y F4b hechas)
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
 ---
@@ -114,7 +114,7 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 | F1 | Estudio de referencia con REA | 3–6 | F0 | Hecha | ~0,6 |
 | F2 | Especificación y arquitectura | 6–10 | F1 | Hecha | ~0,4 |
 | F3 | Monorepo y calidad | 3–5 | F2 | Hecha | ~0,3 |
-| F4 | Motor del puzzle | 20–35 | F3 | En curso (F4a hecha) | F4a ~0,3 |
+| F4 | Motor del puzzle | 20–35 | F3 | En curso (F4a y F4b hechas) | F4a ~0,3 (+0,1 de corrección) · F4b ~0,6 |
 | F5 | Banco de puzzles y dificultad | 6–12 | F4 | Pendiente | |
 | F6 | Sistema de puntuación | 10–18 | F4 | Pendiente | |
 | F7 | Diseño visual propio | 10–20 | F2 (puede ir en paralelo con F4–F6) | Pendiente | |
@@ -239,7 +239,7 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
 | Subfase | Contenido | Horas estimadas | Estado |
 |---|---|---|---|
 | F4a | Tipos, geometría, máscaras, validación de estructura y solución, `checkPlacement`, `isEvidentMistake`, `cleanupPeers` y lint de aislamiento entre solvers | 2–4 | Hecha (~0,3 h) |
-| F4b | Solver A: combinaciones por jaula, propagación y backtracking con MRV; fuerza bruta 4×4 como oráculo | 3–5 | Pendiente |
+| F4b | Solver A: combinaciones por jaula, propagación y backtracking con MRV; fuerza bruta 4×4 como oráculo | 3–5 | Hecha (~0,6 h) |
 | F4c | Solver B: Dancing Links propio (no importa nada de A); verificación cruzada y puzzles de referencia verificados por A y B | 3–5 | Pendiente |
 | F4d | Generador con PRNG con semilla; prueba rápida en la CI y corpus de 1000 puzzles aparte (`pnpm test:corpus` y workflow programado); tiempos en `docs/motor.md` | 4–7 | Pendiente |
 | F4e | Calificador, niveles 1 a 3, y `levelToDeduce` | 4–7 | Pendiente |

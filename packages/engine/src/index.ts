@@ -32,3 +32,4 @@ export {
   type CleanupResult,
   type NoteRemoval,
 } from "./model/notes.ts";
+export { solveA, type SolveAOptions, type SolveAResult } from "./solver-a/solve.ts";

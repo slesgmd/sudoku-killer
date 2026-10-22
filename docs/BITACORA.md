@@ -158,3 +158,23 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 **Tiempo real:** unos 0,1 h (16:13 a 16:18 aproximadamente).
 
 **Siguiente:** F4b, solver A.
+
+## 2026-10-22 — F4b: solver A
+
+**Hecho:**
+- `packages/engine/src/solver-a/`:
+  - `combos.ts`: tabla de combinaciones por (tamaño de jaula, suma), una vez por tamaño de tablero.
+  - `context.ts`: unidades, pares con jaula, cruces caja-línea y grupos de suma: jaulas, más innies y outies de cada caja, par de cajas vecinas, bloque de 2 × 2 cajas y unión de filas o columnas consecutivas (regla del 45).
+  - `propagate.ts`: singles con cola; filtro exacto de grupos (soporte por asignaciones completas de cada combinación, que incluye las cotas de suma); dígitos obligatorios de un grupo que apuntan a una unidad; cotas de suma para innies y outies grandes; hidden singles; locked candidates.
+  - `solve.ts`: `solveA(puzzle, { limit = 2 })` → `{ count, solutions, nodes }`. Backtracking con dom/wdeg (MRV ponderado por fallos), determinista.
+- Pruebas (T-35.1): fuerza bruta 4×4 independiente del motor (`test/helpers/brute-force.ts`) como oráculo en 300 puzzles aleatorios con sumas desplazadas y números iniciales erróneos; casos con 0, 1 y 2 o más soluciones; unicidad por números iniciales en 6×6 y 9×9; toda solución pasa `validateSolution`; determinismo; tabla de combinaciones contra una enumeración independiente hasta 16×16.
+- `docs/motor.md`: API, algoritmo, pruebas y mediciones del solver A.
+
+**Problemas y soluciones:**
+- La primera versión (singles, hidden singles, filtro de jaulas y MRV) tardaba hasta 28 s en un 9×9 con jaulas grandes. Se agregaron innies y outies, locked candidates y dígitos obligatorios: la media bajó a 81 ms, pero quedó una cola de 57 s.
+- Esa cola era *thrashing*: puzzles con muchas soluciones en los que MRV no encontraba ni la primera en 600 000 nodos. dom/wdeg la bajó a unos 500 nodos. Resultado con 1000 puzzles 9×9: media 7 ms, p99 49 ms, máximo 2,4 s.
+- Se midieron y descartaron otros desempates del MRV y los grupos exactos de más de 5 celdas (detalle en `docs/motor.md`).
+
+**Tiempo real:** unos 0,6 h (16:19 a 16:55 aproximadamente), ejecutado en una sesión, sin contar la revisión del usuario.
+
+**Siguiente:** F4c, solver B (Dancing Links).
