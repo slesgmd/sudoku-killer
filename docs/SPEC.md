@@ -1,6 +1,6 @@
 # SPEC — Sudoku Killer Multijugador · v1
 
-- Versión del documento: 1.0 (F2, 2026-10-22)
+- Versión del documento: 1.1 (F3, 2026-10-22). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5.
 - Versión del protocolo: **1**
 - Fuente de las reglas: `docs/PLAN.md`, secciones 1 y 2, más las decisiones de producto de F2 (sección 1 de este documento).
 - Decisiones técnicas: `docs/adr/0001`–`0005`.
@@ -492,11 +492,14 @@ Entre corchetes va la fase en que se implementa cada prueba.
 - T-04.2 Después de `cell.mistake`, el snapshot no guarda ningún valor en esa celda. [I, F9]
 - T-04.3 El cliente muestra el dígito erróneo con su autor durante un instante (duración definida en F7) y después la celda vuelve a quedar vacía. [C, F8]
 
-**R-05 Celda bloqueada / "ya resuelta".** De dos jugadas sobre la misma celda gana la primera. La segunda, y cualquier jugada sobre una celda bloqueada, recibe `cell.already_solved`, sin penalización y sin evento.
+**R-05 Celda bloqueada / "ya resuelta" y jugadas simultáneas.** Una celda acertada queda bloqueada. Cualquier jugada posterior sobre ella recibe `cell.already_solved`, sin penalización y sin evento, sea su dígito correcto o incorrecto.
+- **Jugadas simultáneas** sobre la misma celda: el servidor las ordena con la cola de la sala (§4.6) y gana la primera que procesa. Si la primera es un acierto, la segunda (y las siguientes) recibe `cell.already_solved`, sin penalización y sin evento, aunque su autor todavía no hubiera visto el `cell.solved`.
+- Si la primera es un error, la celda no se bloquea: el error cuenta (R-03) y la siguiente jugada se evalúa con normalidad (E-03).
 - T-05.1 *Dado* dos `cell.place` correctos sobre la misma celda en la misma tanda de la cola, *entonces* el primero produce `cell.solved` y el segundo recibe `cell.already_solved`. No cambian vidas ni puntos, y el registro tiene un solo evento. [I, F9]
 - T-05.2 Una jugada sobre un número inicial recibe `cell.already_solved`, sin penalización. [I, F9]
 - T-05.3 *Dado* una celda bloqueada, *cuando* llega un dígito **incorrecto** sobre ella, *entonces* recibe `cell.already_solved`, no `cell.mistake`. [I, F9]
 - T-05.4 Seis pestañas hacen clic en la misma celda a la vez: un solo acierto y ninguna penalización. [E, F10]
+- T-05.5 *Dado* un `cell.place` incorrecto seguido de uno correcto sobre la misma celda en la misma tanda de la cola, *entonces* el primero produce `cell.mistake` (−1 vida y −P) y el segundo `cell.solved`. El registro tiene dos eventos. [I, F9]
 
 **R-06 Notas en dos capas.** Cada jugador elige qué capas ve (personal, grupal o ambas) y en cuál escribe.
 - T-06.1 El selector de vista oculta y muestra cada capa por separado, y el selector de escritura determina el `layer` que se envía. [C, F8]
@@ -659,7 +662,7 @@ Entre corchetes va la fase en que se implementa cada prueba.
 |---|---|---|---|
 | E-01 | Un jugador se desconecta durante la partida y vuelve antes de 2 min | Recupera todo. Mientras estuvo fuera conservó su asiento y contó como activo para D4. | T-13.1, T-01.4 |
 | E-02 | Un jugador expira y vuelve más tarde | Con cupo, recupera sus datos; sin cupo, recibe `room.full`. Nunca vuelve con 3 vidas nuevas. | T-13.2, T-26.4 |
-| E-03 | Llegan a la vez un acierto y un error sobre la misma celda | Gana el primero en la cola. Si el primero es el acierto, el error recibe `already_solved` y no penaliza. Si el primero es el error, cuenta como error y el acierto bloquea la celda. | T-05.1, T-05.3 |
+| E-03 | Llegan a la vez un acierto y un error sobre la misma celda | Gana el primero en la cola. Si el primero es el acierto, el error recibe `already_solved` y no penaliza. Si el primero es el error, cuenta como error y el acierto bloquea la celda. | T-05.1, T-05.3, T-05.5 |
 | E-04 | Llegan a la vez una pista y una jugada sobre la misma celda | Gana el primero. Si la pista llega segunda, recibe `already_solved` y no gasta pista. | T-19.3 |
 | E-05 | El creador sale antes de iniciar, durante la partida, o se desconecta | Antes de iniciar o durante la partida, el derecho pasa en el momento de salir o expirar. Si solo está desconectado, lo conserva. | T-11.1–T-11.5 |
 | E-06 | Todos se desconectan | 120 s después de la última desconexión, todos expiran. Si había partida en curso, se registra la derrota y después se borra la sala. Si alguien vuelve antes, se cancela el borrado. | T-14.1–T-14.3 |
@@ -729,7 +732,7 @@ El inspector está activo por defecto en todas las pruebas I. Las pruebas E2E us
 | Entrada con partida en curso | R-12 | T-12.1–2 |
 | Desconexión | R-13 | T-13.1–5 |
 | Borrado de sala | R-14 | T-14.1–3 |
-| Celdas | R-15 (+R-05) | T-15.1–2, T-05.1–4 |
+| Celdas | R-15 (+R-05) | T-15.1–2, T-05.1–5 |
 | Notas grupales | R-16 | T-16.1–3 |
 | Limpieza automática | R-17 | T-17.1–5 |
 | Diseño visual | R-18 | T-18.1 |
