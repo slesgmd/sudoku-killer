@@ -5,12 +5,12 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.04
-- **Fase actual:** F3, monorepo y calidad. Pendiente (F0, F1 y F2 hechas el 2026-10-22).
-- **Próxima tarea exacta:** entrar en modo plan y proponer las subtareas de F3. Esperar aprobación antes de ejecutarlas.
-  - Leer F3 en `docs/PLAN.md` y el ADR 0001 (stack, versiones, calidad).
-  - Paquetes que hay que crear: `packages/{engine,protocol,scoring,game}` y `apps/{server,web}`, con un paquete de ejemplo que pase `pnpm check` y `pnpm test`, y la CI en verde.
-  - Incluir la regla de lint que prohíbe `Date.now()` y `Math.random()` en los paquetes puros, y el test de que `packages/protocol` no exporta ningún tipo con `solution` (T-31.3).
+- **Plan:** versión 1.05. **SPEC:** versión 1.1.
+- **Fase actual:** F4, motor del puzzle. Pendiente (F0 a F3 hechas el 2026-10-22).
+- **Próxima tarea exacta:** entrar en modo plan y proponer las subtareas de F4. Esperar aprobación antes de ejecutarlas.
+  - Leer F4 en `docs/PLAN.md` y, en la SPEC, R-17 (`cleanupPeers`) y R-20 (`givensReason`). Ver también el ADR 0005.
+  - Todo va en `packages/engine` (ya existe, con `cellIndex` como ejemplo). Ahí están prohibidos `Date.now()` y `Math.random()`: el azar del generador llega como un generador con semilla.
+  - Criterios: 0 discrepancias entre los dos solvers, 1000 puzzles con solución única y el tiempo medio de generación documentado.
 
 ## Reglas clave
 
@@ -32,7 +32,12 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Comandos
 
-- Todavía no hay código. Los scripts `pnpm dev`, `pnpm test`, `pnpm check` y `pnpm build` se crean en F3.
+- `pnpm install`: instala las dependencias y activa el hook de pre-commit (Husky y lint-staged).
+- `pnpm dev`: servidor (Node desde las fuentes, con `--watch`) y web (Vite) en paralelo.
+- `pnpm check`: typecheck, ESLint (con tipos) y Prettier. `pnpm test`: Vitest en todo el monorepo. `pnpm build`: `tsc` a `dist/` y Vite.
+- Los paquetes exportan sus fuentes con la condición `@sudoku-killer/source`. Los imports relativos llevan la extensión `.ts`.
+- TypeScript fijado en 6.0.x: `typescript-eslint` no admite la 7 (ADR 0001, nota de F3).
+- Remoto público: https://github.com/slesgmd/sudoku-killer. La CI (GitHub Actions) corre `check`, `test` y `build` en cada push a `main`.
 - Entorno verificado en F0: Node 24.21, pnpm 12.12, Git 2.54 y REA 6.7.0.
 
 ## Mapa de carpetas
@@ -46,9 +51,14 @@ docs/IDEAS_FUTURAS.md  ideas fuera de la v1
 docs/referencia.md     comportamiento de la app de referencia (F1)
 docs/adr/              decisiones técnicas (README con plantilla e índice)
 evidence/              evidencia local de REA (ignorada por git)
+packages/engine        motor del puzzle (puro)
+packages/protocol      mensajes y esquemas Zod (nunca la solución, T-31.3)
+packages/scoring       puntuación (pura)
+packages/game          reductor de la partida y GameMode (puro)
+apps/server            servidor de salas
+apps/web               cliente React y Vite
+tests/                 pruebas del repositorio (reglas de lint)
 ```
-
-Se crean en F3: `packages/{engine,protocol,scoring,game}` y `apps/{server,web}`.
 
 ## Antes de cada /clear
 

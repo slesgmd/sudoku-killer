@@ -86,3 +86,31 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 **Tiempo real:** unos 0,4 h (12:39 a 13:05 aproximadamente), ejecutado en una sesión. Incluye la ronda de preguntas, pero no el tiempo de revisión del usuario.
 
 **Siguiente:** F3, monorepo y calidad, en modo plan.
+
+## 2026-10-22 — F3: Monorepo y calidad
+
+**Hecho:**
+- El usuario pidió ejecutar F3 sin pedir confirmación salvo errores, así que no se pasó por el modo plan.
+- Revisión previa de R-05 (SPEC 1.1). La regla ya cubría las jugadas simultáneas, pero decía que "la segunda" recibe siempre `already_solved`, y eso contradice E-03 cuando la primera es un error. Se reescribió: gana la primera que procesa la cola de la sala; si es un acierto, las siguientes reciben `already_solved` sin penalización ni evento; si es un error, la celda no se bloquea. Se agregó T-05.5 (error y después acierto en la misma tanda) y se actualizaron E-03 y la matriz de cobertura. Commit aparte.
+- Monorepo pnpm:
+  - `packages/{engine,protocol,scoring,game}` y `apps/{server,web}`.
+  - `tsconfig.base.json` con `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax` y `erasableSyntaxOnly`.
+  - Los paquetes exportan sus fuentes con la condición `@sudoku-killer/source`, y `dist/` en otro caso. Los imports relativos llevan `.ts` con `rewriteRelativeImportExtensions`.
+- ESLint 10 con `strictTypeChecked` y `stylisticTypeChecked`, `react-hooks` en la web y `no-restricted-properties` contra `Date.now` y `Math.random` en `engine`, `scoring` y `game`. Prettier 3.9 (los `.md` se excluyen para conservar el formato manual).
+- Vitest 5 con una sola configuración en la raíz. Pruebas:
+  - Ejemplo `cellIndex` en `engine`, con fast-check.
+  - T-31.3: recorre con la API del compilador todos los tipos y valores exportados por `protocol` y busca `solution`. Un fixture de control con una interfaz, un `Record`, un esquema Zod, un `z.infer` y una función confirma que el detector encuentra los cinco.
+  - Regla de lint: un test con ESLint comprueba que la regla salta en los tres paquetes puros y no en `server` ni en `protocol`.
+- Husky 9 y lint-staged 17 en el pre-commit. Se comprobó que un commit con `Date.now()` en `engine` queda bloqueado.
+- CI en GitHub Actions: checkout v7, pnpm/action-setup v6 y setup-node v7 con Node desde `.node-version`; `pnpm install --frozen-lockfile`, `check`, `test` y `build`. Primer run en verde en 28 s (39851785929).
+- Verificaciones manuales: el servidor arranca desde `dist/` y desde las fuentes (`node --conditions`), y Vite dev sirve la web resolviendo `protocol` desde sus fuentes.
+
+**Problemas y soluciones:**
+- El último TypeScript es el 7.0 (compilador nativo), pero `typescript-eslint` 8.72 solo admite `<6.1`, y el test T-31.3 necesita la API de JS. Se fijó TypeScript 6.0.3 y quedó anotado en el ADR 0001.
+- Con TypeScript 6, `types` vale `[]` por defecto. Los tipos de Node se dan en el `tsconfig.json` de cada paquete (que incluye `test/`), pero no en `tsconfig.build.json`, así que `src` no puede usar Node sin que falle el build.
+- La primera versión del detector de T-31.3 recorría todo el grafo de tipos de Zod y superaba los 5 s. Ahora, de los tipos de librerías solo recorre los argumentos de tipo. Los tipos mapeados (como `Writeable<T>` de Zod) sí se recorren, porque sin eso no se detectaba el esquema. Tarda unos 2 s.
+- El repositorio de GitHub era público, aunque se describió como privado. Se le preguntó al usuario antes del push y decidió dejarlo público.
+
+**Tiempo real:** unos 0,3 h (15:33 a 15:50 aproximadamente), ejecutado en una sesión. No incluye el tiempo de revisión del usuario.
+
+**Siguiente:** F4, motor del puzzle, en modo plan.

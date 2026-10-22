@@ -1,7 +1,7 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.04
-Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 pendiente
+Versión del plan: 1.05
+Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 pendiente
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
 ---
@@ -113,7 +113,7 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 | F0 | Entorno y arranque | 2–4 | — | Hecha | ~0,1 |
 | F1 | Estudio de referencia con REA | 3–6 | F0 | Hecha | ~0,6 |
 | F2 | Especificación y arquitectura | 6–10 | F1 | Hecha | ~0,4 |
-| F3 | Monorepo y calidad | 3–5 | F2 | Pendiente | |
+| F3 | Monorepo y calidad | 3–5 | F2 | Hecha | ~0,3 |
 | F4 | Motor del puzzle | 20–35 | F3 | Pendiente | |
 | F5 | Banco de puzzles y dificultad | 6–12 | F4 | Pendiente | |
 | F6 | Sistema de puntuación | 10–18 | F4 | Pendiente | |
@@ -200,6 +200,13 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
 **Criterios de aceptación:**
 - `pnpm check` y `pnpm test` pasan con un paquete de ejemplo.
 - La CI está en verde.
+
+**Estado:** hecha el 2026-10-22.
+- Monorepo pnpm con `packages/{engine,protocol,scoring,game}` y `apps/{server,web}`. TypeScript 6.0 estricto (ver la nota de F3 en el ADR 0001), ESLint con reglas con tipos, Prettier, Vitest, Husky con lint-staged y CI en GitHub Actions (`check`, `test` y `build` en Linux).
+- Paquete de ejemplo: `cellIndex` en `engine`, con una prueba de propiedades.
+- Pruebas: T-31.3 (`protocol` no exporta ningún tipo con `solution`, con un fixture de control) y la regla de lint contra `Date.now()` y `Math.random()` en los paquetes puros.
+- `pnpm check`, `pnpm test` y `pnpm build` pasan en local y la CI está en verde (run 39851785929). El repositorio remoto es público por decisión del usuario.
+- Antes de F3 se precisó R-05 en la SPEC (versión 1.1): jugadas simultáneas y el nuevo T-05.5.
 
 ### F4 — Motor del puzzle (20–35 h)
 **Componentes de `packages/engine`:**
@@ -406,3 +413,4 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
   - F4 aclara cuándo hay números iniciales y agrega `cleanupPeers`.
   - F6 agrega el parámetro H (costo de una pista) y las pistas en la simulación.
   - F9 suma pistas, deshacer con comprobación, presencia, vuelta con ficha, heartbeat y saturación, y la reconstrucción tras un reinicio.
+- **1.05:** F3 marcada como hecha (~0,3 h reales). La SPEC pasa a la versión 1.1: R-05 explica las jugadas simultáneas (gana la primera que procesa la cola; si la primera es un error, la celda no se bloquea) y suma T-05.5. TypeScript se fija en 6.0.x por compatibilidad con `typescript-eslint` (ADR 0001).

@@ -41,3 +41,8 @@ Las versiones exactas se fijan en F3, en el `package.json` y en el lockfile.
 - PGlite permite probar los repositorios sin infraestructura. La paridad con Postgres real se verifica en F12.
 - Las reglas con información de tipos hacen el lint más lento, lo que se compensa con caché en la CI.
 - Queda pendiente para F8 la librería de i18n.
+
+## Nota de F3 (2026-10-22): versiones fijadas
+- TypeScript queda en **6.0.x**, no en la 7 (`latest`). La 7 es el compilador nativo y no expone la API de JS que necesitan `typescript-eslint` (8.72 admite `<6.1`) y el test T-31.3. Se revisa cuando `typescript-eslint` admita la 7.
+- Resto: ESLint 10, Prettier 3.9, Vitest 5, fast-check 4, Zod 4, Vite 8, React 19 y Husky 9 con lint-staged 17. Las versiones exactas están en los `package.json` y en `pnpm-lock.yaml`.
+- Los paquetes exportan sus fuentes con la condición `@sudoku-killer/source` (TypeScript, Vite, Vitest y `node --conditions` en desarrollo), y `dist/` en otro caso. Los imports relativos llevan la extensión `.ts` (`rewriteRelativeImportExtensions`), así Node 24 ejecuta las fuentes sin compilar.
