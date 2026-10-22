@@ -1,7 +1,7 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.06
-Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 en curso (F4a y F4b hechas)
+Versión del plan: 1.07
+Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 en curso (F4a, F4b y F4c hechas)
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
 ---
@@ -114,7 +114,7 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 | F1 | Estudio de referencia con REA | 3–6 | F0 | Hecha | ~0,6 |
 | F2 | Especificación y arquitectura | 6–10 | F1 | Hecha | ~0,4 |
 | F3 | Monorepo y calidad | 3–5 | F2 | Hecha | ~0,3 |
-| F4 | Motor del puzzle | 20–35 | F3 | En curso (F4a y F4b hechas) | F4a ~0,3 (+0,1 de corrección) · F4b ~0,6 |
+| F4 | Motor del puzzle | 20–35 | F3 | En curso (F4a, F4b y F4c hechas) | F4a ~0,3 (+0,1 de corrección) · F4b ~0,6 · F4c ~1,1 |
 | F5 | Banco de puzzles y dificultad | 6–12 | F4 | Pendiente | |
 | F6 | Sistema de puntuación | 10–18 | F4 | Pendiente | |
 | F7 | Diseño visual propio | 10–20 | F2 (puede ir en paralelo con F4–F6) | Pendiente | |
@@ -240,13 +240,15 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
 |---|---|---|---|
 | F4a | Tipos, geometría, máscaras, validación de estructura y solución, `checkPlacement`, `isEvidentMistake`, `cleanupPeers` y lint de aislamiento entre solvers | 2–4 | Hecha (~0,3 h) |
 | F4b | Solver A: combinaciones por jaula, propagación y backtracking con MRV; fuerza bruta 4×4 como oráculo | 3–5 | Hecha (~0,6 h) |
-| F4c | Solver B: Dancing Links propio (no importa nada de A); verificación cruzada y puzzles de referencia verificados por A y B | 3–5 | Pendiente |
+| F4c | Solver B: Dancing Links propio (no importa nada de A); verificación cruzada y puzzles de referencia verificados por A y B | 3–5 | Hecha (~1,1 h) |
 | F4d | Generador con PRNG con semilla; prueba rápida en la CI y corpus de 1000 puzzles aparte (`pnpm test:corpus` y workflow programado); tiempos en `docs/motor.md` | 4–7 | Pendiente |
 | F4e | Calificador, niveles 1 a 3, y `levelToDeduce` | 4–7 | Pendiente |
 | F4f | Calificador, niveles 4 y 5; histograma preliminar y cierre de F4 | 4–7 | Pendiente |
 
 - La prueba de 1000 puzzles no corre en la CI de cada push: la CI ejecuta una versión reducida y el corpus completo corre en local y en un workflow programado.
 - Si no hay una fuente pública legible por máquina para los puzzles de referencia, se usan casos con resultado conocido por construcción, y se registra la desviación.
+- **Desviación registrada en F4c:** no se usó ninguna fuente pública (no se hacen más cargas de sudoku.com y no hay otra legible por máquina a mano). Los 13 puzzles de referencia (`packages/engine/test/fixtures/reference-puzzles.ts`) se construyeron sobre cuadrículas válidas, con 0, 1 y de 2 a 4 soluciones en 4×4, 6×6 y 9×9. Su resultado lo calcularon A y B con `limit: Infinity` y lo confirmó el validador.
+- **Nota para F4d (pedida por el usuario, 2026-10-22):** el generador usa `solveA` con un presupuesto de nodos o de tiempo (hoy `solveA` no tiene presupuesto: se agrega en F4d). Si un candidato lo excede, se descarta y se genera otro. Se mide y documenta cuántos candidatos se descartan. B verifica después cada puzzle aceptado; su coste en puzzles únicos está medido en `docs/motor.md` (media 13 ms y máximo 0,7 s en 9×9).
 
 **Criterios de aceptación:**
 - 0 discrepancias entre solvers.
@@ -429,3 +431,4 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
   - F9 suma pistas, deshacer con comprobación, presencia, vuelta con ficha, heartbeat y saturación, y la reconstrucción tras un reinicio.
 - **1.05:** F3 marcada como hecha (~0,3 h reales). La SPEC pasa a la versión 1.1: R-05 explica las jugadas simultáneas (gana la primera que procesa la cola; si la primera es un error, la celda no se bloquea) y suma T-05.5. TypeScript se fija en 6.0.x por compatibilidad con `typescript-eslint` (ADR 0001).
 - **1.06:** F4 se divide en las subfases F4a–F4f (aprobadas por el usuario). La SPEC pasa a la versión 1.2 con R-35 (pruebas del motor). F4a hecha (~0,3 h, incluida la planificación de F4).
+- **1.07:** F4b (~0,6 h) y F4c (~1,1 h) hechas. F4 registra la desviación de los puzzles de referencia (construidos, sin fuente pública) y una nota para F4d pedida por el usuario: presupuesto de nodos o de tiempo para `solveA` en el generador, con descarte de candidatos y medición de cuántos se descartan.

@@ -178,3 +178,31 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 **Tiempo real:** unos 0,6 h (16:19 a 16:55 aproximadamente), ejecutado en una sesión, sin contar la revisión del usuario.
 
 **Siguiente:** F4c, solver B (Dancing Links).
+
+## 2026-10-22 — F4c: solver B
+
+**Pedido del usuario para esta subfase:** comparar A y B también en 6×6 y 9×9, incluir puzzles con varias soluciones (el `count` con `limit: 2` y el conjunto de soluciones cuando es pequeño), investigar cualquier discrepancia y anotar en el plan una condición para F4d.
+
+**Hecho:**
+- `packages/engine/src/solver-b/`, que solo importa `../types.ts`:
+  - `matrix.ts`: comprobación de la entrada y cobertura exacta. Una opción por permutación de cada jaula que da su suma; ítems por celda y por (fila, columna o caja, dígito).
+  - `dlx.ts`: Dancing Links sobre arreglos tipados (`cover`, `uncover`, `hide` y `unhide`).
+  - `regions.ts`: regiones de la regla del 45 y suma parcial de cada opción en cada región.
+  - `solve.ts`: `solveB(puzzle, { limit = 2 })` → `{ count, solutions, nodes }`, con la semántica de `solveA`. Algoritmo X con MRV y poda hasta un punto fijo con tres reglas propias: dos de subsunción entre ítems y jaulas y la regla del 45 por cotas.
+- Pruebas: `solver-b.test.ts` (B contra la fuerza bruta y A en 4×4, casos fijos, entrada), `solvers-cross.test.ts` (A contra B en 6×6 y 9×9: cadenas de números iniciales con muchas, pocas y una solución, conjuntos completos cuando hay 12 o menos, variantes con 0 soluciones) y `reference.test.ts` con 13 puzzles de referencia (T-35.2). Las ayudas comunes de las pruebas de A pasaron a `test/helpers/puzzles.ts`.
+- Mediciones en `docs/motor.md`: 1000 puzzles por tamaño, con 0 discrepancias de `count` entre A y B y la misma solución en los 189 únicos. B en 9×9: media 43 ms y máximo 3,8 s; en puzzles únicos, media 13 ms y máximo 0,7 s.
+- `PLAN.md` (1.07): nota para F4d (presupuesto de `solveA` en el generador, descarte de candidatos y medición de cuántos se descartan) y desviación de los puzzles de referencia.
+
+**Discrepancias entre A y B:** ninguna en ninguna medición: 3000 puzzles con `limit: 2`, 200 únicos, 300 cadenas 9×9 sin números iniciales de partida (1554 puzzles con `limit: 2` y 13, de los que 660 se compararon como conjuntos completos de 2 a 12 soluciones) y las pruebas repetidas con semillas al azar. Hubo dos fallos de prueba, y se investigaron:
+- `shiftFirstSum` podía dejar una suma inalcanzable (por ejemplo, 17 + 1 en una jaula de 2 celdas), y A lanzaba `RangeError`. Era un error de la prueba: ahora desplaza hacia donde la suma sigue siendo alcanzable y salta las jaulas de suma fija.
+- Una cadena 9×9 superó los 5 s de Vitest: era B, que es lento en algunos 9×9 sin números iniciales y con muchas soluciones.
+
+**Problemas y soluciones:**
+- El Dancing Links puro no escalaba en 9×9: hasta 59 s y 3 M de nodos en un puzzle con muchas soluciones, y 1,5 M de nodos para probar la unicidad de otro. La regla del 45 podando opciones, las cachés por profundidad y las reglas de subsunción bajaron el total de 11 puzzles difíciles de 261 s a 2,1 s.
+- Se midieron y descartaron otra formulación (celda, dígito y combinaciones), dom/wdeg sobre los ítems y regiones de pares de cajas (detalle en `docs/motor.md`).
+- Las pruebas 9×9 de la CI parten de 3 números iniciales para acotar el tiempo de B. Los 9×9 sin números iniciales se comparan en la medición y se compararán en el corpus de F4d.
+- **Desviación (T-35.2):** no hay fuente pública legible por máquina para los puzzles de referencia, así que se construyeron. Su resultado lo calcularon A y B y lo confirmó el validador (ver `PLAN.md`, F4).
+
+**Tiempo real:** unos 1,1 h (16:55 a 18:02 aproximadamente), ejecutado en una sesión, sin contar la revisión del usuario.
+
+**Siguiente:** F4d, generador.

@@ -33,6 +33,7 @@ Las funciones de validación devuelven listas de problemas con un código (vací
 ### Ayudas de prueba
 - `test/helpers/grids.ts`: cuadrículas válidas a partir de un patrón (la fila `r` se desplaza `(r mod boxRows) · boxCols + ⌊r / boxRows⌋`) y transformaciones que conservan la validez (reetiquetar dígitos, permutar bandas, filas dentro de una banda, pilas y columnas, y transponer si las cajas son cuadradas). No hay cuadrículas recordadas: el validador comprueba el patrón en cada geometría.
 - `partitionCages` y `killerArb`: particiones aleatorias en jaulas válidas sobre esas cuadrículas, para las pruebas de propiedades.
+- `test/helpers/puzzles.ts` (F4c): puzzles derivados para las pruebas de los solvers. Variantes con sumas desplazadas o números iniciales erróneos, puzzles con números iniciales de su cuadrícula y la cadena de números iniciales hasta la unicidad.
 
 ## Solver A (F4b)
 
@@ -95,5 +96,68 @@ Cómo se llegó aquí (9×9, semilla 42):
 - No se adoptaron: grupos exactos de más de 5 celdas (casi no reducen nodos y encarecen cada uno), desempates del MRV por tamaño de la jaula o por producto de candidatos (peores).
 - Los puzzles generados en F4d tendrán solución única; su tiempo de verificación se mide allí.
 
-## Solver B, generador y calificador
-Se documentan en F4c–F4f.
+## Solver B (F4c)
+
+`solveB(puzzle, { limit = 2 })` → `{ count, solutions, nodes }`, con la misma semántica que `solveA`: `count` 0, 1 o 2; como mucho `limit` soluciones en el orden de la búsqueda; `limit` entero ≥ 1 o `Infinity`; determinista. `nodes` cuenta las coberturas parciales visitadas, incluida la vacía. No es comparable con los nodos de A.
+
+B solo importa `src/types.ts` (lint, T-35.1), así que no puede usar `validateStructure`. Comprueba lo que necesita para que la matriz esté bien definida: geometría, jaulas de 2 a 5 celdas que parten el tablero y números iniciales en rango sin celdas repetidas. Si algo falla, lanza `RangeError`. El resto de la estructura no lo repite: con una suma inalcanzable, la jaula no tiene opciones y B devuelve 0 soluciones, mientras que A lanza `RangeError`. Los llamadores validan la estructura antes, como hará el generador.
+
+### Módulos (`src/solver-b/`)
+
+| Módulo | Contenido |
+|---|---|
+| `matrix.ts` | Comprobación de la entrada y matriz de cobertura exacta. |
+| `dlx.ts` | Dancing Links sobre `Int32Array`: `buildLinks`, `cover` y `uncover` (algoritmo X), y `hide` y `unhide` para quitar una opción suelta y devolverla. |
+| `regions.ts` | Regiones con suma conocida y suma parcial de cada opción en cada región que corta su jaula. |
+| `solve.ts` | Poda, búsqueda y `solveB`. |
+
+### Formulación
+Cobertura exacta con ítems primarios: cada celda y cada (fila, dígito), (columna, dígito) y (caja, dígito). Cada **opción** llena una jaula entera con una permutación de dígitos distintos que da su suma. Las permutaciones se generan en orden lexicográfico, con cotas de suma y respetando los números iniciales. También se descartan las que ponen en una celda un dígito que ya está como número inicial en su fila, columna o caja: es solo una poda, porque la cobertura exacta ya las excluiría. Una cobertura exacta es, por construcción, una solución del killer.
+
+### Búsqueda
+Algoritmo X con Dancing Links. Se ramifica sobre el ítem con menos opciones (MRV; ante un empate, el de menor índice) y las opciones se prueban en orden. Si un ítem tiene una sola opción, se toma sin podar. Antes de cada ramificación real se poda hasta un punto fijo con tres reglas propias:
+1. **Un ítem de una sola jaula.** Si todas las opciones que cubren un ítem de dígito son de la misma jaula, se ocultan las demás opciones de esa jaula.
+2. **Una jaula que fuerza un ítem.** Si todas las opciones de una jaula cubren un ítem de dígito (la jaula pone ese dígito en esa fila, columna o caja haga lo que haga), se ocultan las opciones de otras jaulas que lo cubren. Las reglas 1 y 2 son subsunción entre ítems de la cobertura exacta, con cada jaula como un ítem.
+3. **Regla del 45 por cotas.** Hay una región por cada fila, columna o caja, por cada unión de filas o de columnas consecutivas y por el tablero entero. A su total se le restan las jaulas que caben enteras. Cada jaula que corta la región aporta una suma parcial que depende de su opción. Con el mínimo y el máximo de cada aporte entre las opciones activas, se ocultan las opciones con las que la región ya no puede llegar a su total. Si una región no tiene jaulas cortadas y su total no cuadra (una suma desplazada), no hay solución.
+
+Las opciones ocultas van a una pila y se devuelven en orden inverso al volver del nodo, como en `cover` y `uncover`. Las cotas, y la cantidad de opciones con la que se evaluó por última vez cada ítem y cada jaula, se guardan por profundidad. Un ítem o una jaula se reevalúa solo si esa cantidad cambió: bajando por la búsqueda las opciones solo se quitan, así que la misma cantidad implica el mismo conjunto.
+
+### Pruebas
+- `test/solver-b.test.ts` (T-35.1): en 300 puzzles 4×4 aleatorios (con sumas desplazadas y números iniciales erróneos), B con `limit: Infinity` da exactamente las soluciones de la fuerza bruta y las de A, y los `count` coinciden. También hay casos fijos con 0, 1 y 288 soluciones (con los límites 1, 2 y 5), un total de tablero roto en 9×9, el determinismo y las comprobaciones de entrada.
+- `test/solvers-cross.test.ts` (T-35.1, A contra B en 6×6 y 9×9). La función `compare` exige el mismo `count` con el límite por defecto, la misma solución si es única y el mismo número de soluciones con `limit: 13`. Si hay 12 o menos, exige además el mismo conjunto de soluciones. Se aplica a:
+  - **Cadenas de números iniciales:** desde un puzzle aleatorio, se agregan números iniciales de su cuadrícula hasta la unicidad y se compara cada paso: muchas soluciones, pocas (conjunto completo) y una (la cuadrícula). Cada ejecución hace unas 80 comparaciones de conjuntos de 2 a 11 soluciones en 6×6 y unas 16 en 9×9, y la prueba exige al menos una.
+  - **Variantes** con sumas desplazadas o números iniciales erróneos (0 soluciones) y **totales de tablero rotos**.
+  - En 9×9 se parte de 3 números iniciales: sin ellos, B puede tardar segundos (ver mediciones) y la CI sería lenta e irregular. Los 9×9 sin números iniciales se comparan en la medición de abajo y en el corpus de F4d.
+- `test/reference.test.ts` (T-35.2): los 13 puzzles de `test/fixtures/reference-puzzles.ts`, con 0, 1 y de 2 a 4 soluciones en cada tamaño. A y B reproducen el conjunto de soluciones registrado, el validador acepta cada solución y, en 4×4, la fuerza bruta coincide. **Desviación:** no hay fuente pública. Los puzzles se construyeron sobre cuadrículas válidas (el campo `origin` dice cómo) y el resultado lo calcularon A y B con `limit: Infinity` y lo confirmó el validador.
+
+### Mediciones
+Las mismas que para A: 1000 puzzles aleatorios por tamaño (`killerArb`, semilla 42, jaulas de 2 a 5 celdas, sin números iniciales), Node 24.21, AMD Ryzen 9 9955HX, un hilo. Tiempo por llamada a `solveB` con `limit = 2`. En los 3000 puzzles, A y B dan el mismo `count`, y la misma solución en los 189 únicos.
+
+| Tamaño | Únicos / 2 o más | Media | Mediana | p90 | p99 | Máximo | Nodos (mediana / p99 / máx.) |
+|---|---|---|---|---|---|---|---|
+| 4×4 | 69 / 931 | 0,19 ms | 0,16 ms | 0,3 ms | 0,7 ms | 4 ms | 9 / 13 / 17 |
+| 6×6 | 26 / 974 | 0,93 ms | 0,88 ms | 1,7 ms | 2,3 ms | 3 ms | 14 / 25 / 25 |
+| 9×9 | 94 / 906 | 43 ms | 15 ms | 67 ms | 446 ms | 3,8 s | 34 / 3584 / 31 155 |
+
+**Puzzles únicos**, que son los que verificará F4d: 200 puzzles 9×9 (semilla 7) llevados a la unicidad con números iniciales de su cuadrícula (4,1 de media). A tarda 1,9 ms de media y 27 ms como máximo; B, 13 ms de media, 99 ms en el p99 y 0,7 s como máximo. Coinciden en los 200.
+
+En 9×9, B es unas 6 veces más lento que A de media. Su peor caso son los puzzles **con muchas soluciones y jaulas de 5 celdas**: en uno con 56 soluciones y 15 912 opciones, B necesitó 18 000 nodos y 9 s para encontrar dos. Con 3 números iniciales, el máximo en 300 puzzles bajó a 0,17 s con `limit: 13`.
+
+Cómo se llegó aquí (9×9, 11 puzzles difíciles de la semilla 42, tiempo total):
+
+| Versión | Total | Puzzle único más difícil |
+|---|---|---|
+| Dancing Links puro (permutaciones por jaula, MRV) | 261 s; 8 de los 11 pasan de 300 000 nodos | 1,5 M nodos, 44 s |
+| + regla 3, solo para detectar fallos (cortado en 300 000 nodos) | 116 s; 3 sin terminar | sin terminar |
+| + regla 3 podando opciones hasta un punto fijo | 24 s | 33 000 nodos, 16 s |
+| + cachés por profundidad y poda solo antes de ramificar | 8 s | 39 500 nodos, 5,7 s |
+| + reglas 1 y 2 (versión actual) | 2,1 s | 4 500 nodos, 1,3 s |
+
+No se adoptaron:
+- **Opciones por (celda, dígito) más una opción de combinación por jaula**, sin permutaciones. Es cobertura exacta pura, con una matriz mucho más chica, pero pierde las sumas al ramificar y fue más lenta.
+- **dom/wdeg sobre los ítems**, como en A. Dio resultados mixtos: mejoró algunos puzzles con muchas soluciones y empeoró otros, entre ellos el único más difícil.
+- **Pares de cajas y bloques de 2 × 2 cajas** como regiones: casi no reducen nodos y encarecen cada uno.
+- Ramificar solo sobre ítems de celda o solo sobre ítems de dígito: peor que MRV sobre todos.
+
+## Generador y calificador
+Se documentan en F4d–F4f.

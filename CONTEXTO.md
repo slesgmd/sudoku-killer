@@ -5,15 +5,15 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.06. **SPEC:** versión 1.2.
-- **Fase actual:** F4, motor del puzzle, dividida en F4a–F4f (tabla en `docs/PLAN.md`, F4). F4a y F4b hechas el 2026-10-22.
+- **Plan:** versión 1.07. **SPEC:** versión 1.2.
+- **Fase actual:** F4, motor del puzzle, dividida en F4a–F4f (tabla en `docs/PLAN.md`, F4). F4a, F4b y F4c hechas el 2026-10-22.
 - **Forma de trabajo en F4 (aprobada):** una subfase por sesión, sin pedir confirmación salvo errores. Cada subfase termina así: `pnpm check`, `pnpm test` y `pnpm build` en verde; BITACORA con horas; PLAN marcado; este archivo apuntando a la siguiente; commit, push, CI en verde (`gh run watch`), y aviso al usuario de que puede hacer `/clear`.
-- **Próxima tarea exacta: F4c, solver B.**
-  - En `packages/engine/src/solver-b/`: Dancing Links (algoritmo X) propio. Solo puede importar `../types.ts` (lint, T-35.1): ni el modelo ni las máscaras ni la tabla de combinaciones de A.
-  - Formulación sugerida como cobertura exacta: cada opción llena una jaula con una permutación de dígitos distintos que da su suma, respetando los números iniciales; cubre sus celdas y los ítems (fila, dígito), (columna, dígito) y (caja, dígito).
-  - API: `solveB(puzzle, { limit = 2 })` → `{ count: 0 | 1 | 2, solutions }`, con la misma semántica que `solveA` (ver `docs/motor.md`).
-  - Pruebas: T-35.1, A y B dan el mismo `count` y las mismas soluciones (4×4 y 6×6 con `limit: Infinity`; 9×9 con el límite por defecto), y B coincide con `bruteForce4`. T-35.2, puzzles de referencia en `test/` con resultado calculado por A y B y confirmado por el validador, nunca de memoria (por construcción si no hay fuente pública legible). Una discrepancia bloquea F4.
-  - Medir B como A y documentarlo en `docs/motor.md`.
+- **Próxima tarea exacta: F4d, generador** (`docs/PLAN.md`, F4: pasos del generador y nota para F4d).
+  - En `packages/engine/src/generator/`, puro: PRNG con semilla propio (lint prohíbe `Math.random()` y `Date.now()`). Cuadrícula completa aleatoria, jaulas conectadas de 2 a 5 celdas sin dígitos repetidos, sumas, unicidad y, si hace falta, ajuste de jaulas o números iniciales con `givensReason` (`none`, `easy` o `uniqueness`, SPEC R-20, T-20.2).
+  - **Pedido del usuario:** el generador usa `solveA` con un presupuesto (de nodos: el paquete no puede leer el reloj; agregarlo como opción de `solveA`). Si un candidato lo excede, se descarta y se genera otro. Medir y documentar cuántos se descartan.
+  - Cada puzzle aceptado se verifica con `solveB` (único y misma solución). B es más lento: en 9×9 únicos, media 13 ms y máximo 0,7 s (`docs/motor.md`).
+  - Pruebas: T-35.6 (misma semilla y opciones, mismo puzzle), propiedades (solución válida, sumas, sin repetidos por jaula, estructura válida) y una versión rápida en la CI. Corpus de 1000 puzzles con unicidad confirmada por A y B en `pnpm test:corpus` y un workflow programado; cualquier discrepancia bloquea F4.
+  - Medir el tiempo medio de generación y documentarlo en `docs/motor.md`.
 
 ## Reglas clave
 

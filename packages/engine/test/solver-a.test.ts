@@ -2,101 +2,18 @@
 // validateSolution y, en 4×4, el conjunto de soluciones coincide con la fuerza bruta.
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import {
-  cageSumRange,
-  digitBit,
-  solveA,
-  validateSolution,
-  validateStructure,
-  type Cage,
-  type Geometry,
-  type Grid,
-  type KillerPuzzle,
-} from "@sudoku-killer/engine";
-import { at } from "../src/model/at.ts";
+import { cageSumRange, digitBit, solveA } from "@sudoku-killer/engine";
 import { cageCombinations } from "../src/solver-a/combos.ts";
 import { bruteForce4, gridKeys } from "./helpers/brute-force.ts";
-import { GEOMETRY_4, GEOMETRY_6, GEOMETRY_9, killerArb, patternGrid } from "./helpers/grids.ts";
-
-/** Puzzle 4×4 cuyas jaulas son las cajas: equivale a un sudoku vacío. */
-function boxCagesPuzzle(): KillerPuzzle {
-  const cages: Cage[] = [
-    [0, 1, 4, 5],
-    [2, 3, 6, 7],
-    [8, 9, 12, 13],
-    [10, 11, 14, 15],
-  ].map((cells, id) => ({ id, cells, sum: 10 }));
-  return { ...GEOMETRY_4, cages, givens: [] };
-}
-
-/** Jaulas horizontales de 2 celdas sobre la cuadrícula del patrón. */
-function pairsPuzzle(geometry: Geometry): { puzzle: KillerPuzzle; grid: Grid } {
-  const grid = patternGrid(geometry);
-  const cages: Cage[] = Array.from({ length: grid.length / 2 }, (_, id) => ({
-    id,
-    cells: [2 * id, 2 * id + 1],
-    sum: at(grid, 2 * id) + at(grid, 2 * id + 1),
-  }));
-  return { puzzle: { ...geometry, cages, givens: [] }, grid };
-}
-
-/**
- * Puzzle aleatorio con números iniciales de su cuadrícula y, a veces, una suma desplazada en ±1 o
- * un número inicial que no es el de la cuadrícula. La estructura sigue siendo válida.
- */
-function variantArb(geometry: Geometry): fc.Arbitrary<KillerPuzzle> {
-  return killerArb(geometry).chain(({ puzzle, grid }) =>
-    fc
-      .record({
-        givenCells: fc.uniqueArray(fc.nat({ max: grid.length - 1 }), { maxLength: 4 }),
-        cage: fc.nat({ max: puzzle.cages.length - 1 }),
-        delta: fc.constantFrom(-1, 0, 0, 1),
-        wrong: fc.option(fc.integer({ min: 1, max: puzzle.size - 1 }), { freq: 4 }),
-      })
-      .map(({ givenCells, cage, delta, wrong }) => {
-        const target = at(puzzle.cages, cage);
-        const [min, max] = cageSumRange(target.cells.length, puzzle.size);
-        const sum = Math.min(max, Math.max(min, target.sum + delta));
-        const givens = givenCells.map((cell, i) => {
-          const value = at(grid, cell);
-          // El primero, desplazado en `wrong` dentro de 1..size: nunca coincide con la cuadrícula.
-          return {
-            cell,
-            value: i === 0 && wrong ? ((value - 1 + wrong) % puzzle.size) + 1 : value,
-          };
-        });
-        return {
-          ...puzzle,
-          cages: puzzle.cages.map((c) => (c === target ? { ...c, sum } : c)),
-          givens,
-        };
-      })
-      .filter((variant) => validateStructure(variant).length === 0),
-  );
-}
-
-function expectValidSolutions(puzzle: KillerPuzzle, solutions: readonly Grid[]): void {
-  for (const solution of solutions) expect(validateSolution(puzzle, solution)).toEqual([]);
-  expect(new Set(gridKeys(solutions)).size).toBe(solutions.length);
-}
-
-/**
- * Agrega números iniciales de `grid` donde las dos primeras soluciones difieren, hasta que el
- * puzzle tenga solución única. Comprueba cada resultado por el camino.
- */
-function addGivensUntilUnique(puzzle: KillerPuzzle, grid: Grid): KillerPuzzle {
-  let current = puzzle;
-  for (;;) {
-    const result = solveA(current);
-    expectValidSolutions(current, result.solutions);
-    expect(result.count).toBeGreaterThan(0);
-    if (result.count === 1) return current;
-    const [first, second] = result.solutions;
-    const cell = (first ?? []).findIndex((digit, i) => digit !== second?.[i]);
-    expect(cell).toBeGreaterThanOrEqual(0);
-    current = { ...current, givens: [...current.givens, { cell, value: at(grid, cell) }] };
-  }
-}
+import { GEOMETRY_4, GEOMETRY_6, GEOMETRY_9, killerArb } from "./helpers/grids.ts";
+import {
+  addGivensUntilUnique,
+  boxCagesPuzzle,
+  expectValidSolutions,
+  pairsPuzzle,
+  shiftFirstSum,
+  variantArb,
+} from "./helpers/puzzles.ts";
 
 describe("T-35.1 solver A against the 4x4 brute force", () => {
   it("finds exactly the brute-force solutions of random puzzles", () => {
@@ -113,12 +30,7 @@ describe("T-35.1 solver A against the 4x4 brute force", () => {
   });
 
   it("0 solutions: a cage sum off by one breaks the board total", () => {
-    const { puzzle } = pairsPuzzle(GEOMETRY_4);
-    const first = at(puzzle.cages, 0);
-    const broken = {
-      ...puzzle,
-      cages: [{ ...first, sum: first.sum + 1 }, ...puzzle.cages.slice(1)],
-    };
+    const broken = shiftFirstSum(pairsPuzzle(GEOMETRY_4).puzzle);
     expect(bruteForce4(broken)).toEqual([]);
     expect(solveA(broken)).toMatchObject({ count: 0, solutions: [] });
   });

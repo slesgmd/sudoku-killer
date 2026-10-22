@@ -33,3 +33,4 @@ export {
   type NoteRemoval,
 } from "./model/notes.ts";
 export { solveA, type SolveAOptions, type SolveAResult } from "./solver-a/solve.ts";
+export { solveB, type SolveBOptions, type SolveBResult } from "./solver-b/solve.ts";
