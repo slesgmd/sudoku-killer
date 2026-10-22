@@ -1,0 +1,737 @@
+# SPEC — Sudoku Killer Multijugador · v1
+
+- Versión del documento: 1.0 (F2, 2026-10-22)
+- Versión del protocolo: **1**
+- Fuente de las reglas: `docs/PLAN.md`, secciones 1 y 2, más las decisiones de producto de F2 (sección 1 de este documento).
+- Decisiones técnicas: `docs/adr/0001`–`0005`.
+
+## 0. Cómo leer este documento
+
+| Prefijo | Significado |
+|---|---|
+| **P-n / D-n** | Decisión de producto tomada en F2 (sección 1). |
+| **R-nn** | Regla verificable (sección 6). |
+| **T-nn.m** | Caso de prueba de la regla R-nn, escrito como *Dado / Cuando / Entonces*. |
+| **E-nn** | Caso límite (sección 7). Cada uno remite a sus T. |
+
+Los nombres de tipos, mensajes y campos están en inglés, porque son código. Las explicaciones están en español. "Debe" indica una obligación verificable.
+
+---
+
+## 1. Alcance y decisiones de producto
+
+### 1.1 Modo Normal (único modo de la v1)
+Resumen de `PLAN.md` §1 y §2. Las reglas detalladas están en la sección 6.
+
+- Juego cooperativo: el equipo gana al completar el tablero.
+- Ranking individual por puntos.
+- 3 vidas por jugador; al llegar a 0, el jugador pasa a espectador.
+- Jugadas visibles para todos. Si dos jugadas llegan a la misma celda, gana la primera que llega al servidor.
+- Notas personales y grupales.
+- Temporizador común que no se pausa.
+
+### 1.2 Decisiones de producto de F2 (ronda única con el usuario, 2026-10-22)
+
+| ID | Decisión | Regla |
+|---|---|---|
+| P1 | **Pistas compartidas por el equipo: 3 por partida.**<br>• Las usa un jugador activo sobre una celda vacía que él elige. El servidor coloca el valor correcto y bloquea la celda.<br>• No da bonus de cierre a nadie, no cuesta vidas y se avisa a todos quién la usó.<br>• **Le cuesta −H puntos a quien la usa** (H se calibra en F6). Así no sirve para quitarles celdas difíciles a otros jugadores. | R-19 |
+| P2 | Jaulas de 2 a 5 celdas; no hay jaulas de 1 celda. Hay números iniciales solo en el nivel fácil o cuando el generador los necesita para que la solución sea única. | R-20 |
+| P3 | 4 niveles: fácil, media, difícil y experto. Los elige quien puede iniciar, antes de cada partida. | R-21 |
+| P4 | Al terminar, la sala vuelve al lobby y la partida siguiente empieza con todos activos (3 vidas, 0 puntos). El ranking es por partida; no hay ranking acumulado. | R-22 |
+| P5 | Los espectadores ven todo y pueden escribir notas grupales y personales. No colocan números ni usan pistas. | R-23 |
+| P6 | Cada jugador ve qué celda tiene seleccionada cada compañero. La presencia no se guarda en el registro de eventos. | R-24 |
+| P7 | Deshacer funciona solo sobre las acciones de notas del propio jugador, mediante la operación inversa. **Deshacer una operación grupal solo se aplica si el estado sigue siendo el que dejó esa operación**; si no, no hace nada y avisa. Las jugadas de números no se deshacen. | R-25 |
+| P8 | No hay chat en la v1. | — |
+| P9 | No hay límite de tiempo: el cronómetro cuenta hacia arriba. | R-07 |
+| D1 | Se puede iniciar con 1 jugador. | R-30 |
+| D2 | El código de sala tiene 6 caracteres del alfabeto `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, sin 0, O, 1, I ni L.<br>El apodo tiene de 2 a 16 caracteres y es único en la sala, sin distinguir mayúsculas.<br>**El apodo de un jugador con ficha queda reservado hasta que termina la partida**, aunque haya salido o expirado, porque sigue en el ranking. Se libera al terminar la partida. Fuera de una partida, se libera al salir o al expirar. | R-09, R-27 |
+| D3 | Quien sale a propósito libera su asiento al instante. Si vuelve a la misma partida con su ficha, recupera vidas, puntos y notas, siempre que haya cupo. Si tenía 0 vidas, vuelve como espectador. **Nunca entra como jugador nuevo con 3 vidas.**<br>Limitación aceptada para un grupo cerrado: borrar los datos del navegador borra la ficha y evita esta regla. | R-26 |
+| D3' | Lo mismo se aplica a quien **expiró**, es decir, quien superó los 2 minutos de desconexión. El plazo de 2 minutos solo garantiza el asiento; pasado ese plazo, el jugador vuelve si hay cupo. Si no fuera así, bastaría con desconectarse 2 minutos para recuperar las vidas. | R-13, R-26 |
+| D4 | Si no queda ningún jugador **activo**, la partida termina en derrota. Cuentan como activos los conectados y los desconectados que siguen dentro del plazo de gracia. | R-01 |
+| D5 | La limpieza automática de las notas personales viene activada por defecto. | R-17 |
+| D6 | Un número que repite el dígito de una celda bloqueada en su fila, columna, caja o jaula se puede escribir: el cliente no lo impide y cuenta como error. En cambio, escribir sobre una celda ya bloqueada no es posible y no penaliza (R-05). | R-28, R-05 |
+| D7 | Las notas personales solo las ve su dueño. | R-29 |
+| D8 | No hay "segunda oportunidad" ni pausa. | R-34 |
+| D9 | El puzzle se elige al azar del banco, dentro de la dificultad, sin repetir los que ya se jugaron en la sala. | R-21 |
+| D10 | Se resalta la jaula de la celda seleccionada. El diseño se define en F7. | R-33 |
+| D11 | Un espectador no vuelve a ser activo en la misma partida. | R-23 |
+
+### 1.3 Fuera de la v1
+Estas ideas están registradas en `docs/IDEAS_FUTURAS.md`:
+- Modo competitivo.
+- Ranking acumulado de la sala.
+- Chat y reacciones.
+- Contrarreloj.
+- Identidad persistente, que sobreviva al borrado del navegador.
+
+### 1.4 Preguntas abiertas: resolución y dueño
+Incluye las 14 preguntas de `docs/referencia.md` y la pregunta de pistas de `PLAN.md`. Ninguna queda sin dueño.
+
+| # | Pregunta | Resolución | Dueño |
+|---|---|---|---|
+| ref-1 | Respuesta real de `/api/level` | No aplica: los puzzles se generan en F4 y F5. | Cerrada |
+| ref-2 | Notas en ejecución | No aplica: las reglas propias son R-16 y R-17. | Cerrada |
+| ref-3 | ¿La limpieza se dispara con un número incorrecto? | No. Solo se dispara al bloquear una celda (R-17, T-17.3). | Cerrada |
+| ref-4 | ¿Se puede desactivar la limpieza? | En las notas personales, sí (ajuste). En las grupales, no (R-17). | Cerrada |
+| ref-5 | Resaltado de la jaula seleccionada | Sí (D10). | F7 (diseño), F8 (implementación) |
+| ref-6 | Deshacer | Solo notas, con comprobación (R-25). | Cerrada |
+| ref-7 | ¿Se puede borrar o sobrescribir un número correcto? | No: la celda queda bloqueada para siempre (R-15). | Cerrada |
+| ref-8 | Pista en ejecución | R-19. El valor de H se fija en F6. | F6 |
+| ref-9 | Pausa | No hay pausa (R-07, R-34). | Cerrada |
+| ref-10 | Segunda oportunidad | No hay (D8). | Cerrada |
+| ref-11 | `checkMistakes` | No aplica: todo error cuenta (R-03). | Cerrada |
+| ref-12 | Multiplicador por completar áreas | No aplica: usamos el bonus β. | F6 |
+| ref-13 | ¿El temporizador sigue con la pestaña oculta? | El tiempo lo lleva el servidor y no se pausa (R-07). | Cerrada |
+| ref-14 | Cambio de dificultad en ejecución | No aplica: la dificultad se elige en el lobby (R-21). | Cerrada |
+| plan | Pistas en la v1 | P1 y R-19. | F6 (H) |
+
+Parámetros que quedan pendientes con su dueño:
+- B, w, P, β y H: F6.
+- Mapeo de los niveles del calificador a las dificultades: F5.
+- Límites de velocidad y de tamaño de mensaje: valores iniciales en la sección 4.8; se calibran en F11.
+- Duración del destello de un error: F7.
+- Hosting: F12.
+
+---
+
+## 2. Modelo de datos
+
+### 2.1 Tablero
+- **Tamaño:** se parametriza como `size` (9 en la v1) con cajas de `boxRows × boxCols` (3 × 3). El motor no asume que el tablero sea de 9 × 9.
+- **Índice de celda:** `cell = row × size + col`, de 0 a `size² − 1`.
+- **Dígitos:** de 1 a `size`.
+- **Candidatos de una celda:** se guardan en una máscara de bits `mask`, donde el bit `d − 1` corresponde al dígito `d`.
+- **Unidades de una celda:** su fila, su columna, su caja y su jaula. Las **pares** de una celda son las demás celdas de esas cuatro unidades.
+
+### 2.2 Puzzle
+
+```ts
+type Difficulty = 'easy' | 'medium' | 'hard' | 'expert';
+
+interface Cage { id: number; cells: number[]; sum: number }      // 2..5 celdas (P2)
+
+// Lo que puede salir del servidor. Vive en packages/protocol.
+interface PublicPuzzle {
+  id: string;
+  size: number; boxRows: number; boxCols: number;
+  difficulty: Difficulty;
+  cages: Cage[];
+  givens: Array<{ cell: number; value: number }>;
+}
+
+// Solo servidor (packages/engine y apps/server). NUNCA se importa en packages/protocol.
+interface PuzzleRecord extends PublicPuzzle {
+  solution: number[];            // size² dígitos
+  graderMaxLevel: number;        // técnica máxima requerida (F4/F5)
+  graderSteps: number;
+  generatorVersion: string;
+  givensReason: 'none' | 'easy' | 'uniqueness';
+}
+```
+
+A diferencia de la referencia, las sumas de las jaulas viajan en el puzzle público. Así el cliente no necesita la solución para mostrarlas.
+
+### 2.3 Sala, jugador y partida (estado en memoria del servidor, `RoomStore`)
+
+```ts
+type RoomState = 'waiting' | 'running' | 'finished';             // esperando / en curso / terminada
+type Role = 'active' | 'spectator';
+type Connection = 'connected' | 'disconnected' | 'expired' | 'left';
+
+interface Room {
+  code: string;                  // D2
+  state: RoomState;
+  createdAt: number;
+  starterId: PlayerId | null;    // quien puede iniciar (R-10, R-11)
+  difficulty: Difficulty;        // elegida en el lobby; por defecto 'easy'
+  players: Map<PlayerId, Player>;
+  match: Match | null;           // partida en curso o la última terminada
+  playedPuzzleIds: string[];     // D9, en orden de juego
+  emptySince: number | null;     // desde cuándo no hay nadie conectado (R-14)
+}
+
+interface Player {
+  id: PlayerId;                  // aleatorio, público
+  nickname: string;
+  nicknameKey: string;           // NFKC + minúsculas, para la unicidad
+  seat: number | null;           // 0..5; null si 'left' o 'expired'
+  joinedAt: number;              // antigüedad en la sala (R-11); se conserva al volver
+  tokenHash: string;             // SHA-256 de la ficha; la ficha nunca se guarda
+  connection: Connection;
+  disconnectedAt: number | null;
+  settings: { autoCleanPersonalNotes: boolean };   // D5: true
+  // Datos de la partida (null fuera de una partida)
+  role: Role | null;
+  lives: number;
+  score: number;
+  mistakes: number;
+  scoreReachedAt: number | null; // último cambio de puntaje, para el desempate
+  personalNotes: Uint16Array;    // una máscara por celda
+}
+
+interface Match {
+  id: string;
+  puzzleId: string;
+  difficulty: Difficulty;
+  modeId: 'normal';
+  scoringParamsVersion: string;  // p. ej. 'v1'
+  startedAt: number;
+  endedAt: number | null;
+  result: 'victory' | 'defeat' | null;
+  seq: number;                   // último seq del registro (ADR 0004)
+  cells: CellState[];
+  groupNotes: Uint16Array;
+  hintsLeft: number;             // P1: 3
+  lastNoteOp: Map<string, number>;          // `group:${cell}:${digit}` | `personal:${playerId}:${cell}:${digit}` → seq de la última modificación (P7)
+  recentClientMsgIds: Map<PlayerId, LRU<string, CachedResult>>;  // idempotencia (E-07)
+}
+
+type CellState =
+  | { status: 'empty' }
+  | { status: 'locked'; value: number; source: 'given' | 'solved' | 'hint'; by: PlayerId | null; seq: number };
+```
+
+**Asiento ocupado:** lo ocupa un jugador cuya `connection` es `connected` o `disconnected`, tanto en el lobby como en la partida y sea cual sea su rol. Hay como máximo 6 asientos ocupados (R-08).
+
+### 2.4 Ficha de reconexión
+- Son 128 bits aleatorios codificados en base64url. Se generan con un CSPRNG al entrar por primera vez.
+- Se envían **solo** al dueño, en `room.welcome`. El navegador la guarda en `localStorage` bajo la clave `sk:token:<code>`.
+- El servidor guarda solo `tokenHash` (SHA-256), en memoria y en el registro de eventos.
+- La ficha vale para una sala y deja de valer cuando el jugador se purga, es decir, al terminar la partida si había salido o expirado, o al salir o expirar fuera de una partida.
+
+### 2.5 Persistencia
+Tablas `puzzles`, `matches` y `match_events`; ver ADR 0003. Los eventos del registro se describen en el ADR 0004 y en la sección 4.6.
+
+---
+
+## 3. Máquinas de estado
+
+### 3.1 Sala
+
+```
+            match.start (starter)            última celda bloqueada → victory
+ waiting ─────────────────────────▶ running ───────────────────────────────▶ finished
+    ▲                                  │      sin jugadores activos → defeat       │
+    │                                  └──────────────────────────────────────────▶│
+    └──────────────────────── room.reset (starter) ───────────────────────────────┘
+
+ Cualquier estado ── 2 min sin nadie conectado ──▶ (borrada)
+```
+
+| Desde | Disparador | Hasta | Efectos |
+|---|---|---|---|
+| — | `room.create` | waiting | Quien crea la sala ocupa el asiento 0 y es el `starter`. |
+| waiting | `match.start` del starter | running | Se elige el puzzle (D9). Todo jugador con asiento pasa a `active`, con 3 vidas, 0 puntos, 0 errores y notas vacías. Hay 3 pistas. Se registra el evento `match.started`. |
+| running | Se bloquea la última celda (por acierto o por pista) | finished | `match.ended{victory}`. |
+| running | Ningún jugador queda `active` con `connection ∈ {connected, disconnected}` (D4) | finished | `match.ended{defeat}`. |
+| finished | Al entrar | — | Se calcula el ranking. Se **purgan** los jugadores `left` o `expired`: se liberan sus apodos y sus fichas dejan de valer. |
+| finished | `room.reset` del starter | waiting | Se borran los datos de partida de los jugadores (`role = null`, notas vacías). `match` queda solo para mostrar el último resultado. |
+| cualquiera | `emptySince + 120 s` sin conexiones (R-14) | borrada | Si estaba en `running`, primero expiran los jugadores y se registra `match.ended{defeat}`. Después se borra la sala. |
+
+En `waiting` y en `finished` se puede entrar y salir libremente. En `running` también se puede entrar (R-12).
+
+### 3.2 Jugador: dos ejes independientes
+`PLAN.md` describe una cadena lineal (`activo → espectador → desconectado → expirado`). La SPEC la descompone en **dos ejes independientes**, porque un espectador también puede desconectarse.
+
+**Eje de rol** (existe solo durante una partida):
+
+```
+ active ── lives llega a 0 ──▶ spectator          (sin vuelta en la misma partida, D11)
+```
+
+| Desde | Disparador | Hasta |
+|---|---|---|
+| — | Inicio de la partida con asiento, o entrada nueva a mitad de partida (R-12) | active (3 vidas) |
+| — | Vuelta con ficha (D3, D3') | El rol que tenía: si tenía 0 vidas, spectator |
+| active | Error con `lives = 1` | spectator. Conserva sus puntos. |
+
+**Eje de conexión:**
+
+```
+ connected ── socket cae / heartbeat falla ──▶ disconnected ── 120 s ──▶ expired
+     │  ▲                                          │
+     │  └──────────── vuelve con ficha ────────────┘
+     └── room.leave ──▶ left
+ left / expired ── vuelve con ficha y hay cupo ──▶ connected   (solo en la misma partida)
+```
+
+| Desde | Disparador | Hasta | Asiento | Apodo |
+|---|---|---|---|---|
+| connected | El socket se cierra o pasan 30 s sin pong (ADR 0002) | disconnected | Reservado 120 s | Reservado |
+| disconnected | Vuelve con ficha dentro del plazo | connected | El mismo | — |
+| disconnected | Pasan 120 s | expired | **Liberado** | En partida: reservado hasta el fin (D2). Fuera de partida: el jugador se purga. |
+| connected | `room.leave` | left | **Liberado al instante** | Igual que en `expired` |
+| left / expired | Vuelve con ficha a la misma partida y hay cupo | connected | El mismo, si está libre; si no, el primero libre | — |
+| left / expired | La partida termina (purga) | (eliminado) | — | Liberado |
+
+Si un jugador vuelve con ficha a una sala que está en `waiting` o `finished` y su entrada sigue existiendo (por ejemplo, está `disconnected`), se aplica la misma tabla.
+
+### 3.3 Derecho de iniciar (starter)
+- Lo tiene quien crea la sala.
+- Si el starter pasa a `left` o `expired`, el derecho pasa al jugador con menor `joinedAt` entre los que tienen asiento. Si no queda nadie, `starterId = null` y lo recibe el siguiente que entre.
+- Mientras el starter está `disconnected`, conserva el derecho.
+- El traspaso vale para las partidas siguientes y no se revierte, aunque el antiguo starter vuelva.
+
+---
+
+## 4. Protocolo v1
+
+### 4.1 Transporte y sobre
+WebSocket con `ws`, en una sola ruta `/ws` (ADR 0002). Los mensajes son texto JSON validados con Zod en ambos extremos (`packages/protocol`).
+
+```ts
+// cliente → servidor
+interface ClientEnvelope { v: 1; id: string /* clientMsgId, 1..64 chars, único por jugador */; type: string; payload: unknown }
+// servidor → cliente
+interface ServerEnvelope { v: 1; type: string; seq?: number; replyTo?: string; payload: unknown }
+```
+
+- `seq`: se incluye en los mensajes que reflejan un evento del registro de la partida. Un cliente puede ver saltos de `seq`, porque los eventos privados de otros jugadores no le llegan; **los saltos no indican pérdida**. TCP garantiza el orden y la reconexión trae un snapshot nuevo.
+- `replyTo`: el servidor lo agrega en la copia que recibe el autor del comando. Con él, el cliente asocia la respuesta a su solicitud pendiente.
+
+### 4.2 Mensajes del cliente al servidor
+
+| `type` | `payload` | Quién puede | Estado de la sala |
+|---|---|---|---|
+| `room.create` | `{ nickname }` | Una conexión sin sala | — |
+| `room.join` | `{ code, nickname, token? }` | Una conexión sin sala | Cualquiera |
+| `room.leave` | `{}` | Miembro | Cualquiera |
+| `room.set_difficulty` | `{ difficulty }` | starter | waiting |
+| `room.reset` | `{}` | starter | finished |
+| `match.start` | `{}` | starter | waiting |
+| `cell.place` | `{ cell, digit }` | active | running |
+| `hint.use` | `{ cell }` | active | running |
+| `note.add` / `note.remove` | `{ layer: 'personal'\|'group', cell, digit }` | active o spectator | running |
+| `note.undo` | `{ opSeq }` | Autor de la operación | running |
+| `settings.update` | `{ autoCleanPersonalNotes }` | Miembro | Cualquiera |
+| `presence.select` | `{ cell: number \| null }` | Miembro con rol | running |
+| `sys.ping` | `{ t0 }` | Cualquiera | — |
+
+En `room.join`, si la `token` es válida para esa sala, se reanuda la sesión y se ignora `nickname`. Si la `token` falta o no es válida, la entrada es nueva y se usa `nickname`.
+
+**No existen** mensajes para expulsar jugadores, cerrar la sala, pausar, borrar un número, deshacer una jugada, alternar candidatos ni pedir una segunda oportunidad. El esquema los rechaza con `bad_request` (R-10, R-16, R-25, R-34).
+
+### 4.3 Mensajes del servidor al cliente
+
+| `type` | `payload` | Destino |
+|---|---|---|
+| `room.welcome` | `{ playerId, token?, snapshot: Snapshot }` | Solo a quien entra. `token` va solo cuando la ficha es nueva. |
+| `room.player_joined` | `{ player: PublicPlayer }` | Los demás |
+| `room.player_connection` | `{ playerId, connection, seat }` | Todos |
+| `room.player_removed` | `{ playerId }` | Todos (purga, o salida y expiración fuera de partida) |
+| `room.starter_changed` | `{ playerId \| null }` | Todos |
+| `room.difficulty_set` | `{ difficulty }` | Todos |
+| `room.state_changed` | `{ state }` | Todos |
+| `match.started` | `{ matchId, puzzle: PublicPuzzle, startedAt, hintsLeft, players: PublicPlayer[] }` | Todos |
+| `cell.solved` | `{ cell, value, by, points, score, bonuses: Bonus[] }` | Todos |
+| `cell.mistake` | `{ cell, digit, by, points, score, livesLeft, role }` | Todos |
+| `cell.already_solved` | `{ cell }` | Solo al autor |
+| `hint.used` | `{ cell, value, by, points, score, hintsLeft }` | Todos |
+| `note.applied` | `{ opSeq, layer, op: 'add'\|'remove', cell, digit, by, undoOf? }` | Grupal: todos. Personal: solo el dueño. |
+| `presence.updated` | `{ playerId, cell \| null }` | Los demás (agrupado, ver 4.8) |
+| `match.ended` | `{ result, endedAt, ranking: RankingEntry[] }` | Todos |
+| `ack` | `{ applied: boolean }` | Solo al autor, para comandos sin otra respuesta: una nota sin efecto, `settings.update`, `room.leave` |
+| `error` | `{ code: ErrorCode, reason? }` | Solo al autor |
+| `sys.pong` | `{ t0, serverNow }` | Solo a quien envió el ping |
+
+```ts
+interface PublicPlayer { id; nickname; seat; joinedAt; connection; role; lives; score; mistakes }
+interface Bonus { unit: 'row' | 'col' | 'box' | 'cage'; index: number; points: number }
+interface RankingEntry { playerId; nickname; score; mistakes; scoreReachedAt; position }
+```
+
+- `points` es el cambio de puntaje de `by` en ese mensaje, bonus incluidos; `score` es su total nuevo.
+- **Convención anti-filtración:** el campo `value` solo lleva dígitos **revelados por el servidor**, es decir, de celdas que ese mensaje bloquea o que ya estaban bloqueadas. Los dígitos que aporta un jugador viajan como `digit`. El inspector de la sección 8.3 se basa en esta convención.
+
+### 4.4 Códigos de error
+
+| `code` | Cuándo |
+|---|---|
+| `bad_request` | El mensaje no cumple el esquema o el tipo no existe. No cambia el estado. |
+| `protocol.unsupported` | `v ≠ 1`. Después se cierra la conexión con el código 4000. |
+| `rate_limited` | Se superó el límite de mensajes (4.8). |
+| `room.not_found` | El código no existe o la sala se borró. |
+| `room.full` | No hay asiento libre. |
+| `room.wrong_state` | El comando no vale en el estado actual de la sala. |
+| `nickname.invalid` / `nickname.taken` | D2 |
+| `forbidden` | El rol o el derecho de iniciar no lo permiten. |
+| `match.not_running` | Comando de juego sin una partida en curso. |
+| `cell.locked` | Nota sobre una celda bloqueada. |
+| `hint.none_left` | No quedan pistas. |
+| `undo.not_applicable` | `reason`: `modified` (otro jugador, una limpieza o un bloqueo cambiaron ese candidato), `not_owner` o `unknown_op`. |
+| `server.unavailable` | La base de datos no responde (ADR 0004). |
+
+Un error **nunca** cambia vidas ni puntos.
+
+### 4.5 Snapshot
+
+```ts
+interface Snapshot {
+  serverNow: number;
+  atSeq: number | null;                       // último seq de la partida incluido
+  room: { code; state; starterId; difficulty; players: PublicPlayer[] };
+  match: null | {
+    id; puzzle: PublicPuzzle; startedAt; endedAt; result; hintsLeft;
+    locked: Array<{ cell; value; source; by }>;     // value: solo celdas bloqueadas
+    groupNotes: Array<{ cell; mask }>;              // solo celdas con candidatos
+    ranking: RankingEntry[] | null;                 // si terminó
+  };
+  you: { playerId; settings; personalNotes: Array<{ cell; mask }> };
+}
+```
+
+Se envía al entrar, al volver con ficha y tras una reconstrucción del servidor. El cliente reemplaza su estado por el del snapshot y después reenvía sus comandos pendientes con el mismo `id` (E-07).
+
+### 4.6 Orden, idempotencia y reconciliación
+- **Orden:** cada sala procesa sus comandos uno por uno, en el orden de llegada (una cola por sala). "La primera que llega" es la primera que se procesa (R-05).
+- **Idempotencia:** el servidor guarda, por jugador, los últimos 256 `clientMsgId` con su resultado. Un duplicado recibe el mismo resultado y no se vuelve a aplicar. Los `clientMsgId` de los comandos que cambian el estado se guardan en el evento, así que la deduplicación sobrevive a un reinicio.
+- **Cuándo se confirma:** un evento se difunde **después** de quedar confirmado en la base de datos (group commit, ADR 0004). El estado en memoria se actualiza al procesar el comando, así el comando siguiente ya ve la celda bloqueada.
+- **Reconciliación en el cliente:**
+  - Las jugadas de números **no son optimistas**: la celda queda "pendiente" hasta el veredicto del servidor.
+  - Las notas sí son optimistas: lo que se ve es el estado confirmado más las operaciones pendientes, aplicadas en orden (ADR 0005).
+
+### 4.7 Versionado
+- `v` es un entero. Un cambio incompatible sube la versión. Un cambio compatible, como agregar un campo opcional o un tipo nuevo que el cliente puede ignorar, no la sube.
+- El servidor de la v1 acepta solo `v = 1`.
+- Los esquemas viven en `packages/protocol/src/v1/`. Cada versión nueva será una carpeta aparte.
+- El cliente ignora los tipos que no conoce y los registra en el log de depuración.
+
+### 4.8 Límites (valores iniciales; se calibran en F11)
+
+| Límite | Valor |
+|---|---|
+| Tamaño máximo de un mensaje entrante | 16 KiB (`maxPayload`); si se supera, se cierra la conexión con el código 1009 |
+| Velocidad de comandos | Cubeta de 20 por segundo, con ráfagas de hasta 40, por conexión. `presence.select` y `sys.ping` tienen cubetas propias. |
+| Difusión de presencia | Como máximo una cada 100 ms por jugador; solo se envía la última selección |
+| Heartbeat | Ping del servidor cada 15 s; la conexión se corta si pasan 30 s sin pong |
+| Ping de aplicación del cliente | Cada 5 s; sirve para sincronizar el reloj y detectar caídas desde el cliente |
+| Saturación (backpressure) | Con `bufferedAmount` por encima de 256 KiB se descarta la presencia. Por encima de 1 MiB se cierra con el código 1013 y el cliente se reconecta. |
+
+---
+
+## 5. Interfaz `GameMode`
+
+El reductor de la partida (`packages/game`, ADR 0004) es puro y delega en el modo todo lo que es propio del modo: permisos, vidas, puntuación, pistas, resultado y ranking. Un modo no puede leer el reloj ni generar números aleatorios; el tiempo le llega en el contexto, desde el evento.
+
+```ts
+type Action = 'place' | 'hint' | 'note.personal' | 'note.group' | 'note.undo' | 'presence';
+
+interface ModeRules {
+  maxSeats: number;            // Normal: 6
+  initialLives: number;        // 3
+  teamHints: number;           // 3
+  graceMs: number;             // 120_000
+  allowMidMatchJoin: boolean;  // true
+}
+
+interface PlacementContext {
+  state: Readonly<MatchState>;          // estado ANTES de aplicar
+  playerId: PlayerId; cell: number; value: number; at: number;
+  closedUnits: Array<{ unit: Bonus['unit']; index: number }>;   // unidades que esta jugada completa
+  levelToDeduce: number;                // engine.levelToDeduce(cell, state) — F4
+}
+
+interface ScoreChange { playerId: PlayerId; delta: number; reason: 'correct' | 'closure' | 'mistake' | 'hint' }
+
+interface GameMode {
+  readonly id: string;                                  // 'normal'
+  readonly rules: ModeRules;
+  can(role: Role, action: Action): boolean;
+  onCorrect(ctx: PlacementContext): ScoreChange[];      // incluye bonus de cierre
+  onMistake(ctx: { state; playerId; cell; digit; at }): { score: ScoreChange[]; livesDelta: number };
+  onHint(ctx: PlacementContext): ScoreChange[];         // Normal: −H para quien la usa, sin cierre
+  roleAfterLives(lives: number): Role;                  // Normal: lives > 0 ? 'active' : 'spectator'
+  outcome(state: Readonly<MatchState>): 'victory' | 'defeat' | null;
+  ranking(state: Readonly<MatchState>): RankingEntry[];
+}
+```
+
+**Modo Normal (boceto)**
+- `can`: `active` puede hacer todas las acciones. `spectator` puede hacer `note.*` y `presence`.
+- `onCorrect`: `B × w(level)` más β por cada unidad cerrada, a través de `packages/scoring` con `params.v1.json`.
+- `onMistake`: `{ score: [−P], livesDelta: −1 }`.
+- `onHint`: `[−H]`.
+- `outcome`: `victory` si no queda ninguna celda vacía. `defeat` si ningún jugador `active` tiene `connection ∈ {connected, disconnected}`. Si no, `null`.
+- `ranking`: ordena por puntaje descendente; a igual puntaje, menos errores; después, menor `scoreReachedAt`. Si todo empata, comparten posición; para mostrarlos se ordenan por apodo.
+
+---
+
+## 6. Reglas como casos verificables
+
+Niveles de prueba:
+- **U:** unitaria o de propiedades sobre un paquete puro.
+- **I:** integración del servidor con `Transport` falso y reloj falso.
+- **C:** componente del cliente.
+- **E:** E2E con Playwright.
+- **M:** revisión manual.
+
+Entre corchetes va la fase en que se implementa cada prueba.
+
+### Visión del modo Normal (`PLAN.md` §1)
+
+**R-01 Resultado grupal.** El equipo gana al completar el tablero y pierde cuando no queda ningún jugador activo (D4).
+- T-01.1 *Dado* una sola celda vacía, *cuando* un jugador activo coloca el valor correcto, *entonces* todos reciben `cell.solved` y después `match.ended{victory}`, y la sala pasa a `finished`. [I, F9]
+- T-01.2 *Dado* un único activo con 1 vida y el resto espectadores, *cuando* comete un error, *entonces* pasa a espectador y se emite `match.ended{defeat}`. [I, F9]
+- T-01.3 *Dado* un único activo desconectado, *cuando* el reloj falso avanza 120 s, *entonces* expira y se emite `match.ended{defeat}`. [I, F9]
+- T-01.4 *Dado* un único activo desconectado durante 60 s y espectadores conectados, *entonces* la partida sigue en `running`. [I, F9]
+- T-01.5 *Dado* una sola celda vacía, *cuando* se usa una pista sobre ella, *entonces* el resultado es `victory`. [I, F9]
+
+**R-02 Ranking individual.**
+- T-02.1 El ranking ordena por puntaje descendente. [U, F6]
+- T-02.2 A igual puntaje, va primero quien tiene menos errores. [U, F6]
+- T-02.3 A igual puntaje y errores, va primero quien tiene menor `scoreReachedAt`. [U, F6]
+- T-02.4 Los jugadores que salieron o expiraron durante la partida aparecen en el ranking de `match.ended`. [I, F9]
+
+**R-03 Vidas.** Cada jugador tiene 3 vidas. Cada error resta una vida y P puntos. Con 0 vidas, el jugador pasa a espectador y conserva sus puntos.
+- T-03.1 *Cuando* un jugador activo coloca un dígito incorrecto, *entonces* pasa de 3 a 2 vidas, su puntaje baja P y todos reciben `cell.mistake` con `by`, `livesLeft` y `role`. [I, F9]
+- T-03.2 *Cuando* comete su tercer error, *entonces* `role = spectator` y su puntaje es el anterior menos P. [I, F9]
+- T-03.3 Un segundo dígito incorrecto en la **misma** celda cuenta como un error nuevo. [I, F9]
+
+**R-04 Jugadas visibles.** Los aciertos y los errores se notifican a todos con su autor. La celda acertada queda bloqueada. El número erróneo se muestra un instante y luego se retira.
+- T-04.1 Después de `cell.solved`, el snapshot de cualquier jugador incluye la celda en `locked`, con `by`. [I, F9]
+- T-04.2 Después de `cell.mistake`, el snapshot no guarda ningún valor en esa celda. [I, F9]
+- T-04.3 El cliente muestra el dígito erróneo con su autor durante un instante (duración definida en F7) y después la celda vuelve a quedar vacía. [C, F8]
+
+**R-05 Celda bloqueada / "ya resuelta".** De dos jugadas sobre la misma celda gana la primera. La segunda, y cualquier jugada sobre una celda bloqueada, recibe `cell.already_solved`, sin penalización y sin evento.
+- T-05.1 *Dado* dos `cell.place` correctos sobre la misma celda en la misma tanda de la cola, *entonces* el primero produce `cell.solved` y el segundo recibe `cell.already_solved`. No cambian vidas ni puntos, y el registro tiene un solo evento. [I, F9]
+- T-05.2 Una jugada sobre un número inicial recibe `cell.already_solved`, sin penalización. [I, F9]
+- T-05.3 *Dado* una celda bloqueada, *cuando* llega un dígito **incorrecto** sobre ella, *entonces* recibe `cell.already_solved`, no `cell.mistake`. [I, F9]
+- T-05.4 Seis pestañas hacen clic en la misma celda a la vez: un solo acierto y ninguna penalización. [E, F10]
+
+**R-06 Notas en dos capas.** Cada jugador elige qué capas ve (personal, grupal o ambas) y en cuál escribe.
+- T-06.1 El selector de vista oculta y muestra cada capa por separado, y el selector de escritura determina el `layer` que se envía. [C, F8]
+- T-06.2 Un `note.add` personal llega solo al dueño; uno grupal llega a todos. [I, F9]
+
+**R-07 Temporizador común.** Lo controla el servidor, no se pausa y no tiene límite (P9).
+- T-07.1 `match.started` y el snapshot incluyen `startedAt` y `serverNow`. No existe ningún comando de pausa: el esquema rechaza `match.pause` con `bad_request`. [U+I, F9]
+- T-07.2 Con el reloj del cliente desfasado 10 minutos, el cronómetro mostrado coincide con el del servidor (±1 s), gracias al desfase que mide `sys.ping`. [C, F8 / E, F10]
+- T-07.3 Después de una reconstrucción por reinicio, el cronómetro es `ahora − startedAt` e incluye el tiempo de caída. [I, F9]
+
+### Reglas de producto (`PLAN.md` §2)
+
+**R-08 Capacidad.** Hay 6 asientos. Los espectadores y los desconectados en gracia conservan el suyo.
+- T-08.1 Con 6 asientos ocupados, un séptimo `room.join` recibe `room.full`. [I, F9]
+- T-08.2 Un jugador que pasa a espectador sigue ocupando su asiento, así que el séptimo sigue rechazado. [I, F9]
+- T-08.3 Un jugador `disconnected` ocupa asiento; uno `left` no lo ocupa. [I, F9]
+
+**R-09 Acceso.** Se entra con código y apodo único, sin cuentas (D2).
+- T-09.1 Un código inexistente recibe `room.not_found`. [I, F9]
+- T-09.2 "Ana" en una sala donde ya está "ana" recibe `nickname.taken`. [I, F9]
+- T-09.3 Un apodo de 1 o de 17 caracteres, o vacío después de recortar espacios, recibe `nickname.invalid`. [U, F9]
+- T-09.4 Propiedad: los códigos generados tienen 6 caracteres del alfabeto de D2 y no chocan con una sala existente. [U, F9]
+
+**R-10 Creador.** Solo puede iniciar. No expulsa a nadie ni cierra la sala.
+- T-10.1 `match.start` de un jugador que no es starter recibe `forbidden`. [I, F9]
+- T-10.2 `room.kick` y `room.close` reciben `bad_request` (no existen). [U, F9]
+
+**R-11 Traspaso del derecho de iniciar.**
+- T-11.1 Si el starter sale en el lobby, el derecho pasa al jugador con menor `joinedAt` y todos reciben `room.starter_changed`. [I, F9]
+- T-11.2 Si el starter expira durante una partida, el derecho pasa en ese momento y en la partida siguiente inicia el nuevo starter. [I, F9]
+- T-11.3 Un starter `disconnected` (dentro de los 120 s) conserva el derecho. [I, F9]
+- T-11.4 Un antiguo starter que vuelve con ficha no recupera el derecho. [I, F9]
+- T-11.5 Si el starter sale y no queda nadie, el siguiente que entra es el starter. [I, F9]
+
+**R-12 Entrada con la partida en curso.** Quien entra sin ficha y encuentra cupo empieza como activo, con 3 vidas y 0 puntos.
+- T-12.1 *Dado* una partida en curso con cupo, *cuando* entra un jugador nuevo, *entonces* es `active`, con 3 vidas y 0 puntos, y recibe un snapshot que pasa el inspector de filtración. [I, F9]
+- T-12.2 Sin cupo, recibe `room.full`. [I, F9]
+
+**R-13 Desconexión.** Hay 2 minutos para volver con la ficha y recuperar asiento, vidas, puntos y notas.
+- T-13.1 Vuelve a los 119 s: tiene el mismo asiento, vidas, puntos y notas personales, y todos reciben `room.player_connection{connected}`. [I, F9]
+- T-13.2 A los 120 s pasa a `expired` y su asiento queda libre. Si vuelve después con ficha y hay cupo, recupera vidas, puntos y notas (D3'). [I, F9]
+- T-13.3 Una ficha inválida se trata como una entrada nueva con el `nickname` del mensaje. [I, F9]
+- T-13.4 La ficha tiene 128 bits de un CSPRNG. Ni la memoria persistida ni el registro guardan la ficha en claro, solo su hash. [U+I, F9]
+- T-13.5 Desconexión y vuelta dentro del plazo, en navegadores reales, sin pérdida de estado. [E, F10]
+
+**R-14 Borrado de la sala.** La sala se borra cuando pasan 2 minutos sin nadie conectado.
+- T-14.1 El último conectado se desconecta; 120 s después la sala se borra y un `room.join` posterior recibe `room.not_found`. [I, F9]
+- T-14.2 Si alguien vuelve a los 119 s, la sala no se borra. [I, F9]
+- T-14.3 Si había una partida en curso, `match.ended{defeat}` queda en el registro antes del borrado. [I, F9]
+
+**R-15 Una celda correcta queda bloqueada para siempre.**
+- T-15.1 Propiedad: para cualquier secuencia de comandos, una celda `locked` nunca cambia de valor ni vuelve a `empty`. [U, F9, fast-check sobre el reductor]
+- T-15.2 Un `note.add` sobre una celda bloqueada recibe `cell.locked`. [I, F9]
+
+**R-16 Notas grupales con operaciones explícitas, ordenadas por el servidor.**
+- T-16.1 El esquema acepta `note.add` y `note.remove`; un hipotético `note.toggle` recibe `bad_request`. [U, F9]
+- T-16.2 Propiedad: con secuencias aleatorias de operaciones concurrentes de varios clientes, todos convergen al estado que define el orden del servidor (ADR 0005). [U, F10]
+- T-16.3 Un `note.add` de un candidato que ya está recibe `ack{applied:false}` y no genera evento. [I, F9]
+
+**R-17 Limpieza automática.** Al bloquearse una celda con el dígito d, se quita d de sus pares en las notas grupales (fila, columna, caja y jaula). En las notas personales se quita según el ajuste de cada jugador, activado por defecto (D5). Además, siempre se vacían las dos capas de la celda bloqueada.
+- T-17.1 Al bloquear (c, d), d desaparece de las notas grupales de los pares de c, y la celda c queda sin notas. [U, F9]
+- T-17.2 Con el ajuste activado, las notas personales se limpian igual. Con el ajuste desactivado, solo se vacía la celda c. [U+I, F9]
+- T-17.3 Un error no limpia nada. [I, F9]
+- T-17.4 Una pista limpia igual que un acierto. [I, F9]
+- T-17.5 Un jugador recién entrado tiene `autoCleanPersonalNotes = true`. [I, F9]
+
+**R-18 Diseño visual 100 % propio.**
+- T-18.1 Al cerrar F7 hay una revisión explícita que confirma que nada replica la interfaz de la referencia, registrada en `docs/diseno.md`. [M, F7]
+
+### Decisiones de F2
+
+**R-19 Pistas (P1).**
+- T-19.1 Un jugador activo usa una pista sobre una celda vacía. Todos reciben `hint.used` con `value` y `by`, la celda queda bloqueada con `source = hint` y `hintsLeft` baja de 3 a 2. Quien la usó pierde H puntos y nadie recibe bonus. [I, F9]
+- T-19.2 Con `hintsLeft = 0`, `hint.use` recibe `hint.none_left`. [I, F9]
+- T-19.3 Una pista sobre una celda bloqueada recibe `cell.already_solved` y no gasta pista. [I, F9]
+- T-19.4 Un espectador que usa `hint.use` recibe `forbidden`. [I, F9]
+- T-19.5 Si la pista completa una fila, columna, caja o jaula, nadie recibe β. [U, F6]
+- T-19.6 La simulación de F6 incluye el uso de pistas y muestra que pedir una pista nunca da más puntos que no pedirla. [U, F6]
+
+**R-20 Puzzles (P2).**
+- T-20.1 Propiedad sobre los puzzles generados: jaulas de 2 a 5 celdas, conectadas, que cubren todas las celdas, sin dígitos repetidos y con la suma correcta. Ambos solvers confirman que la solución es única. [U, F4]
+- T-20.2 Hay números iniciales solo si `givensReason` es `easy` o `uniqueness`; en `none` la lista de números iniciales está vacía. [U, F4/F5]
+
+**R-21 Dificultad y elección del puzzle (P3, D9).**
+- T-21.1 `room.set_difficulty` del starter llega a todos, y `match.start` elige un puzzle de esa dificultad que no esté en `playedPuzzleIds`. [I, F9]
+- T-21.2 Si ya se jugaron todos los puzzles de la dificultad en esa sala, se elige el que se jugó hace más tiempo. [U, F9]
+- T-21.3 `room.set_difficulty` de un jugador que no es starter recibe `forbidden`. [I, F9]
+
+**R-22 Partidas siguientes (P4).**
+- T-22.1 Después de `match.ended`, la sala está en `finished`. Con `room.reset` pasa a `waiting`, y con `match.start` todos los presentes pasan a activos con 3 vidas, 0 puntos y notas vacías, y vuelven a haber 3 pistas. [I, F9]
+- T-22.2 El puntaje de la partida anterior no pasa a la nueva. [I, F9]
+- T-22.3 Al terminar la partida se purgan los jugadores `left` o `expired`; su apodo queda libre y su ficha deja de valer. [I, F9]
+
+**R-23 Espectadores (P5, D11).**
+- T-23.1 La nota grupal de un espectador se aplica y llega a todos. [I, F9]
+- T-23.2 Un `cell.place` de un espectador recibe `forbidden`, sin cambio de vidas ni puntos. [I, F9]
+- T-23.3 Un espectador que sale y vuelve con ficha sigue siendo espectador. [I, F9]
+
+**R-24 Presencia (P6).**
+- T-24.1 Un `presence.select` genera `presence.updated` para los demás y no agrega ningún evento al registro. [I, F9]
+- T-24.2 Una ráfaga de 50 selecciones en 1 s produce como máximo 10 difusiones, y la última refleja la selección final. [I, F9]
+- T-24.3 El cliente muestra la celda seleccionada de cada compañero. [C, F8]
+
+**R-25 Deshacer notas (P7).**
+- T-25.1 Un jugador deshace su `note.add` grupal sin cambios posteriores sobre ese candidato: se aplica un `remove` con `undoOf` y llega a todos. [I, F9]
+- T-25.2 Si otro jugador modificó ese candidato (celda y dígito) después, `note.undo` recibe `undo.not_applicable{modified}`, el estado no cambia y el cliente muestra un aviso. [I, F9; C, F8]
+- T-25.3 Si después hubo una limpieza automática o se bloqueó la celda, `note.undo` recibe `undo.not_applicable{modified}`. [I, F9]
+- T-25.4 Deshacer la operación de otro jugador recibe `undo.not_applicable{not_owner}`. [I, F9]
+- T-25.5 Deshacer una nota personal sigue la misma regla, y solo el dueño recibe el resultado. [I, F9]
+- T-25.6 No existe un mensaje para deshacer `cell.place`: el esquema lo rechaza. [U, F9]
+
+**R-26 Salir y volver (D3, D3').**
+- T-26.1 Un `room.leave` durante una partida libera el asiento al instante (`connection = left`), y el jugador sigue en el ranking. [I, F9]
+- T-26.2 Si vuelve con ficha a la misma partida y hay cupo, recupera vidas, puntos y notas personales. [I, F9]
+- T-26.3 Si tenía 0 vidas, vuelve como `spectator`. [I, F9]
+- T-26.4 Si vuelve con ficha y no hay cupo, recibe `room.full` y sus datos siguen guardados. [I, F9]
+- T-26.5 Sin ficha y con otro apodo, entra como jugador nuevo con 3 vidas. Es la limitación aceptada de D3: el test documenta el comportamiento. [I, F9]
+- T-26.6 Un `room.leave` en el lobby borra al jugador y libera su apodo. [I, F9]
+
+**R-27 Apodo reservado hasta el fin de la partida (D2).**
+- T-27.1 Si un jugador salió o expiró durante la partida, un jugador nuevo que pide su apodo recibe `nickname.taken`. [I, F9]
+- T-27.2 Después de `match.ended`, con la purga, ese apodo queda disponible. [I, F9]
+
+**R-28 Error evidente (D6).**
+- T-28.1 Un dígito que repite el valor de una celda bloqueada de la misma fila, columna, caja o jaula se procesa como `cell.mistake`. [I, F9]
+- T-28.2 El cliente no bloquea la tecla en ese caso. [C, F8]
+
+**R-29 Notas personales privadas (D7).**
+- T-29.1 El inspector comprueba que ningún mensaje lleva notas personales de un jugador a otro, ni en `note.applied` ni en snapshots. [I, F9]
+
+**R-30 Se puede iniciar con 1 jugador (D1).**
+- T-30.1 En una sala donde solo está el creador, `match.start` funciona. [I, F9]
+
+### Principios de arquitectura
+
+**R-31 La solución nunca sale del servidor.**
+- T-31.1 El inspector de la sección 8.3 revisa todos los mensajes salientes de todas las pruebas I y E. [I, F9; E, F10–F11]
+- T-31.2 El build de producción del cliente no incluye el servidor simulado ni ninguna solución. [U, F8]
+- T-31.3 `packages/protocol` no exporta ningún tipo con un campo `solution`: lo verifica un test de los tipos exportados. [U, F3/F9]
+
+**R-32 Registro de eventos reproducible.**
+- T-32.1 Propiedad: para partidas aleatorias, `replay(registro)` produce el mismo estado y los mismos puntajes que el servidor en vivo. [U, F9]
+- T-32.2 Al reiniciar el servidor, las partidas sin `endedAt` se reconstruyen. Sus jugadores quedan `disconnected` con un plazo nuevo y pueden volver con su ficha. [I, F9]
+- T-32.3 Un evento que no se confirmó en la base de datos no se difunde. [I, F9]
+- T-32.4 Recalcular los puntajes con otra versión de los parámetros cambia los puntajes sin modificar el registro. [U, F6]
+
+### Reglas del cliente
+
+**R-33 Resaltado de la jaula seleccionada (D10).**
+- T-33.1 Al seleccionar una celda, el cliente resalta su jaula, además de la fila, la columna y la caja. [C, F8]
+
+**R-34 Sin segunda oportunidad ni pausa (D8).**
+- T-34.1 El esquema no tiene mensajes para pedir una segunda oportunidad ni para pausar, así que esos tipos reciben `bad_request`. [U, F9]
+
+---
+
+## 7. Casos límite
+
+| ID | Situación | Comportamiento esperado | Pruebas |
+|---|---|---|---|
+| E-01 | Un jugador se desconecta durante la partida y vuelve antes de 2 min | Recupera todo. Mientras estuvo fuera conservó su asiento y contó como activo para D4. | T-13.1, T-01.4 |
+| E-02 | Un jugador expira y vuelve más tarde | Con cupo, recupera sus datos; sin cupo, recibe `room.full`. Nunca vuelve con 3 vidas nuevas. | T-13.2, T-26.4 |
+| E-03 | Llegan a la vez un acierto y un error sobre la misma celda | Gana el primero en la cola. Si el primero es el acierto, el error recibe `already_solved` y no penaliza. Si el primero es el error, cuenta como error y el acierto bloquea la celda. | T-05.1, T-05.3 |
+| E-04 | Llegan a la vez una pista y una jugada sobre la misma celda | Gana el primero. Si la pista llega segunda, recibe `already_solved` y no gasta pista. | T-19.3 |
+| E-05 | El creador sale antes de iniciar, durante la partida, o se desconecta | Antes de iniciar o durante la partida, el derecho pasa en el momento de salir o expirar. Si solo está desconectado, lo conserva. | T-11.1–T-11.5 |
+| E-06 | Todos se desconectan | 120 s después de la última desconexión, todos expiran. Si había partida en curso, se registra la derrota y después se borra la sala. Si alguien vuelve antes, se cancela el borrado. | T-14.1–T-14.3 |
+| E-07 | Reconexión en medio de un evento: el comando se envió y la conexión cayó antes de la respuesta | El cliente vuelve con su ficha, recibe el snapshot y reenvía los pendientes con el mismo `id`. Un comando ya aplicado devuelve el resultado guardado y no penaliza dos veces. Si el evento se confirmó mientras el cliente estaba fuera, ya aparece en el snapshot. | T-32.1, prueba I específica en F9 (`idempotency.reconnect`) |
+| E-08 | La misma ficha se abre en dos pestañas | La conexión nueva reemplaza a la anterior, que se cierra con el código 4001 (`replaced`). | Prueba I en F9 |
+| E-09 | Entrada a mitad de partida con la sala llena | `room.full`. Con cupo, el jugador entra activo con 3 vidas. | T-12.1, T-12.2 |
+| E-10 | El último jugador activo pierde su última vida mientras quedan espectadores | Derrota inmediata. | T-01.2 |
+| E-11 | El último jugador activo sale | Derrota inmediata (D4). Aunque después vuelva, la partida ya terminó. | T-01.3, T-26.1 |
+| E-12 | Llegan comandos después de la victoria | `match.not_running`, sin efecto. | T-01.1 |
+| E-13 | Se deshace una nota grupal que otro jugador modificó | `undo.not_applicable{modified}` y un aviso. | T-25.2 |
+| E-14 | Un jugador nuevo pide el apodo de alguien que salió | `nickname.taken` hasta que termine la partida. | T-27.1, T-27.2 |
+| E-15 | El servidor se reinicia durante una partida | La partida se reconstruye desde el registro, con plazos de gracia nuevos. El cronómetro sigue desde `startedAt`. Las salas en lobby se pierden. | T-32.2, T-07.3 |
+| E-16 | La base de datos falla al confirmar eventos | No se difunde nada que no esté confirmado. Los comandos que cambian el estado reciben `server.unavailable`. Si el fallo persiste más de 10 s, la sala se cierra y se reconstruye desde el registro confirmado; ningún cliente vio los eventos perdidos. | T-32.3 |
+| E-17 | Un cliente consume demasiado lento | Primero se descarta la presencia y después se cierra con 1013. El cliente se reconecta y recibe un snapshot. | Prueba I en F9, carga en F11 |
+| E-18 | Llega un mensaje inválido, demasiado grande o de un tipo desconocido | `bad_request` sin cambio de estado; si es demasiado grande, se cierra con 1009. | T-10.2, T-16.1 |
+| E-19 | El cliente usa otra versión del protocolo | `protocol.unsupported` y cierre con 4000. | Prueba U en F9 |
+| E-20 | Vuelve con ficha un jugador que tenía 0 vidas | Vuelve como espectador. | T-26.3, T-23.3 |
+| E-21 | Un espectador intenta jugar o pedir una pista | `forbidden`, sin efecto. | T-23.2, T-19.4 |
+| E-22 | La última celda se resuelve con una pista | Victoria; nadie recibe bonus de cierre. | T-01.5, T-19.5 |
+| E-23 | El asiento de un jugador expirado lo ocupa otro, y el expirado vuelve | Necesita cupo; si no lo hay, recibe `room.full`. | T-26.4 |
+| E-24 | El reloj del cliente está mal | El cronómetro usa el desfase medido con `sys.ping`. | T-07.2 |
+
+---
+
+## 8. Plan de pruebas
+
+### 8.1 Niveles y herramientas
+
+| Nivel | Herramienta | Qué cubre | Fase |
+|---|---|---|---|
+| Unitarias y de propiedades | Vitest y fast-check | Motor (solvers, generador, calificador), puntuación, reductor de la partida, esquemas del protocolo | F4, F6, F9 |
+| Integración del servidor | Vitest, `Transport` en memoria, `Clock` falso, PGlite | Todos los T de nivel I: máquinas de estado, plazos, cola por sala, persistencia | F9 |
+| Componentes | Vitest y Testing Library | Los T de nivel C | F8 |
+| E2E | Playwright (6 contextos de navegador) | Partida completa, clics simultáneos, reconexión | F10–F11 |
+| Caos | Playwright con cortes de red | E-01, E-07, E-17 | F11 |
+| Carga | Script con muchos clientes WS | 50 salas, p95 menor a 150 ms y memoria | F11 |
+| Manual | Lista de revisión | T-18.1 | F7 |
+
+### 8.2 Interfaces que hacen testeable al servidor
+- `Transport`: se implementa con `ws` en producción y en memoria para las pruebas.
+- `Clock`: con `now()` y temporizadores. En las pruebas es un reloj falso que se avanza a mano, y con él se prueban los 120 s.
+- `IdGenerator` / `Random`: tienen semilla en las pruebas.
+- `RoomStore`, `PuzzleRepository` y `MatchRepository`: los repositorios usan PGlite en las pruebas.
+
+### 8.3 Inspector de filtración (T-31.1, T-29.1)
+Es un envoltorio del `Transport` de pruebas que revisa **cada** mensaje saliente y hace fallar la prueba si encuentra alguna de estas cosas:
+1. Una clave llamada `solution`, `tokenHash` o `token`. La única excepción es `token` en el `room.welcome` dirigido a su propio dueño.
+2. La solución de la partida serializada en cualquier forma: el texto de 81 dígitos o el arreglo JSON.
+3. Un campo `value` en una celda que no queda bloqueada a más tardar en ese mismo mensaje (convención de 4.3).
+4. Notas personales de un jugador en un mensaje destinado a otro.
+
+El inspector está activo por defecto en todas las pruebas I. Las pruebas E2E usan una versión equivalente sobre el tráfico WS que captura Playwright.
+
+### 8.4 Pruebas transversales
+- **Reproducción (T-32.1):** se generan partidas aleatorias con fast-check y se comprueba que `replay(eventos) ≡ estado en vivo`, incluidos puntajes, ranking, notas y vidas.
+- **Convergencia de notas grupales (T-16.2):** varios clientes simulados, con operaciones optimistas, latencias aleatorias y reordenamiento de las entregas, terminan con el mismo estado.
+- **Esquemas:** cada mensaje de los catálogos 4.2 y 4.3 tiene un ejemplo válido y uno inválido en `packages/protocol`.
+
+### 8.5 Matriz de cobertura de `PLAN.md` §2
+
+| Regla del plan | R | Pruebas |
+|---|---|---|
+| Capacidad | R-08 | T-08.1–3 |
+| Acceso | R-09 | T-09.1–4 |
+| Creador | R-10 | T-10.1–2 |
+| Si el creador se va antes de iniciar | R-11 | T-11.1–5 |
+| Entrada con partida en curso | R-12 | T-12.1–2 |
+| Desconexión | R-13 | T-13.1–5 |
+| Borrado de sala | R-14 | T-14.1–3 |
+| Celdas | R-15 (+R-05) | T-15.1–2, T-05.1–4 |
+| Notas grupales | R-16 | T-16.1–3 |
+| Limpieza automática | R-17 | T-17.1–5 |
+| Diseño visual | R-18 | T-18.1 |
+
+Todas las reglas de la visión (R-01 a R-07) y las decisiones de F2 (R-19 a R-34) tienen también sus pruebas en la sección 6.

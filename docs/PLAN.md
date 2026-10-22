@@ -1,7 +1,7 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.03
-Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 pendiente
+Versión del plan: 1.04
+Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 pendiente
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
 ---
@@ -48,6 +48,7 @@ El modo competitivo entre amigos y cualquier idea nueva se registran en `docs/ID
    - `packages/engine`: lógica pura del puzzle, sin E/S.
    - `packages/protocol`: mensajes y esquemas versionados.
    - `packages/scoring`: puntuación pura y parametrizada.
+   - `packages/game`: reductor puro de la partida y módulos `GameMode` (ADR 0004).
    - `apps/server`: servidor de salas.
    - `apps/web`: cliente.
 2. **Servidor autoritativo.** La solución nunca sale del servidor. Un test automático revisa cada mensaje saliente y falla si contiene la solución.
@@ -66,12 +67,12 @@ El modo competitivo entre amigos y cualquier idea nueva se registran en `docs/ID
    - TypeScript estricto.
    - Commits con formato Conventional Commits.
 
-**Stack por defecto** (se confirma o cambia mediante ADR en F2):
+**Stack** (confirmado en F2; ver ADR 0001 y 0002):
 - pnpm workspaces y TypeScript.
 - Cliente: React con Vite.
-- Servidor: Node con Colyseus o ws/Socket.IO.
+- Servidor: Node 24 con `ws` y protocolo propio (se descartaron Colyseus y Socket.IO).
 - Validación: Zod.
-- Base de datos: PostgreSQL con Drizzle.
+- Base de datos: PostgreSQL con Drizzle; PGlite en las pruebas.
 - Pruebas: Vitest y fast-check; Playwright para pruebas de extremo a extremo (E2E).
 
 ---
@@ -111,7 +112,7 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 |---|---|---|---|---|---|
 | F0 | Entorno y arranque | 2–4 | — | Hecha | ~0,1 |
 | F1 | Estudio de referencia con REA | 3–6 | F0 | Hecha | ~0,6 |
-| F2 | Especificación y arquitectura | 6–10 | F1 | Pendiente | |
+| F2 | Especificación y arquitectura | 6–10 | F1 | Hecha | ~0,4 |
 | F3 | Monorepo y calidad | 3–5 | F2 | Pendiente | |
 | F4 | Motor del puzzle | 20–35 | F3 | Pendiente | |
 | F5 | Banco de puzzles y dificultad | 6–12 | F4 | Pendiente | |
@@ -176,16 +177,21 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
 - **ADRs:** 0001 stack, 0002 comunicación en tiempo real, 0003 persistencia, 0004 registro de eventos, 0005 notas grupales.
 
 **Preguntas abiertas:**
-- Pistas en v1: ¿existen?, ¿cuántas?, ¿individuales o compartidas?, ¿afectan la puntuación?
+- Pistas en v1: ¿existen?, ¿cuántas?, ¿individuales o compartidas?, ¿afectan la puntuación? → **Resuelta (P1):** sí; 3 por partida, compartidas por el equipo; cuestan −H puntos a quien la usa y no dan bonus.
 
 **Criterios de aceptación:**
 - Cada regla de la sección 2 tiene al menos un caso de prueba definido.
 - No quedan preguntas abiertas sin dueño.
 
+**Estado:** hecha el 2026-10-22.
+- Entregables: `docs/SPEC.md` (34 reglas R-xx con sus casos T-xx, 24 casos límite y la matriz de cobertura de la sección 2 en SPEC §8.5) y los ADR 0001–0005.
+- Las decisiones de producto se tomaron en una sola ronda con el usuario (SPEC §1.2).
+- Las 14 preguntas de `referencia.md` y la de pistas tienen su resolución o su dueño (SPEC §1.4).
+
 ### F3 — Monorepo y calidad (3–5 h)
 **Tareas:**
-- Estructura `apps/` y `packages/`.
-- TypeScript estricto, linter y formateador.
+- Estructura `apps/` y `packages/`, incluido `packages/game`.
+- TypeScript estricto, linter y formateador (ESLint con `typescript-eslint` y Prettier, ADR 0001). Una regla de lint prohíbe `Date.now()` y `Math.random()` en `packages/game`, `engine` y `scoring`.
 - Vitest configurado.
 - Scripts `dev`, `test`, `check` y `build`.
 - CI básica en GitHub Actions.
@@ -206,7 +212,8 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
   2. Dividirla en jaulas conectadas de 2 a 5 celdas sin dígitos repetidos.
   3. Calcular las sumas.
   4. Verificar que tiene solución única.
-  5. Si tiene más de una, ajustar jaulas o agregar un número inicial, y volver a verificar.
+  5. Si tiene más de una, ajustar jaulas o agregar un número inicial, y volver a verificar. Solo hay números iniciales cuando hacen falta para la unicidad o en el nivel fácil; cada puzzle registra el motivo en `givensReason` (SPEC R-20).
+- **Función `cleanupPeers(celda, dígito)`:** la limpieza automática de notas (SPEC R-17, ADR 0005). Su comportamiento se fija con tests porque la reproducción del registro depende de ella.
 - **Calificador humano:** técnicas por niveles de complejidad.
   - Nivel 1: singles.
   - Nivel 2: combinaciones obligatorias de jaula.
@@ -246,6 +253,7 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
 - **Error:** `−P` además de perder una vida. P se calibra para que adivinar entre 2 o más candidatos tenga un valor esperado negativo frente a deducir.
 - **Cierre de jaula, fila, columna o caja:** bonus β para quien coloca la última celda. Este bonus no debe superar el 20 % del puntaje típico de una partida.
 - **Notas:** no dan puntos en la v1, para evitar el spam.
+- **Pista:** `−H` para quien la usa, sin bonus de cierre para nadie (SPEC R-19). H se calibra para que pedir una pista nunca dé más puntos que no pedirla, y para que no compense usarla para quitarles celdas difíciles a otros.
 - **Desempate:** primero menos errores; después, quien alcanzó antes su puntaje final.
 - **Determinismo:** `puntaje = f(registro de eventos, versión de parámetros)`. Se puede recalcular cualquier partida con parámetros nuevos.
 
@@ -256,6 +264,7 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
   - Bot veloz: toma siempre la celda más fácil.
   - Bot adivinador: adivina cuando no encuentra deducciones.
   - Variación de la velocidad de cada bot.
+  - Uso de pistas (3 por partida, compartidas).
   - Incluir como modelo de comparación (baseline) en la simulación Monte Carlo una fórmula basada en velocidad (base por dificultad, decreciente según el tiempo desde la jugada anterior, con mínimo y multiplicador por completar fila, columna o caja) y demostrar que el modelo propio reduce la ventaja de correr por celdas fáciles.
 - **Métricas y objetivos iniciales:**
   - Correlación de Spearman entre el aporte real (deducciones difíciles) y el puntaje: al menos 0,8.
@@ -306,6 +315,9 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
 - Validación de todos los mensajes con Zod.
 - Límite de velocidad de mensajes por conexión.
 - Implementación del modo Normal como módulo `GameMode`.
+- Pistas compartidas, deshacer de notas con comprobación, presencia, y vuelta con ficha tras salir o expirar (SPEC R-19, R-24 a R-27).
+- Heartbeat, `maxPayload` y control de saturación (ADR 0002).
+- Confirmación en la base de datos antes de difundir y reconstrucción de las partidas en curso tras un reinicio (ADR 0003 y 0004).
 
 **Criterios de aceptación:**
 - Pruebas de cada transición de estado y de cada caso límite de la SPEC.
@@ -386,3 +398,11 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
 - **1.01:** versión inicial. Modo Normal para la v1 y modo competitivo movido a ideas futuras. Reglas de sala, notas y puntuación definidas. Diseño propio obligatorio en F7.
 - **1.02:** Referencia de skill corregida a la oficial de REA.
 - **1.03:** F1 marcada como hecha (~0,6 h reales). F2 suma la pregunta abierta sobre las pistas en la v1 (si existen, cuántas, si son individuales o compartidas y si afectan la puntuación). F6 suma, en la simulación Monte Carlo, un modelo de comparación basado en velocidad como el de la app de referencia (ver `docs/referencia.md`, sección 12). Hay que demostrar que el modelo propio reduce la ventaja de correr por celdas fáciles.
+- **1.04:** F2 marcada como hecha (~0,4 h reales). Cambios:
+  - La sección 15 de `referencia.md` se descartó.
+  - Se agregó el paquete `packages/game` (reductor puro y `GameMode`, ADR 0004).
+  - El stack quedó confirmado por los ADR 0001 y 0002: `ws` con protocolo propio.
+  - F3 suma una regla de lint contra el uso del reloj y del azar en los paquetes puros.
+  - F4 aclara cuándo hay números iniciales y agrega `cleanupPeers`.
+  - F6 agrega el parámetro H (costo de una pista) y las pistas en la simulación.
+  - F9 suma pistas, deshacer con comprobación, presencia, vuelta con ficha, heartbeat y saturación, y la reconstrucción tras un reinicio.

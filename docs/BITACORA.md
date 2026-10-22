@@ -55,3 +55,34 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 **Tiempo real:** unos 0,6 h, ejecutado en una sesión, sin contar la revisión del usuario.
 
 **Siguiente:** agregar las 3 observaciones manuales del usuario a `docs/referencia.md` (sección 15). Después, F2 en modo plan.
+
+## 2026-10-22 — F2: Especificación y arquitectura
+
+**Hecho:**
+- F2.0: la sección 15 de `referencia.md` quedó marcada como "Descartada: las reglas propias ya cubren estos puntos" y se quitó el pendiente de `CONTEXTO.md` (commit aparte).
+- Subtareas propuestas en modo plan. Las preguntas de producto se hicieron **en una sola ronda**, nueve preguntas (P1–P9) y once decisiones por defecto (D1–D11), cada una con su opción recomendada. El usuario aceptó todo con estos cambios:
+  - P1: la pista le cuesta −H a quien la usa.
+  - P7: deshacer una nota grupal solo se aplica si nadie la modificó después.
+  - D3: quien sale y vuelve con ficha recupera vidas y puntos, y nunca vuelve con 3 vidas nuevas.
+  - D6: redacción precisa.
+  - Al aprobar el plan agregó dos correcciones: el apodo queda reservado hasta el fin de la partida, y el estado "salió" se suma al eje de conexión.
+- `docs/SPEC.md`:
+  - Decisiones de producto y resolución con dueño de las 15 preguntas abiertas.
+  - Modelo de datos y máquinas de estado. La del jugador se modela en dos ejes independientes, rol y conexión.
+  - Protocolo v1 con sobre, catálogo, errores, snapshot, idempotencia, versionado y límites.
+  - Interfaz `GameMode`.
+  - 34 reglas (R-01 a R-34) con sus casos T-xx, 24 casos límite y un plan de pruebas con inspector de filtración y matriz de cobertura.
+- ADR 0001–0005 escritos y aceptados, con el índice en `docs/adr/README.md`.
+- `IDEAS_FUTURAS.md`: se agregaron el ranking acumulado, el chat y las reacciones, el contrarreloj y la identidad persistente.
+- Plan 1.04: F2 hecha, paquete `packages/game` y ajustes en F3, F4, F6 y F9.
+
+**Problemas y soluciones:**
+- Había dos huecos entre reglas, pero ninguna contradicción.
+  - Un jugador que **expira** y vuelve con su ficha recibiría 3 vidas nuevas según la regla de "entrada con partida en curso", y eso se podía aprovechar desconectándose 2 minutos. Se resolvió como en D3: recupera sus datos, y el plazo de 2 minutos solo garantiza el asiento (D3' en la SPEC). El usuario lo confirmó al aprobar el plan.
+  - El usuario mencionó una "regla 9" para la celda bloqueada. Se interpretó como la regla de celda bloqueada / "ya resuelta", que en la SPEC es R-05.
+- La cadena lineal de estados del jugador del plan (`activo → espectador → desconectado → expirado`) no representa a un espectador desconectado. Se separó en dos ejes y quedó documentado como un refinamiento.
+- El reductor de la partida tiene que ser compartido por el servidor, la reconstrucción y el servidor simulado del cliente (F8), y no encajaba en `engine` ni en `scoring`. Se creó `packages/game` (ADR 0004).
+
+**Tiempo real:** unos 0,4 h (12:39 a 13:05 aproximadamente), ejecutado en una sesión. Incluye la ronda de preguntas, pero no el tiempo de revisión del usuario.
+
+**Siguiente:** F3, monorepo y calidad, en modo plan.

@@ -27,4 +27,8 @@ Qué se gana, qué se pierde y qué queda pendiente.
 
 | N.º | Título | Estado |
 |---|---|---|
-| — | (las primeras ADR se escriben en F2: 0001 stack, 0002 tiempo real, 0003 persistencia, 0004 registro de eventos, 0005 notas grupales) | — |
+| [0001](0001-stack.md) | Stack tecnológico | aceptada |
+| [0002](0002-tiempo-real.md) | Comunicación en tiempo real (`ws` + protocolo propio) | aceptada |
+| [0003](0003-persistencia.md) | Persistencia (memoria + PostgreSQL, reconstrucción tras reinicio) | aceptada |
+| [0004](0004-registro-de-eventos.md) | Registro de eventos por partida | aceptada |
+| [0005](0005-notas-grupales.md) | Notas grupales | aceptada |
