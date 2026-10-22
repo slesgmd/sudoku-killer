@@ -1,0 +1,6 @@
+pnpm-lock.yaml
+dist/
+coverage/
+evidence/
+# La documentación conserva su formato manual
+*.md

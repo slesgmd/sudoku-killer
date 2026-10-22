@@ -1,0 +1,16 @@
+{
+  "name": "@sudoku-killer/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --conditions=@sudoku-killer/source --watch src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sudoku-killer/game": "workspace:*",
+    "@sudoku-killer/protocol": "workspace:*"
+  }
+}

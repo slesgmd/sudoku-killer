@@ -40,3 +40,6 @@ evidence/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Caché de ESLint
+.eslintcache
