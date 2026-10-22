@@ -1,0 +1,41 @@
+# Dependencias
+node_modules/
+.pnpm-store/
+
+# Builds y salidas
+dist/
+build/
+out/
+.vite/
+.turbo/
+*.tsbuildinfo
+
+# Pruebas y cobertura
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# Entorno y secretos
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Evidencia y capturas locales de REA (no se versionan: pueden contener material de la app de referencia)
+.rea/
+rea-evidence/
+*.har
+
+
+# Editores y sistema operativo
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

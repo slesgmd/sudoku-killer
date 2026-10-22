@@ -1,0 +1,11 @@
+# Finales de línea LF en el repositorio, independientes del sistema operativo
+* text=auto eol=lf
+
+# Binarios
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
