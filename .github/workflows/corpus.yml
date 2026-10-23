@@ -1,8 +1,10 @@
 name: Corpus
 
-# Corpus del generador (F4d): 1000 puzzles con unicidad confirmada por los solvers A y B. Es largo
-# para la CI de cada push. Cada ejecución programada usa semillas nuevas (desde run_number × 1000)
-# y la manual permite elegirlas. Una discrepancia bloquea F4: la semilla queda en el log.
+# Corpus del generador (F4d): 1000 puzzles con unicidad confirmada por los solvers A y B. Corpus del
+# calificador (F4e): los mismos puzzles calificados, con cada deducción comprobada contra la
+# solución. Es largo para la CI de cada push. Cada ejecución programada usa semillas nuevas (desde
+# run_number × 1000) y la manual permite elegirlas. Una discrepancia o una deducción errónea
+# bloquea F4: la semilla queda en el log.
 
 on:
   schedule:

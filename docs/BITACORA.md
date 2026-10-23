@@ -251,3 +251,22 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 **Tiempo real:** unos 0,4 h (11:05 a 11:30 aproximadamente), ejecutado en la misma sesión que el refuerzo de F4c.
 
 **Siguiente:** F4e, calificador (niveles 1 a 3) y `levelToDeduce`.
+
+## 2026-10-23 — F4e: calificador, niveles 1 a 3, y `levelToDeduce`
+
+**Pedido del usuario para esta subfase:** técnicas aisladas que devuelven sus deducciones con su nivel, aplicando siempre el nivel más bajo; una prueba de propiedades sobre el corpus que compruebe que ninguna deducción contradice la solución (cualquier fallo bloquea la subfase); «excede las técnicas» en vez de adivinar; `levelToDeduce` determinista, solo con los dígitos colocados y con su tiempo medido en 9×9; dividir el trabajo en niveles 1 a 3 (esta subfase) y 4 y 5 (F4f), y reportar la distribución de niveles del corpus.
+
+**Hecho:**
+- `packages/engine/src/grader/`: contexto por puzzle (memoizado), estado de candidatos, filtro exacto de grupos con suma conocida y las técnicas `nakedSingle`, `hiddenSingle` y `cageLastCell` (nivel 1), `cageCombination` y `cageForcedDigit` (nivel 2) e `innieOutie` (nivel 3). `grade(puzzle, { trace })` y `levelToDeduce(cell, { puzzle, values })`, con `UNRATED = 6`.
+- Pruebas: `test/grader.test.ts` en la CI (T-35.4 y T-35.5: reproducción de la traza con el orden de niveles comprobado, deducciones contra la solución desde estados al azar, 4×4 con cualquier número de soluciones contra la fuerza bruta, monotonía de `levelToDeduce`, oráculos independientes para las técnicas de jaula) y `test/grader.corpus.test.ts` en `pnpm test:corpus`.
+- `docs/motor.md`: sección del calificador con API, técnicas, algoritmo, pruebas y mediciones.
+
+**Resultados:** corpus de 1000 puzzles 9×9 (semillas 1 a 1000): **365 264 deducciones, 0 contra la solución**. Nivel máximo: 0 de nivel 1, 100 de nivel 2, 668 de nivel 3 y **232 que exceden las técnicas**. `grade`: media 11 ms. `levelToDeduce` en 100 partidas simuladas (8099 llamadas): **media 0,77 ms, p95 4,7 ms**, máximo 30 ms; desde el tablero vacío, unos 15 ms.
+
+**Problemas y soluciones:**
+- La primera versión enumeraba todas las asignaciones de cada jaula y grupo en cada pasada: `grade` tardaba 37 ms de media. Con una memoria por jaula y grupo (el resultado depende solo de sus máscaras), búsquedas dirigidas por (celda, dígito) y una poda por dígitos libres, unos 9 ms en la misma muestra; la distribución de niveles no cambió.
+- Una prueba falló por la ayuda `shiftFirstSum`, que lanza si todas las jaulas 4×4 tienen 4 celdas; se corrigió la prueba y la semilla quedó como regresión.
+
+**Tiempo real:** unos 0,4 h (11:55 a 12:15 aproximadamente), ejecutado en una sesión.
+
+**Siguiente:** F4f, calificador niveles 4 y 5, histograma preliminar y cierre de F4.

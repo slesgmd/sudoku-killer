@@ -48,3 +48,20 @@ export {
   type GenerationStats,
   type GivensReason,
 } from "./generator/generate.ts";
+export {
+  MAX_TECHNIQUE_LEVEL,
+  UNRATED,
+  type Deduction,
+  type Technique,
+  type TechniqueId,
+} from "./grader/types.ts";
+export {
+  TECHNIQUES,
+  grade,
+  levelToDeduce,
+  type BoardState,
+  type GradeOptions,
+  type GradeResult,
+  type GradeStatus,
+  type GradeStep,
+} from "./grader/grade.ts";

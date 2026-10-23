@@ -5,14 +5,14 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.09. **SPEC:** versión 1.2.
-- **Fase actual:** F4, motor del puzzle, dividida en F4a–F4f (tabla en `docs/PLAN.md`, F4). F4a, F4b y F4c hechas el 2026-10-22; F4d (generador), el 2026-10-23.
+- **Plan:** versión 1.10. **SPEC:** versión 1.2.
+- **Fase actual:** F4, motor del puzzle, dividida en F4a–F4f (tabla en `docs/PLAN.md`, F4). F4a, F4b y F4c hechas el 2026-10-22; F4d (generador) y F4e (calificador, niveles 1 a 3), el 2026-10-23.
 - **Forma de trabajo en F4 (aprobada):** una subfase por sesión, sin pedir confirmación salvo errores. Cada subfase termina así: `pnpm check`, `pnpm test` y `pnpm build` en verde; BITACORA con horas; PLAN marcado; este archivo apuntando a la siguiente; commit, push, CI en verde (`gh run watch`), y aviso al usuario de que puede hacer `/clear`.
-- **Próxima tarea exacta: F4e, calificador niveles 1 a 3 y `levelToDeduce`** (`docs/PLAN.md`, F4: calificador humano; SPEC R-35, T-35.4 y T-35.5).
-  - En `packages/engine/src/grader/`, puro. Nivel 1: singles; nivel 2: combinaciones obligatorias de jaula; nivel 3: regla del 45 (innies y outies). `grade(puzzle)` aplica las técnicas de menor nivel posible paso a paso y registra el nivel máximo y los pasos (`graderMaxLevel`, `graderSteps` del `PuzzleRecord`, SPEC §2.2).
-  - `levelToDeduce(cell, state)`: nivel mínimo con el que la celda queda determinada desde el estado actual, entre 1 y `UNRATED` (F6 lo usa para puntuar).
-  - Pruebas: T-35.4 (en cada paso de `grade` el dígito de la solución sigue entre los candidatos, con puzzles de `generatePuzzle`) y T-35.5 (1 para un single; no sube al agregar celdas correctas). Propiedades con `assertProperty`.
-  - Dato de F4d: con `maxNodes: 2`, A acepta puzzles generados que su propagación resuelve en la raíz; muchos generados pueden ser fáciles (`docs/motor.md`, generador).
+- **Próxima tarea exacta: F4f, calificador niveles 4 y 5; histograma preliminar y cierre de F4** (`docs/PLAN.md`, F4: calificador humano y pedido del usuario del 2026-10-23).
+  - Nivel 4: pares y tríos (desnudos y ocultos), interacciones entre jaulas (y locked candidates); nivel 5: técnicas avanzadas. Cada técnica es un `Technique` aislado en `packages/engine/src/grader/` que se agrega a `TECHNIQUES` en orden de nivel; subir `MAX_TECHNIQUE_LEVEL` a 5 (`UNRATED` sigue en 6).
+  - Las reglas deben ser monótonas (con menos candidatos deducen lo mismo o más): `levelToDeduce` y T-35.5 dependen de eso (`docs/motor.md`, calificador).
+  - Mismas pruebas que F4e (`test/grader.test.ts` y `grader.corpus.test.ts`): ninguna deducción contradice la solución; un fallo bloquea. Medir de nuevo `grade` y `levelToDeduce` (media y p95).
+  - Al cerrar, reportar al usuario la distribución de niveles del corpus (cuántos por nivel máximo y cuántos exceden), para F5. Base de F4e: 0 / 100 / 668 en los niveles 1 a 3 y 232 que exceden.
 
 ## Reglas clave
 

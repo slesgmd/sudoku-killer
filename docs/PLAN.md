@@ -1,7 +1,7 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.09
-Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 en curso (F4a a F4d hechas)
+Versión del plan: 1.10
+Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 en curso (F4a a F4e hechas)
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
 ---
@@ -114,7 +114,7 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 | F1 | Estudio de referencia con REA | 3–6 | F0 | Hecha | ~0,6 |
 | F2 | Especificación y arquitectura | 6–10 | F1 | Hecha | ~0,4 |
 | F3 | Monorepo y calidad | 3–5 | F2 | Hecha | ~0,3 |
-| F4 | Motor del puzzle | 20–35 | F3 | En curso (F4a, F4b y F4c hechas) | F4a ~0,3 (+0,1 de corrección) · F4b ~0,6 · F4c ~1,1 |
+| F4 | Motor del puzzle | 20–35 | F3 | En curso (F4a a F4e hechas) | F4a ~0,3 (+0,1 de corrección) · F4b ~0,6 · F4c ~1,1 · F4d ~0,4 · F4e ~0,4 |
 | F5 | Banco de puzzles y dificultad | 6–12 | F4 | Pendiente | |
 | F6 | Sistema de puntuación | 10–18 | F4 | Pendiente | |
 | F7 | Diseño visual propio | 10–20 | F2 (puede ir en paralelo con F4–F6) | Pendiente | |
@@ -242,7 +242,7 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
 | F4b | Solver A: combinaciones por jaula, propagación y backtracking con MRV; fuerza bruta 4×4 como oráculo | 3–5 | Hecha (~0,6 h) |
 | F4c | Solver B: Dancing Links propio (no importa nada de A); verificación cruzada y puzzles de referencia verificados por A y B | 3–5 | Hecha (~1,1 h) |
 | F4d | Generador con PRNG con semilla; prueba rápida en la CI y corpus de 1000 puzzles aparte (`pnpm test:corpus` y workflow programado); tiempos en `docs/motor.md` | 4–7 | Hecha (~0,4 h) |
-| F4e | Calificador, niveles 1 a 3, y `levelToDeduce` | 4–7 | Pendiente |
+| F4e | Calificador, niveles 1 a 3, y `levelToDeduce` | 4–7 | Hecha (~0,4 h) |
 | F4f | Calificador, niveles 4 y 5; histograma preliminar y cierre de F4 | 4–7 | Pendiente |
 
 - La prueba de 1000 puzzles no corre en la CI de cada push: la CI ejecuta una versión reducida y el corpus completo corre en local y en un workflow programado.
@@ -251,6 +251,8 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
 - **Refuerzo de F4c (pedido por el usuario, 2026-10-23):** `solveB` tiene la opción `prune: false` (Dancing Links puro), y B con poda y sin ella coinciden en 4×4, 6×6 y 9×9 con números iniciales (prueba en la CI y 4307 puzzles medidos, 0 diferencias). Las pruebas aleatorias imprimen la semilla en todo fallo, y cada semilla que falle se agrega como regresión fija (`docs/motor.md`).
 - **Nota para F4d (pedida por el usuario, 2026-10-22):** el generador usa `solveA` con un presupuesto de nodos o de tiempo (hoy `solveA` no tiene presupuesto: se agrega en F4d). Si un candidato lo excede, se descarta y se genera otro. Se mide y documenta cuántos candidatos se descartan. B verifica después cada puzzle aceptado; su coste en puzzles únicos está medido en `docs/motor.md` (media 13 ms y máximo 0,7 s en 9×9).
 - **Hecho en F4d (2026-10-23):** el presupuesto es de nodos (`solveA` con `maxNodes`), porque el motor no lee el reloj. Con el valor por defecto (1000 nodos), el corpus de 1000 puzzles 9×9 descartó 1 de 1001 candidatos; la tabla con otros presupuestos está en `docs/motor.md`. Tiempo medio de generación en 9×9: 39 ms, con la verificación de B incluida. 0 discrepancias entre A y B; el 0,7 % de los puzzles necesita números iniciales para la unicidad.
+- **Pedido del usuario para el calificador (2026-10-23):** cada técnica es una función aislada que devuelve sus deducciones (colocar un dígito o quitar un candidato) con su nivel; se aplica siempre el nivel más bajo con deducciones. Una prueba de propiedades sobre el corpus comprueba que ninguna deducción contradice la solución única, y cualquier fallo bloquea la subfase. Si las técnicas no alcanzan, el puzzle queda como «excede las técnicas»: nunca se adivina. `levelToDeduce` usa solo los dígitos colocados, no las notas, es determinista y su tiempo en 9×9 (media y p95) se documenta en `docs/motor.md`. Al cerrar F4f se informa la distribución de niveles del corpus para F5.
+- **Hecho en F4e (2026-10-23):** niveles 1 (singles y última celda de jaula), 2 (combinaciones y dígitos obligatorios de jaula) y 3 (innies y outies), `grade` y `levelToDeduce`. Corpus de 1000 puzzles 9×9: 365 264 deducciones, 0 contra la solución. Nivel máximo: 0 puzzles de nivel 1, 100 de nivel 2, 668 de nivel 3 y 232 que exceden las técnicas. `levelToDeduce` en partidas simuladas: media 0,77 ms y p95 4,7 ms (`docs/motor.md`).
 
 **Criterios de aceptación:**
 - 0 discrepancias entre solvers.
@@ -436,3 +438,4 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
 - **1.07:** F4b (~0,6 h) y F4c (~1,1 h) hechas. F4 registra la desviación de los puzzles de referencia (construidos, sin fuente pública) y una nota para F4d pedida por el usuario: presupuesto de nodos o de tiempo para `solveA` en el generador, con descarte de candidatos y medición de cuántos se descartan.
 - **1.08:** refuerzo de F4c pedido por el usuario antes de F4d: B con poda contra Dancing Links puro (0 diferencias) y semillas visibles en las pruebas aleatorias, con regresiones fijas (`docs/motor.md`).
 - **1.09:** F4d hecha (~0,4 h): generador, presupuesto de nodos en `solveA`, corpus de 1000 puzzles (0 discrepancias) y workflow programado.
+- **1.10:** F4e hecha (~0,4 h): calificador de niveles 1 a 3 y `levelToDeduce`, con los requisitos del usuario registrados en F4. Corpus: 0 deducciones erróneas; el 23 % de los puzzles excede los niveles 1 a 3.
