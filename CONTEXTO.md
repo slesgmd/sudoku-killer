@@ -31,6 +31,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 - TypeScript estricto. Textos de la interfaz preparados para i18n.
 - Aserción `!` prohibida salvo en `packages/engine/src/solver-{a,b}/` (`docs/motor.md`); fuera, `for...of`, comprobaciones o `at()` de `src/model/at.ts`.
 - Commits con formato Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `test:`, `refactor:`).
+- Nunca agregues atribuciones de IA en commits ni PR. El hook `.husky/commit-msg` (`scripts/strip-attribution.mjs`) las quita igual.
 - Rama principal: `main`.
 
 ## Comandos
