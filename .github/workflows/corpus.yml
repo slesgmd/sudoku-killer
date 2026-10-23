@@ -1,0 +1,43 @@
+name: Corpus
+
+# Corpus del generador (F4d): 1000 puzzles con unicidad confirmada por los solvers A y B. Es largo
+# para la CI de cada push. Cada ejecución programada usa semillas nuevas (desde run_number × 1000)
+# y la manual permite elegirlas. Una discrepancia bloquea F4: la semilla queda en el log.
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      base_seed:
+        description: "Primera semilla (vacío: la del número de ejecución)"
+        required: false
+      size:
+        description: "Cantidad de puzzles"
+        required: false
+        default: "1000"
+
+permissions:
+  contents: read
+
+jobs:
+  corpus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Choose the seeds
+        run: |
+          echo "CORPUS_BASE_SEED=${BASE_SEED:-$(( RUN_NUMBER * 1000 ))}" >> "$GITHUB_ENV"
+          echo "CORPUS_SIZE=${SIZE:-1000}" >> "$GITHUB_ENV"
+        env:
+          BASE_SEED: ${{ inputs.base_seed }}
+          SIZE: ${{ inputs.size }}
+          RUN_NUMBER: ${{ github.run_number }}
+      - run: pnpm test:corpus

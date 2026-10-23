@@ -5,15 +5,14 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.08. **SPEC:** versión 1.2.
-- **Fase actual:** F4, motor del puzzle, dividida en F4a–F4f (tabla en `docs/PLAN.md`, F4). F4a, F4b y F4c hechas el 2026-10-22.
+- **Plan:** versión 1.09. **SPEC:** versión 1.2.
+- **Fase actual:** F4, motor del puzzle, dividida en F4a–F4f (tabla en `docs/PLAN.md`, F4). F4a, F4b y F4c hechas el 2026-10-22; F4d (generador), el 2026-10-23.
 - **Forma de trabajo en F4 (aprobada):** una subfase por sesión, sin pedir confirmación salvo errores. Cada subfase termina así: `pnpm check`, `pnpm test` y `pnpm build` en verde; BITACORA con horas; PLAN marcado; este archivo apuntando a la siguiente; commit, push, CI en verde (`gh run watch`), y aviso al usuario de que puede hacer `/clear`.
-- **Próxima tarea exacta: F4d, generador** (`docs/PLAN.md`, F4: pasos del generador y nota para F4d).
-  - En `packages/engine/src/generator/`, puro: PRNG con semilla propio (lint prohíbe `Math.random()` y `Date.now()`). Cuadrícula completa aleatoria, jaulas conectadas de 2 a 5 celdas sin dígitos repetidos, sumas, unicidad y, si hace falta, ajuste de jaulas o números iniciales con `givensReason` (`none`, `easy` o `uniqueness`, SPEC R-20, T-20.2).
-  - **Pedido del usuario:** el generador usa `solveA` con un presupuesto (de nodos: el paquete no puede leer el reloj; agregarlo como opción de `solveA`). Si un candidato lo excede, se descarta y se genera otro. Medir y documentar cuántos se descartan.
-  - Cada puzzle aceptado se verifica con `solveB` (único y misma solución). B es más lento: en 9×9 únicos, media 13 ms y máximo 0,7 s (`docs/motor.md`).
-  - Pruebas: T-35.6 (misma semilla y opciones, mismo puzzle), propiedades (solución válida, sumas, sin repetidos por jaula, estructura válida) y una versión rápida en la CI. Corpus de 1000 puzzles con unicidad confirmada por A y B en `pnpm test:corpus` y un workflow programado; cualquier discrepancia bloquea F4.
-  - Medir el tiempo medio de generación y documentarlo en `docs/motor.md`.
+- **Próxima tarea exacta: F4e, calificador niveles 1 a 3 y `levelToDeduce`** (`docs/PLAN.md`, F4: calificador humano; SPEC R-35, T-35.4 y T-35.5).
+  - En `packages/engine/src/grader/`, puro. Nivel 1: singles; nivel 2: combinaciones obligatorias de jaula; nivel 3: regla del 45 (innies y outies). `grade(puzzle)` aplica las técnicas de menor nivel posible paso a paso y registra el nivel máximo y los pasos (`graderMaxLevel`, `graderSteps` del `PuzzleRecord`, SPEC §2.2).
+  - `levelToDeduce(cell, state)`: nivel mínimo con el que la celda queda determinada desde el estado actual, entre 1 y `UNRATED` (F6 lo usa para puntuar).
+  - Pruebas: T-35.4 (en cada paso de `grade` el dígito de la solución sigue entre los candidatos, con puzzles de `generatePuzzle`) y T-35.5 (1 para un single; no sube al agregar celdas correctas). Propiedades con `assertProperty`.
+  - Dato de F4d: con `maxNodes: 2`, A acepta puzzles generados que su propagación resuelve en la raíz; muchos generados pueden ser fáciles (`docs/motor.md`, generador).
 
 ## Reglas clave
 
@@ -39,6 +38,8 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 - `pnpm install`: instala las dependencias y activa el hook de pre-commit (Husky y lint-staged).
 - `pnpm dev`: servidor (Node desde las fuentes, con `--watch`) y web (Vite) en paralelo.
 - `pnpm check`: typecheck, ESLint (con tipos) y Prettier. `pnpm test`: Vitest en todo el monorepo. `pnpm build`: `tsc` a `dist/` y Vite.
+- `pnpm test:corpus`: corpus de 1000 puzzles generados, verificados por A y B (unos 60 s; también en el workflow programado `corpus.yml`).
+- Pruebas de propiedades: `assertProperty` (`packages/engine/test/helpers/property.ts`), no `fc.assert` (lint). Cada semilla que falle se agrega a `regressions` (`docs/motor.md`).
 - Los paquetes exportan sus fuentes con la condición `@sudoku-killer/source`. Los imports relativos llevan la extensión `.ts`.
 - TypeScript fijado en 6.0.x: `typescript-eslint` no admite la 7 (ADR 0001, nota de F3).
 - Remoto público: https://github.com/slesgmd/sudoku-killer. La CI (GitHub Actions) corre `check`, `test` y `build` en cada push a `main`.

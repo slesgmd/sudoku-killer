@@ -43,10 +43,11 @@ Las funciones de validación devuelven listas de problemas con un código (vací
 
 ## Solver A (F4b)
 
-`solveA(puzzle, { limit = 2 })` → `{ count, solutions, nodes }`.
+`solveA(puzzle, { limit = 2, maxNodes = Infinity })` → `{ count, solutions, nodes, exhausted }`.
 - `count`: 0 (sin solución), 1 (una) o 2 (dos o más). Con `limit = 1`, 1 significa «al menos una».
 - `solutions`: las encontradas, como mucho `limit`, en el orden de la búsqueda. `limit` es un entero ≥ 1 o `Infinity` (las pruebas lo usan para enumerarlas todas).
-- `nodes`: estados propagados, incluida la raíz.
+- `nodes`: estados propagados, incluida la raíz. Nunca pasa de `maxNodes`.
+- `maxNodes` (F4d): presupuesto de nodos, entero ≥ 1 o `Infinity`. Si la búsqueda lo agota, se detiene con `exhausted: true`, y `count` y `solutions` son solo lo encontrado hasta ahí (un prefijo de lo que encuentra la búsqueda completa). Es de nodos y no de tiempo porque el motor no lee el reloj. Lo usa el generador.
 - Exige una estructura válida (`validateStructure`); si no, lanza `RangeError`.
 - Es determinista: no hay azar, los dígitos se prueban de menor a mayor y los empates se resuelven por índice.
 
@@ -180,5 +181,64 @@ No se adoptaron:
 - **Pares de cajas y bloques de 2 × 2 cajas** como regiones: casi no reducen nodos y encarecen cada uno.
 - Ramificar solo sobre ítems de celda o solo sobre ítems de dígito: peor que MRV sobre todos.
 
-## Generador y calificador
-Se documentan en F4d–F4f.
+## Generador (F4d)
+
+`generatePuzzle({ seed, geometry = 9×9, easyGivens = 0, maxNodes = 1000, maxAdjustments = 40, maxCandidates = 1000, cageSizeWeights = [3, 4, 2, 1] })` → `{ puzzle, solution, givensReason, stats }`.
+- `seed`: entero de 32 bits sin signo. Con la misma semilla y las mismas opciones, el resultado es idéntico (T-35.6). `GENERATOR_VERSION` cambia cuando un cambio del generador altera lo que sale de una semilla.
+- `givensReason` (SPEC §2.2, R-20): `none` sin números iniciales; `uniqueness` si hicieron falta para la unicidad; `easy` si se pidieron `easyGivens` (aunque también haya alguno de unicidad).
+- `stats`: candidatos empezados y descartados, particiones repetidas, reajustes de jaulas y números iniciales de unicidad del puzzle aceptado, y nodos de A (en todos los candidatos) y de B (en la verificación).
+- Lanza `RangeError` con opciones inválidas y `Error` si ningún candidato se acepta en `maxCandidates` o si los solvers discrepan.
+
+### Módulos (`src/generator/`)
+
+| Módulo | Contenido |
+|---|---|
+| `rng.ts` | `createRng(seed)`: SFC32 sembrado con SplitMix32 (para que semillas vecinas den secuencias sin relación). `int(bound)` por rechazo, sin sesgo de módulo. `shuffle` (Fisher-Yates) y `weightedIndex`. |
+| `grid.ts` | `randomGrid`: backtracking con MRV y candidatos en orden aleatorio. |
+| `cages.ts` | `partitionCages` y `recut`. |
+| `generate.ts` | `generatePuzzle`. |
+
+### Algoritmo
+1. **Cuadrícula** completa aleatoria.
+2. **Jaulas.** Las celdas se recorren en orden aleatorio. Cada celda libre empieza una jaula con un tamaño objetivo de 2 a 5 elegido con `cageSizeWeights`, y crece agregando vecinas libres al azar que no repitan dígito, hasta el objetivo o hasta quedarse sin vecinas. Una celda que queda sola se une a una jaula vecina con lugar y sin su dígito; si no hay ninguna, se vuelve a partir (`partitionRetries`).
+3. **Sumas**, desde la cuadrícula.
+4. **Unicidad** con `solveA` y `maxNodes`. Si A agota el presupuesto en cualquier llamada, el candidato se **descarta entero** y se genera otro desde el paso 1.
+5. **Reajuste.** Con dos soluciones, se toma una celda donde difieren y se vuelve a cortar su jaula: se parte en dos si tiene 4 o 5 celdas y, si no, se recorta junto con una jaula vecina en dos jaulas nuevas. Las jaulas salen siempre de la cuadrícula, así que esta sigue siendo solución. Tras `maxAdjustments` reajustes (o si ningún corte es posible), se agrega en una de esas celdas el número inicial de la cuadrícula. Se repite el paso 4 hasta la unicidad.
+6. Con `easyGivens`, se agregan esos números iniciales en celdas al azar.
+7. **Verificación**: `validateStructure`, `validateSolution` y **`solveB`**, que tiene que encontrar una sola solución, la misma. Si no, es un error de un solver y se lanza `Error`.
+
+### Pruebas
+- `test/rng.test.ts` (T-35.6): misma semilla, misma secuencia; semillas vecinas distintas; `int` uniforme (chi-cuadrado); `shuffle` es una permutación; entradas inválidas.
+- `test/generator.test.ts`, versión rápida en la CI con semillas aleatorias en 4×4, 6×6 y 9×9: propiedades T-20.1 y T-20.2 (`test/helpers/generated.ts`: estructura válida, jaulas de 2 a 5 celdas sin repetidos y con su suma, solución única para A y para B sin presupuesto, números iniciales de la solución y su motivo), T-35.6 (mismo resultado con la misma semilla y opciones, incluidos `easyGivens`), sin reajustes la unicidad viene de números iniciales, el descarte por presupuesto (con `maxNodes: 2`, el puzzle aceptado en el candidato `c` hace fallar `maxCandidates: c − 1`) y las opciones inválidas.
+- `test/generator.corpus.test.ts` (T-20.1, T-35.1): **1000 puzzles 9×9** (semillas 1 a 1000) con unicidad confirmada por A y por B sin presupuesto, todos distintos. Imprime el tiempo de generación y los descartes. No corre en `pnpm test` (excluido en `vitest.config.ts`): `pnpm test:corpus` en local y el workflow `corpus.yml`, programado cada lunes con semillas nuevas (desde `run_number × 1000`) y manual con la semilla y la cantidad que se elijan. Si falla, el mensaje dice la semilla, que se agrega como caso fijo.
+
+### Mediciones
+Semillas 1 a 1000, opciones por defecto, Node 24.21, AMD Ryzen 9 9955HX, un hilo. El tiempo es el de `generatePuzzle` completo, verificación con B incluida.
+
+| Tamaño | Puzzles | Media | Mediana | p90 | p99 | Máximo | Descartados por presupuesto | Con números iniciales de unicidad |
+|---|---|---|---|---|---|---|---|---|
+| 9×9 (corpus) | 1000 | **39 ms** | 36 ms | 64 ms | 103 ms | 137 ms | 1 de 1001 candidatos (0,1 %) | 7 (0,7 %) |
+| 6×6 | 300 | 7,9 ms | 6,0 ms | 15 ms | 37 ms | 45 ms | 0 | 7 (2,3 %) |
+| 4×4 | 300 | 4,7 ms | 3,0 ms | 9,9 ms | 23 ms | 41 ms | 0 | 78 (26 %) |
+
+- En 9×9, de los 39 ms, la verificación con B se lleva unos 15 ms de media (108 ms como máximo) y la última llamada a A, 2 ms. El resto son la cuadrícula, las particiones y unos 8,7 reajustes de media, cada uno con su llamada a A.
+- Jaulas en 9×9: 28,6 por puzzle; el 47 % de 2 celdas, el 31 % de 3, el 15 % de 4 y el 7 % de 5. Los reajustes parten jaulas, así que empujan hacia las chicas. La dificultad se calibra en F5 (`cageSizeWeights` y el calificador).
+- En 4×4 hay pocas formas de cortar un tablero tan chico, y una cuarta parte necesita números iniciales.
+
+**Presupuesto de nodos de A** (9×9, semillas 1 a 1000, 40 reajustes):
+
+| `maxNodes` | Candidatos descartados | Media | Máximo |
+|---|---|---|---|
+| 10 | 396 de 1396 (28 %) | 36 ms | 108 ms |
+| 30 | 83 de 1083 (7,7 %) | 37 ms | 150 ms |
+| 100 | 10 de 1010 (1,0 %) | 38 ms | 123 ms |
+| 300 | 2 de 1002 (0,2 %) | 37 ms | 138 ms |
+| **1000** (por defecto) | 1 de 1001 (0,1 %) | 39 ms | 137 ms |
+| sin límite | 0 | 37 ms | 437 ms |
+
+Los presupuestos chicos casi no cambian la media: la mayoría de los candidatos se resuelven con pocos nodos, y los descartados se reemplazan rápido. Se eligió 1000 porque descarta muy poco (el p99 de A en puzzles 9×9 aleatorios es de 763 nodos, ver solver A) y aun así corta la cola: sin límite, un candidato llegó a 437 ms. Con `maxNodes: 2`, A no puede ramificar, y aun así se aceptan puzzles: la propagación de A los resuelve en la raíz. Eso es dato para el calificador (F4e).
+
+**Reajustes de jaulas** (9×9, sin límite de nodos): con 10 reajustes, el 30 % de los puzzles necesita números iniciales (100 semillas); con 20, 40 y 80, el 9,5 %, el 1,5 % y el 1 % (200 semillas). Se eligió 40. Lo que queda son puzzles en los que ningún corte cerca de las celdas que difieren es posible.
+
+## Calificador
+Se documenta en F4e–F4f.

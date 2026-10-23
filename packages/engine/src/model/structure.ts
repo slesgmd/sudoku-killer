@@ -25,7 +25,8 @@ export function cageSumRange(count: number, size: number): readonly [number, num
   return [min, max];
 }
 
-function isConnected(cells: readonly number[], size: number): boolean {
+/** Las celdas forman una región conectada por lados (vacía: no). */
+export function isConnected(cells: readonly number[], size: number): boolean {
   const members = new Set(cells);
   const first = cells[0];
   if (first === undefined) return false;

@@ -34,3 +34,17 @@ export {
 } from "./model/notes.ts";
 export { solveA, type SolveAOptions, type SolveAResult } from "./solver-a/solve.ts";
 export { solveB, type SolveBOptions, type SolveBResult } from "./solver-b/solve.ts";
+export { createRng, isValidSeed, type Rng } from "./generator/rng.ts";
+export type { CageSizeWeights } from "./generator/cages.ts";
+export {
+  DEFAULT_CAGE_SIZE_WEIGHTS,
+  DEFAULT_MAX_ADJUSTMENTS,
+  DEFAULT_MAX_CANDIDATES,
+  DEFAULT_MAX_NODES,
+  GENERATOR_VERSION,
+  generatePuzzle,
+  type GenerateOptions,
+  type GeneratedPuzzle,
+  type GenerationStats,
+  type GivensReason,
+} from "./generator/generate.ts";

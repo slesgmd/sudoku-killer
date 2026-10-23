@@ -6,7 +6,7 @@ import { cageSumRange, digitBit, solveA } from "@sudoku-killer/engine";
 import { cageCombinations } from "../src/solver-a/combos.ts";
 import { bruteForce4, gridKeys } from "./helpers/brute-force.ts";
 import { GEOMETRY_4, GEOMETRY_6, GEOMETRY_9, killerArb } from "./helpers/grids.ts";
-import { assertProperty } from "./helpers/property.ts";
+import { assertProperty, seedMessage } from "./helpers/property.ts";
 import {
   addGivensUntilUnique,
   boxCagesPuzzle,
@@ -93,12 +93,48 @@ describe("T-35.1 solver A on 6x6 and 9x9", () => {
   });
 });
 
+describe("solver A node budget (maxNodes, used by the generator)", () => {
+  it("stops at the budget with exhausted = true, and never goes past it", () => {
+    let exhausted = 0;
+    const seed = assertProperty(
+      fc.property(variantArb(GEOMETRY_9), fc.integer({ min: 1, max: 20 }), (puzzle, cut) => {
+        const full = solveA(puzzle);
+        expect(full.exhausted).toBe(false);
+        const maxNodes = Math.max(1, full.nodes - cut);
+        const limited = solveA(puzzle, { maxNodes });
+        expect(limited.nodes).toBeLessThanOrEqual(maxNodes);
+        expect(limited.exhausted).toBe(full.nodes > maxNodes);
+        if (limited.exhausted) {
+          exhausted++;
+          // Lo encontrado antes de agotarlo es un prefijo de lo que encuentra la búsqueda completa.
+          expect(full.solutions.slice(0, limited.solutions.length)).toEqual(limited.solutions);
+        }
+      }),
+      { numRuns: 40 },
+    );
+    expect(exhausted, seedMessage(seed)).toBeGreaterThan(0);
+  });
+
+  it("gives the same result as without a budget when the budget is enough", () => {
+    assertProperty(
+      fc.property(variantArb(GEOMETRY_9), (puzzle) => {
+        const full = solveA(puzzle);
+        expect(solveA(puzzle, { maxNodes: full.nodes })).toEqual(full);
+      }),
+      { numRuns: 20 },
+    );
+  });
+});
+
 describe("solver A input checks", () => {
-  it("rejects an invalid structure and an invalid limit", () => {
+  it("rejects an invalid structure, limit or node budget", () => {
     const { puzzle } = pairsPuzzle(GEOMETRY_4);
     expect(() => solveA({ ...puzzle, cages: puzzle.cages.slice(1) })).toThrow(RangeError);
     for (const limit of [0, -1, 1.5, NaN]) {
       expect(() => solveA(puzzle, { limit })).toThrow(RangeError);
+    }
+    for (const maxNodes of [0, -1, 2.5, NaN]) {
+      expect(() => solveA(puzzle, { maxNodes })).toThrow(RangeError);
     }
   });
 });

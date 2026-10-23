@@ -225,3 +225,29 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 **Tiempo real:** unos 0,25 h (10:50 a 11:05 aproximadamente), ejecutado en una sesión.
 
 **Siguiente:** F4d, generador.
+
+## 2026-10-23 — F4d: generador
+
+**Pedido del usuario para esta subfase:** que el generador use `solveA` con un presupuesto (de nodos, agregado como opción de `solveA`), que descarte los candidatos que lo excedan y que se mida cuántos se descartan; verificar con `solveB` cada puzzle aceptado.
+
+**Hecho:**
+- `solveA(puzzle, { maxNodes })`: se detiene al agotar el presupuesto, con `exhausted: true` en el resultado. Pruebas: nunca pasa del presupuesto, lo encontrado es un prefijo de la búsqueda completa y, con presupuesto suficiente, el resultado es el mismo.
+- `packages/engine/src/generator/`:
+  - `rng.ts`: SFC32 sembrado con SplitMix32, `int` sin sesgo, `shuffle` y `weightedIndex`.
+  - `grid.ts`: cuadrícula completa aleatoria.
+  - `cages.ts`: partición en jaulas conectadas de 2 a 5 celdas sin dígitos repetidos y recorte de jaulas.
+  - `generate.ts`: `generatePuzzle({ seed, ... })` → `{ puzzle, solution, givensReason, stats }`. Unicidad con A y presupuesto (1000 nodos por defecto), hasta 40 reajustes de jaulas donde difieren dos soluciones, números iniciales de unicidad si no alcanza, `easyGivens` y verificación final con B.
+- Pruebas: `rng.test.ts`, `generator.test.ts` (T-20.1, T-20.2 y T-35.6 en 4×4, 6×6 y 9×9, descarte por presupuesto y opciones inválidas) y el corpus `generator.corpus.test.ts` (1000 puzzles 9×9), fuera de `pnpm test`: `pnpm test:corpus` y el workflow `.github/workflows/corpus.yml` (cada lunes con semillas nuevas, y manual).
+- Mediciones en `docs/motor.md`.
+
+**Resultados:** corpus de 1000 puzzles 9×9 con **0 discrepancias** entre A y B. Tiempo medio de generación: **39 ms** (mediana 36 ms, p99 103 ms, máximo 137 ms), con la verificación de B incluida (unos 15 ms). Con el presupuesto de 1000 nodos se descartó **1 de 1001 candidatos**; con 10 nodos, 28 %; sin límite, ninguno, pero un candidato tardó 437 ms. El 0,7 % de los puzzles necesita números iniciales para la unicidad.
+
+**Problemas y soluciones:**
+- Con 10 reajustes de jaulas, el 30 % de los puzzles necesitaba números iniciales; con 40, el 1,5 % (200 semillas). Se eligió 40.
+- La prueba del descarte suponía que con `maxNodes: 1` no se acepta ningún puzzle, y falló: la propagación de A resuelve algunos puzzles generados en la raíz. Se rehízo sin esa suposición: si un puzzle se acepta en el candidato `c`, con `maxCandidates: c − 1` el generador tiene que fallar. Queda anotado para el calificador.
+- Las expresiones de GitHub Actions no tienen aritmética: la primera semilla del corpus programado se calcula en un paso de shell.
+- `mergeConfig` de Vitest suma las listas `include` y `exclude`: la configuración del corpus se arma aparte.
+
+**Tiempo real:** unos 0,4 h (11:05 a 11:30 aproximadamente), ejecutado en la misma sesión que el refuerzo de F4c.
+
+**Siguiente:** F4e, calificador (niveles 1 a 3) y `levelToDeduce`.
