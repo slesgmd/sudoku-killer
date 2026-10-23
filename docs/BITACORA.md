@@ -22,7 +22,7 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 - Git avisaba de conversiones LF→CRLF porque `core.autocrlf` está activo en Windows. Se agregó `.gitattributes` con `* text=auto eol=lf` para que el repositorio sea consistente con la CI de Linux (F3).
 - La salida de `binary_session` es muy grande (unos 68 000 caracteres). Para consultarla conviene filtrar `tool_availability.groups` por nombre de herramienta en lugar de leerla entera.
 
-**Tiempo real:** unos 0,1 h, ejecutado en una sola sesión, sin contar la revisión del usuario.
+**Tiempo real:** unos 0,1 h en una sola sesión, sin contar la revisión del usuario.
 
 **Siguiente:** F1, estudio de referencia con REA. Hay que empezar en modo plan y proponer las subtareas.
 
@@ -52,7 +52,7 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 - Dos cargas seguidas fallaron: en modo launch con storage precargado ("Scenario navigation failed…") y en modo connect, con el HTML bloqueado (`net::ERR_BLOCKED_BY_RESPONSE`). No se sabe si es un límite del sitio o un problema de la herramienta. El usuario decidió no hacer más cargas automáticas.
 - Falta el dato del usuario: pidió agregar "3 respuestas" como observaciones manuales, pero en el mensaje quedó el texto de plantilla. La sección 15 de `referencia.md` queda pendiente.
 
-**Tiempo real:** unos 0,6 h, ejecutado en una sesión, sin contar la revisión del usuario.
+**Tiempo real:** unos 0,6 h en una sesión, sin contar la revisión del usuario.
 
 **Siguiente:** agregar las 3 observaciones manuales del usuario a `docs/referencia.md` (sección 15). Después, F2 en modo plan.
 
@@ -83,7 +83,7 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 - La cadena lineal de estados del jugador del plan (`activo → espectador → desconectado → expirado`) no representa a un espectador desconectado. Se separó en dos ejes y quedó documentado como un refinamiento.
 - El reductor de la partida tiene que ser compartido por el servidor, la reconstrucción y el servidor simulado del cliente (F8), y no encajaba en `engine` ni en `scoring`. Se creó `packages/game` (ADR 0004).
 
-**Tiempo real:** unos 0,4 h (12:39 a 13:05 aproximadamente), ejecutado en una sesión. Incluye la ronda de preguntas, pero no el tiempo de revisión del usuario.
+**Tiempo real:** unos 0,4 h (12:39 a 13:05 aproximadamente), en una sesión. Incluye la ronda de preguntas, pero no el tiempo de revisión del usuario.
 
 **Siguiente:** F3, monorepo y calidad, en modo plan.
 
@@ -111,7 +111,7 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 - La primera versión del detector de T-31.3 recorría todo el grafo de tipos de Zod y superaba los 5 s. Ahora, de los tipos de librerías solo recorre los argumentos de tipo. Los tipos mapeados (como `Writeable<T>` de Zod) sí se recorren, porque sin eso no se detectaba el esquema. Tarda unos 2 s.
 - El repositorio de GitHub era público, aunque se describió como privado. Se le preguntó al usuario antes del push y decidió dejarlo público.
 
-**Tiempo real:** unos 0,3 h (15:33 a 15:50 aproximadamente), ejecutado en una sesión. No incluye el tiempo de revisión del usuario.
+**Tiempo real:** unos 0,3 h (15:33 a 15:50 aproximadamente), en una sesión. No incluye el tiempo de revisión del usuario.
 
 **Siguiente:** F4, motor del puzzle, en modo plan.
 
@@ -144,7 +144,7 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 - Un heredoc largo de Bash con varios archivos falló («unexpected EOF»). Los archivos largos se escriben con la herramienta de escritura, no con heredocs encadenados.
 - Para la regla de aislamiento se usó `regex` en `no-restricted-imports` en lugar de patrones estilo gitignore, que no se llevan bien con rutas que empiezan con `../`.
 
-**Tiempo real:** unos 0,3 h (15:52 a 16:12 aproximadamente), incluida la planificación de F4. Ejecutado en una sesión, sin contar la revisión del usuario.
+**Tiempo real:** unos 0,3 h (15:52 a 16:12 aproximadamente), incluida la planificación de F4, en una sesión, sin contar la revisión del usuario.
 
 **Siguiente:** F4b, solver A.
 
@@ -175,7 +175,7 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 - Esa cola era *thrashing*: puzzles con muchas soluciones en los que MRV no encontraba ni la primera en 600 000 nodos. dom/wdeg la bajó a unos 500 nodos. Resultado con 1000 puzzles 9×9: media 7 ms, p99 49 ms, máximo 2,4 s.
 - Se midieron y descartaron otros desempates del MRV y los grupos exactos de más de 5 celdas (detalle en `docs/motor.md`).
 
-**Tiempo real:** unos 0,6 h (16:19 a 16:55 aproximadamente), ejecutado en una sesión, sin contar la revisión del usuario.
+**Tiempo real:** unos 0,6 h (16:19 a 16:55 aproximadamente), en una sesión, sin contar la revisión del usuario.
 
 **Siguiente:** F4c, solver B (Dancing Links).
 
@@ -203,7 +203,7 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 - Las pruebas 9×9 de la CI parten de 3 números iniciales para acotar el tiempo de B. Los 9×9 sin números iniciales se comparan en la medición y se compararán en el corpus de F4d.
 - **Desviación (T-35.2):** no hay fuente pública legible por máquina para los puzzles de referencia, así que se construyeron. Su resultado lo calcularon A y B y lo confirmó el validador (ver `PLAN.md`, F4).
 
-**Tiempo real:** unos 1,1 h (16:55 a 18:02 aproximadamente), ejecutado en una sesión, sin contar la revisión del usuario.
+**Tiempo real:** unos 1,1 h (16:55 a 18:02 aproximadamente), en una sesión, sin contar la revisión del usuario.
 
 **Siguiente:** F4d, generador.
 
@@ -222,7 +222,7 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 **Problemas y soluciones:**
 - ESLint no suma las opciones de `no-restricted-properties` entre bloques: las pruebas de los paquetes puros repiten las dos listas (reloj y azar, y `fc.assert`).
 
-**Tiempo real:** unos 0,25 h (10:50 a 11:05 aproximadamente), ejecutado en una sesión.
+**Tiempo real:** unos 0,25 h (10:50 a 11:05 aproximadamente).
 
 **Siguiente:** F4d, generador.
 
@@ -248,7 +248,7 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 - Las expresiones de GitHub Actions no tienen aritmética: la primera semilla del corpus programado se calcula en un paso de shell.
 - `mergeConfig` de Vitest suma las listas `include` y `exclude`: la configuración del corpus se arma aparte.
 
-**Tiempo real:** unos 0,4 h (11:05 a 11:30 aproximadamente), ejecutado en la misma sesión que el refuerzo de F4c.
+**Tiempo real:** unos 0,4 h (11:05 a 11:30 aproximadamente), en la misma sesión que el refuerzo de F4c.
 
 **Siguiente:** F4e, calificador (niveles 1 a 3) y `levelToDeduce`.
 
@@ -267,7 +267,7 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 - La primera versión enumeraba todas las asignaciones de cada jaula y grupo en cada pasada: `grade` tardaba 37 ms de media. Con una memoria por jaula y grupo (el resultado depende solo de sus máscaras), búsquedas dirigidas por (celda, dígito) y una poda por dígitos libres, unos 9 ms en la misma muestra; la distribución de niveles no cambió.
 - Una prueba falló por la ayuda `shiftFirstSum`, que lanza si todas las jaulas 4×4 tienen 4 celdas; se corrigió la prueba y la semilla quedó como regresión.
 
-**Tiempo real:** unos 0,4 h (11:55 a 12:15 aproximadamente), ejecutado en una sesión.
+**Tiempo real:** unos 0,4 h (11:55 a 12:15 aproximadamente).
 
 **Siguiente:** F4f, calificador niveles 4 y 5, histograma preliminar y cierre de F4.
 
@@ -290,6 +290,6 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 
 **Cierre de F4:** F4a ~0,3 h (+0,1 de corrección), F4b ~0,6, F4c ~1,1, F4d ~0,4, F4e ~0,4 y F4f ~0,5: **unas 3,4 h frente a 20–35 h estimadas** (entre el 10 % y el 17 %). De F0 a F4, unas 4,8 h frente a 34–60 h. La recalibración propuesta de F5 a F13 (de 96–171 h a 28–57 h) está en `docs/PLAN.md`, sección 5, pendiente de aprobación.
 
-**Tiempo real:** unos 0,5 h (13:09 a 13:40 aproximadamente), ejecutado en una sesión.
+**Tiempo real:** unos 0,5 h (13:09 a 13:40 aproximadamente).
 
 **Siguiente:** F5, banco de puzzles y calibración de dificultad. Empieza por las decisiones pendientes a) y b) y por la aprobación de la recalibración.
