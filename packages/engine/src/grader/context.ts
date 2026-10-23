@@ -37,6 +37,13 @@ export interface GraderContext {
   readonly supportCache: (
     { readonly masks: readonly number[]; readonly result: SumSupport } | undefined
   )[];
+  /**
+   * Memoria de las combinaciones de unidad (nivel 5), por índice de `units`: el último soporte, con
+   * las máscaras de la unidad y de las celdas de fuera de sus jaulas con que se calculó.
+   */
+  readonly unitCache: (
+    { readonly masks: readonly number[]; readonly support: number[] } | undefined
+  )[];
 }
 
 const contexts = new WeakMap<KillerPuzzle, GraderContext>();
@@ -89,6 +96,7 @@ function buildContext(puzzle: KillerPuzzle): GraderContext {
     isPeer,
     sumGroups,
     supportCache: new Array<undefined>(cages.length + sumGroups.length).fill(undefined),
+    unitCache: new Array<undefined>(units.length).fill(undefined),
   };
 }
 

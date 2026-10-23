@@ -5,14 +5,13 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.10. **SPEC:** versión 1.2.
-- **Fase actual:** F4, motor del puzzle, dividida en F4a–F4f (tabla en `docs/PLAN.md`, F4). F4a, F4b y F4c hechas el 2026-10-22; F4d (generador) y F4e (calificador, niveles 1 a 3), el 2026-10-23.
-- **Forma de trabajo en F4 (aprobada):** una subfase por sesión, sin pedir confirmación salvo errores. Cada subfase termina así: `pnpm check`, `pnpm test` y `pnpm build` en verde; BITACORA con horas; PLAN marcado; este archivo apuntando a la siguiente; commit, push, CI en verde (`gh run watch`), y aviso al usuario de que puede hacer `/clear`.
-- **Próxima tarea exacta: F4f, calificador niveles 4 y 5; histograma preliminar y cierre de F4** (`docs/PLAN.md`, F4: calificador humano y pedido del usuario del 2026-10-23).
-  - Nivel 4: pares y tríos (desnudos y ocultos), interacciones entre jaulas (y locked candidates); nivel 5: técnicas avanzadas. Cada técnica es un `Technique` aislado en `packages/engine/src/grader/` que se agrega a `TECHNIQUES` en orden de nivel; subir `MAX_TECHNIQUE_LEVEL` a 5 (`UNRATED` sigue en 6).
-  - Las reglas deben ser monótonas (con menos candidatos deducen lo mismo o más): `levelToDeduce` y T-35.5 dependen de eso (`docs/motor.md`, calificador).
-  - Mismas pruebas que F4e (`test/grader.test.ts` y `grader.corpus.test.ts`): ninguna deducción contradice la solución; un fallo bloquea. Medir de nuevo `grade` y `levelToDeduce` (media y p95).
-  - Al cerrar, reportar al usuario la distribución de niveles del corpus (cuántos por nivel máximo y cuántos exceden), para F5. Base de F4e: 0 / 100 / 668 en los niveles 1 a 3 y 232 que exceden.
+- **Plan:** versión 1.11. **SPEC:** versión 1.2.
+- **Fase actual:** F5, banco de puzzles y calibración de dificultad. F4 (motor del puzzle, F4a–F4f) se cerró el 2026-10-23 con unas 3,4 h reales frente a 20–35 h estimadas.
+- **Pendiente del usuario antes de F5:** aprobar o no la recalibración de F5 a F13 (`docs/PLAN.md`, sección 5) y resolver las decisiones pendientes a) y b) de F5.
+- **Próxima tarea exacta: F5** (`docs/PLAN.md`, F5).
+  - Empezar por las decisiones pendientes de F5: a) excluir del banco los puzzles que exceden todas las técnicas (7 % del corpus); b) cómo compensar el nivel fácil (solo el 10 % de los puzzles tiene nivel máximo ≤ 2): más candidatos, `easyGivens` (P2) o `cageSizeWeights`. Medir las opciones antes de decidir con el usuario.
+  - Calificador: niveles 1 a 5 en `packages/engine/src/grader/` (`MAX_TECHNIQUE_LEVEL = 5`, `UNRATED = 6`); `grade` da `maxLevel` y `stepsByLevel` para los histogramas (`docs/motor.md`, calificador).
+  - Corpus de F4f (1000 puzzles 9×9): nivel máximo 0 / 100 / 668 / 77 / 85 en los niveles 1 a 5 y 70 que exceden. `levelToDeduce`: p95 9,2 ms.
 
 ## Reglas clave
 

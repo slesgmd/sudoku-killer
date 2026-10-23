@@ -270,3 +270,26 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 **Tiempo real:** unos 0,4 h (11:55 a 12:15 aproximadamente), ejecutado en una sesión.
 
 **Siguiente:** F4f, calificador niveles 4 y 5, histograma preliminar y cierre de F4.
+
+## 2026-10-23 — F4f: calificador, niveles 4 y 5, y cierre de F4
+
+**Pedido del usuario para esta subfase:** los mismos requisitos de F4e (técnicas aisladas, prueba de corrección contra la solución en el corpus y nunca adivinar); volver a medir `levelToDeduce` con los niveles 4 y 5 (p95 en 9×9 por debajo de 50 ms; si no, optimizar o avisar); informar la distribución final del corpus por nivel máximo; registrar en F5 dos decisiones pendientes (excluir del banco los puzzles que exceden las técnicas, y el rendimiento bajo del nivel fácil); cerrar F4 con la suma de horas reales, la comparación con lo estimado y una recalibración propuesta de F5 a F13.
+
+**Hecho:**
+- Nivel 4: `lockedCandidates` (pointing y claiming, también a través de jaulas), `nakedPair` y `nakedTriple` (en unidades y jaulas), `hiddenPair` y `hiddenTriple` (en unidades, y en jaulas con sus dígitos obligatorios) y `cageUnitLock` (si un dígito de una unidad solo cabe en una jaula, la jaula tiene que usarlo). Nivel 5: `xWing`, `swordfish`, `yWing` y `unitCombination` (una unidad entera con todas las jaulas que la tocan). `MAX_TECHNIQUE_LEVEL` pasa a 5.
+- `sumSupport` admite dígitos que la asignación tiene que usar (`mustUse`).
+- Pruebas: `test/grader-advanced.test.ts` (T-35.4) con estados que todavía admiten la solución (dígitos correctos y candidatos equivocados quitados al azar): ninguna técnica la contradice en 4×4, 6×6 y 9×9, y cada técnica nueva coincide con un oráculo por fuerza bruta escrito aparte. Además, una prueba comprueba que cada técnica deduce algo en algún estado, para que la comparación no sea vacía. El corpus imprime los pasos por técnica.
+- `docs/motor.md` y `docs/PLAN.md` (F4, F5, sección 5 y sección 8, versión 1.11).
+
+**Resultados:** corpus de 1000 puzzles 9×9: **401 109 deducciones, 0 contra la solución**. Nivel máximo: 0 de nivel 1, 100 de nivel 2, 668 de nivel 3, 77 de nivel 4, 85 de nivel 5 y **70 que exceden todas las técnicas** (eran 232). `levelToDeduce` en 100 partidas simuladas (8099 llamadas): **media 1,5 ms y p95 9,2 ms**, máximo 85 ms. `grade`: media 25 ms y p95 59 ms. Monotonía de `levelToDeduce` comprobada aparte en 9000 comparaciones (200 puzzles), sin ninguna subida.
+
+**Problemas y soluciones:**
+- `unitCombination` con búsquedas dirigidas por (celda, dígito), como `sumSupport`, tardaba unos 12 ms por llamada, y una memoria de estados sin salida casi no ayudó. Se reescribió enumerando las formas de llenar cada jaula dentro de la unidad, agrupadas por conjunto de dígitos, y combinándolas con un barrido hacia adelante y hacia atrás sobre las máscaras: 2,4 veces más rápido y exacto.
+- La primera medición del corpus corrió a la vez que las pruebas, así que se repitió sin otra carga. Los números de arriba son los de la segunda.
+- Y-Wing y Swordfish no se usaron nunca en el corpus (X-Wing, una vez): antes deducen algo las técnicas de jaula y de unidad. Se dejaron porque son correctas, tienen su oráculo y son baratas.
+
+**Cierre de F4:** F4a ~0,3 h (+0,1 de corrección), F4b ~0,6, F4c ~1,1, F4d ~0,4, F4e ~0,4 y F4f ~0,5: **unas 3,4 h frente a 20–35 h estimadas** (entre el 10 % y el 17 %). De F0 a F4, unas 4,8 h frente a 34–60 h. La recalibración propuesta de F5 a F13 (de 96–171 h a 28–57 h) está en `docs/PLAN.md`, sección 5, pendiente de aprobación.
+
+**Tiempo real:** unos 0,5 h (13:09 a 13:40 aproximadamente), ejecutado en una sesión.
+
+**Siguiente:** F5, banco de puzzles y calibración de dificultad. Empieza por las decisiones pendientes a) y b) y por la aprobación de la recalibración.

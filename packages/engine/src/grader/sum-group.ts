@@ -38,10 +38,11 @@ export function cachedSumSupport(
 }
 
 /**
- * Filtro exacto de `cells` con sus candidatos: una asignación válida suma `sum` y no repite dígito
- * entre pares. Por cada (celda, dígito) todavía sin soporte se busca una asignación que lo use, y
- * esa asignación da soporte a todas sus celdas. Un dígito es obligatorio si ninguna asignación lo
- * evita. Solo se usa con pocas celdas sin resolver: las resueltas no ramifican.
+ * Filtro exacto de `cells` con sus candidatos: una asignación válida suma `sum`, no repite dígito
+ * entre pares y usa todos los dígitos de `mustUse`. Por cada (celda, dígito) todavía sin soporte se
+ * busca una asignación que lo use, y esa asignación da soporte a todas sus celdas. Un dígito es
+ * obligatorio si ninguna asignación lo evita. Solo se usa con pocas celdas sin resolver: las
+ * resueltas no ramifican.
  */
 export function sumSupport(
   context: GraderContext,
@@ -49,6 +50,7 @@ export function sumSupport(
   cells: readonly number[],
   sum: number,
   withRequired: boolean,
+  mustUse = 0,
 ): SumSupport {
   const count = cells.length;
   // Primero las celdas con menos candidatos: las resueltas no ramifican y podan antes.
@@ -59,6 +61,7 @@ export function sumSupport(
     context,
     order.map(({ cell }) => cell),
     sum,
+    mustUse,
   );
   const masks = order.map(({ mask }) => mask);
 
@@ -93,12 +96,14 @@ export function sumSupport(
 
 /**
  * Búsqueda en profundidad de una asignación de `cells` (en ese orden) que suma `sum`, sin repetir
- * dígito entre pares, con los candidatos que se le pasen. Devuelve la primera, o `null`.
+ * dígito entre pares y usando todos los dígitos de `mustUse`, con los candidatos que se le pasen.
+ * Devuelve la primera, o `null`.
  */
 function createSearch(
   context: GraderContext,
   cells: readonly number[],
   sum: number,
+  mustUse: number,
 ): (masks: readonly number[]) => number[] | null {
   const { cellCount, isPeer } = context;
   const count = cells.length;
@@ -126,8 +131,10 @@ function createSearch(
     }
     const assigned = new Array<number>(count).fill(0);
     const visit = (depth: number, remaining: number, used: number): boolean => {
-      if (depth === count) return remaining === 0;
+      if (depth === count) return remaining === 0 && (used & mustUse) === mustUse;
       if (remaining < at(minRest, depth) || remaining > at(maxRest, depth)) return false;
+      const missing = mustUse & ~used;
+      if ((at(unionRest, depth) & missing) !== missing) return false;
       if (distinct && !distinctSumFits(at(unionRest, depth) & ~used, count - depth, remaining)) {
         return false;
       }

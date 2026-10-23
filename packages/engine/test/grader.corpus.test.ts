@@ -1,10 +1,12 @@
-// Corpus del calificador (F4e, T-35.4 y T-35.5): califica los puzzles 9×9 del corpus del generador
+// Corpus del calificador (F4e y F4f, T-35.4 y T-35.5): califica los puzzles 9×9 del corpus del generador
 // y comprueba cada deducción contra la solución única. Una deducción que la contradiga bloquea F4.
 // Imprime la distribución de niveles (dato para F5) y el tiempo de `grade` y de `levelToDeduce`.
 // No corre en la CI de cada push: `pnpm test:corpus` y el workflow programado `corpus.yml`.
 // Semillas: de CORPUS_BASE_SEED (por defecto 1) en adelante; CORPUS_SIZE cambia la cantidad.
 import { describe, expect, it } from "vitest";
 import {
+  MAX_TECHNIQUE_LEVEL,
+  TECHNIQUES,
   UNRATED,
   createRng,
   generatePuzzle,
@@ -68,10 +70,11 @@ describe("grader corpus", () => {
       expect(Number.isInteger(BASE_SEED) && BASE_SEED >= 0).toBe(true);
       const byLevel = new Map<string, number>();
       const steps: number[] = [];
-      const stepsByLevel = [0, 0, 0, 0];
+      const stepsByLevel = new Array<number>(MAX_TECHNIQUE_LEVEL + 1).fill(0);
       const gradeTimes: number[] = [];
       const levelTimes: number[] = [];
       const levels = new Map<number, number>();
+      const byTechnique = new Map<string, number>();
       let deductions = 0;
 
       for (let seed = BASE_SEED; seed < BASE_SEED + SIZE; seed++) {
@@ -84,7 +87,10 @@ describe("grader corpus", () => {
 
           const traced = expectSoundGrade(puzzle, solution);
           expect({ ...traced, trace: undefined }).toEqual({ ...result, trace: undefined });
-          deductions += (traced.trace ?? []).reduce((n, step) => n + step.deductions.length, 0);
+          for (const step of traced.trace ?? []) {
+            deductions += step.deductions.length;
+            byTechnique.set(step.technique, (byTechnique.get(step.technique) ?? 0) + 1);
+          }
           const key =
             result.status === "solved" ? `level ${String(result.maxLevel)}` : result.status;
           byLevel.set(key, (byLevel.get(key) ?? 0) + 1);
@@ -108,7 +114,8 @@ describe("grader corpus", () => {
         [
           `Grader corpus: ${String(SIZE)} puzzles 9x9, seeds ${String(BASE_SEED)} to ${String(BASE_SEED + SIZE - 1)}, ${String(deductions)} deductions, 0 against the solution`,
           `Max level: ${distribution.map(([key, count]) => `${key}: ${String(count)}`).join(", ")}`,
-          `Steps per puzzle: median ${String(quantile(sortedSteps, 0.5))}, max ${String(sortedSteps.at(-1))}; steps by level 1-3: ${stepsByLevel.slice(1).join(" / ")}`,
+          `Steps per puzzle: median ${String(quantile(sortedSteps, 0.5))}, max ${String(sortedSteps.at(-1))}; steps by level 1-${String(MAX_TECHNIQUE_LEVEL)}: ${stepsByLevel.slice(1).join(" / ")}`,
+          `Steps by technique: ${TECHNIQUES.map(({ id }) => `${id} ${String(byTechnique.get(id) ?? 0)}`).join(", ")}`,
           `grade: ${summary(gradeTimes)}`,
           `levelToDeduce (${String(levelTimes.length)} calls in ${String(GAMES)} simulated games): ${summary(levelTimes, 2)}`,
           `levelToDeduce results: ${levelCounts.map(([level, count]) => `${String(level)}: ${String(count)}`).join(", ")}`,

@@ -1,9 +1,9 @@
-// Tipos del calificador humano (F4e): deducciones, técnicas y niveles (SPEC R-35, T-35.4 y T-35.5).
+// Tipos del calificador humano (F4e y F4f): deducciones, técnicas y niveles (SPEC R-35, T-35.4 y T-35.5).
 import type { GraderContext } from "./context.ts";
 import type { GraderState } from "./state.ts";
 
 /** Nivel más alto que implementa el calificador. */
-export const MAX_TECHNIQUE_LEVEL = 3;
+export const MAX_TECHNIQUE_LEVEL = 5;
 
 /**
  * Nivel de lo que excede las técnicas implementadas: un puzzle que el calificador no termina, o
@@ -23,7 +23,17 @@ export type TechniqueId =
   | "cageLastCell"
   | "cageCombination"
   | "cageForcedDigit"
-  | "innieOutie";
+  | "innieOutie"
+  | "lockedCandidates"
+  | "nakedPair"
+  | "hiddenPair"
+  | "cageUnitLock"
+  | "nakedTriple"
+  | "hiddenTriple"
+  | "xWing"
+  | "yWing"
+  | "swordfish"
+  | "unitCombination";
 
 /**
  * Técnica aislada: lee el estado sin modificarlo y devuelve las deducciones que encuentra en él,

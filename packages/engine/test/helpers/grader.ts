@@ -34,6 +34,26 @@ export function boardWith(solution: Grid, cells: Iterable<number>): number[] {
 }
 
 /**
+ * Estado con los dígitos de la solución en `cells` y, además, sin los candidatos de `eliminations`
+ * que no son el de la solución: un estado cualquiera que todavía la admite (como las notas de un
+ * jugador que solo borra candidatos equivocados).
+ */
+export function stateWith(
+  puzzle: KillerPuzzle,
+  solution: Grid,
+  cells: Iterable<number>,
+  eliminations: Iterable<readonly [number, number]>,
+): GraderState {
+  const context = graderContextOf(puzzle);
+  const state = createGraderState(context, boardWith(solution, cells));
+  for (const [cell, digit] of eliminations) {
+    if (digit !== at(solution, cell))
+      applyDeduction(context, state, { kind: "eliminate", cell, digit });
+  }
+  return state;
+}
+
+/**
  * Reproduce la traza de `grade` con un estado propio y comprueba: cada técnica anterior a la del
  * paso (todas las de menor nivel incluidas) no encuentra nada; la técnica encuentra exactamente
  * esas deducciones; ninguna contradice la solución (T-35.4); y después de aplicarlas el dígito de

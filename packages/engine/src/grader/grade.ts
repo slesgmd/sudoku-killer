@@ -1,4 +1,4 @@
-// Calificador humano (F4e, SPEC R-35): resuelve con técnicas por niveles, siempre con la de menor
+// Calificador humano (F4e y F4f, SPEC R-35): resuelve con técnicas por niveles, siempre con la de menor
 // nivel que encuentre algo, y nunca adivina. `levelToDeduce` da el nivel mínimo con el que una celda
 // queda determinada desde un estado (F6 lo usa para puntuar).
 import type { KillerPuzzle } from "../types.ts";
@@ -6,8 +6,12 @@ import { at } from "../model/at.ts";
 import { popcount } from "../model/mask.ts";
 import { cageCombination, cageForcedDigit } from "./cages.ts";
 import { graderContextOf, type GraderContext } from "./context.ts";
+import { swordfish, xWing, yWing } from "./fish.ts";
+import { cageUnitLock, lockedCandidates } from "./interactions.ts";
 import { innieOutie } from "./rule45.ts";
 import { cageLastCell, hiddenSingle, nakedSingle } from "./singles.ts";
+import { hiddenPair, hiddenTriple, nakedPair, nakedTriple } from "./subsets.ts";
+import { unitCombination } from "./unit-combination.ts";
 import { applyDeduction, createGraderState, type GraderState } from "./state.ts";
 import { MAX_TECHNIQUE_LEVEL, UNRATED, type Deduction, type Technique } from "./types.ts";
 
@@ -19,6 +23,16 @@ export const TECHNIQUES: readonly Technique[] = [
   cageCombination,
   cageForcedDigit,
   innieOutie,
+  lockedCandidates,
+  nakedPair,
+  hiddenPair,
+  cageUnitLock,
+  nakedTriple,
+  hiddenTriple,
+  xWing,
+  yWing,
+  swordfish,
+  unitCombination,
 ];
 
 /** Un paso: todas las deducciones que una técnica encontró en un mismo estado. */

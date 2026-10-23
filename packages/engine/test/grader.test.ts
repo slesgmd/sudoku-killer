@@ -5,6 +5,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
+  MAX_TECHNIQUE_LEVEL,
   TECHNIQUES,
   UNRATED,
   generatePuzzle,
@@ -167,7 +168,7 @@ describe("techniques against independent oracles", () => {
     return found;
   };
 
-  it("levels: singles 1, cage combinations 2, innies and outies 3, in order", () => {
+  it("levels: singles 1, cages 2, innies and outies 3, subsets 4, advanced 5, in order", () => {
     expect(TECHNIQUES.map((t) => [t.id, t.level])).toEqual([
       ["nakedSingle", 1],
       ["hiddenSingle", 1],
@@ -175,7 +176,19 @@ describe("techniques against independent oracles", () => {
       ["cageCombination", 2],
       ["cageForcedDigit", 2],
       ["innieOutie", 3],
+      ["lockedCandidates", 4],
+      ["nakedPair", 4],
+      ["hiddenPair", 4],
+      ["cageUnitLock", 4],
+      ["nakedTriple", 4],
+      ["hiddenTriple", 4],
+      ["xWing", 5],
+      ["yWing", 5],
+      ["swordfish", 5],
+      ["unitCombination", 5],
     ]);
+    expect(MAX_TECHNIQUE_LEVEL).toBe(5);
+    expect(UNRATED).toBe(6);
   });
 
   it("cageCombination on an empty board keeps the digits of the cage's combinations", () => {

@@ -240,7 +240,7 @@ Los presupuestos chicos casi no cambian la media: la mayoría de los candidatos 
 
 **Reajustes de jaulas** (9×9, sin límite de nodos): con 10 reajustes, el 30 % de los puzzles necesita números iniciales (100 semillas); con 20, 40 y 80, el 9,5 %, el 1,5 % y el 1 % (200 semillas). Se eligió 40. Lo que queda son puzzles en los que ningún corte cerca de las celdas que difieren es posible.
 
-## Calificador (F4e)
+## Calificador (F4e y F4f)
 
 `grade(puzzle, { trace = false })` → `{ status, maxLevel, steps, stepsByLevel, unplaced, trace? }`.
 - `status`: `solved` si las técnicas llenan el tablero; `exceedsTechniques` si se quedan sin deducciones antes; `contradiction` si una celda se queda sin candidatos o el tablero lleno no cumple las sumas (solo en puzzles sin solución). **Nunca adivina:** no hay búsqueda.
@@ -253,17 +253,19 @@ Los presupuestos chicos casi no cambian la media: la mayoría de los candidatos 
 - Es el nivel mínimo con el que la celda queda con un solo candidato desde ese estado. Si el estado es contradictorio, devuelve `UNRATED`. Lanza `RangeError` si la celda no existe, ya tiene un dígito o `values` no tiene esa forma.
 - El servidor lo llama antes de aplicar cada jugada correcta (`PlacementContext`, SPEC); F6 lo usa para puntuar.
 
-Constantes: `MAX_TECHNIQUE_LEVEL = 3` (el nivel más alto implementado; F4f lo sube a 5) y `UNRATED = 6`. `UNRATED` es fijo, no `MAX_TECHNIQUE_LEVEL + 1`, para que un nivel guardado no cambie de sentido al agregar técnicas.
+Constantes: `MAX_TECHNIQUE_LEVEL = 5` (el nivel más alto implementado; era 3 en F4e) y `UNRATED = 6`. `UNRATED` es fijo, no `MAX_TECHNIQUE_LEVEL + 1`, para que un nivel guardado no cambie de sentido al agregar técnicas.
 
 ### Módulos (`src/grader/`)
 
 | Módulo | Contenido |
 |---|---|
 | `types.ts` | `Deduction` (`place` o `eliminate`, con celda y dígito), `Technique` (`id`, `level` y `find`), `MAX_TECHNIQUE_LEVEL` y `UNRATED`. |
-| `context.ts` | `graderContextOf(puzzle)`: unidades, jaulas, pares (con la jaula), matriz de pares y grupos de la regla del 45. Memoizado por objeto (`WeakMap`), como `layoutOf`. |
+| `context.ts` | `graderContextOf(puzzle)`: unidades, jaulas, pares (con la jaula), matriz de pares, grupos de la regla del 45 y las memorias de los filtros. Memoizado por objeto (`WeakMap`), como `layoutOf`. |
 | `state.ts` | Candidatos y dígitos colocados. Colocar un dígito lo quita de los candidatos de sus pares (fila, columna, caja y jaula), como la limpieza de notas. |
-| `sum-group.ts` | Filtro exacto de celdas con suma conocida (`sumSupport`, con memoria) y cotas de suma (`sumBounds`). |
+| `sum-group.ts` | Filtro exacto de celdas con suma conocida (`sumSupport`, con memoria y con dígitos que la asignación tiene que usar, `mustUse`) y cotas de suma (`sumBounds`). |
 | `singles.ts`, `cages.ts`, `rule45.ts` | Las técnicas de los niveles 1, 2 y 3. |
+| `interactions.ts`, `subsets.ts` | Nivel 4: locked candidates y jaula obligada por una unidad; pares y tríos desnudos y ocultos. `subsets.ts` tiene también las ayudas comunes (`combinations`, `eliminationCollector`). |
+| `fish.ts`, `unit-combination.ts` | Nivel 5: X-Wing, Swordfish e Y-Wing; combinaciones de unidad. |
 | `grade.ts` | `TECHNIQUES`, `grade` y `levelToDeduce`. |
 
 ### Técnicas
@@ -277,6 +279,17 @@ Cada técnica es una función aislada (`find`): lee el estado sin modificarlo y 
 | 2 | `cageCombination` | Un candidato que no aparece en ninguna forma de llenar la jaula con su suma, sin repetir dígito, sale de la celda. |
 | 2 | `cageForcedDigit` | Un dígito que está en todas las combinaciones posibles de la jaula: si solo una celda lo admite, va ahí; si no, sale de las celdas de fuera de la jaula que ven a todas las que lo admiten. |
 | 3 | `innieOutie` | Regla del 45: los innies y los outies de una región son una jaula virtual. Con una celda sin resolver, vale la suma menos las demás; con hasta 5, filtro exacto (sin repetir dígito entre pares); con más, cotas de suma. |
+| 4 | `lockedCandidates` | Un dígito que una fila, columna o caja tiene que usar y que solo cabe en celdas que ve otra celda sale de esa celda (pointing y claiming, y también a través de jaulas, porque sus celdas son pares). |
+| 4 | `nakedPair`, `nakedTriple` | 2 o 3 celdas vacías de una unidad o jaula cuyos candidatos juntos son 2 o 3 dígitos: esos dígitos salen de toda celda que las vea a todas. |
+| 4 | `hiddenPair`, `hiddenTriple` | 2 o 3 dígitos que una unidad tiene que usar (o que son obligatorios en una jaula) y que solo caben en 2 o 3 de sus celdas: esas celdas pierden los demás candidatos. |
+| 4 | `cageUnitLock` | Si en una unidad un dígito solo cabe en celdas de una misma jaula, la jaula tiene que usarlo: se descartan sus combinaciones sin él. |
+| 5 | `xWing`, `swordfish` | Peces de 2 y 3 líneas: si en 2 (o 3) filas un dígito solo cabe en 2 (o 3) columnas, sale del resto de esas columnas; igual cambiando filas por columnas. |
+| 5 | `yWing` | Un pivote {a, b} que ve una celda {a, c} y otra {b, c}: c sale de las celdas que ven a las dos. |
+| 5 | `unitCombination` | Una fila, columna o caja entera con las jaulas que la tocan: un candidato que no aparece en ninguna forma de llenar la unidad con todos sus dígitos, en la que cada jaula cuadre (entera dentro, con su suma; si sobresale, completable fuera con sus candidatos y sin repetir dígito), sale de la celda. |
+
+Dentro de un nivel, el orden de `TECHNIQUES` es el de la tabla (en el nivel 4: `lockedCandidates`, `nakedPair`, `hiddenPair`, `cageUnitLock`, `nakedTriple` y `hiddenTriple`). No cambia el nivel de ningún puzzle ni de ninguna celda, solo los pasos.
+
+**Combinaciones de unidad** (`unitSupport`): para cada jaula que toca la unidad se enumeran las formas de llenar sus celdas de dentro (sin repetir dígito, con cotas de suma y comprobando que la jaula se completa fuera), agrupadas por el conjunto de dígitos que usan. Después se combinan las jaulas sin repetir dígito: hacia adelante, los conjuntos de dígitos alcanzables tras cada jaula; hacia atrás, los que todavía llegan a usar todos los dígitos. Un conjunto de una jaula vale si une un estado alcanzable con uno que termina, y sus formas dan el soporte. Es exacto y crece con los conjuntos de dígitos (como mucho 2^size por jaula), no con las permutaciones. La primera versión hacía búsquedas dirigidas por (celda, dígito), como `sumSupport`, y tardaba 2,4 veces más. Tiene memoria por unidad, como los grupos del 45.
 
 Regiones de la regla del 45: cada fila, columna y caja, y cada unión de 2 a `size − 1` filas o columnas consecutivas. Una región de `k` unidades suma `k · size · (size + 1) / 2`. Restando las jaulas que caben enteras, quedan la suma de los innies (las celdas de la región en jaulas que sobresalen) y la de los outies (las celdas de esas jaulas que quedan fuera). Los grupos se calculan una vez por puzzle, sin repetir conjuntos de celdas.
 
@@ -285,7 +298,7 @@ Regiones de la regla del 45: cada fila, columna y caja, y cada unión de 2 a `si
 ### Algoritmo
 `grade` repite: prueba las técnicas en el orden de `TECHNIQUES` (de menor a mayor nivel) y aplica **todas las deducciones de la primera que encuentra algo**; eso es un paso. Después vuelve a empezar desde el nivel 1. Así, un nivel solo se usa cuando ninguna técnica de un nivel inferior deduce nada. Termina cuando el tablero está lleno o ninguna técnica encuentra nada.
 
-`levelToDeduce` aplica el mismo bucle desde el estado dado hasta que la celda queda con un solo candidato, y devuelve el nivel más alto que usó (al menos 1). Ese nivel es el mínimo. Las reglas son monótonas (con menos candidatos deducen lo mismo o más), así que lo que deducen las técnicas de nivel ≤ L desde un estado es un punto fijo único. El bucle usa el nivel L solo después de llegar al punto fijo de los niveles inferiores, en el que la celda todavía no estaba determinada. Por la misma monotonía, agregar celdas correctas no sube el nivel (T-35.5).
+`levelToDeduce` aplica el mismo bucle desde el estado dado hasta que la celda queda con un solo candidato, y devuelve el nivel más alto que usó (al menos 1). Ese nivel es el mínimo. Las reglas son monótonas (con menos candidatos deducen lo mismo o más), así que lo que deducen las técnicas de nivel ≤ L desde un estado es un punto fijo único. Las de los niveles 4 y 5 también lo son: un patrón solo se ignora cuando una de sus celdas queda resuelta, y lo que habría deducido lo deducen entonces los singles. El bucle usa el nivel L solo después de llegar al punto fijo de los niveles inferiores, en el que la celda todavía no estaba determinada. Por la misma monotonía, agregar celdas correctas no sube el nivel (T-35.5).
 
 **Memoria por jaula y grupo.** El filtro exacto depende solo de los candidatos de sus celdas, así que el contexto guarda el último resultado de cada jaula y de cada grupo, con las máscaras con que se calculó, y lo reutiliza si no cambiaron. No cambia ningún resultado: lo comprueba la prueba de determinismo con y sin memoria.
 
@@ -297,29 +310,39 @@ Regiones de la regla del 45: cada fila, columna y caja, y cada unión de 2 a `si
   - `levelToDeduce`: entre 1 y `UNRATED`; vale 1 si la celda tiene un solo candidato o la coloca una técnica de nivel 1; no sube al agregar celdas correctas; no pasa del `maxLevel` de `grade`; desde el tablero vacío sin números iniciales es al menos 2. Casos fijos de naked single, hidden single y última celda de jaula.
   - Oráculos independientes en el tablero vacío: `cageCombination` deja exactamente los dígitos de las combinaciones de cada jaula, y `cageForcedDigit` quita exactamente sus dígitos obligatorios de las celdas que ven toda la jaula (combinaciones por enumeración directa de subconjuntos). Las sumas de los grupos del 45 coinciden con la solución.
   - Determinismo, con y sin memoria, y entradas inválidas.
+- `test/grader-advanced.test.ts` (F4f, T-35.4), en la CI, con estados que todavía admiten la solución: dígitos correctos colocados y candidatos equivocados quitados al azar (como las notas de un jugador), que es lo que hace aparecer los patrones de los niveles 4 y 5.
+  - Desde esos estados, en 4×4, 6×6 y 9×9, ninguna deducción de ninguna técnica contradice la solución.
+  - Cada técnica de los niveles 4 y 5 deduce exactamente lo mismo que un oráculo por fuerza bruta escrito aparte (subconjuntos por máscara; permutaciones completas de la unidad para `unitCombination`), en 4×4 y 6×6, y en 9×9 salvo `unitCombination`.
+  - Cada una de esas técnicas deduce algo en alguno de 400 estados 6×6, para que la comparación con su oráculo no sea vacía.
 - `test/grader.corpus.test.ts`: los 1000 puzzles del corpus (semillas 1 a 1000) con la misma reproducción de la traza. Mide `grade` y simula 100 partidas para medir `levelToDeduce`. Corre con `pnpm test:corpus` y en el workflow `corpus.yml`.
 
 ### Mediciones
-Semillas 1 a 1000 (9×9, opciones por defecto del generador), Node 24.21, AMD Ryzen 9 9955HX, un hilo. **365 264 deducciones, 0 contra la solución.**
+Semillas 1 a 1000 (9×9, opciones por defecto del generador), Node 24.21, AMD Ryzen 9 9955HX, un hilo. **Niveles 1 a 5 (F4f): 401 109 deducciones, 0 contra la solución.**
 
-| Nivel máximo | Puzzles |
-|---|---|
-| 1 | 0 |
-| 2 | 100 (10,0 %) |
-| 3 | 668 (66,8 %) |
-| Exceden las técnicas (niveles 1 a 3) | 232 (23,2 %) |
+| Nivel máximo | Puzzles (F4f) | Con los niveles 1 a 3 (F4e) |
+|---|---|---|
+| 1 | 0 | 0 |
+| 2 | 100 (10,0 %) | 100 |
+| 3 | 668 (66,8 %) | 668 |
+| 4 | 77 (7,7 %) | — |
+| 5 | 85 (8,5 %) | — |
+| Exceden las técnicas | **70 (7,0 %)** | 232 (23,2 %) |
 
 - Ningún puzzle es de nivel 1: sin números iniciales no hay ningún single al empezar, y hace falta al menos una combinación de jaula. Con `easyGivens` puede haberlos (F5).
-- Pasos por puzzle: mediana 46, máximo 75. Pasos por nivel en todo el corpus: 29 909 de nivel 1, 9664 de nivel 2 y 1499 de nivel 3.
+- Los niveles 4 y 5 resuelven 162 de los 232 puzzles que excedían los niveles 1 a 3. Los niveles 2 y 3 no cambian: las técnicas nuevas solo se usan cuando las anteriores no deducen nada.
+- Pasos por puzzle: mediana 51, máximo 98. Pasos por nivel en todo el corpus: 35 831 de nivel 1, 11 458 de nivel 2, 2030 de nivel 3, 634 de nivel 4 y 245 de nivel 5.
+- Pasos por técnica de los niveles 4 y 5: `lockedCandidates` 412, `cageUnitLock` 134, `nakedPair` 49, `hiddenPair` 20, `nakedTriple` 17, `hiddenTriple` 2, `xWing` 1, `yWing` 0, `swordfish` 0 y `unitCombination` 244. En killer, las técnicas de jaula y de unidad hacen casi todo el trabajo: Y-Wing y Swordfish no se usaron nunca en el corpus, porque antes deduce algo otra técnica. Se quedan porque son correctas (tienen su oráculo y deducen en estados al azar) y baratas, y otros puzzles pueden necesitarlas.
 
-**Tiempo de `grade`** (primera llamada por puzzle, sin memoria previa): media 11 ms, mediana 8,5 ms, p95 25 ms, p99 32 ms y máximo 57 ms.
+**Tiempo de `grade`** (primera llamada por puzzle, sin memoria previa): media 25 ms, mediana 20 ms, p95 59 ms, p99 84 ms y máximo 130 ms (con los niveles 1 a 3, media 11 ms). Lo que más cuesta es `unitCombination`.
 
-**Tiempo de `levelToDeduce`**, que se ejecutará en el servidor en cada jugada correcta. Se simularon 100 partidas sobre los primeros puzzles del corpus: las celdas vacías se llenan con la solución en un orden aleatorio con semilla, y antes de cada jugada se mide la llamada, como hará el servidor. 8099 llamadas:
+**Tiempo de `levelToDeduce`**, que se ejecutará en el servidor en cada jugada correcta. Se simularon 100 partidas sobre los primeros puzzles del corpus: las celdas vacías se llenan con la solución en un orden aleatorio con semilla, y antes de cada jugada se mide la llamada, como hará el servidor. 8099 llamadas, medidas sin otra carga en la máquina:
 
-| Media | Mediana | p95 | p99 | Máximo |
-|---|---|---|---|---|
-| **0,77 ms** | 0,06 ms | **4,7 ms** | 11,5 ms | 30 ms |
+| Técnicas | Media | Mediana | p95 | p99 | Máximo |
+|---|---|---|---|---|---|
+| **Niveles 1 a 5 (F4f)** | **1,50 ms** | 0,09 ms | **9,2 ms** | 20,6 ms | 85 ms |
+| Niveles 1 a 3 (F4e) | 0,77 ms | 0,06 ms | 4,7 ms | 11,5 ms | 30 ms |
 
-- El coste depende de cuánto falta deducir. Casi todas las jugadas de media partida son singles (0,06 ms de mediana). Lo más caro son las primeras jugadas: desde el tablero vacío, cada llamada tarda unos 15 ms, porque recorre casi toda la resolución.
-- Resultados de esas llamadas: 6190 de nivel 1, 1574 de nivel 2, 291 de nivel 3 y 44 `UNRATED`.
-- Cómo se llegó aquí (`grade`, 100 puzzles). Enumerando todas las asignaciones de cada jaula y grupo en cada pasada, 37 ms de media. Con la memoria por jaula y grupo, 14 ms: el 70 % del tiempo era volver a filtrar jaulas sin cambios. Con búsquedas dirigidas por (celda, dígito) en vez de la enumeración completa, 11 ms: un grupo de 5 celdas que pueden repetir dígito llegaba a 9⁵ asignaciones. Con la poda por dígitos libres, unos 9 ms.
+- El p95 queda muy por debajo del límite de 50 ms pedido para F4f. El coste depende de cuánto falta deducir: casi todas las jugadas de media partida son singles, y lo más caro son las primeras jugadas, que recorren casi toda la resolución.
+- Resultados de esas llamadas: 6190 de nivel 1, 1574 de nivel 2, 291 de nivel 3, 24 de nivel 4, 7 de nivel 5 y 13 `UNRATED` (con los niveles 1 a 3 eran 44 `UNRATED`).
+- Monotonía (T-35.5), comprobada además con un script aparte: en 200 puzzles (semillas 5000 a 5199), 3 celdas por puzzle y 15 tandas de 4 celdas correctas agregadas, 9000 comparaciones sin ninguna subida y ningún nivel por encima del `maxLevel` de `grade`.
+- Cómo se llegó a los tiempos de F4e (`grade`, 100 puzzles). Enumerando todas las asignaciones de cada jaula y grupo en cada pasada, 37 ms de media. Con la memoria por jaula y grupo, 14 ms: el 70 % del tiempo era volver a filtrar jaulas sin cambios. Con búsquedas dirigidas por (celda, dígito) en vez de la enumeración completa, 11 ms: un grupo de 5 celdas que pueden repetir dígito llegaba a 9⁵ asignaciones. Con la poda por dígitos libres, unos 9 ms.
