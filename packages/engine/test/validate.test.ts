@@ -12,6 +12,7 @@ import {
 } from "@sudoku-killer/engine";
 import { at } from "../src/model/at.ts";
 import { GEOMETRIES, GEOMETRY_4, GEOMETRY_9, anyKillerArb, patternGrid } from "./helpers/grids.ts";
+import { assertProperty } from "./helpers/property.ts";
 
 /** 4x4 con jaulas horizontales de 2 celdas; las sumas salen de la cuadrícula del patrón. */
 function basePuzzle(): { puzzle: KillerPuzzle; grid: number[] } {
@@ -29,7 +30,7 @@ const codes = (issues: readonly StructureIssue[]): string[] =>
 
 describe("T-35.3 validateStructure", () => {
   it("accepts random valid puzzles of every test geometry", () => {
-    fc.assert(
+    assertProperty(
       fc.property(anyKillerArb, ({ puzzle }) => {
         expect(validateStructure(puzzle)).toEqual([]);
       }),
@@ -118,7 +119,7 @@ describe("T-35.3 validateStructure", () => {
 
 describe("T-35.3 validateSolution", () => {
   it("accepts the grid a random puzzle was built from", () => {
-    fc.assert(
+    assertProperty(
       fc.property(anyKillerArb, ({ puzzle, grid }) => {
         expect(validateSolution(puzzle, grid)).toEqual([]);
       }),
@@ -127,7 +128,7 @@ describe("T-35.3 validateSolution", () => {
   });
 
   it("rejects a grid with one changed cell", () => {
-    fc.assert(
+    assertProperty(
       fc.property(anyKillerArb, fc.nat(), fc.nat(), ({ puzzle, grid }, pick, delta) => {
         const cell = pick % grid.length;
         const changed = [...grid];

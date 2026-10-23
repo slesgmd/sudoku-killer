@@ -6,6 +6,12 @@ import { buildRegions, type Regions } from "./regions.ts";
 export interface SolveBOptions {
   /** Soluciones a buscar antes de detenerse (por defecto 2: basta para saber si es única). */
   readonly limit?: number;
+  /**
+   * Poda propia de B (por defecto, activada): las reglas 1 a 3 y el descarte de opciones que
+   * repiten un número inicial de su fila, columna o caja. Con `false` queda Dancing Links puro,
+   * que sirve de referencia para comprobar que la poda no pierde soluciones (docs/motor.md).
+   */
+  readonly prune?: boolean;
 }
 
 export interface SolveBResult {
@@ -29,6 +35,7 @@ interface Run {
   readonly regions: Regions;
   readonly cellCount: number;
   readonly limit: number;
+  readonly prune: boolean;
   /** Cabecera del ítem de la primera celda de cada jaula: sus opciones son las de la jaula. */
   readonly cageHeader: Int32Array;
   readonly optionCage: Int32Array;
@@ -298,7 +305,7 @@ function explore(run: Run): void {
   // Un ítem con una sola opción es una jugada forzada: se toma sin podar.
   const mark = run.trail.length;
   let header = choose(links);
-  if (length[header]! > 1) {
+  if (run.prune && length[header]! > 1) {
     if (!prune(run)) {
       restore(run, mark);
       return;
@@ -357,7 +364,8 @@ export function solveB(puzzle: KillerPuzzle, options: SolveBOptions = {}): Solve
   if (!(Number.isInteger(limit) || limit === Infinity) || limit < 1) {
     throw new RangeError(`Invalid limit ${String(limit)}`);
   }
-  const matrix = buildExactCover(puzzle);
+  const prune = options.prune ?? true;
+  const matrix = buildExactCover(puzzle, prune);
   const regions = buildRegions(puzzle, matrix);
   const cageOf = new Int32Array(puzzle.size * puzzle.size);
   puzzle.cages.forEach((cage, index) => {
@@ -372,6 +380,7 @@ export function solveB(puzzle: KillerPuzzle, options: SolveBOptions = {}): Solve
     regions,
     cellCount: puzzle.size * puzzle.size,
     limit,
+    prune,
     cageHeader: Int32Array.from(puzzle.cages, (cage) => cage.cells[0]! + 1),
     optionCage: Int32Array.from(matrix.cells, (cells) => cageOf[cells[0]!]!),
     chosenOf: new Int32Array(cageCount).fill(-1),

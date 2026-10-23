@@ -1,6 +1,6 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.07
+Versión del plan: 1.08
 Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 en curso (F4a, F4b y F4c hechas)
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
@@ -248,6 +248,7 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
 - La prueba de 1000 puzzles no corre en la CI de cada push: la CI ejecuta una versión reducida y el corpus completo corre en local y en un workflow programado.
 - Si no hay una fuente pública legible por máquina para los puzzles de referencia, se usan casos con resultado conocido por construcción, y se registra la desviación.
 - **Desviación registrada en F4c:** no se usó ninguna fuente pública (no se hacen más cargas de sudoku.com y no hay otra legible por máquina a mano). Los 13 puzzles de referencia (`packages/engine/test/fixtures/reference-puzzles.ts`) se construyeron sobre cuadrículas válidas, con 0, 1 y de 2 a 4 soluciones en 4×4, 6×6 y 9×9. Su resultado lo calcularon A y B con `limit: Infinity` y lo confirmó el validador.
+- **Refuerzo de F4c (pedido por el usuario, 2026-10-23):** `solveB` tiene la opción `prune: false` (Dancing Links puro), y B con poda y sin ella coinciden en 4×4, 6×6 y 9×9 con números iniciales (prueba en la CI y 4307 puzzles medidos, 0 diferencias). Las pruebas aleatorias imprimen la semilla en todo fallo, y cada semilla que falle se agrega como regresión fija (`docs/motor.md`).
 - **Nota para F4d (pedida por el usuario, 2026-10-22):** el generador usa `solveA` con un presupuesto de nodos o de tiempo (hoy `solveA` no tiene presupuesto: se agrega en F4d). Si un candidato lo excede, se descarta y se genera otro. Se mide y documenta cuántos candidatos se descartan. B verifica después cada puzzle aceptado; su coste en puzzles únicos está medido en `docs/motor.md` (media 13 ms y máximo 0,7 s en 9×9).
 
 **Criterios de aceptación:**
@@ -432,3 +433,4 @@ Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra p
 - **1.05:** F3 marcada como hecha (~0,3 h reales). La SPEC pasa a la versión 1.1: R-05 explica las jugadas simultáneas (gana la primera que procesa la cola; si la primera es un error, la celda no se bloquea) y suma T-05.5. TypeScript se fija en 6.0.x por compatibilidad con `typescript-eslint` (ADR 0001).
 - **1.06:** F4 se divide en las subfases F4a–F4f (aprobadas por el usuario). La SPEC pasa a la versión 1.2 con R-35 (pruebas del motor). F4a hecha (~0,3 h, incluida la planificación de F4).
 - **1.07:** F4b (~0,6 h) y F4c (~1,1 h) hechas. F4 registra la desviación de los puzzles de referencia (construidos, sin fuente pública) y una nota para F4d pedida por el usuario: presupuesto de nodos o de tiempo para `solveA` en el generador, con descarte de candidatos y medición de cuántos se descartan.
+- **1.08:** refuerzo de F4c pedido por el usuario antes de F4d: B con poda contra Dancing Links puro (0 diferencias) y semillas visibles en las pruebas aleatorias, con regresiones fijas (`docs/motor.md`).

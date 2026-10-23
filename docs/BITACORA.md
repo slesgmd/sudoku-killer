@@ -206,3 +206,22 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 **Tiempo real:** unos 1,1 h (16:55 a 18:02 aproximadamente), ejecutado en una sesión, sin contar la revisión del usuario.
 
 **Siguiente:** F4d, generador.
+
+## 2026-10-23 — Refuerzo de F4c antes de F4d
+
+**Pedido del usuario:** una opción de `solveB` sin poda propia (Dancing Links puro) y la comparación con B con poda en 4×4, 6×6 y 9×9 con números iniciales (mismo `count` con `limit: 2` y mismo conjunto de soluciones; cualquier diferencia bloquea); que toda prueba aleatoria imprima su semilla al fallar, y que cada semilla que falle quede como caso fijo de regresión.
+
+**Hecho:**
+- `solveB(puzzle, { prune: false })`: sin las reglas 1 a 3 ni el descarte de opciones que repiten un número inicial de su fila, columna o caja (`buildExactCover(puzzle, blockPeers)`).
+- `test/solver-b-pure.test.ts` (T-35.1): 4×4 con conjuntos completos, 6×6 sin números iniciales y 9×9 con 15, en cadenas hasta la unicidad y en variantes con 0 soluciones.
+- Medición: 4307 puzzles, **0 diferencias** (tabla en `docs/motor.md`). Dancing Links puro en 9×9 es rápido desde unos 12 números iniciales (media 13 ms con `limit: 2`) y llega a 1,7 s con 5.
+- `test/helpers/property.ts`: `assertProperty` reemplaza a `fc.assert` en todas las pruebas, que ahora lo prohíbe el lint (`tests/lint-property-seed.test.ts`). Imprime `{ seed, path }` al fallar, devuelve la semilla para las comprobaciones posteriores (`seedMessage`) y ejecuta antes las regresiones registradas. Su propio test: `test/property.test.ts`.
+- La única comprobación posterior que había (`smallSets > 0` en `solvers-cross.test.ts`) ahora imprime la semilla.
+- `docs/motor.md` explica el procedimiento de regresión; `PLAN.md` pasa a la 1.08.
+
+**Problemas y soluciones:**
+- ESLint no suma las opciones de `no-restricted-properties` entre bloques: las pruebas de los paquetes puros repiten las dos listas (reloj y azar, y `fc.assert`).
+
+**Tiempo real:** unos 0,25 h (10:50 a 11:05 aproximadamente), ejecutado en una sesión.
+
+**Siguiente:** F4d, generador.

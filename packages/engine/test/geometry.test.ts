@@ -15,6 +15,7 @@ import {
 } from "@sudoku-killer/engine";
 import { at } from "../src/model/at.ts";
 import { GEOMETRIES, GEOMETRY_9 } from "./helpers/grids.ts";
+import { assertProperty } from "./helpers/property.ts";
 
 describe("T-35.3 geometry", () => {
   it("cellIndex maps the corners of a 9x9 board and rejects cells outside it", () => {
@@ -26,7 +27,7 @@ describe("T-35.3 geometry", () => {
   });
 
   it("cellIndex is a bijection onto 0..size²-1", () => {
-    fc.assert(
+    assertProperty(
       fc.property(fc.integer({ min: 1, max: 16 }), fc.nat(), fc.nat(), (size, r, c) => {
         const index = cellIndex(r % size, c % size, size);
         expect([Math.floor(index / size), index % size]).toEqual([r % size, c % size]);
@@ -82,7 +83,7 @@ describe("T-35.3 geometry", () => {
 
 describe("T-35.3 candidate masks", () => {
   it("digitsOf, digitBit, popcount and singleDigit agree", () => {
-    fc.assert(
+    assertProperty(
       fc.property(fc.integer({ min: 0, max: fullMask(16) }), (mask) => {
         const digits = digitsOf(mask);
         expect(digits.reduce((m, d) => m | digitBit(d), 0)).toBe(mask);

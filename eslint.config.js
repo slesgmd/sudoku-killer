@@ -13,6 +13,31 @@ export const SOLVER_FILES = [
   "packages/engine/src/solver-b/**/*.ts",
 ];
 
+/** Pruebas de todo el monorepo. */
+const TEST_FILES = ["**/test/**", "tests/**"];
+
+const PURE_RESTRICTIONS = [
+  {
+    object: "Date",
+    property: "now",
+    message: "Paquete puro: el tiempo llega en el evento o en el contexto (ADR 0004).",
+  },
+  {
+    object: "Math",
+    property: "random",
+    message: "Paquete puro: el azar llega como un generador con semilla (ADR 0004).",
+  },
+];
+
+const TEST_RESTRICTIONS = [
+  {
+    object: "fc",
+    property: "assert",
+    message:
+      "Usar assertProperty (packages/engine/test/helpers/property.ts): imprime la semilla en todo fallo y ejecuta las regresiones (docs/motor.md).",
+  },
+];
+
 export default defineConfig(
   globalIgnores(["**/dist/", "**/coverage/", "evidence/"]),
   js.configs.recommended,
@@ -40,23 +65,19 @@ export default defineConfig(
     extends: [reactHooks.configs.flat.recommended],
     languageOptions: { globals: globals.browser },
   },
+  // Las opciones de una regla no se suman entre bloques: el último que aplica las reemplaza. Por
+  // eso las pruebas de los paquetes puros repiten las dos listas.
   {
     files: PURE_PACKAGES,
-    rules: {
-      "no-restricted-properties": [
-        "error",
-        {
-          object: "Date",
-          property: "now",
-          message: "Paquete puro: el tiempo llega en el evento o en el contexto (ADR 0004).",
-        },
-        {
-          object: "Math",
-          property: "random",
-          message: "Paquete puro: el azar llega como un generador con semilla (ADR 0004).",
-        },
-      ],
-    },
+    rules: { "no-restricted-properties": ["error", ...PURE_RESTRICTIONS] },
+  },
+  {
+    files: TEST_FILES,
+    rules: { "no-restricted-properties": ["error", ...TEST_RESTRICTIONS] },
+  },
+  {
+    files: PURE_PACKAGES.map((pkg) => pkg.replace("/**", "/test/**")),
+    rules: { "no-restricted-properties": ["error", ...PURE_RESTRICTIONS, ...TEST_RESTRICTIONS] },
   },
   {
     // Solo los solvers: bucles críticos sobre arreglos tipados con índices garantizados por

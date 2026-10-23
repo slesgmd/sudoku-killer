@@ -6,6 +6,7 @@ import { solveA, solveB, type KillerPuzzle } from "@sudoku-killer/engine";
 import { at } from "../src/model/at.ts";
 import { bruteForce4, gridKeys } from "./helpers/brute-force.ts";
 import { GEOMETRY_4, GEOMETRY_9, killerArb } from "./helpers/grids.ts";
+import { assertProperty } from "./helpers/property.ts";
 import {
   addGivensUntilUnique,
   boxCagesPuzzle,
@@ -17,7 +18,7 @@ import {
 
 describe("T-35.1 solver B against the 4x4 brute force and solver A", () => {
   it("finds exactly the brute-force solutions of random puzzles, like A", () => {
-    fc.assert(
+    assertProperty(
       fc.property(variantArb(GEOMETRY_4), (puzzle) => {
         const expected = gridKeys(bruteForce4(puzzle));
         const all = solveB(puzzle, { limit: Infinity });
@@ -60,7 +61,7 @@ describe("T-35.1 solver B against the 4x4 brute force and solver A", () => {
 
 describe("solver B on 9x9", () => {
   it("is deterministic", () => {
-    fc.assert(
+    assertProperty(
       fc.property(variantArb(GEOMETRY_9, 3), (puzzle) => {
         expect(solveB(puzzle)).toEqual(solveB(puzzle));
       }),
@@ -69,7 +70,7 @@ describe("solver B on 9x9", () => {
   });
 
   it("detects a broken board total", () => {
-    fc.assert(
+    assertProperty(
       fc.property(killerArb(GEOMETRY_9), ({ puzzle }) => {
         expect(solveB(shiftFirstSum(puzzle))).toMatchObject({ count: 0, solutions: [] });
       }),

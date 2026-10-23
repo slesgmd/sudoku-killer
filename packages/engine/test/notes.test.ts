@@ -15,6 +15,7 @@ import {
 } from "@sudoku-killer/engine";
 import { at } from "../src/model/at.ts";
 import { GEOMETRY_9, anyKillerArb } from "./helpers/grids.ts";
+import { assertProperty } from "./helpers/property.ts";
 
 const notesArb = (puzzle: KillerPuzzle): fc.Arbitrary<Uint16Array> =>
   fc
@@ -34,7 +35,7 @@ describe("T-17.1 cleanupPeers", () => {
         digit: fc.integer({ min: 1, max: puzzle.size }),
       }),
     );
-    fc.assert(
+    assertProperty(
       fc.property(scenario, ({ puzzle, notes, cell, digit }) => {
         const before = notes.slice();
         const { notes: after, removed } = cleanupPeers(puzzle, notes, cell, digit);

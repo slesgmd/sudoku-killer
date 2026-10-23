@@ -69,8 +69,12 @@ function checkInput(puzzle: KillerPuzzle): void {
   }
 }
 
-/** Construye la matriz de cobertura exacta. Lanza `RangeError` si la entrada no la define. */
-export function buildExactCover(puzzle: KillerPuzzle): ExactCover {
+/**
+ * Construye la matriz de cobertura exacta. Lanza `RangeError` si la entrada no la define. Con
+ * `blockPeers`, una poda propia de B, se descartan también las opciones que repiten un número
+ * inicial de su fila, columna o caja; sin ella, la matriz es la de la formulación pura.
+ */
+export function buildExactCover(puzzle: KillerPuzzle, blockPeers = true): ExactCover {
   checkInput(puzzle);
   const { size, boxRows, boxCols } = puzzle;
   const cellCount = size * size;
@@ -84,7 +88,7 @@ export function buildExactCover(puzzle: KillerPuzzle): ExactCover {
   const fixed = new Uint8Array(cellCount);
   const blocked = new Uint16Array(cellCount);
   for (const { cell, value } of puzzle.givens) fixed[cell] = value;
-  for (const { cell: given, value } of puzzle.givens) {
+  for (const { cell: given, value } of blockPeers ? puzzle.givens : []) {
     for (let cell = 0; cell < cellCount; cell++) {
       if (
         cell !== given &&

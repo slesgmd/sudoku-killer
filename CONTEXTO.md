@@ -5,7 +5,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.07. **SPEC:** versión 1.2.
+- **Plan:** versión 1.08. **SPEC:** versión 1.2.
 - **Fase actual:** F4, motor del puzzle, dividida en F4a–F4f (tabla en `docs/PLAN.md`, F4). F4a, F4b y F4c hechas el 2026-10-22.
 - **Forma de trabajo en F4 (aprobada):** una subfase por sesión, sin pedir confirmación salvo errores. Cada subfase termina así: `pnpm check`, `pnpm test` y `pnpm build` en verde; BITACORA con horas; PLAN marcado; este archivo apuntando a la siguiente; commit, push, CI en verde (`gh run watch`), y aviso al usuario de que puede hacer `/clear`.
 - **Próxima tarea exacta: F4d, generador** (`docs/PLAN.md`, F4: pasos del generador y nota para F4d).

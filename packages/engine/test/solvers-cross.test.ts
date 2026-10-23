@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { solveA, solveB, type Geometry, type KillerPuzzle } from "@sudoku-killer/engine";
 import { gridKeys } from "./helpers/brute-force.ts";
 import { GEOMETRY_6, GEOMETRY_9, killerArb } from "./helpers/grids.ts";
+import { assertProperty, seedMessage } from "./helpers/property.ts";
 import {
   expectValidSolutions,
   givensChain,
@@ -51,7 +52,7 @@ describe.each<[Geometry, number, number, number]>([
 ])("T-35.1 solvers A and B agree ($size)", (geometry, chains, variants, givens) => {
   it("along a chain of givens: many solutions, a few (same set) and one (the grid)", SLOW, () => {
     let smallSets = 0;
-    fc.assert(
+    const seed = assertProperty(
       fc.property(killerWithGivensArb(geometry, givens), ({ puzzle, grid }) => {
         const chain = givensChain(puzzle, grid);
         for (const step of chain) {
@@ -65,11 +66,11 @@ describe.each<[Geometry, number, number, number]>([
     );
     // Las cadenas pasan casi siempre por puzzles con pocas soluciones; si no, la prueba no
     // compararía conjuntos de varias soluciones.
-    expect(smallSets).toBeGreaterThan(0);
+    expect(smallSets, seedMessage(seed)).toBeGreaterThan(0);
   });
 
   it("on variants with 0 solutions, wrong givens or shifted sums", SLOW, () => {
-    fc.assert(
+    assertProperty(
       fc.property(variantArb(geometry, givens), (puzzle) => {
         compare(puzzle);
       }),
@@ -78,7 +79,7 @@ describe.each<[Geometry, number, number, number]>([
   });
 
   it("when the board total is broken", SLOW, () => {
-    fc.assert(
+    assertProperty(
       fc.property(killerArb(geometry), ({ puzzle }) => {
         expect(compare(shiftFirstSum(puzzle))).toBe(0);
       }),

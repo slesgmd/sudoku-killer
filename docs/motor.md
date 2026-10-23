@@ -16,6 +16,12 @@ La única excepción es un override de ESLint limitado a `packages/engine/src/so
 - Allí los índices están garantizados por construcción: celdas en `0..size² − 1` de un puzzle ya validado con `validateStructure`, y unidades y jaulas tomadas del `Layout` precalculado. Un índice fuera de rango es un error del solver, y lo detectan los tests (la solución pasa `validateSolution`, y A y B se comparan entre sí y con la fuerza bruta).
 - Fuera de esos bucles, los solvers también prefieren `for...of`. El alcance del override lo fija `tests/lint-non-null.test.ts`.
 
+### Pruebas aleatorias y semillas
+Las pruebas de propiedades usan `assertProperty` (`test/helpers/property.ts`) en vez de `fc.assert`, que está prohibido por lint en todas las pruebas del monorepo (`tests/lint-property-seed.test.ts`).
+- **Todo fallo imprime la semilla.** Si falla la propiedad, el mensaje de fast-check trae `{ seed, path }` y el contraejemplo reducido. `assertProperty` devuelve además la semilla de la ejecución, para que las comprobaciones posteriores sobre el conjunto de ejecuciones (por ejemplo, «hubo al menos un conjunto de pocas soluciones») la impriman con `expect(x, seedMessage(seed))`.
+- **Cada semilla que falle se agrega como caso fijo de regresión**, en la lista `regressions` de esa misma propiedad: `assertProperty(property, { numRuns, regressions: [{ seed, path }] })`. Las regresiones se ejecutan siempre, antes que la semilla nueva de cada ejecución. Se agrega aunque el fallo ya esté corregido, con un comentario que diga qué falló. Si falló una comprobación posterior (sin `path`), basta la semilla.
+- Una semilla reproduce sus valores mientras no cambien los arbitrarios de la propiedad. Si un cambio los altera, el contraejemplo se copia además como caso fijo explícito (un puzzle literal en un `it` propio), que no depende de fast-check.
+
 ## Modelo (F4a)
 
 | Módulo | Contenido |
@@ -98,7 +104,9 @@ Cómo se llegó aquí (9×9, semilla 42):
 
 ## Solver B (F4c)
 
-`solveB(puzzle, { limit = 2 })` → `{ count, solutions, nodes }`, con la misma semántica que `solveA`: `count` 0, 1 o 2; como mucho `limit` soluciones en el orden de la búsqueda; `limit` entero ≥ 1 o `Infinity`; determinista. `nodes` cuenta las coberturas parciales visitadas, incluida la vacía. No es comparable con los nodos de A.
+`solveB(puzzle, { limit = 2, prune = true })` → `{ count, solutions, nodes }`, con la misma semántica que `solveA`: `count` 0, 1 o 2; como mucho `limit` soluciones en el orden de la búsqueda; `limit` entero ≥ 1 o `Infinity`; determinista. `nodes` cuenta las coberturas parciales visitadas, incluida la vacía. No es comparable con los nodos de A.
+
+Con `prune: false` se desactiva toda la poda propia de B: las reglas 1 a 3 y el descarte de opciones que repiten un número inicial de su fila, columna o caja. Queda Dancing Links puro (algoritmo X con MRV sobre la formulación de abajo), que sirve de referencia para la poda. Las cotas de suma con las que se enumeran las permutaciones de cada jaula se mantienen: no son poda, porque generan exactamente las permutaciones de dígitos distintos que dan la suma.
 
 B solo importa `src/types.ts` (lint, T-35.1), así que no puede usar `validateStructure`. Comprueba lo que necesita para que la matriz esté bien definida: geometría, jaulas de 2 a 5 celdas que parten el tablero y números iniciales en rango sin celdas repetidas. Si algo falla, lanza `RangeError`. El resto de la estructura no lo repite: con una suma inalcanzable, la jaula no tiene opciones y B devuelve 0 soluciones, mientras que A lanza `RangeError`. Los llamadores validan la estructura antes, como hará el generador.
 
@@ -128,6 +136,7 @@ Las opciones ocultas van a una pila y se devuelven en orden inverso al volver de
   - **Cadenas de números iniciales:** desde un puzzle aleatorio, se agregan números iniciales de su cuadrícula hasta la unicidad y se compara cada paso: muchas soluciones, pocas (conjunto completo) y una (la cuadrícula). Cada ejecución hace unas 80 comparaciones de conjuntos de 2 a 11 soluciones en 6×6 y unas 16 en 9×9, y la prueba exige al menos una.
   - **Variantes** con sumas desplazadas o números iniciales erróneos (0 soluciones) y **totales de tablero rotos**.
   - En 9×9 se parte de 3 números iniciales: sin ellos, B puede tardar segundos (ver mediciones) y la CI sería lenta e irregular. Los 9×9 sin números iniciales se comparan en la medición de abajo y en el corpus de F4d.
+- `test/solver-b-pure.test.ts` (T-35.1, B con poda contra Dancing Links puro): la misma función de comparación, entre `solveB` y `solveB` con `prune: false`. En 4×4, 300 puzzles aleatorios (con sumas desplazadas y números iniciales erróneos) con el conjunto completo de soluciones (`limit: Infinity`). En 6×6 sin números iniciales y en 9×9 con 15, cadenas de números iniciales hasta la unicidad y variantes con 0 soluciones. En 9×9 se parte de 15 porque Dancing Links puro se vuelve lento con menos (ver mediciones).
 - `test/reference.test.ts` (T-35.2): los 13 puzzles de `test/fixtures/reference-puzzles.ts`, con 0, 1 y de 2 a 4 soluciones en cada tamaño. A y B reproducen el conjunto de soluciones registrado, el validador acepta cada solución y, en 4×4, la fuerza bruta coincide. **Desviación:** no hay fuente pública. Los puzzles se construyeron sobre cuadrículas válidas (el campo `origin` dice cómo) y el resultado lo calcularon A y B con `limit: Infinity` y lo confirmó el validador.
 
 ### Mediciones
@@ -152,6 +161,18 @@ Cómo se llegó aquí (9×9, 11 puzzles difíciles de la semilla 42, tiempo tota
 | + regla 3 podando opciones hasta un punto fijo | 24 s | 33 000 nodos, 16 s |
 | + cachés por profundidad y poda solo antes de ramificar | 8 s | 39 500 nodos, 5,7 s |
 | + reglas 1 y 2 (versión actual) | 2,1 s | 4 500 nodos, 1,3 s |
+
+**B con poda contra Dancing Links puro** (2026-10-23, semilla 2026; el `count` con `limit: 2`, la solución si es única, las primeras 13 soluciones y el conjunto completo si hay 12 o menos; en 4×4, siempre el conjunto completo). **0 diferencias** en 4307 puzzles:
+
+| Muestra | Puzzles | 0 / 1 / conjuntos de 2 a 12 | Media con poda | Media pura | Máximo puro |
+|---|---|---|---|---|---|
+| 4×4, variantes | 1000 | 512 / 86 / 402 | 0,37 ms | 0,39 ms | 4 ms |
+| 6×6, variantes | 1000 | 698 / 8 / 144 | 1,7 ms | 2,3 ms | 17 ms |
+| 6×6, 300 cadenas sin números iniciales | 1568 | 0 / 300 / 796 | 1,6 ms | 2,0 ms | 16 ms |
+| 9×9, variantes con 12 números iniciales | 300 | 257 / 13 / 28 | 6,7 ms | 23 ms | 121 ms |
+| 9×9, 100 cadenas desde 12 números iniciales | 239 | 0 / 100 / 117 | 5,9 ms | 20 ms | 86 ms |
+
+Cada tiempo suma las dos llamadas de ese lado por puzzle (`limit: 2` y `limit: 13`, o `Infinity` en 4×4). En 9×9 con `limit: 2`, Dancing Links puro tarda de media 4,7 ms con 30 números iniciales, 13 ms con 12, 36 ms con 8 (máximo 0,7 s) y 118 ms con 5 (máximo 1,7 s).
 
 No se adoptaron:
 - **Opciones por (celda, dígito) más una opción de combinación por jaula**, sin permutaciones. Es cobertura exacta pura, con una matriz mucho más chica, pero pierde las sumas al ramificar y fue más lenta.

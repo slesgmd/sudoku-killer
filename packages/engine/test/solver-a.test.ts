@@ -6,6 +6,7 @@ import { cageSumRange, digitBit, solveA } from "@sudoku-killer/engine";
 import { cageCombinations } from "../src/solver-a/combos.ts";
 import { bruteForce4, gridKeys } from "./helpers/brute-force.ts";
 import { GEOMETRY_4, GEOMETRY_6, GEOMETRY_9, killerArb } from "./helpers/grids.ts";
+import { assertProperty } from "./helpers/property.ts";
 import {
   addGivensUntilUnique,
   boxCagesPuzzle,
@@ -17,7 +18,7 @@ import {
 
 describe("T-35.1 solver A against the 4x4 brute force", () => {
   it("finds exactly the brute-force solutions of random puzzles", () => {
-    fc.assert(
+    assertProperty(
       fc.property(variantArb(GEOMETRY_4), (puzzle) => {
         const expected = bruteForce4(puzzle);
         const all = solveA(puzzle, { limit: Infinity });
@@ -61,7 +62,7 @@ describe("T-35.1 solver A on 6x6 and 9x9", () => {
     [GEOMETRY_6, 40],
     [GEOMETRY_9, 25],
   ])("random puzzles become unique with givens from their grid ($size)", (geometry, numRuns) => {
-    fc.assert(
+    assertProperty(
       fc.property(killerArb(geometry), ({ puzzle, grid }) => {
         const unique = addGivensUntilUnique(puzzle, grid);
         expect(solveA(unique).solutions).toEqual([grid]);
@@ -71,7 +72,7 @@ describe("T-35.1 solver A on 6x6 and 9x9", () => {
   });
 
   it("every returned solution is valid, also when a sum is shifted", () => {
-    fc.assert(
+    assertProperty(
       fc.property(fc.oneof(variantArb(GEOMETRY_6), variantArb(GEOMETRY_9)), (puzzle) => {
         const result = solveA(puzzle);
         expectValidSolutions(puzzle, result.solutions);
@@ -83,7 +84,7 @@ describe("T-35.1 solver A on 6x6 and 9x9", () => {
   });
 
   it("is deterministic", () => {
-    fc.assert(
+    assertProperty(
       fc.property(variantArb(GEOMETRY_9), (puzzle) => {
         expect(solveA(puzzle)).toEqual(solveA(puzzle));
       }),
