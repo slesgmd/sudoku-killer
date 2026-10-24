@@ -242,10 +242,11 @@ Los presupuestos chicos casi no cambian la media: la mayoría de los candidatos 
 
 ## Calificador (F4e y F4f)
 
-`grade(puzzle, { trace = false })` → `{ status, maxLevel, steps, stepsByLevel, unplaced, trace? }`.
+`grade(puzzle, { trace = false, techniques = TECHNIQUES })` → `{ status, maxLevel, steps, stepsByLevel, unplaced, trace? }`.
 - `status`: `solved` si las técnicas llenan el tablero; `exceedsTechniques` si se quedan sin deducciones antes; `contradiction` si una celda se queda sin candidatos o el tablero lleno no cumple las sumas (solo en puzzles sin solución). **Nunca adivina:** no hay búsqueda.
 - `maxLevel`: el nivel de la técnica más difícil que hizo falta (`graderMaxLevel`, SPEC §2.2), o `UNRATED` si no terminó. `steps` es `graderSteps`, y `stepsByLevel[level]` son los pasos de cada nivel.
 - `trace`: los pasos en orden, cada uno con su técnica, su nivel y sus deducciones.
+- `techniques`: otra lista de técnicas, solo para medir (por ejemplo, otra cota de `unitCombination`).
 - Exige una estructura válida (`validateStructure`); si no, lanza `RangeError`. Es determinista.
 
 `levelToDeduce(cell, { puzzle, values })` → un nivel entre 1 y `UNRATED` (T-35.5).
@@ -253,7 +254,7 @@ Los presupuestos chicos casi no cambian la media: la mayoría de los candidatos 
 - Es el nivel mínimo con el que la celda queda con un solo candidato desde ese estado. Si el estado es contradictorio, devuelve `UNRATED`. Lanza `RangeError` si la celda no existe, ya tiene un dígito o `values` no tiene esa forma.
 - El servidor lo llama antes de aplicar cada jugada correcta (`PlacementContext`, SPEC); F6 lo usa para puntuar.
 
-Constantes: `MAX_TECHNIQUE_LEVEL = 5` (el nivel más alto implementado; era 3 en F4e) y `UNRATED = 6`. `UNRATED` es fijo, no `MAX_TECHNIQUE_LEVEL + 1`, para que un nivel guardado no cambie de sentido al agregar técnicas.
+Constantes: `MAX_TECHNIQUE_LEVEL = 5` (el nivel más alto implementado; era 3 en F4e) y `UNRATED = 6`. `UNRATED` es fijo, no `MAX_TECHNIQUE_LEVEL + 1`, para que un nivel guardado no cambie de sentido al agregar técnicas. `GRADER_VERSION` cambia cuando un cambio del calificador altera el nivel o los pasos de algún puzzle: "1" en F4f y "2" desde F5, con `unitCombination` acotada (`UNIT_COMBINATION_BOUND`, 4 jaulas abiertas y 8 combinaciones).
 
 ### Módulos (`src/grader/`)
 
@@ -285,11 +286,15 @@ Cada técnica es una función aislada (`find`): lee el estado sin modificarlo y 
 | 4 | `cageUnitLock` | Si en una unidad un dígito solo cabe en celdas de una misma jaula, la jaula tiene que usarlo: se descartan sus combinaciones sin él. |
 | 5 | `xWing`, `swordfish` | Peces de 2 y 3 líneas: si en 2 (o 3) filas un dígito solo cabe en 2 (o 3) columnas, sale del resto de esas columnas; igual cambiando filas por columnas. |
 | 5 | `yWing` | Un pivote {a, b} que ve una celda {a, c} y otra {b, c}: c sale de las celdas que ven a las dos. |
-| 5 | `unitCombination` | Una fila, columna o caja entera con las jaulas que la tocan: un candidato que no aparece en ninguna forma de llenar la unidad con todos sus dígitos, en la que cada jaula cuadre (entera dentro, con su suma; si sobresale, completable fuera con sus candidatos y sin repetir dígito), sale de la celda. |
+| 5 | `unitCombination` | Una fila, columna o caja entera con las jaulas que la tocan: un candidato que no aparece en ninguna forma de llenar la unidad con todos sus dígitos, en la que cada jaula cuadre (entera dentro, con su suma; si sobresale, completable fuera con sus candidatos y sin repetir dígito), sale de la celda. **Acotada (F5):** solo en unidades con como mucho 4 jaulas abiertas y 8 combinaciones. |
 
 Dentro de un nivel, el orden de `TECHNIQUES` es el de la tabla (en el nivel 4: `lockedCandidates`, `nakedPair`, `hiddenPair`, `cageUnitLock`, `nakedTriple` y `hiddenTriple`). No cambia el nivel de ningún puzzle ni de ninguna celda, solo los pasos.
 
 **Combinaciones de unidad** (`unitSupport`): para cada jaula que toca la unidad se enumeran las formas de llenar sus celdas de dentro (sin repetir dígito, con cotas de suma y comprobando que la jaula se completa fuera), agrupadas por el conjunto de dígitos que usan. Después se combinan las jaulas sin repetir dígito: hacia adelante, los conjuntos de dígitos alcanzables tras cada jaula; hacia atrás, los que todavía llegan a usar todos los dígitos. Un conjunto de una jaula vale si une un estado alcanzable con uno que termina, y sus formas dan el soporte. Es exacto y crece con los conjuntos de dígitos (como mucho 2^size por jaula), no con las permutaciones. La primera versión hacía búsquedas dirigidas por (celda, dígito), como `sumSupport`, y tardaba 2,4 veces más. Tiene memoria por unidad, como los grupos del 45.
+
+**Cota (F5).** `unitCombinationWithin({ maxOpenCages, maxCombinations })` arma la técnica; `TECHNIQUES` usa `UNIT_COMBINATION_BOUND` (4 y 8), y `UNBOUNDED` (la versión de F4f) queda solo para medir. Una unidad entra en la cota si tiene como mucho `maxOpenCages` jaulas abiertas (con alguna celda vacía dentro de la unidad) y `maxCombinations` combinaciones: formas de repartir sus dígitos entre las jaulas, un conjunto de dígitos por jaula sin repetir entre jaulas, en las que cada jaula cuadra con los candidatos. Es lo que una persona puede hacer con notas: escribe las combinaciones de cada jaula, las cruza en la unidad y descarta los dígitos que no aparecen en ninguna. Las jaulas abiertas se cuentan antes de enumerar; las combinaciones, en la pasada hacia adelante (con conteos por conjunto alcanzado), y si pasan la cota no se hace la pasada hacia atrás. La memoria por unidad guarda la pasada hacia adelante y, si se calculó, el soporte.
+
+Con menos candidatos o más celdas colocadas, las jaulas abiertas y las combinaciones no suben: una unidad que entra en la cota sigue entrando, y la técnica sigue siendo monótona (T-35.5). Además, la acotada deduce un subconjunto de lo que deduce la completa, así que el punto fijo con la cota está contenido en el de la completa: la cota solo puede pasar puzzles de nivel 5 a exceder las técnicas, nunca cambiar el nivel ni los pasos de los demás. `grader-bounds.corpus.test.ts` lo comprueba en el corpus.
 
 Regiones de la regla del 45: cada fila, columna y caja, y cada unión de 2 a `size − 1` filas o columnas consecutivas. Una región de `k` unidades suma `k · size · (size + 1) / 2`. Restando las jaulas que caben enteras, quedan la suma de los innies (las celdas de la región en jaulas que sobresalen) y la de los outies (las celdas de esas jaulas que quedan fuera). Los grupos se calculan una vez por puzzle, sin repetir conjuntos de celdas.
 
@@ -315,6 +320,8 @@ Regiones de la regla del 45: cada fila, columna y caja, y cada unión de 2 a `si
   - Desde esos estados, en 4×4, 6×6 y 9×9, ninguna deducción de ninguna técnica contradice la solución.
   - Cada técnica de los niveles 4 y 5 deduce exactamente lo mismo que un oráculo por fuerza bruta escrito aparte (subconjuntos por máscara; permutaciones completas de la unidad para `unitCombination`), en 4×4 y 6×6, y en 9×9 salvo `unitCombination`.
   - Cada una de esas técnicas deduce algo en alguno de 400 estados 6×6, para que la comparación con su oráculo no sea vacía.
+  - **Cota de `unitCombination` (F5):** con cada cota (sin cota, 4/8, 5/16, 5/32 y dos muy chicas, 3/2 y 2/1), la técnica deduce exactamente lo que el oráculo de permutaciones deduce en las unidades que entran en la cota, en 4×4 y 6×6. El oráculo cuenta las jaulas abiertas y las combinaciones por su cuenta (repartos distintos de conjuntos de dígitos entre las jaulas en las permutaciones que cuadran). Cada cota deduce algo en alguno de 400 estados 6×6, y las cotas 3/2 y 2/1 dejan de lado alguna unidad que usa la técnica completa, para que la cota no quede sin probar.
+- `test/grader-bounds.corpus.test.ts` (F5): los 1000 puzzles del corpus calificados sin cota y con las cotas 4/8, 5/16 y 5/32. Comprueba que una cota solo pasa puzzles de nivel 5 a exceder las técnicas (los demás conservan nivel y pasos) e imprime, por cota, los puzzles de nivel 5 conservados, los que pasan a exceder, la tasa de nivel 5, los minutos estimados para 500 y los tiempos de `grade` y `levelToDeduce` (100 partidas simuladas). Con la cota elegida imprime los histogramas para la equivalencia de dificultades. Corre con `pnpm test:corpus`.
 - `test/grader.corpus.test.ts`: los 1000 puzzles del corpus (semillas 1 a 1000) con la misma reproducción de la traza. Mide `grade`, simula 100 partidas para medir `levelToDeduce` e imprime el informe para F5 (abajo). Además, comprueba la monotonía de `levelToDeduce` (T-35.5) en los 200 primeros puzzles: 3 celdas por puzzle y 15 tandas de 4 celdas correctas, **9000 comparaciones**, con las mismas comprobaciones que la versión de la CI (`expectMonotoneLevels`, en `test/helpers/grader.ts`). Corre con `pnpm test:corpus` y en el workflow `corpus.yml`.
 
 ### Mediciones
@@ -350,7 +357,7 @@ Semillas 1 a 1000 (9×9, opciones por defecto del generador), Node 24.21, AMD Ry
 - Cómo se llegó a los tiempos de F4e (`grade`, 100 puzzles). Enumerando todas las asignaciones de cada jaula y grupo en cada pasada, 37 ms de media. Con la memoria por jaula y grupo, 14 ms: el 70 % del tiempo era volver a filtrar jaulas sin cambios. Con búsquedas dirigidas por (celda, dígito) en vez de la enumeración completa, 11 ms: un grupo de 5 celdas que pueden repetir dígito llegaba a 9⁵ asignaciones. Con la poda por dígitos libres, unos 9 ms.
 
 ### Informe para F5
-Mediciones del corpus (semillas 1 a 1000) para decidir en F5 la equivalencia entre niveles y dificultades. **Solo miden: el calificador no cambió.** Las imprime `test/grader.corpus.test.ts`, con las ayudas de `test/helpers/grader-report.ts`.
+Mediciones del corpus (semillas 1 a 1000) con el calificador de F4f, **sin cota** (`GRADER_VERSION` "1"), para decidir en F5 la equivalencia entre niveles y dificultades. Se conservan como historia: la cota elegida y sus mediciones están en «Cota de `unitCombination` (F5)», más abajo. **Solo miden: el calificador no cambió.** Las imprime `test/grader.corpus.test.ts`, con las ayudas de `test/helpers/grader-report.ts`.
 
 **Uso por técnica.** Puzzles en los que la técnica se usa al menos una vez (de 1000), pasos y deducciones en total:
 
@@ -411,3 +418,26 @@ Puzzles de nivel 5 (de 85) en los que **todas** las deducciones de `unitCombinat
 1. Implementarla como técnica aparte y medir cuántos de los 85 puzzles conserva. La cota inferior es 1, pero lo real puede ser bastante más, porque la variante puede encontrar otro camino.
 2. Si conserva muy pocos, probar la cota amplia (5 jaulas abiertas y 32 combinaciones: el 79,4 % de las deducciones y al menos 16 puzzles), o dejar la técnica completa como un nivel aparte, más difícil que el nivel 5 acotado.
 3. Contar el costo en candidatos: con la cota, el nivel 5 se vuelve más escaso que el 8,5 % actual, y para 500 puzzles por nivel harían falta más candidatos (a unos 70 ms cada uno).
+
+### Cota de `unitCombination` (F5)
+`test/grader-bounds.corpus.test.ts`, semillas 1 a 1000, Node 24.21, AMD Ryzen 9 9955HX, un hilo, sin otra carga. Un candidato es una semilla: `generatePuzzle` (media 30,6 ms) más `grade` con esa cota. Los minutos son los de 500 puzzles de nivel 5: 500 / tasa × tiempo por candidato. `levelToDeduce` se mide en 100 partidas simuladas (8099 llamadas).
+
+| Cota (jaulas abiertas / combinaciones) | Nivel 5 conservados (de 85) | Pasan a exceder | Tasa de nivel 5 | Minutos para 500 | `grade`: media / p95 | `levelToDeduce`: media / p95 / máx. |
+|---|---|---|---|---|---|---|
+| Sin cota (F4f) | 85 | 0 | 8,5 % | 4,7 | 17,3 / 41,4 ms | 0,92 / 5,46 / 60 ms |
+| **4/8 (elegida)** | **39** | **46** | **3,9 %** | **9,9** | 15,6 / 33,6 ms | 0,91 / 5,53 / 46 ms |
+| 5/16 | 75 | 10 | 7,5 % | 5,2 | 16,1 / 36,5 ms | 0,90 / 5,33 / 58 ms |
+| 5/32 | 77 | 8 | 7,7 % | 5,1 | 16,2 / 35,9 ms | 0,90 / 5,46 / 53 ms |
+
+- La cota conserva muchos más puzzles que la cota inferior del informe (1 de 85 con 4/8): la técnica acotada encuentra otros caminos, por unidades más chicas o más tarde, cuando hay menos candidatos.
+- Se eligió **4/8**, la cota más estrecha de las tres, porque 500 puzzles de nivel 5 salen en unos 10 minutos con un hilo (criterio: 30 minutos o menos).
+- Como se esperaba, los niveles 2 a 4 conservan el nivel y los pasos con cualquier cota. Los 70 puzzles que excedían sin cota siguen excediendo.
+- Los tiempos cambian poco: la cota ahorra la pasada hacia atrás en las unidades grandes.
+- Una medición previa, con otra carga en la máquina, dio 10,4 minutos para 4/8.
+
+Corpus con la cota 4/8 (`grader.corpus.test.ts`):
+- **391 229 deducciones, 0 contra la solución.**
+- Nivel máximo: 100 de nivel 2, 668 de nivel 3, 77 de nivel 4, **39 de nivel 5** y **116 que exceden las técnicas**.
+- Pasos por puzzle: mediana 49, máximo 91. `unitCombination` se usa en 123 puzzles (154 pasos y 1677 deducciones). Sus deducciones miran unidades de mediana 4 jaulas abiertas y 4 combinaciones, como mucho 8.
+- `levelToDeduce` en esas partidas: 6190 de nivel 1, 1574 de nivel 2, 291 de nivel 3, 24 de nivel 4, 3 de nivel 5 y 17 `UNRATED`. Todas las `UNRATED` son de puzzles que exceden las técnicas, que se excluyen del banco.
+- Monotonía (T-35.5): 9000 comparaciones sin ninguna subida.

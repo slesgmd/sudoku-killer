@@ -11,9 +11,21 @@ import { cageUnitLock, lockedCandidates } from "./interactions.ts";
 import { innieOutie } from "./rule45.ts";
 import { cageLastCell, hiddenSingle, nakedSingle } from "./singles.ts";
 import { hiddenPair, hiddenTriple, nakedPair, nakedTriple } from "./subsets.ts";
-import { unitCombination } from "./unit-combination.ts";
+import { unitCombinationWithin, type UnitCombinationBound } from "./unit-combination.ts";
 import { applyDeduction, createGraderState, type GraderState } from "./state.ts";
 import { MAX_TECHNIQUE_LEVEL, UNRATED, type Deduction, type Technique } from "./types.ts";
+
+/**
+ * Cambia cuando un cambio del calificador altera el nivel o los pasos de algún puzzle. "1" fue el
+ * de F4f (`unitCombination` sin cota); "2" acota `unitCombination` (F5).
+ */
+export const GRADER_VERSION = "2";
+
+/** Cota de `unitCombination` en `TECHNIQUES` (elegida en F5, `docs/dificultad.md`). */
+export const UNIT_COMBINATION_BOUND: UnitCombinationBound = {
+  maxOpenCages: 4,
+  maxCombinations: 8,
+};
 
 /** Técnicas por nivel; dentro de un nivel, en el orden en que se prueban. */
 export const TECHNIQUES: readonly Technique[] = [
@@ -32,7 +44,7 @@ export const TECHNIQUES: readonly Technique[] = [
   xWing,
   yWing,
   swordfish,
-  unitCombination,
+  unitCombinationWithin(UNIT_COMBINATION_BOUND),
 ];
 
 /** Un paso: todas las deducciones que una técnica encontró en un mismo estado. */
@@ -65,14 +77,23 @@ export interface GradeResult {
 
 export interface GradeOptions {
   readonly trace?: boolean;
+  /**
+   * Técnicas, de menor a mayor nivel; por defecto `TECHNIQUES`. Otra lista sirve solo para medir
+   * (por ejemplo, otra cota de `unitCombination`).
+   */
+  readonly techniques?: readonly Technique[];
 }
 
 /**
  * Busca la primera técnica, de menor a mayor nivel, que encuentra deducciones, y las aplica todas.
  * Devuelve el paso, o `null` si ninguna técnica encuentra nada.
  */
-function nextStep(context: GraderContext, state: GraderState): GradeStep | null {
-  for (const technique of TECHNIQUES) {
+function nextStep(
+  context: GraderContext,
+  state: GraderState,
+  techniques: readonly Technique[],
+): GradeStep | null {
+  for (const technique of techniques) {
     const deductions = technique.find(context, state);
     if (deductions.length === 0) continue;
     for (const deduction of deductions) applyDeduction(context, state, deduction);
@@ -91,7 +112,10 @@ function cageSumsHold(context: GraderContext, state: GraderState): boolean {
  * Califica el puzzle desde sus números iniciales. Exige una estructura válida (`validateStructure`);
  * si no, lanza `RangeError`. Determinista.
  */
-export function grade(puzzle: KillerPuzzle, { trace = false }: GradeOptions = {}): GradeResult {
+export function grade(
+  puzzle: KillerPuzzle,
+  { trace = false, techniques = TECHNIQUES }: GradeOptions = {},
+): GradeResult {
   const context = graderContextOf(puzzle);
   const state = createGraderState(context);
   const stepsByLevel = new Array<number>(MAX_TECHNIQUE_LEVEL + 1).fill(0);
@@ -99,7 +123,7 @@ export function grade(puzzle: KillerPuzzle, { trace = false }: GradeOptions = {}
   let count = 0;
   let maxLevel = 0;
   while (state.unplaced > 0 && !state.contradiction) {
-    const step = nextStep(context, state);
+    const step = nextStep(context, state, techniques);
     if (!step) break;
     count++;
     stepsByLevel[step.level] = at(stepsByLevel, step.level) + 1;
@@ -139,7 +163,16 @@ export interface BoardState {
  * hasta determinar la celda es el mínimo. Si el estado es contradictorio, devuelve `UNRATED`.
  * Lanza `RangeError` si la celda no existe o ya tiene un dígito.
  */
-export function levelToDeduce(cell: number, { puzzle, values }: BoardState): number {
+export function levelToDeduce(cell: number, board: BoardState): number {
+  return levelToDeduceWith(TECHNIQUES, cell, board);
+}
+
+/** `levelToDeduce` con otra lista de técnicas. Interno: solo para medir. */
+export function levelToDeduceWith(
+  techniques: readonly Technique[],
+  cell: number,
+  { puzzle, values }: BoardState,
+): number {
   const context = graderContextOf(puzzle);
   if (!Number.isInteger(cell) || cell < 0 || cell >= context.cellCount) {
     throw new RangeError(`Invalid cell ${String(cell)}`);
@@ -153,7 +186,7 @@ export function levelToDeduce(cell: number, { puzzle, values }: BoardState): num
   let level = 1;
   while (!state.contradiction) {
     if (popcount(at(state.candidates, cell)) === 1) return level;
-    const step = nextStep(context, state);
+    const step = nextStep(context, state, techniques);
     if (!step) break;
     level = Math.max(level, step.level);
   }

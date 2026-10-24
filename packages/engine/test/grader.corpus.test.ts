@@ -9,7 +9,6 @@ import {
   MAX_TECHNIQUE_LEVEL,
   TECHNIQUES,
   UNRATED,
-  createRng,
   generatePuzzle,
   grade,
   levelToDeduce,
@@ -17,7 +16,7 @@ import {
   type GradeResult,
   type TechniqueId,
 } from "@sudoku-killer/engine";
-import { at } from "../src/model/at.ts";
+import { countsOf, quantile, simulateGame, spread, summary } from "./helpers/corpus-stats.ts";
 import { expectMonotoneLevels, expectSoundGrade } from "./helpers/grader.ts";
 import {
   gradeWithout,
@@ -34,56 +33,21 @@ const GAMES = Math.min(SIZE, 100);
 const MONOTONY_PUZZLES = Math.min(SIZE, 200);
 const MONOTONY = { targets: 3, batches: 15, batchSize: 4 } as const;
 
-function quantile(sorted: readonly number[], q: number): number {
-  return sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] ?? NaN;
-}
-
-function summary(values: readonly number[], digits = 1): string {
-  const sorted = [...values].sort((a, b) => a - b);
-  const mean = values.reduce((a, b) => a + b, 0) / values.length;
-  const ms = (value: number): string => `${value.toFixed(digits)} ms`;
-  return `mean ${ms(mean)}, median ${ms(quantile(sorted, 0.5))}, p95 ${ms(quantile(sorted, 0.95))}, p99 ${ms(quantile(sorted, 0.99))}, max ${ms(sorted.at(-1) ?? NaN)}`;
-}
-
-/** Mediana, p95 y máximo de una lista de enteros. */
-function spread(values: readonly number[]): string {
-  const sorted = [...values].sort((a, b) => a - b);
-  return `median ${String(quantile(sorted, 0.5))}, p95 ${String(quantile(sorted, 0.95))}, max ${String(sorted.at(-1))}`;
-}
-
-const countsOf = (counts: Map<string, number>): string =>
-  [...counts]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, count]) => `${key}: ${String(count)}`)
-    .join(", ");
-
-/**
- * Partida simulada: las celdas vacías se llenan con la solución en un orden aleatorio (con
- * semilla), y antes de cada jugada se mide `levelToDeduce` como lo hará el servidor.
- */
-function simulateGame(
-  { puzzle, solution }: GeneratedPuzzle,
+/** `levelToDeduce` antes de cada jugada de una partida simulada, con su tiempo y su nivel. */
+function measureGame(
+  generated: GeneratedPuzzle,
   seed: number,
   times: number[],
   levels: Map<number, number>,
 ): void {
-  const values = new Array<number>(solution.length).fill(0);
-  for (const { cell, value } of puzzle.givens) values[cell] = value;
-  const order = values.flatMap((value, cell) => (value === 0 ? [cell] : []));
-  const rng = createRng(seed);
-  for (let i = order.length - 1; i > 0; i--) {
-    const j = rng.int(i + 1);
-    [order[i], order[j]] = [at(order, j), at(order, i)];
-  }
-  for (const cell of order) {
+  simulateGame(generated, seed, (cell, values) => {
     const start = performance.now();
-    const level = levelToDeduce(cell, { puzzle, values });
+    const level = levelToDeduce(cell, { puzzle: generated.puzzle, values });
     times.push(performance.now() - start);
     expect(level).toBeGreaterThanOrEqual(1);
     expect(level).toBeLessThanOrEqual(UNRATED);
     levels.set(level, (levels.get(level) ?? 0) + 1);
-    values[cell] = at(solution, cell);
-  }
+  });
 }
 
 /** Uso de una técnica en el corpus. */
@@ -213,7 +177,7 @@ describe("grader corpus", () => {
             stepsByLevel[level] = (stepsByLevel[level] ?? 0) + count;
           });
 
-          if (seed < BASE_SEED + GAMES) simulateGame(generated, seed, levelTimes, levels);
+          if (seed < BASE_SEED + GAMES) measureGame(generated, seed, levelTimes, levels);
         } catch (error) {
           throw new Error(`Corpus seed ${String(seed)} failed (add it as a fixed case)`, {
             cause: error,

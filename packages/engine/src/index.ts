@@ -56,7 +56,9 @@ export {
   type TechniqueId,
 } from "./grader/types.ts";
 export {
+  GRADER_VERSION,
   TECHNIQUES,
+  UNIT_COMBINATION_BOUND,
   grade,
   levelToDeduce,
   type BoardState,
@@ -65,3 +67,8 @@ export {
   type GradeStatus,
   type GradeStep,
 } from "./grader/grade.ts";
+export {
+  UNBOUNDED,
+  unitCombinationWithin,
+  type UnitCombinationBound,
+} from "./grader/unit-combination.ts";

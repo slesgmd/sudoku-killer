@@ -1,33 +1,68 @@
 // Nivel 5: combinaciones de una unidad entera con sus jaulas. Generaliza la regla del 45 y las
 // combinaciones de jaula: una fila, columna o caja usa cada dígito una vez, y las jaulas que la
-// tocan tienen que cuadrar a la vez.
+// tocan tienen que cuadrar a la vez. La técnica se acota (F5) a unidades que una persona puede
+// razonar con notas: pocas jaulas abiertas y pocas combinaciones.
 import { at } from "../model/at.ts";
 import { digitBit, digitsOf, popcount } from "../model/mask.ts";
-import type { GraderContext } from "./context.ts";
+import type { GraderContext, UnitCacheEntry } from "./context.ts";
+import type { GraderState } from "./state.ts";
 import { eliminationCollector } from "./subsets.ts";
 import type { Technique } from "./types.ts";
 
 /**
- * Combinaciones de unidad: un candidato de una celda de la unidad que no aparece en ninguna forma
- * de llenarla con todos sus dígitos, en la que cada jaula que la toca cuadre, sale de la celda. Una
- * jaula entera dentro de la unidad tiene que sumar justo; una que sobresale, poder completarse
- * fuera con sus candidatos, sin repetir dígito en la jaula.
+ * Cota de `unitCombination`: la técnica solo mira una unidad con como mucho `maxOpenCages` jaulas
+ * abiertas (con alguna celda vacía dentro de la unidad) y `maxCombinations` combinaciones. Una
+ * combinación es una forma de repartir los dígitos de la unidad entre sus jaulas (un conjunto de
+ * dígitos por jaula, sin repetir entre jaulas) en la que cada jaula cuadra con los candidatos.
  */
-export const unitCombination: Technique = {
-  id: "unitCombination",
-  level: 5,
-  find: (context, state) => {
-    const { deductions, eliminate } = eliminationCollector(state);
-    context.units.forEach((unit, index) => {
-      if (unit.every((cell) => popcount(at(state.candidates, cell)) === 1)) return;
-      const support = cachedUnitSupport(context, state.candidates, index);
-      unit.forEach((cell, i) => {
-        if (at(state.values, cell) === 0) eliminate(cell, ~at(support, i));
-      });
-    });
-    return deductions;
-  },
+export interface UnitCombinationBound {
+  readonly maxOpenCages: number;
+  readonly maxCombinations: number;
+}
+
+/** Sin cota: la enumeración completa de F4f. Solo para medir. */
+export const UNBOUNDED: UnitCombinationBound = {
+  maxOpenCages: Infinity,
+  maxCombinations: Infinity,
 };
+
+/**
+ * Combinaciones de unidad dentro de la cota: un candidato de una celda de la unidad que no aparece
+ * en ninguna forma de llenarla con todos sus dígitos, en la que cada jaula que la toca cuadre, sale
+ * de la celda. Una jaula entera dentro de la unidad tiene que sumar justo; una que sobresale, poder
+ * completarse fuera con sus candidatos, sin repetir dígito en la jaula. Con menos candidatos o más
+ * celdas colocadas, las jaulas abiertas y las combinaciones no suben, así que una unidad que entra
+ * en la cota sigue entrando (T-35.5).
+ */
+export function unitCombinationWithin({
+  maxOpenCages,
+  maxCombinations,
+}: UnitCombinationBound): Technique {
+  return {
+    id: "unitCombination",
+    level: 5,
+    find: (context, state) => {
+      const { deductions, eliminate } = eliminationCollector(state);
+      context.units.forEach((unit, index) => {
+        if (unit.every((cell) => popcount(at(state.candidates, cell)) === 1)) return;
+        const pieces = piecesOf(context, unit);
+        if (openCages(state, pieces) > maxOpenCages) return;
+        const support = cachedUnitSupport(
+          context,
+          state.candidates,
+          index,
+          pieces,
+          maxCombinations,
+        );
+        if (!support) return;
+        unit.forEach((cell, i) => {
+          if (at(state.values, cell) === 0) eliminate(cell, ~at(support, i));
+        });
+      });
+      return deductions;
+    },
+  };
+}
 
 /** Una jaula que toca la unidad: sus celdas dentro y fuera. */
 interface Piece {
@@ -49,52 +84,75 @@ function piecesOf(context: GraderContext, unit: readonly number[]): Piece[] {
   });
 }
 
+/** Jaulas con alguna celda vacía dentro de la unidad. */
+function openCages(state: GraderState, pieces: readonly Piece[]): number {
+  return pieces.filter(({ inside }) => inside.some((cell) => at(state.values, cell) === 0)).length;
+}
+
 /**
  * `unitSupport` con memoria, como `cachedSumSupport`: el resultado depende de los candidatos de la
- * unidad y de las celdas de fuera de sus jaulas.
+ * unidad y de las celdas de fuera de sus jaulas. Devuelve `null` si la unidad tiene más de
+ * `maxCombinations` combinaciones. La memoria guarda el conteo y, si se calculó, el soporte.
  */
 function cachedUnitSupport(
   context: GraderContext,
   candidates: Uint16Array,
   index: number,
-): number[] {
+  pieces: readonly Piece[],
+  maxCombinations: number,
+): readonly number[] | null {
   const unit = at(context.units, index);
-  const pieces = piecesOf(context, unit);
   const watched = [...unit, ...pieces.flatMap((piece) => piece.outside)];
-  const entry = context.unitCache[index];
-  if (entry && watched.every((cell, i) => at(candidates, cell) === at(entry.masks, i))) {
-    return entry.support;
-  }
-  const support = unitSupport(context, candidates, unit, pieces);
-  context.unitCache[index] = { masks: watched.map((cell) => at(candidates, cell)), support };
-  return support;
+  const cached = context.unitCache[index];
+  const entry =
+    cached && watched.every((cell, i) => at(candidates, cell) === at(cached.masks, i))
+      ? cached
+      : {
+          masks: watched.map((cell) => at(candidates, cell)),
+          ...countUnit(context.full, candidates, pieces),
+        };
+  context.unitCache[index] = entry;
+  if (entry.combinations > maxCombinations) return null;
+  entry.support ??= unitSupport(context, unit, pieces, entry);
+  return entry.support;
 }
 
 /**
- * Filtro exacto de la unidad. Para cada jaula se enumeran las formas de llenar sus celdas de dentro
- * (sin repetir dígito y con la jaula completable fuera), agrupadas por el conjunto de dígitos que
- * usan. Después se combinan las jaulas sin repetir dígito: hacia adelante, los conjuntos de dígitos
- * alcanzables tras cada jaula; hacia atrás, los que todavía llegan a usar todos los dígitos. Un
- * conjunto de una jaula vale si une un estado alcanzable con uno que termina. Devuelve el soporte
- * de cada celda, en el orden de `unit`.
+ * Pasada hacia adelante: para cada jaula, las formas de llenar sus celdas de dentro agrupadas por
+ * el conjunto de dígitos que usan; y, tras cada jaula, cuántas combinaciones parciales llegan a
+ * cada conjunto de dígitos usados. Las combinaciones de la unidad son las que llegan a todos.
  */
-function unitSupport(
-  context: GraderContext,
+function countUnit(
+  full: number,
   candidates: Uint16Array,
-  unit: readonly number[],
   pieces: readonly Piece[],
-): number[] {
+): Pick<UnitCacheEntry, "options" | "reach" | "combinations"> {
   const options = pieces.map((piece) => pieceOptions(candidates, piece));
-
-  const reach: Set<number>[] = [new Set([0])];
+  const reach: Map<number, number>[] = [new Map([[0, 1]])];
   options.forEach((byDigits, p) => {
-    const next = new Set<number>();
-    for (const used of at(reach, p)) {
-      for (const digits of byDigits.keys()) if ((used & digits) === 0) next.add(used | digits);
+    const next = new Map<number, number>();
+    for (const [used, count] of at(reach, p)) {
+      for (const digits of byDigits.keys()) {
+        if ((used & digits) === 0) next.set(used | digits, (next.get(used | digits) ?? 0) + count);
+      }
     }
     reach.push(next);
   });
+  return { options, reach, combinations: at(reach, pieces.length).get(full) ?? 0 };
+}
 
+/**
+ * Filtro exacto de la unidad, pasada hacia atrás: desde el conjunto completo, los conjuntos de
+ * dígitos que todavía llegan a usar todos. Un conjunto de una jaula vale si une un estado
+ * alcanzable con uno que termina, y sus formas dan el soporte. Devuelve el soporte de cada celda,
+ * en el orden de `unit`.
+ */
+function unitSupport(
+  context: GraderContext,
+  unit: readonly number[],
+  pieces: readonly Piece[],
+  { options, reach }: Pick<UnitCacheEntry, "options" | "reach">,
+): number[] {
   const support = new Array<number>(unit.length).fill(0);
   let finishing = new Set(at(reach, pieces.length).has(context.full) ? [context.full] : []);
   for (let p = pieces.length - 1; p >= 0; p--) {
@@ -102,7 +160,7 @@ function unitSupport(
     const piece = at(pieces, p);
     for (const [digits, cells] of at(options, p)) {
       let valid = false;
-      for (const used of at(reach, p)) {
+      for (const used of at(reach, p).keys()) {
         if ((used & digits) !== 0 || !finishing.has(used | digits)) continue;
         before.add(used);
         valid = true;

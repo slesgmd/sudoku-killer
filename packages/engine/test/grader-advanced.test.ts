@@ -6,12 +6,16 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
   TECHNIQUES,
+  UNBOUNDED,
+  UNIT_COMBINATION_BOUND,
   generatePuzzle,
+  unitCombinationWithin,
   layoutOf,
   type Deduction,
   type Geometry,
   type Grid,
   type KillerPuzzle,
+  type UnitCombinationBound,
 } from "@sudoku-killer/engine";
 import { at } from "../src/model/at.ts";
 import { graderContextOf } from "../src/grader/context.ts";
@@ -267,12 +271,24 @@ function yWingOracle(o: Oracle): void {
   }
 }
 
-/** Todas las permutaciones de la unidad con sus candidatos en las que cada jaula que la toca cuadra. */
-function unitCombinationOracle(o: Oracle): void {
+/**
+ * Todas las permutaciones de la unidad con sus candidatos en las que cada jaula que la toca cuadra.
+ * Con cota, solo mira las unidades con hasta `maxOpenCages` jaulas abiertas (alguna celda vacía
+ * dentro de la unidad) y hasta `maxCombinations` combinaciones: los repartos distintos de conjuntos
+ * de dígitos entre las jaulas que aparecen en esas permutaciones.
+ */
+function unitCombinationOracle(
+  o: Oracle,
+  { maxOpenCages, maxCombinations }: UnitCombinationBound = UNBOUNDED,
+): void {
   for (const unit of o.units) {
     if (unit.every((c) => countBits(o.cand(c)) === 1)) continue;
     const support = unit.map(() => 0);
     const cagesHere = o.cages.filter((cage) => cage.cells.some((c) => unit.includes(c)));
+    const open = cagesHere.filter((cage) =>
+      cage.cells.some((c) => unit.includes(c) && o.value(c) === 0),
+    ).length;
+    if (open > maxOpenCages) continue;
     const fits = (perm: readonly number[]): boolean =>
       cagesHere.every(({ cells, sum }) => {
         const inside = cells.filter((c) => unit.includes(c)).map((c) => at(perm, unit.indexOf(c)));
@@ -286,9 +302,17 @@ function unitCombinationOracle(o: Oracle): void {
         };
         return walk(0, inside, left);
       });
+    const combinations = new Set<string>();
     const permute = (i: number, perm: number[]): void => {
       if (i === unit.length) {
-        if (fits(perm)) perm.forEach((d, j) => (support[j] = at(support, j) | (1 << (d - 1))));
+        if (!fits(perm)) return;
+        perm.forEach((d, j) => (support[j] = at(support, j) | (1 << (d - 1))));
+        const split = cagesHere.map(({ cells }) =>
+          cells
+            .filter((c) => unit.includes(c))
+            .reduce((mask, c) => mask | (1 << (at(perm, unit.indexOf(c)) - 1)), 0),
+        );
+        combinations.add(split.join(","));
         return;
       }
       for (const d of digitsIn(o.cand(at(unit, i)))) {
@@ -296,6 +320,7 @@ function unitCombinationOracle(o: Oracle): void {
       }
     };
     permute(0, []);
+    if (combinations.size > maxCombinations) continue;
     unit.forEach((cell, j) => {
       if (o.value(cell) === 0) o.remove(cell, ~at(support, j));
     });
@@ -342,8 +367,25 @@ const ORACLES: readonly [string, (o: Oracle) => void][] = [
       fishOracle(o, 3);
     },
   ],
-  ["unitCombination", unitCombinationOracle],
+  [
+    "unitCombination",
+    (o) => {
+      unitCombinationOracle(o, UNIT_COMBINATION_BOUND);
+    },
+  ],
 ];
+
+/** Cotas medidas en F5, más dos muy chicas para que la cota se note también en 4×4 y 6×6. */
+const BOUNDS: readonly UnitCombinationBound[] = [
+  UNBOUNDED,
+  { maxOpenCages: 4, maxCombinations: 8 },
+  { maxOpenCages: 5, maxCombinations: 16 },
+  { maxOpenCages: 5, maxCombinations: 32 },
+  { maxOpenCages: 3, maxCombinations: 2 },
+  { maxOpenCages: 2, maxCombinations: 1 },
+];
+const boundName = ({ maxOpenCages, maxCombinations }: UnitCombinationBound): string =>
+  `${String(maxOpenCages)}/${String(maxCombinations)}`;
 
 // ---------------------------------------------------------------------------------------------
 
@@ -388,6 +430,27 @@ describe.each<[Geometry, number]>([
   });
 });
 
+describe.each<[Geometry, number]>([
+  [GEOMETRY_4, 60],
+  [GEOMETRY_6, 25],
+])("bounded unitCombination against its oracle ($size)", (geometry, numRuns) => {
+  it.each(BOUNDS.map((bound) => [boundName(bound), bound] as const))(
+    "T-35.4: bound %s finds exactly what the oracle finds within the bound",
+    (_, bound) => {
+      assertProperty(
+        fc.property(scenarioArb(geometry), (input) => {
+          const { puzzle, state } = scenario(geometry, input);
+          const o = oracle(puzzle, state);
+          unitCombinationOracle(o, bound);
+          const found = unitCombinationWithin(bound).find(graderContextOf(puzzle), state);
+          expect(keysOf(found)).toEqual([...o.out].sort());
+        }),
+        { numRuns },
+      );
+    },
+  );
+});
+
 describe("levels 4 and 5 against oracles (9x9, cheap oracles)", () => {
   const cheap = ORACLES.filter(([id]) => id !== "unitCombination");
   it.each(cheap)("%s finds exactly what its oracle finds", SLOW, (id, run) => {
@@ -417,5 +480,25 @@ describe("the oracles see the patterns they check", () => {
       }
     }
     expect([...seen].sort()).toEqual(ORACLES.map(([id]) => id).sort());
+  });
+
+  it("each bound deduces something, and the small ones skip units the full technique uses", () => {
+    // Sin esto, la comparación con cota podría pasar sin que la cota descarte ninguna unidad.
+    const deduces = new Set<string>();
+    const skips = new Set<string>();
+    const rng = fc.sample(scenarioArb(GEOMETRY_6), { numRuns: 400, seed: 47 });
+    for (const input of rng) {
+      const { puzzle, state } = scenario(GEOMETRY_6, input);
+      const context = graderContextOf(puzzle);
+      const full = unitCombinationWithin(UNBOUNDED).find(context, state).length;
+      for (const bound of BOUNDS) {
+        const found = unitCombinationWithin(bound).find(context, state).length;
+        if (found > 0) deduces.add(boundName(bound));
+        if (found < full) skips.add(boundName(bound));
+      }
+    }
+    expect([...deduces].sort()).toEqual(BOUNDS.map(boundName).sort());
+    expect(skips).toContain("3/2");
+    expect(skips).toContain("2/1");
   });
 });

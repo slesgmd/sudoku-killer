@@ -38,12 +38,22 @@ export interface GraderContext {
     { readonly masks: readonly number[]; readonly result: SumSupport } | undefined
   )[];
   /**
-   * Memoria de las combinaciones de unidad (nivel 5), por índice de `units`: el último soporte, con
-   * las máscaras de la unidad y de las celdas de fuera de sus jaulas con que se calculó.
+   * Memoria de las combinaciones de unidad (nivel 5), por índice de `units`, con las máscaras de la
+   * unidad y de las celdas de fuera de sus jaulas con que se calculó: la pasada hacia adelante
+   * (formas de cada jaula, conjuntos alcanzables y conteo de combinaciones) y, si alguna cota la
+   * pidió, el soporte.
    */
-  readonly unitCache: (
-    { readonly masks: readonly number[]; readonly support: number[] } | undefined
-  )[];
+  readonly unitCache: (UnitCacheEntry | undefined)[];
+}
+
+export interface UnitCacheEntry {
+  readonly masks: readonly number[];
+  /** Por jaula: conjunto de dígitos usados → candidatos de cada celda de dentro que lo forman. */
+  readonly options: readonly Map<number, number[]>[];
+  /** Tras cada jaula: conjunto de dígitos usados → combinaciones parciales que llegan a él. */
+  readonly reach: readonly Map<number, number>[];
+  readonly combinations: number;
+  support?: readonly number[];
 }
 
 const contexts = new WeakMap<KillerPuzzle, GraderContext>();
