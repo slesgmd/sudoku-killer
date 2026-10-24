@@ -5,9 +5,10 @@ name: Corpus
 # solución. Cotas de `unitCombination` (F5). Banco de puzzles (F5): el manifiesto completo
 # regenerado y verificado, con una partida simulada por puzzle (T-20.4 y T-20.5); este usa siempre
 # las semillas del manifiesto. Puntuación (F6): la validación de los parámetros vigentes, 10 000
-# partidas simuladas con la semilla fija de `docs/puntuacion.md`. Es largo para la CI de cada push. Cada ejecución programada usa
-# semillas nuevas en los corpus (desde run_number × 1000) y la manual permite elegirlas. Una
-# discrepancia o una deducción errónea bloquea: la semilla queda en el log.
+# partidas simuladas con la semilla fija de `docs/puntuacion.md`. Es largo para la CI de cada push.
+# Cada ejecución programada usa semillas nuevas en los corpus (desde run_number × 1000) y la manual
+# permite elegirlas; el banco y la puntuación usan siempre las suyas. Una discrepancia o una
+# deducción errónea bloquea: la semilla queda en el log.
 
 on:
   schedule:
