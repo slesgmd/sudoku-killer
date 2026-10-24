@@ -16,7 +16,7 @@ import {
   pointsFor,
   type ScoringParams,
 } from "@sudoku-killer/scoring";
-import { manifestSchema } from "../src/puzzles/bank.ts";
+import { manifestSchema } from "@sudoku-killer/bank";
 import {
   drift,
   reliability,

@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { parseScoringParams, type ScoringParams } from "@sudoku-killer/scoring";
-import { manifestSchema } from "../src/puzzles/bank.ts";
+import { manifestSchema } from "@sudoku-killer/bank";
 import { evaluate, ownScorer, reliability } from "./scoring-sim/metrics.ts";
 import { runSimulation } from "./scoring-sim/run.ts";
 import { checkTargets, guessThreshold, type Check } from "./scoring-sim/targets.ts";

@@ -3,7 +3,8 @@
 // su semilla, así que el resultado no depende de cuántos hilos haya ni del orden de las tareas.
 import { Worker } from "node:worker_threads";
 import { DIFFICULTIES } from "@sudoku-killer/protocol";
-import { verifyEntry, type Manifest, type ManifestEntry } from "../../src/puzzles/bank.ts";
+import type { Manifest, ManifestEntry } from "@sudoku-killer/bank";
+import { verifyEntry } from "../../src/puzzles/bank.ts";
 import { GAMES_PER_PUZZLE, runGame, type GameRecord } from "./experiments.ts";
 import { simPuzzle } from "./game.ts";
 import type { ProfileName } from "./world.ts";

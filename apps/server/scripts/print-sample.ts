@@ -10,7 +10,8 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { createRng, type KillerPuzzle } from "@sudoku-killer/engine";
 import { DIFFICULTIES, type Difficulty } from "@sudoku-killer/protocol";
-import { manifestSchema, verifyEntry, type ManifestEntry } from "../src/puzzles/bank.ts";
+import { manifestSchema, type ManifestEntry } from "@sudoku-killer/bank";
+import { verifyEntry } from "../src/puzzles/bank.ts";
 
 const { values } = parseArgs({
   options: {

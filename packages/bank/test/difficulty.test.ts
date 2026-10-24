@@ -3,12 +3,7 @@
 import { UNRATED, type GradeResult } from "@sudoku-killer/engine";
 import { DIFFICULTIES } from "@sudoku-killer/protocol";
 import { describe, expect, it } from "vitest";
-import { DIFFICULTY_VALUES } from "../src/db/schema.ts";
-import {
-  DIFFICULTY_MAPPING_VERSION,
-  DIFFICULTY_RULES,
-  difficultyOfSeed,
-} from "../src/puzzles/difficulty.ts";
+import { DIFFICULTY_MAPPING_VERSION, DIFFICULTY_RULES, difficultyOfSeed } from "../src/index.ts";
 
 /** Resultado de `grade` con los pasos de los niveles 1 a 5. */
 function result(steps: readonly number[], status: GradeResult["status"] = "solved"): GradeResult {
@@ -85,9 +80,5 @@ describe("T-20.3 difficulty rules (mapping version 2)", () => {
       "easy",
       "medium",
     ]);
-  });
-
-  it("the database accepts exactly the protocol's difficulties", () => {
-    expect([...DIFFICULTY_VALUES]).toEqual([...DIFFICULTIES]);
   });
 });

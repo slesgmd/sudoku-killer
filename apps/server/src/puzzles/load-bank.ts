@@ -5,7 +5,8 @@
 import { GRADER_VERSION } from "@sudoku-killer/engine";
 import type { Database } from "../db/database.ts";
 import { puzzles } from "../db/schema.ts";
-import { assertCurrentManifest, verifyEntry, type Manifest, type ManifestEntry } from "./bank.ts";
+import { assertCurrentManifest, type Manifest, type ManifestEntry } from "@sudoku-killer/bank";
+import { verifyEntry } from "./bank.ts";
 import { encodeSolution } from "./solution.ts";
 
 /** Filas por sentencia `INSERT`. */

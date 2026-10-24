@@ -1,0 +1,25 @@
+{
+  "name": "@sudoku-killer/bank",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "@sudoku-killer/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sudoku-killer/engine": "workspace:*",
+    "@sudoku-killer/protocol": "workspace:*",
+    "zod": "4.6.7"
+  }
+}

@@ -1,104 +1,41 @@
 // Banco de puzzles (F5, ADR 0006): el banco se versiona como un manifiesto de semillas, porque el
-// generador es determinista. Cada entrada guarda lo necesario para regenerar el puzzle y comprobar
-// que sigue siendo el mismo (versiones y hash), y su calificación.
+// generador es determinista. La parte pura (equivalencia, manifiesto y regeneración) está en
+// `@sudoku-killer/bank`; aquí quedan el hash, la construcción del banco y la verificación.
 import { createHash } from "node:crypto";
+import {
+  DIFFICULTY_MAPPING_VERSION,
+  canonicalPuzzle,
+  difficultyOfSeed,
+  givensByDifficulty,
+  regenerateSeed,
+  type Manifest,
+  type ManifestEntry,
+  type RegeneratedSeed,
+} from "@sudoku-killer/bank";
 import {
   GENERATOR_VERSION,
   GRADER_VERSION,
   UNIT_COMBINATION_BOUND,
-  addGivens,
-  generatePuzzle,
-  grade,
   type GeneratedPuzzle,
-  type GradeResult,
 } from "@sudoku-killer/engine";
-import { DIFFICULTIES, difficultySchema, type Difficulty } from "@sudoku-killer/protocol";
-import { z } from "zod";
-import {
-  DIFFICULTY_MAPPING_VERSION,
-  DIFFICULTY_RULES,
-  difficultyOfSeed,
-  givensByDifficulty,
-} from "./difficulty.ts";
+import { DIFFICULTIES, type Difficulty } from "@sudoku-killer/protocol";
 
 /** Puzzles por dificultad del banco de la v1 (criterio de aceptación de F5). */
 export const DEFAULT_PER_DIFFICULTY = 500;
-
-export const manifestEntrySchema = z.object({
-  seed: z.int().nonnegative(),
-  difficulty: difficultySchema,
-  graderMaxLevel: z.int().min(1).max(5),
-  graderSteps: z.int().positive(),
-  /** Primeros 16 dígitos hexadecimales del SHA-256 de `canonicalPuzzle`. */
-  hash: z.string().regex(/^[0-9a-f]{16}$/),
-});
-
-export const manifestSchema = z.object({
-  generatorVersion: z.string(),
-  graderVersion: z.string(),
-  mappingVersion: z.string(),
-  unitCombinationBound: z.object({ maxOpenCages: z.int(), maxCombinations: z.int() }),
-  /** Números iniciales de cada dificultad (equivalencia vigente). */
-  givens: z.record(difficultySchema, z.int().nonnegative()),
-  baseSeed: z.int().nonnegative(),
-  perDifficulty: z.int().positive(),
-  /** En orden de semilla. */
-  entries: z.array(manifestEntrySchema),
-});
-
-export type ManifestEntry = z.infer<typeof manifestEntrySchema>;
-export type Manifest = z.infer<typeof manifestSchema>;
-
-/** El puzzle y su solución en un orden de campos fijo, para el hash. */
-export function canonicalPuzzle({ puzzle, solution }: GeneratedPuzzle): string {
-  return JSON.stringify({
-    size: puzzle.size,
-    boxRows: puzzle.boxRows,
-    boxCols: puzzle.boxCols,
-    cages: puzzle.cages.map(({ id, cells, sum }) => ({ id, cells, sum })),
-    givens: puzzle.givens.map(({ cell, value }) => ({ cell, value })),
-    solution,
-  });
-}
 
 export function puzzleHash(generated: GeneratedPuzzle): string {
   return createHash("sha256").update(canonicalPuzzle(generated)).digest("hex").slice(0, 16);
 }
 
-/** Una semilla generada para su dificultad, con sus números iniciales y su calificación. */
-export interface BankCandidate {
-  readonly seed: number;
-  /** La dificultad de la semilla (`difficultyOfSeed`). */
-  readonly difficulty: Difficulty;
-  /** Si el puzzle final cumple la banda de su dificultad y entra al banco. */
-  readonly accepted: boolean;
-  /** El puzzle final, o el base si la guarda no dejó llegar a la cantidad de números. */
-  readonly generated: GeneratedPuzzle;
-  readonly result: GradeResult;
+/** Una semilla regenerada con el hash de su puzzle. */
+export interface BankCandidate extends RegeneratedSeed {
   readonly hash: string;
 }
 
-/**
- * Genera el puzzle de la semilla, le agrega los números iniciales de su dificultad (repartidos por
- * cajas, con la guarda del piso de la banda) y lo califica con ellos.
- */
+/** Regenera la semilla (`regenerateSeed`) y calcula el hash de su puzzle. */
 export function evaluateSeed(seed: number): BankCandidate {
-  const difficulty = difficultyOfSeed(seed);
-  const rule = DIFFICULTY_RULES[difficulty];
-  const base = generatePuzzle({ seed });
-  const withGivens =
-    rule.givens > 0 ? addGivens(base, { count: rule.givens, seed, keep: rule.floor }) : null;
-  const generated = withGivens?.generated ?? base;
-  const result = withGivens?.result ?? grade(base.puzzle);
-  const reached = rule.givens === 0 || withGivens !== null;
-  return {
-    seed,
-    difficulty,
-    accepted: reached && rule.accepts(result),
-    generated,
-    result,
-    hash: puzzleHash(generated),
-  };
+  const regenerated = regenerateSeed(seed);
+  return { ...regenerated, hash: puzzleHash(regenerated.generated) };
 }
 
 /** Lo que se mide al generar el banco, por dificultad (docs/dificultad.md). */
@@ -197,37 +134,6 @@ export function serializeManifest({ entries, ...header }: Manifest): string {
   const head = JSON.stringify(header, null, 2).replace(/\n}$/, "");
   const lines = entries.map((entry) => `    ${JSON.stringify(entry)}`);
   return `${head},\n  "entries": [\n${lines.join(",\n")}\n  ]\n}\n`;
-}
-
-/**
- * Comprueba que el manifiesto corresponde al motor y a la equivalencia actuales: mismas versiones
- * del generador, del calificador y de la equivalencia, la misma cota y los mismos números iniciales.
- * Lanza `Error` si no.
- */
-export function assertCurrentManifest(manifest: Manifest): void {
-  const givens = givensByDifficulty();
-  const expected = {
-    generatorVersion: GENERATOR_VERSION,
-    graderVersion: GRADER_VERSION,
-    mappingVersion: DIFFICULTY_MAPPING_VERSION,
-    unitCombinationBound: { ...UNIT_COMBINATION_BOUND },
-    givens: DIFFICULTIES.map((d) => givens[d]),
-  };
-  const actual = {
-    generatorVersion: manifest.generatorVersion,
-    graderVersion: manifest.graderVersion,
-    mappingVersion: manifest.mappingVersion,
-    unitCombinationBound: {
-      maxOpenCages: manifest.unitCombinationBound.maxOpenCages,
-      maxCombinations: manifest.unitCombinationBound.maxCombinations,
-    },
-    givens: DIFFICULTIES.map((d) => manifest.givens[d]),
-  };
-  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(
-      `The bank manifest is for ${JSON.stringify(actual)}, but the engine is ${JSON.stringify(expected)}: generate a new manifest`,
-    );
-  }
 }
 
 /**

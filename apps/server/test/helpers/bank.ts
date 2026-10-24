@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { UNRATED, createRng, levelToDeduce, type KillerPuzzle } from "@sudoku-killer/engine";
 import { DIFFICULTIES } from "@sudoku-killer/protocol";
 import { expect } from "vitest";
-import { manifestSchema, type Manifest } from "../../src/puzzles/bank.ts";
+import { manifestSchema, type Manifest } from "@sudoku-killer/bank";
 
 export function readManifest(): Manifest {
   const file = new URL("../../bank/manifest.json", import.meta.url);

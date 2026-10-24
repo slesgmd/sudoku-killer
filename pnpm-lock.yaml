@@ -208,6 +208,9 @@ importers:
 
   apps/server:
     dependencies:
+      '@sudoku-killer/bank':
+        specifier: workspace:*
+        version: link:../../packages/bank
       '@sudoku-killer/engine':
         specifier: workspace:*
         version: link:../../packages/engine
@@ -256,6 +259,18 @@ importers:
         specifier: 6.1.2
         version: 6.1.2(vite@8.3.5(@types/node@26.6.5)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
 
+  packages/bank:
+    dependencies:
+      '@sudoku-killer/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@sudoku-killer/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
   packages/engine: {}
 
   packages/game:
@@ -269,6 +284,10 @@ importers:
       '@sudoku-killer/scoring':
         specifier: workspace:*
         version: link:../scoring
+    devDependencies:
+      '@sudoku-killer/bank':
+        specifier: workspace:*
+        version: link:../bank
 
   packages/protocol:
     dependencies:

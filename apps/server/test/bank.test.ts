@@ -8,13 +8,16 @@ import { DIFFICULTIES } from "@sudoku-killer/protocol";
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_PER_DIFFICULTY,
-  assertCurrentManifest,
   buildBank,
-  manifestSchema,
   serializeManifest,
   verifyEntry,
 } from "../src/puzzles/bank.ts";
-import { DIFFICULTY_RULES, difficultyOfSeed } from "../src/puzzles/difficulty.ts";
+import {
+  DIFFICULTY_RULES,
+  assertCurrentManifest,
+  difficultyOfSeed,
+  manifestSchema,
+} from "@sudoku-killer/bank";
 import { expectGameNeverUnrated, readManifest, sampleOf } from "./helpers/bank.ts";
 
 const SLOW = { timeout: 120_000 };

@@ -15,6 +15,7 @@
     "scoring:calibrate": "node --conditions=@sudoku-killer/source scripts/calibrate-scoring.ts"
   },
   "dependencies": {
+    "@sudoku-killer/bank": "workspace:*",
     "@sudoku-killer/engine": "workspace:*",
     "@sudoku-killer/game": "workspace:*",
     "@sudoku-killer/protocol": "workspace:*",

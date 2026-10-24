@@ -13,7 +13,7 @@ import {
   serializeManifest,
   type BankCandidate,
 } from "../src/puzzles/bank.ts";
-import { DIFFICULTY_RULES } from "../src/puzzles/difficulty.ts";
+import { DIFFICULTY_RULES } from "@sudoku-killer/bank";
 
 const { values } = parseArgs({
   options: {

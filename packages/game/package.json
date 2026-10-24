@@ -8,6 +8,11 @@
       "@sudoku-killer/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./client": {
+      "@sudoku-killer/source": "./src/client.ts",
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
     }
   },
   "files": [
@@ -21,5 +26,8 @@
     "@sudoku-killer/engine": "workspace:*",
     "@sudoku-killer/protocol": "workspace:*",
     "@sudoku-killer/scoring": "workspace:*"
+  },
+  "devDependencies": {
+    "@sudoku-killer/bank": "workspace:*"
   }
 }
