@@ -16,6 +16,7 @@ describe("T-31.2 the detector fails on the control fixture", () => {
   it("finds every forbidden text pattern", () => {
     const rules = new Set(findTextLeaks(FIXTURE).map((finding) => finding.rule));
     expect([...rules].sort()).toEqual([
+      "inlined font",
       "manifest key",
       "serialized solution",
       "simulator marker",

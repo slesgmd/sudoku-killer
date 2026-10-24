@@ -1,0 +1,657 @@
+/* Componentes compartidos (docs/diseno.md §5). Reglas de ui.css y screens.css del prototipo; solo
+   usan los tokens de tokens.css. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  -webkit-text-size-adjust: 100%;
+}
+button,
+input {
+  font-family: inherit;
+}
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+dl,
+dd,
+figure,
+fieldset {
+  margin: 0;
+}
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.lbl {
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-medium);
+  color: var(--muted);
+}
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 var(--s-1);
+  border: var(--bw) solid var(--border);
+  border-radius: 4px;
+  font-size: var(--fs-caption);
+  line-height: 1;
+  font-weight: var(--fw-medium);
+  color: var(--muted);
+  background: var(--paper);
+}
+.pts {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+.small {
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+}
+.muted {
+  color: var(--muted);
+}
+
+/* Botones (§5.1) */
+.btn {
+  min-height: var(--target);
+  padding: 0 var(--s-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: var(--fs-label);
+  line-height: var(--lh-label);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.btn.ghost {
+  border-color: transparent;
+  background: transparent;
+}
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--paper);
+}
+.btn.secondary {
+  background: var(--paper);
+  border-color: var(--ink);
+}
+.btn.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--paper);
+}
+.btn.lg {
+  min-height: 48px;
+  font-size: var(--fs-body);
+}
+.btn.block {
+  width: 100%;
+}
+.btn.stack {
+  flex-direction: column;
+  gap: 2px;
+  min-height: 52px;
+  padding: var(--s-1);
+  font-size: var(--fs-small);
+  line-height: 16px;
+}
+.btn[aria-disabled="true"] {
+  color: var(--muted);
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--muted);
+  cursor: not-allowed;
+}
+.btn svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.btn .count {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  color: var(--muted);
+}
+
+/* Control segmentado (§5.2) */
+.seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: var(--s-1);
+  padding: var(--s-1);
+  background: var(--surface);
+  border-radius: var(--r-md);
+}
+.seg button {
+  min-height: var(--target);
+  padding: 0 var(--s-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  border: var(--bw) solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  line-height: var(--lh-label);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+.seg button[aria-pressed="true"] {
+  background: var(--paper);
+  border-color: var(--ink);
+  color: var(--ink);
+  font-weight: var(--fw-semibold);
+}
+.seg button[aria-disabled="true"] {
+  cursor: not-allowed;
+  border-style: dashed;
+  border-color: var(--muted);
+}
+
+/* Visibilidad de una capa (§5.4) */
+.vis[aria-pressed="false"] {
+  color: var(--muted);
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--muted);
+}
+
+/* Teclado (§5.3) */
+.keys {
+  display: grid;
+  gap: var(--s-2);
+}
+.key {
+  position: relative;
+  min-height: var(--target);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: var(--fw-medium);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+.key .left {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  font-size: var(--fs-caption);
+  line-height: 1;
+  font-weight: var(--fw-medium);
+  color: var(--muted);
+}
+.key.done,
+.key[aria-disabled="true"] {
+  background: var(--paper);
+  box-shadow: inset 0 0 0 var(--bw) var(--border);
+  color: var(--muted);
+}
+.key[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+.key[aria-disabled="true"] .left {
+  visibility: hidden;
+}
+
+/* Jugadores (§5.5) */
+.mono {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-label);
+  line-height: 1;
+  font-weight: var(--fw-semibold);
+  color: var(--paper);
+  background: var(--pc, var(--muted));
+}
+.mono.off {
+  background: var(--paper);
+  color: var(--pc, var(--muted));
+  border: 1.5px dashed var(--pc, var(--muted));
+}
+.mono.free {
+  background: transparent;
+  border: 1.5px dashed var(--border);
+}
+.mono.sm {
+  width: 28px;
+  height: 28px;
+  font-size: var(--fs-small);
+}
+.mono.xs {
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
+  border: var(--bw) solid var(--border);
+  border-radius: 4px;
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-medium);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.hearts {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+}
+.hearts svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+.heart-full {
+  fill: var(--ink);
+}
+.heart-empty {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.3;
+}
+
+/* Avisos (§5.6) */
+.notice {
+  display: flex;
+  gap: var(--s-3);
+  align-items: flex-start;
+  padding: var(--s-3);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-md);
+  background: var(--paper);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+}
+.notice svg,
+.toast svg,
+.banner svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin-top: 1px;
+  color: var(--info);
+}
+.toast {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 11px var(--s-3);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-md);
+  background: var(--paper);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  box-shadow: var(--shadow-float);
+}
+.toast.err {
+  background: var(--danger-tint);
+  border-color: var(--danger);
+}
+.toast.err svg {
+  color: var(--danger);
+}
+.toast .tclose {
+  margin: -10px -8px -10px auto;
+  min-height: var(--target);
+  width: var(--target);
+  padding: 0;
+}
+.toasts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.banner {
+  display: flex;
+  gap: var(--s-3);
+  align-items: center;
+  padding: 10px var(--s-4);
+  background: var(--surface);
+  border-bottom: var(--bw) solid var(--ink);
+  font-size: var(--fs-label);
+  line-height: var(--lh-label);
+}
+.banner .btn {
+  margin-left: auto;
+}
+
+/* Diálogos (§5.7) */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-4);
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+}
+.dialog {
+  width: 100%;
+  max-width: 440px;
+  padding: var(--s-6);
+  background: var(--paper);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-float);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.dialog h2 {
+  font-size: var(--fs-title);
+  line-height: var(--lh-title);
+  font-weight: var(--fw-semibold);
+}
+.dialog .dhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.dialog .dhead .btn {
+  margin: -10px -10px -10px 0;
+  width: var(--target);
+  padding: 0;
+}
+.dialog .dbody {
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.dialog .dactions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+  margin-top: var(--s-1);
+}
+@media (max-width: 599px) {
+  .dialog {
+    padding: var(--s-5);
+  }
+  .dialog .dactions {
+    flex-direction: column-reverse;
+  }
+  .dialog .dactions .btn {
+    width: 100%;
+  }
+}
+
+/* Interruptor (§5.8) */
+.switch {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-4);
+  width: 100%;
+  min-height: var(--target);
+  padding: 10px 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+.switch .stext {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+.switch .slabel {
+  font-size: var(--fs-body);
+  line-height: 20px;
+  font-weight: var(--fw-semibold);
+}
+.switch .shelp {
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--muted);
+}
+.switch .sside {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-1);
+}
+.switch .track {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  border: 1.5px solid var(--muted);
+  background: var(--paper);
+}
+.switch .track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.switch[aria-checked="true"] .track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.switch[aria-checked="true"] .track::after {
+  left: 21px;
+  background: var(--paper);
+}
+.switch .sstate {
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-semibold);
+}
+
+/* Formularios (§5.8) */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field > label,
+.field .flabel {
+  font-size: var(--fs-label);
+  line-height: var(--lh-label);
+  font-weight: var(--fw-semibold);
+}
+.input {
+  width: 100%;
+  height: 48px;
+  padding: 0 var(--s-3);
+  border: var(--bw) solid var(--cage-line);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--ink);
+}
+.input[aria-invalid="true"] {
+  border: 2px solid var(--danger);
+  padding: 0 11px;
+}
+.input[disabled] {
+  background: var(--surface);
+  color: var(--muted);
+}
+.hint {
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--muted);
+}
+.ferr {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--danger);
+  font-weight: var(--fw-medium);
+}
+.radios {
+  border-top: var(--bw) solid var(--border);
+}
+.radio {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 52px;
+  padding: var(--s-1) 0;
+  border-bottom: var(--bw) solid var(--border);
+  cursor: pointer;
+  font-size: var(--fs-body);
+  line-height: 20px;
+}
+.radio input {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex: none;
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+  background: var(--paper);
+  cursor: pointer;
+}
+.radio input:checked {
+  border: 6px solid var(--accent);
+}
+.radio .rnote {
+  display: block;
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--muted);
+}
+.radio:has(input:checked) .rname {
+  font-weight: var(--fw-semibold);
+}
+
+/* Puntos de espera (§5.9) */
+.bdots {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: var(--s-1);
+}
+.bdots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: sk-wait 1.2s infinite ease-in-out;
+}
+.bdots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.bdots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+.skel {
+  display: inline-block;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+/* Menú compacto (§5.9) */
+.menu {
+  position: absolute;
+  z-index: 45;
+  right: var(--s-1);
+  top: 48px;
+  min-width: 220px;
+  padding: 6px;
+  background: var(--paper);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-float);
+  display: flex;
+  flex-direction: column;
+}
+.menu .btn {
+  justify-content: flex-start;
+  border-color: transparent;
+  background: transparent;
+}
+
+/* Franja desplazable de jugadores (§5.5) */
+.strip {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+.strip::-webkit-scrollbar {
+  display: none;
+}
+.strip li {
+  scroll-snap-align: start;
+}
+
+@keyframes sk-wait {
+  0%,
+  80%,
+  100% {
+    opacity: 0.35;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bdots i {
+    animation: none;
+  }
+}

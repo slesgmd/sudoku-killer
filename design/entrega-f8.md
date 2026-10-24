@@ -48,17 +48,16 @@ F8 pide tablero, entrada de números, notas por capas con selector de vista y de
 ## 4. Pendientes
 
 No resueltos por el prototipo; se deciden en F8 o en la fase que se indica:
-- **Valor de H** en la confirmación de pista («Cuesta −H puntos»): lo fija F6.
 - **Fotos:** son marcadores. Elegirlas y registrar fuente y licencia en `design/fotos.md`.
 - **Pantallas fuera de la partida entre 600 y 1023 px:** el prototipo solo dibuja móvil y escritorio.
-- **Aviso de traspaso en la salida durante la partida:** el diálogo de salida de la partida no lo muestra; decidir si se agrega con la condición de la decisión 2.
+- ~~**Aviso de traspaso en la salida durante la partida**~~: resuelto en F8. Se agrega, con la condición de la decisión 2.
 - **Transiciones que no están dibujadas:** de «Entrando…» al lobby, del lobby a la partida para quienes esperan, de la partida a Resultados (automática o solo con «Ver resultados»), de Resultados al lobby para los demás, llegada directa a una partida en curso, vuelta con ficha a una sala llena y regreso al estado normal tras reconectar.
-- **Foco inicial de Ajustes:** el diálogo lo pone en el interruptor, pero dentro de la partida y del lobby el diálogo contenedor lo lleva a «Cerrar». Elegir uno. Confirmar también que al cerrar un diálogo el foco vuelve al control que lo abrió.
+- ~~**Foco inicial de Ajustes**~~: resuelto en F8. Va al interruptor, y al cerrar cualquier diálogo el foco vuelve al control que lo abrió (`docs/diseno.md`, sección 7).
 - **Área táctil de la celda a 360 px:** 37,3 px, por debajo de los 44 px del sistema. Verificar en el celular junto con el anillo (decisión 6) y con las notas de 8 px, que dependen de la lupa.
 - **«Compartir»** en el lobby: no tiene comportamiento definido (por ejemplo, la hoja de compartir del sistema con un enlace a la sala).
-- **Asignación de colores de jugador** a cada asiento.
+- ~~**Asignación de colores de jugador**~~: resuelta en F8. El asiento N usa `--player-(N + 1)` (`docs/diseno.md`, sección 2.4).
 - **Tema oscuro:** no está diseñado. Si no entra en la v1, va a `docs/IDEAS_FUTURAS.md`.
-- **Atajos de teclado:** el prototipo los lista como propuesta y no los implementa; se validan al implementarlos.
+- ~~**Atajos de teclado**~~: implementados en F8. Se validan en el punto de control.
 
 ## 5. Lista de comprobación de F8
 

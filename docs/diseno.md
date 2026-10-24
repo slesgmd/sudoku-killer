@@ -68,7 +68,9 @@ Seis colores derivados de la gama tierra y piedra, con luminancias parecidas par
 | `--player-5` | `#3F6B5B` | pino | 5,71:1 |
 | `--player-6` | `#585A85` | índigo | 6,15:1 |
 
-Como contorno de presencia sobre selection-tint: 4,41:1 o más. La asignación de color a cada asiento no está definida en el prototipo (pendiente).
+Como contorno de presencia sobre selection-tint: 4,41:1 o más.
+
+**Asignación por asiento (resuelta en F8):** el asiento N (de 0 a 5) usa `--player-(N + 1)`, en el orden de la tabla. El color sigue al asiento actual. Si el jugador queda sin asiento (salió o expiró), conserva el color del último que tuvo, así sus entradas del registro de actividad no cambian de color.
 
 ### 2.5 Contrastes medidos
 
@@ -98,7 +100,7 @@ Medidos con la fórmula de luminancia relativa de WCAG 2.2. Mínimos: texto 4,5:
 
 | Token | Valor | Uso |
 |---|---|---|
-| `--t-error-flash` | 1500 ms | Destello del error en la celda |
+| `--t-error-flash` | 1500 ms | Destello del error en la celda (T-04.3; el cliente usa el mismo valor) |
 | `--t-fast` | 120 ms | Transiciones cortas |
 
 Además, en el CSS: sacudida del dígito erróneo de 320 ms (`sk-shake`) y puntos de espera con un ciclo de 1,2 s (`sk-wait`). Los avisos breves duran 6 s (decisión 4 de `design/entrega-f8.md`).
@@ -251,11 +253,12 @@ Fondo ink al 45 %; panel paper de hasta 440 px, radio 10, sombra flotante. Títu
 
 - **Contraste AA** medido para cada par usado (sección 2.5); los pares que fallan están prohibidos.
 - **Nunca solo color:** error (tachado, inicial y aviso con texto), notas (negrita frente a subrayado), pista (esquina doblada), pendiente (puntos), presencia (contorno e inicial), desconectado (contorno discontinuo y etiqueta), inactivo (borde discontinuo), capa oculta (ojo tachado), mismo dígito (anillo).
-- **Teclado:** flechas para mover la selección; 1–9 para número o nota según el modo; N alterna Número y Notas; G alterna la capa; Supr borra las notas de la capa activa en la celda; Ctrl+Z deshace tus últimas notas (agrupadas); H pide pista (abre la confirmación); Esc cierra un diálogo o un menú. El prototipo **lista** los atajos (Ayuda, hoja de celdas) pero no los implementa.
+- **Teclado:** flechas para mover la selección; 1–9 para número o nota según el modo; N alterna Número y Notas; G alterna la capa; Supr borra las notas de la capa activa en la celda; Ctrl+Z deshace tus últimas notas (agrupadas); H pide pista (abre la confirmación); Esc cierra un diálogo o un menú. Implementados en F8; se ignoran mientras el foco está en un campo de texto. Se listan en la Ayuda (F10).
 - **Foco itinerante en el tablero:** solo la celda seleccionada entra en el orden de tabulación (`tabindex` 0; el resto −1). El tablero es `role="grid"` con filas y `gridcell` y `aria-selected`.
 - **Etiqueta de cada celda:** «Fila 2, columna 7, jaula de 10, vacía, notas grupales 1 y 2, notas personales 2 y 4», «…, 3, resuelta por Rafa», «…, pista usada por Valeria», «…, pendiente de confirmación», «…, vacía; Tomás acaba de fallar con un 3», más «mismo número que la celda seleccionada» y «Valeria está aquí».
 - **Regiones vivas:** avisos con `role="status"` (polite) o `role="alert"` (assertive) según la tabla de estados; región oculta `aria-live` con la última actividad; `aria-busy` durante las cargas; cronómetro `role="timer"` con `aria-live="off"`.
-- **Diálogos:** foco atrapado, Esc, foco inicial en la acción segura y vuelta al control que lo abrió (pendiente de confirmar en F8).
+- **Diálogos:** foco atrapado, Esc, foco inicial en la acción segura y vuelta al control que lo abrió (confirmado en F8, con prueba de componente).
+- **Foco inicial de Ajustes (resuelto en F8):** en el interruptor, en el lobby y en la partida, porque es el único control del diálogo y la razón de abrirlo. Activarlo exige Espacio o Intro, así que no hay cambios por accidente. «Cerrar» y la X cierran, igual que Esc.
 - **Movimiento reducido:** con `prefers-reduced-motion`, sin sacudida del error ni animación de los puntos.
 - **Texto oculto** donde la forma no basta: puntos, vidas, «Puesto 2, empate», código deletreado («H P Q 6 N Z»).
 - **Áreas táctiles** de 44 px, salvo la celda del tablero a 360 px (37,3 px; sección 4).
@@ -294,8 +297,8 @@ Cuatro tipos:
 | Demasiadas acciones | Aviso | «Vas muy rápido: la última acción no se envió. Espera un momento y repítela.» | Polite. Sin efecto en vidas ni puntos. |
 | Sala borrada | Aviso integrado | «La sala HPQ6NZ ya no existe. Las salas se borran tras 2 minutos sin nadie conectado.» | En Inicio, con ficha caducada: se descarta la ficha. En Entrar, error «sala inexistente». |
 | Acción no permitida | Aviso de error | «No se usó la pista: ya eres espectador y solo puedes escribir notas.» | Assertive. La acción salió antes del cambio de rol; sin efecto. |
-| Partida terminada | Banner + integrado | «La partida terminó. El equipo completó el tablero en 31:07.» con «Ver resultados» | Tablero completo sin selección ni lupa; controles inactivos; cronómetro detenido. |
-| Confirmación de salida | Diálogo | «¿Salir de la sala?» | `alertdialog`; foco en «Quedarme»; Esc cancela. Aviso de traspaso del derecho de iniciar solo si quien sale lo tiene (decisión 2). |
+| Partida terminada | Banner + integrado | «La partida terminó. El equipo completó el tablero en 31:07.» con «Ver resultados» | Tablero completo sin selección ni lupa; controles inactivos; cronómetro detenido. En F8, sin la pantalla Resultados, el botón es «Volver al inicio» (decisión del usuario); «Ver resultados» llega con Resultados en F10. |
+| Confirmación de salida | Diálogo | «¿Salir de la sala?» | `alertdialog`; foco en «Quedarme»; Esc cancela. Aviso de traspaso del derecho de iniciar solo si quien sale lo tiene (decisión 2), también en la partida (decidido en F8). |
 | Confirmación de pista | Diálogo | «¿Usar una pista en F2 C7?» «Cuesta −H puntos a quien la usa y no da bonus.» | Siempre se pide; requiere celda vacía; foco en «Cancelar». |
 | «Ya resuelta» | Aviso, solo al autor | «Valeria resolvió F1 C3 un instante antes. Tu jugada no cuenta y no pierdes vida.» | Polite; sin destello. |
 | Error propio | Aviso de error + destello | «El 3 no va en F7 C3. Te quedan 2 vidas.» | Assertive; destello de 1500 ms con tu inicial, que ven todos. |

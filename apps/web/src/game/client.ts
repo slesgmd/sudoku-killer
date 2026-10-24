@@ -74,6 +74,8 @@ export class GameClient {
   private readonly undoStack: UndoGroup[] = [];
   private undoRun: UndoRun | null = null;
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
+  /** Último asiento conocido de cada jugador, para su color (docs/diseno.md §2.4). */
+  private readonly seats = new Map<string, number>();
 
   constructor({ transport, now = () => Date.now() }: GameClientOptions) {
     this.transport = transport;
@@ -97,6 +99,10 @@ export class GameClient {
 
   private set(patch: Partial<ClientState>): void {
     this.state = { ...this.state, ...patch };
+    if (patch.players) {
+      for (const player of patch.players)
+        if (player.seat !== null) this.seats.set(player.id, player.seat);
+    }
     for (const listener of [...this.listeners]) listener();
   }
 
@@ -107,6 +113,20 @@ export class GameClient {
 
   clientNow(): number {
     return this.now();
+  }
+
+  /**
+   * Color de un jugador: el de su asiento, `--player-(asiento + 1)`. Sin asiento (salió o expiró),
+   * el del último que tuvo.
+   */
+  colorOf(playerId: string | null): string {
+    const seat = playerId === null ? undefined : this.seats.get(playerId);
+    return seat === undefined ? "var(--muted)" : `var(--player-${String(seat + 1)})`;
+  }
+
+  /** Si hay un servidor del otro lado (en producción, recién desde F10). */
+  available(): boolean {
+    return this.transport.status !== "unavailable";
   }
 
   destroy(): void {

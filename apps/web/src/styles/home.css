@@ -1,0 +1,55 @@
+/* Inicio mínimo de F8 (de screens.css del prototipo). */
+
+.apphead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  height: 64px;
+  padding: 0 var(--s-8);
+  border-bottom: var(--bw) solid var(--border);
+}
+.home-wrap {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: var(--s-12) var(--s-8) var(--s-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.h-xl {
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-display-l);
+  line-height: var(--lh-display-l);
+  letter-spacing: -0.005em;
+}
+.lead {
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--muted);
+}
+.home-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+  margin-top: var(--s-4);
+}
+.home-form legend {
+  padding: 0;
+  margin-bottom: 6px;
+}
+@media (max-width: 599px) {
+  .apphead {
+    height: 52px;
+    padding: 0 var(--s-1) 0 var(--s-3);
+  }
+  .home-wrap {
+    padding: var(--s-5) var(--s-3) 28px;
+  }
+  .h-xl {
+    font-size: var(--fs-display-m);
+    line-height: var(--lh-display-m);
+  }
+}

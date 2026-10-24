@@ -51,6 +51,7 @@ const FORBIDDEN_TEXT: readonly { readonly rule: string; readonly pattern: RegExp
     pattern: /\b(graderSteps|graderMaxLevel|mappingVersion|unitCombinationBound)\b/,
   },
   { rule: "simulator marker", pattern: /\[sim\]/ },
+  { rule: "inlined font", pattern: /data:(?:font|application\/(?:x-)?font)/ },
   { rule: "serialized solution", pattern: /[1-9]{81}/ },
   { rule: "solution array", pattern: /\[\s*(?:[1-9]\s*,\s*){80}[1-9]\s*,?\s*\]/ },
 ];

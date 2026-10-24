@@ -12,12 +12,29 @@ export default defineConfig({
   resolve: { conditions, alias: devAliases },
   ssr: { resolve: { conditions } },
   test: {
-    include: [
-      "packages/*/test/**/*.test.ts",
-      "apps/*/test/**/*.test.{ts,tsx}",
-      "tests/**/*.test.ts",
-    ],
     exclude: [...configDefaults.exclude, CORPUS_TESTS],
-    environment: "node",
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "node",
+          include: [
+            "packages/*/test/**/*.test.ts",
+            "apps/*/test/**/*.test.ts",
+            "tests/**/*.test.ts",
+          ],
+          environment: "node",
+        },
+      },
+      {
+        // Pruebas de componentes del cliente (nivel C de la SPEC): Testing Library sobre jsdom.
+        extends: true,
+        test: {
+          name: "web",
+          include: ["apps/web/test/**/*.test.tsx"],
+          environment: "jsdom",
+        },
+      },
+    ],
   },
 });

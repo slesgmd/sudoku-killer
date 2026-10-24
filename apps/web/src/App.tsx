@@ -1,48 +1,44 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { DIFFICULTIES, type Difficulty } from "@sudoku-killer/protocol";
 import { GameClient } from "./game/client.ts";
 import { INITIAL_STATE } from "./game/state.ts";
-import { t } from "./i18n/index.ts";
+import { GameScreen } from "./screens/GameScreen.tsx";
+import { Home } from "./screens/Home.tsx";
 import { createTransport } from "./transport/index.ts";
 
-// Esqueleto de F8c: arranca una partida contra el transporte disponible. La interfaz del diseño
-// llega en F8d.
+const noop = () => () => undefined;
+const initial = () => INITIAL_STATE;
+
+/** Inicio mínimo o partida, según la fase del cliente (F8). */
 export function App() {
   const [client, setClient] = useState<GameClient | null>(null);
   useEffect(() => {
     let created: GameClient | null = null;
+    let cancelled = false;
     void createTransport().then((transport) => {
+      if (cancelled) {
+        transport.close();
+        return;
+      }
       created = new GameClient({ transport });
       setClient(created);
     });
     return () => {
+      cancelled = true;
       created?.destroy();
     };
   }, []);
-  const state = useSyncExternalStore(
-    client?.subscribe ?? (() => () => undefined),
-    client?.getState ?? (() => INITIAL_STATE),
-  );
-  const [difficulty, setDifficulty] = useState<Difficulty>("easy");
-  return (
-    <main>
-      <h1>{t("appTitle")}</h1>
-      <select
-        value={difficulty}
-        onChange={(event) => {
-          setDifficulty(event.target.value as Difficulty);
+  const state = useSyncExternalStore(client?.subscribe ?? noop, client?.getState ?? initial);
+
+  if (!client || state.phase === "home" || state.phase === "entering") {
+    return (
+      <Home
+        state={state}
+        available={client?.available() === true}
+        onStart={(nickname, difficulty) => {
+          client?.start(nickname, difficulty);
         }}
-      >
-        {DIFFICULTIES.map((d) => (
-          <option key={d} value={d}>
-            {t(`difficulty.${d}`)}
-          </option>
-        ))}
-      </select>
-      <button type="button" onClick={() => client?.start("Inés", difficulty)}>
-        {t("home.start")}
-      </button>
-      <p>{state.phase}</p>
-    </main>
-  );
+      />
+    );
+  }
+  return <GameScreen client={client} state={state} />;
 }

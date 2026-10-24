@@ -41,6 +41,8 @@ export const es = {
   "cell.empty": "vacía",
   "cell.given": "{value}, número inicial",
   "cell.solved": "{value}, resuelta por {name}",
+  "cell.solvedYou": "{value}, resuelta por ti",
+  "cell.hintYou": "{value}, pista usada por ti",
   "cell.hint": "{value}, pista usada por {name}",
   "cell.pending": "{value}, pendiente de confirmación",
   "cell.mistake": "vacía; {name} acaba de fallar con un {digit}",
@@ -49,7 +51,6 @@ export const es = {
   "cell.sameDigit": "mismo número que la celda seleccionada",
   "cell.presence": "{names} está aquí",
   "cell.presenceMany": "{names} están aquí",
-  "list.and": "{a} y {b}",
   magnifier: "Lupa · {cell}",
 
   // Controles
@@ -68,7 +69,7 @@ export const es = {
   "tool.clearLabel": "Borrar las notas de la capa {layer} en la celda",
   "tool.undo": "Deshacer",
   "tool.undoLabel": "Deshacer tus últimas notas",
-  "tool.hint": "Pista · {left}",
+  "tool.hint": "Pista",
   "tool.hintLabel": "Pista, quedan {left}",
   "tool.hintSpectator": "Pista no disponible para espectadores",
   "tool.hintNone": "Pista: no quedan pistas",
@@ -85,7 +86,7 @@ export const es = {
   "players.swipe": "Desliza para ver todos",
   "players.you": "tú",
   "players.lives": "{lives} vidas de {total}",
-  "players.points": "{score} puntos",
+  "players.pointsUnit": "puntos",
   "players.spectator": "Espectador",
   "players.disconnected": "Desconectado",
   "players.left": "Salió",
@@ -101,12 +102,9 @@ export const es = {
   "activity.joined": "{name} entró en la partida",
   "activity.left": "{name} salió de la sala",
   "activity.spectator": "{name} pasó a espectador",
-  "activity.show": "Mostrar la actividad",
-  "activity.hide": "Ocultar la actividad",
 
   // Estados (docs/diseno.md §9)
   loading: "Cargando la partida…",
-  "toast.close": "Cerrar aviso",
   "state.ownMistake": "El {digit} no va en {cell}. {lives}",
   "state.livesLeft": { one: "Te queda {count} vida.", other: "Te quedan {count} vidas." },
   "state.nowSpectator":
