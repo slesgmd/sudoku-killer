@@ -2,7 +2,12 @@
 // crear y Lobby completos son de F10 (prioridad 3 de entrega-f8.md). Si el arranque falla, un aviso
 // con «Reintentar» conserva el apodo y la dificultad (T-37.1, como «Fallo de conexión» en Entrar).
 import { useRef, useState } from "react";
-import { DIFFICULTIES, type Difficulty } from "@sudoku-killer/protocol";
+import {
+  DIFFICULTIES,
+  isValidNickname,
+  normalizeNickname,
+  type Difficulty,
+} from "@sudoku-killer/protocol";
 import type { ClientState } from "../game/state.ts";
 import { t } from "../i18n/index.ts";
 import { GitHubMark, Icon } from "../components/Icon.tsx";
@@ -59,8 +64,8 @@ export function Home({ state, available, onStart }: HomeProps) {
           onSubmit={(event) => {
             event.preventDefault();
             if (available !== true || entering) return;
-            const trimmed = nickname.normalize("NFKC").trim();
-            if (trimmed.length < 2 || trimmed.length > 16) {
+            const trimmed = normalizeNickname(nickname);
+            if (!isValidNickname(trimmed)) {
               setInvalid(true);
               input.current?.focus();
               return;

@@ -15,3 +15,4 @@ export {
   type ManifestEntry,
 } from "./manifest.ts";
 export { canonicalPuzzle, regenerateSeed, type RegeneratedSeed } from "./regenerate.ts";
+export { pickPuzzle } from "./pick.ts";

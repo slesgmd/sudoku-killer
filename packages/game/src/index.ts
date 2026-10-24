@@ -51,3 +51,19 @@ export {
   type Outgoing,
   type RoomView,
 } from "./project.ts";
+export {
+  freeSeat,
+  generateRoomCode,
+  holdsSeat,
+  lobbyPlayer,
+  lobbySnapshot,
+  nextStarter,
+  seatFor,
+  type RoomMember,
+} from "./room.ts";
+export {
+  MATCH_EVENT_TYPES,
+  eventPayloadSchemas,
+  matchEventSchema,
+  playerEntrySchema,
+} from "./event-schema.ts";

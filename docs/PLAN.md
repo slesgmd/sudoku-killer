@@ -558,6 +558,24 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - Pruebas de cada transición de estado y de cada caso límite de la SPEC.
 - El test de "la solución nunca sale del servidor" está en verde.
 
+**Al aprobar el plan, el usuario pidió:**
+- PostgreSQL 18 local en desarrollo, con un rol propio sin privilegios, dueño solo de la base `sudoku_killer` (nunca `postgres`). El usuario ejecuta el SQL en «SQL Shell (psql)», elige la contraseña y escribe `apps/server/.env`. Ningún script ni log muestra `DATABASE_URL`, y las pruebas siguen con PGlite en memoria.
+- Los puzzles que salen del manifiesto se retiran, no se borran, y las partidas viejas conservan su clave foránea.
+- Un punto de control del esquema de `matches` y `match_events` antes de implementar la persistencia.
+- Fichas de 128 bits con `node:crypto`, de las que solo se guarda el SHA-256; secretos solo por variables de entorno; Zod en todo mensaje entrante; errores sin detalles internos; lista de orígenes permitidos.
+- Una demostración con el servidor real y dos clientes Node hasta la victoria.
+
+**Subtareas** (la estimación del plan aprobado es de unas 6–7 h, por encima de las 3–6 h de la fase, por la persistencia, la reconstrucción, el adaptador `ws` y la demostración):
+
+| Subtarea | Contenido | Estado |
+|---|---|---|
+| F9a | Piezas puras en sus paquetes: apodo y código de sala en `packages/protocol` (T-09.3); código, asientos, traspaso y snapshot del lobby en `packages/game` (T-09.4); esquema Zod de los eventos; `pickPuzzle` en `packages/bank` (T-21.2). El simulador y el Inicio las usan. | Hecha |
+| F9b | Núcleo del servidor: interfaces de §8.2, `RoomStore`, cola por sala, lobby, ciclo de vida, fichas, plazos, E-08, inspector de filtración y logger. | Pendiente |
+| F9c | Partida en vivo, presencia, idempotencia, límites de velocidad y T-32.1 contra el servidor. | Pendiente |
+| F9d | Punto de control y después persistencia: `matches` y `match_events`, group commit, reconstrucción, E-16 y retiro de puzzles. | Pendiente |
+| F9e | Producción: `ws`, `pg`, configuración, `db:migrate` y `bank:load`. | Pendiente |
+| F9f | Demostración y cierre. | Pendiente |
+
 ### F10 — Integración en tiempo real (5–10 h; antes 4–8 h; original 15–25 h)
 **Tareas:**
 - Conectar el cliente al servidor real.
@@ -603,6 +621,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - Variables de entorno.
 - Clave de acceso del grupo cerrado (opcional, recomendada).
 - Logs y métricas básicas.
+- Revisar las migraciones automáticas al arrancar (F9): en producción, una migración destructiva no debe aplicarse sola.
 
 **Criterios de aceptación:**
 - Una partida real entre dispositivos distintos funciona.

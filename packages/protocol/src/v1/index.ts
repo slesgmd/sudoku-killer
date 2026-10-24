@@ -4,3 +4,4 @@ export * from "./puzzle.ts";
 export * from "./errors.ts";
 export * from "./client.ts";
 export * from "./server.ts";
+export * from "./room.ts";

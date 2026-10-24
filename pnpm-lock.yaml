@@ -308,6 +308,9 @@ importers:
       '@sudoku-killer/scoring':
         specifier: workspace:*
         version: link:../scoring
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@sudoku-killer/bank':
         specifier: workspace:*

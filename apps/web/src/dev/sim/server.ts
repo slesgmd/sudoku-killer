@@ -11,8 +11,13 @@ import {
   decideJoin,
   decideStarter,
   fanOut,
+  freeSeat,
+  generateRoomCode,
   initialState,
+  lobbyPlayer,
+  lobbySnapshot,
   messagesOf,
+  nextStarter,
   publicPlayers,
   snapshotFor,
   startMatch,
@@ -23,6 +28,9 @@ import {
   type RoomView,
 } from "@sudoku-killer/game";
 import {
+  isValidNickname,
+  nicknameKey,
+  normalizeNickname,
   parseClientEnvelope,
   serverEnvelopeSchema,
   type ClientEnvelope,
@@ -40,8 +48,6 @@ import { PARAMS_V1 } from "@sudoku-killer/scoring";
 
 export const SIM_MODE = createNormalMode(PARAMS_V1);
 
-/** Alfabeto de los códigos de sala (D2). */
-const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const PRESENCE_WINDOW_MS = 100;
 
 export interface SimPuzzle {
@@ -88,8 +94,6 @@ export interface SimConnection {
   /** El cliente cerró la conexión. */
   close(): void;
 }
-
-const nicknameKeyOf = (nickname: string) => nickname.normalize("NFKC").trim().toLowerCase();
 
 export class SimServer {
   private room: Room | null = null;
@@ -241,17 +245,7 @@ export class SimServer {
 
   private publicPlayersOf(room: Room): PublicPlayer[] {
     if (room.match && room.state !== "waiting") return publicPlayers(room.match.state);
-    return [...room.members.values()].map((m) => ({
-      id: m.id,
-      nickname: m.nickname,
-      seat: m.seat,
-      joinedAt: m.joinedAt,
-      connection: m.connection,
-      role: null,
-      lives: 0,
-      score: 0,
-      mistakes: 0,
-    }));
+    return [...room.members.values()].map(lobbyPlayer);
   }
 
   private snapshot(room: Room, member: Member): Snapshot {
@@ -259,13 +253,7 @@ export class SimServer {
     if (room.match && room.state !== "waiting") {
       return snapshotFor(room.match.state, this.roomView(room), member.id, now, SIM_MODE);
     }
-    return {
-      serverNow: now,
-      atSeq: null,
-      room: { ...this.roomView(room), players: this.publicPlayersOf(room) },
-      match: null,
-      you: { playerId: member.id, settings: member.settings, personalNotes: [] },
-    };
+    return lobbySnapshot(this.roomView(room), member, now);
   }
 
   private entryOf(member: Member): PlayerEntry {
@@ -391,18 +379,19 @@ export class SimServer {
     link: number,
     message: ClientEnvelope & { type: "room.create" | "room.join" },
   ): void {
-    const nickname = message.payload.nickname.normalize("NFKC").trim();
-    if (nickname.length < 2 || nickname.length > 16) {
+    const nickname = normalizeNickname(message.payload.nickname);
+    if (!isValidNickname(nickname)) {
       this.error(link, message, "nickname.invalid");
       return;
     }
     const now = this.options.now();
     if (message.type === "room.create") {
       // Una sola sala: crear otra reemplaza la anterior.
-      const code = Array.from(
-        { length: 6 },
-        () => CODE_ALPHABET[this.options.randomInt(CODE_ALPHABET.length)],
-      ).join("");
+      const { randomInt } = this.options;
+      const code = generateRoomCode(
+        { int: randomInt, next: () => randomInt(0x1_0000_0000) },
+        () => false,
+      );
       this.room = {
         code,
         state: "waiting",
@@ -421,14 +410,13 @@ export class SimServer {
       return;
     }
     const members = [...room.members.values()];
-    const taken = new Set(members.flatMap((m) => (m.seat === null ? [] : [m.seat])));
-    const seat = [0, 1, 2, 3, 4, 5].find((s) => !taken.has(s));
-    if (seat === undefined) {
+    const seat = freeSeat(members, SIM_MODE.rules.maxSeats);
+    if (seat === null) {
       this.error(link, message, "room.full");
       return;
     }
-    const nicknameKey = nicknameKeyOf(nickname);
-    if (members.some((m) => m.nicknameKey === nicknameKey)) {
+    const key = nicknameKey(nickname);
+    if (members.some((m) => m.nicknameKey === key)) {
       this.error(link, message, "nickname.taken");
       return;
     }
@@ -436,7 +424,7 @@ export class SimServer {
     const member: Member = {
       id: this.options.randomId(),
       nickname,
-      nicknameKey,
+      nicknameKey: key,
       seat,
       joinedAt: now,
       connection: "connected",
@@ -519,10 +507,7 @@ export class SimServer {
 
   /** El derecho de iniciar pasa al jugador con asiento más antiguo (R-11). */
   private passStarter(room: Room, at: number): void {
-    const next = [...room.members.values()]
-      .filter((m) => m.seat !== null)
-      .sort((a, b) => a.joinedAt - b.joinedAt)[0];
-    room.starterId = next?.id ?? null;
+    room.starterId = nextStarter(room.members.values());
     const match = room.match;
     if (room.state === "running" && match) {
       this.commit(decideStarter(match.state, room.starterId, at), null, null);
