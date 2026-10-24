@@ -12,7 +12,9 @@
     "bank:sample": "node --conditions=@sudoku-killer/source scripts/print-sample.ts",
     "db:generate": "drizzle-kit generate",
     "scoring:simulate": "node --conditions=@sudoku-killer/source scripts/simulate-scoring.ts",
-    "scoring:calibrate": "node --conditions=@sudoku-killer/source scripts/calibrate-scoring.ts"
+    "scoring:calibrate": "node --conditions=@sudoku-killer/source scripts/calibrate-scoring.ts",
+    "db:setup-local": "node --conditions=@sudoku-killer/source scripts/setup-local-db.ts",
+    "db:check-local": "node --env-file=.env scripts/check-local-db.ts"
   },
   "dependencies": {
     "@sudoku-killer/bank": "workspace:*",
@@ -21,10 +23,14 @@
     "@sudoku-killer/protocol": "workspace:*",
     "@sudoku-killer/scoring": "workspace:*",
     "drizzle-orm": "0.45.4",
+    "pg": "8.23.1",
+    "ws": "8.22.0",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
+    "@types/pg": "8.23.1",
+    "@types/ws": "8.18.2",
     "drizzle-kit": "0.31.11"
   }
 }
