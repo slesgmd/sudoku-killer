@@ -119,7 +119,10 @@ export class SimServer {
         this.queue = this.queue
           .then(() => this.handle(link, text))
           .catch((error: unknown) => {
+            // Un fallo del simulador (por ejemplo, al cargar el puzzle) no deja al cliente esperando:
+            // recibe `server.unavailable` y muestra «Reintentar» (T-37.1).
             console.error("[sim]", error);
+            this.error(link, null, "server.unavailable");
           });
       },
       close: () => {

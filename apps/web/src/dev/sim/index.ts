@@ -6,6 +6,7 @@
 // - `errors`: probabilidad de que un bot se equivoque a propósito, de 0 a 1 (por defecto 0,1).
 // - `seed`: semilla de los bots (por defecto 1).
 import { createRng } from "@sudoku-killer/engine";
+import { randomId } from "../../game/random-id.ts";
 import { Bot } from "../bot/bot.ts";
 import type { Transport } from "../../transport/types.ts";
 import { reportLoadTime } from "../load-time.ts";
@@ -38,7 +39,7 @@ export function createDevTransport(params: URLSearchParams): Transport {
     const randomInt = (bound: number) => rng.int(bound);
     server = new SimServer({
       now: () => Date.now() + skew,
-      randomId: () => crypto.randomUUID(),
+      randomId,
       randomInt,
       onRoomCreated(code) {
         for (const bot of bots) bot.stop();
@@ -55,7 +56,7 @@ export function createDevTransport(params: URLSearchParams): Transport {
         });
       },
       async loadPuzzle(difficulty) {
-        const loaded = await loadPuzzle(difficulty, randomInt, crypto.randomUUID());
+        const loaded = await loadPuzzle(difficulty, randomInt, randomId());
         console.info(
           `[sim] ${difficulty}: seed ${String(loaded.entry.seed)} loaded in ${loaded.ms.toFixed(0)} ms`,
         );

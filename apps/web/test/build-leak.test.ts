@@ -19,6 +19,7 @@ describe("T-31.2 the detector fails on the control fixture", () => {
       "inlined font",
       "manifest key",
       "serialized solution",
+      "simulator SHA-256",
       "simulator marker",
       "solution array",
       "solution field",

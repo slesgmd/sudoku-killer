@@ -10,7 +10,7 @@ import {
   type ManifestEntry,
 } from "@sudoku-killer/bank";
 import type { Difficulty, PublicPuzzle } from "@sudoku-killer/protocol";
-import { puzzleHashSubtle } from "./hash.ts";
+import { puzzleHash } from "./hash.ts";
 import type { SimPuzzle } from "./server.ts";
 
 let manifest: Manifest | null = null;
@@ -33,7 +33,7 @@ export interface LoadedPuzzle extends SimPuzzle {
 export async function regenerateEntry(entry: ManifestEntry, id: string): Promise<LoadedPuzzle> {
   const begin = performance.now();
   const { difficulty, accepted, generated, result } = regenerateSeed(entry.seed);
-  const hash = await puzzleHashSubtle(canonicalPuzzle(generated));
+  const hash = await puzzleHash(canonicalPuzzle(generated));
   const ms = performance.now() - begin;
   const actual = { difficulty, accepted, maxLevel: result.maxLevel, steps: result.steps, hash };
   const expected = {

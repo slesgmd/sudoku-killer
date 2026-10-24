@@ -3,7 +3,7 @@
 // - los módulos fuente de cada chunk (informe de `module-report.ts`): nada del simulador, del banco,
 //   del manifiesto, ni del motor o de `packages/game` fuera de lo permitido al cliente;
 // - el texto de cada archivo emitido: el identificador `solution`, las claves del manifiesto, la
-//   marca del simulador y cualquier solución serializada (81 dígitos o un arreglo de 81 dígitos).
+//   marca del simulador, el SHA-256 en JavaScript del simulador y cualquier solución serializada (81 dígitos o un arreglo de 81 dígitos).
 // Si da un falso positivo, se corrigen los imports del cliente, nunca este detector.
 // Uso: `node scripts/check-dist.ts [carpeta]` (por defecto `dist`).
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -51,6 +51,9 @@ const FORBIDDEN_TEXT: readonly { readonly rule: string; readonly pattern: RegExp
     pattern: /\b(graderSteps|graderMaxLevel|mappingVersion|unitCombinationBound)\b/,
   },
   { rule: "simulator marker", pattern: /\[sim\]/ },
+  // La primera constante de ronda del SHA-256 en JavaScript del simulador (`src/dev/sim/sha256.ts`),
+  // en hexadecimal o en decimal, como la deje el minificador.
+  { rule: "simulator SHA-256", pattern: /\b(?:0x428a2f98|1116352408)\b/i },
   { rule: "inlined font", pattern: /data:(?:font|application\/(?:x-)?font)/ },
   { rule: "serialized solution", pattern: /[1-9]{81}/ },
   { rule: "solution array", pattern: /\[\s*(?:[1-9]\s*,\s*){80}[1-9]\s*,?\s*\]/ },

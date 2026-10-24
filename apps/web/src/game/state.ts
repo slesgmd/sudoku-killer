@@ -101,6 +101,10 @@ export interface ClientState {
   readonly canUndo: boolean;
   /** Error al entrar (código del protocolo). */
   readonly enterError: string | null;
+  /** El último arranque pedido: el inicio lo conserva para «Reintentar» y al volver (T-37.1). */
+  readonly lastStart: { readonly nickname: string; readonly difficulty: Difficulty } | null;
+  /** La entrada o la carga de la partida fallaron, o no terminaron a tiempo (T-37.1). */
+  readonly startFailed: boolean;
 }
 
 export const INITIAL_STATE: ClientState = {
@@ -127,6 +131,8 @@ export const INITIAL_STATE: ClientState = {
   clockOffset: 0,
   canUndo: false,
   enterError: null,
+  lastStart: null,
+  startFailed: false,
 };
 
 /** Notas de una capa tal como se ven: lo confirmado más las pendientes, en orden (ADR 0005). */

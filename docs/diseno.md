@@ -51,8 +51,8 @@ Los valores propuestos no llegaban al mínimo sobre alguna superficie o tinte y 
 | `--cell-line` | `= border` | Línea de celda, 1 px |
 | `--box-line` | `= ink` | Línea de caja, 2 px |
 | `--cage-line` | `#827968` | Jaula: línea discontinua a 3 px del borde |
-| `--cage-width` | `1.5px` | Grosor de la línea de jaula (F8; antes 1 px) |
-| `--cage-width-selected` | `2.5px` | Grosor en la jaula de la celda seleccionada (F8; antes 2 px) |
+| `--cage-width` | `2px` | Grosor de la línea de jaula (F8: 1 px en F7, 1,5 px en el punto de control y 2 px tras la prueba con el bot) |
+| `--cage-width-selected` | `3px` | Grosor en la jaula de la celda seleccionada (F8: 2 px en F7, después 2,5 px y 3 px) |
 | `--selection-tint` | `#E3E6D4` | Celda propia (con borde accent de 2 px) |
 | `--related-tint` | `#EFEDE2` | Fila, columna, caja y jaula de la celda seleccionada |
 | `--danger-tint` | `#F7E6E1` | Fondo del error durante el destello |
@@ -207,6 +207,7 @@ Fondo ink al 45 %; panel paper de hasta 440 px, radio 10, sombra flotante. Títu
 - **Puntos en botón** (`.bdots`): para «Entrando…» y cargas.
 - **Esqueleto** (`.skel`) para la carga inicial.
 - **Registro de actividad (más sobrio desde F8):** monograma de 20 px, texto «Tomás · error en F7 C3» y tiempo de partida en tnum. En 1280, una sola línea con la última entrada bajo los jugadores y «Ver actividad», que abre el historial completo en un diálogo. En 360 y 768 queda plegado en un botón que muestra la última entrada (`aria-expanded`); en horizontal, detrás de un botón de cabecera. Una región oculta con `role="log"` anuncia cada entrada nueva, y el historial incluye los textos de los avisos.
+- **Enlace al repositorio (F8):** solo en la cabecera del Inicio, arriba a la derecha; nunca en la partida. Es la marca de GitHub (Invertocat) en SVG local, sin CDN, de 20 px dentro de un área táctil de 44 × 44, en ink (el negro de la paleta), sin cambiar su forma ni su proporción, como piden las pautas de uso del logo de GitHub. Es un botón fantasma con el nombre accesible «Código fuente en GitHub» (también como `title`), abre https://github.com/slesgmd/sudoku-killer en otra pestaña (`target="_blank"`) con `rel="noopener noreferrer"`.
 - **Menú compacto** (`.menu`): Ayuda, Ajustes y Salir en móvil y horizontal.
 - **Marcador de foto** (`.ph`): rectángulo surface con aspa y leyenda de la foto prevista (ver `design/fotos.md`).
 - **Controles de prueba** (`.testbar`, barra oscura): solo del prototipo, **no forman parte de la interfaz**.
@@ -215,7 +216,8 @@ Fondo ink al 45 %; panel paper de hasta 440 px, radio 10, sombra flotante. Títu
 
 ### 6.1 Dibujo
 - Celda paper; líneas de celda de 1 px (border) y de caja de 2 px (ink).
-- **Jaula:** línea discontinua de 1,5 px (`--cage-width`) a 3 px hacia dentro, con esquinas cóncavas resueltas; 2,5 px (`--cage-width-selected`) en la jaula de la celda seleccionada. Se distingue de la línea de caja (2 px continua en ink) por el trazo discontinuo, el color y la separación de 3 px. El contraste de `--cage-line` no cambia: 4,05 sobre paper, 3,39 sobre selección, 3,66 sobre relación y 3,55 sobre error (mínimo 3:1).
+- **Jaula:** línea discontinua de 2 px (`--cage-width`) a 3 px hacia dentro, con esquinas cóncavas resueltas; 3 px (`--cage-width-selected`) en la jaula de la celda seleccionada. Tiene el mismo grosor que la línea de caja, pero se distingue de ella por el trazo discontinuo, el color (`--cage-line` frente a ink) y la separación de 3 px.
+  - **Grosores enteros:** Chromium redondea hacia abajo el ancho de un borde fraccionario a píxeles enteros en cualquier densidad (medido en F8: 1,5 px se dibuja como 1 px y 2,5 px como 2 px). WebKit lo hace solo con densidad 1. Por eso los dos grosores son enteros: con 2,5 px, la jaula seleccionada habría quedado igual que las demás en Chrome. El contraste de `--cage-line` no cambia: 4,05 sobre paper, 3,39 sobre selección, 3,66 sobre relación y 3,55 sobre error (mínimo 3:1).
 - **Suma:** arriba a la izquierda de la celda ancla (la de menor índice), con el fondo de la celda para cortar la línea.
 - **Variante A (elegida): franja superior reservada.** Todas las celdas reservan arriba la altura de la suma. Las notas ocupan el resto en una cuadrícula 3 × 3 con **posición fija por dígito** en todo el tablero.
 - **Notas:** grupales en ink 600; personales en accent 400 subrayadas; en las dos capas, ink 600 subrayado en accent.
@@ -232,7 +234,7 @@ Fondo ink al 45 %; panel paper de hasta 440 px, radio 10, sombra flotante. Títu
 | Error | danger-tint, dígito danger **tachado** con la **inicial del autor** a su lado, sacudida breve; 1500 ms y lo ven todos |
 | Selección propia | selection-tint y borde accent de 2 px |
 | Relacionada | related-tint (fila, columna, caja y jaula) |
-| Jaula seleccionada | Línea de jaula de 2,5 px |
+| Jaula seleccionada | Línea de jaula de 3 px |
 | Presencia | Contorno de 1,5 px del color del compañero e inicial arriba a la derecha; «+N» si hay varios; 2 px más adentro si coincide con tu selección |
 | Mismo dígito | **Anillo ink** de 1,5 px alrededor de los dígitos bloqueados iguales al de la celda seleccionada; sin color ni fondo; siempre activo |
 
@@ -249,7 +251,7 @@ Fondo ink al 45 %; panel paper de hasta 440 px, radio 10, sombra flotante. Títu
 | 7 | Presencia | Contorno de 1,5 px y la inicial arriba a la derecha; «+N» si hay varios. Ocupa la franja libre de la variante A. Nunca tapa un dígito: el dígito se centra bajo la suma. |
 | 8 | Suma de jaula | Siempre visible, con el fondo de la celda para cortar la línea. |
 | 9 | Notas | Debajo de todo lo anterior. La capa oculta no se dibuja. |
-| 10 | Línea de jaula | 2,5 px en la jaula seleccionada, 1,5 px en el resto. |
+| 10 | Línea de jaula | 3 px en la jaula seleccionada, 2 px en el resto. |
 | 11 | Fondo | danger-tint, luego selection-tint, luego related-tint, luego paper. |
 
 ## 7. Accesibilidad
@@ -310,6 +312,7 @@ Cuatro tipos:
 | No se pudo deshacer | Aviso | «No se pudo deshacer: otra persona cambió esa nota grupal después.» | También «…: la celda ya está resuelta». Polite. |
 | Traspaso del derecho de iniciar | Aviso integrado | «Inés salió de la sala. Ahora inicia la partida Tomás.» | En el lobby. `role=status`. |
 | Errores al entrar | Error de campo o aviso | Sala inexistente, sala llena, apodo en uso, apodo no válido, fallo de conexión, carga | Hoja «Entrar · validación, errores y carga». |
+| No se pudo empezar (F8) | Aviso de error en el formulario | «No se pudo empezar. La partida no terminó de cargar. Revisa tu conexión y vuelve a intentarlo.» con «Reintentar» | Si la entrada o la carga fallan (error del servidor) o no terminan en 15 s, el inicio vuelve con el aviso en lugar de «Entrando…» para siempre. Es el mismo aviso que «Fallo de conexión» en Entrar: `role=alert`, con el apodo y la dificultad conservados. «Reintentar» vuelve a enviar el formulario. Si ya había entrado a la sala, sale de ella. T-37.1. |
 
 ---
 

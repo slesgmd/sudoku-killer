@@ -14,6 +14,7 @@ import type {
 import { t } from "../i18n/index.ts";
 import type { Transport } from "../transport/types.ts";
 import { USE_NOTES_KEY, browserPrefs, type Prefs } from "./prefs.ts";
+import { randomId } from "./random-id.ts";
 import {
   INITIAL_STATE,
   me,
@@ -32,6 +33,11 @@ export const ERROR_FLASH_MS = 1500;
 export const PING_INTERVAL_MS = 5000;
 /** Muestras de reloj que se guardan; gana la de menor ida y vuelta. */
 const CLOCK_SAMPLES = 8;
+/**
+ * Tiempo máximo para entrar y cargar la partida (T-37.1). La carga más lenta medida es de unos
+ * 300 ms (docs/dificultad.md §5.1): el margen cubre un celular lento o un servidor con demora.
+ */
+export const START_TIMEOUT_MS = 15_000;
 /** Grupos de deshacer guardados (ADR 0005). */
 const UNDO_LIMIT = 50;
 
@@ -74,6 +80,9 @@ export class GameClient {
   private pingTimer: ReturnType<typeof setInterval> | null = null;
   private readonly clockSamples: { rtt: number; offset: number }[] = [];
   private startRequest: { id: string; difficulty: Difficulty } | null = null;
+  /** Mensajes del arranque (`room.create`, `room.set_difficulty` y `match.start`). */
+  private readonly startIds = new Set<string>();
+  private startTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly undoStack: UndoGroup[] = [];
   private undoRun: UndoRun | null = null;
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
@@ -86,7 +95,7 @@ export class GameClient {
     this.now = now;
     this.prefs = prefs;
     this.state = { ...INITIAL_STATE, notesEnabled: prefs.get(USE_NOTES_KEY) !== "0" };
-    this.idPrefix = Math.floor(now()).toString(36);
+    this.idPrefix = randomId().slice(0, 8);
     this.unsubscribe = transport.subscribe((message) => {
       this.receive(message);
     });
@@ -138,6 +147,7 @@ export class GameClient {
   destroy(): void {
     this.unsubscribe();
     if (this.pingTimer !== null) clearInterval(this.pingTimer);
+    this.stopStartTimer();
     for (const timer of this.timers) clearTimeout(timer);
     this.transport.close();
   }
@@ -166,8 +176,21 @@ export class GameClient {
 
   /** Inicio mínimo de F8: crea la sala, elige la dificultad e inicia la partida. */
   start(nickname: string, difficulty: Difficulty): void {
-    this.set({ ...INITIAL_STATE, phase: "entering", notesEnabled: this.state.notesEnabled });
-    this.startRequest = { id: this.send("room.create", { nickname }), difficulty };
+    this.set({
+      ...INITIAL_STATE,
+      phase: "entering",
+      notesEnabled: this.state.notesEnabled,
+      lastStart: { nickname, difficulty },
+    });
+    const id = this.send("room.create", { nickname });
+    this.startRequest = { id, difficulty };
+    this.startIds.clear();
+    this.startIds.add(id);
+    this.stopStartTimer();
+    this.startTimer = setTimeout(() => {
+      this.startTimer = null;
+      if (this.state.phase === "entering" || this.state.phase === "loading") this.failStart();
+    }, START_TIMEOUT_MS);
     if (this.pingTimer === null) {
       this.ping();
       this.pingTimer = setInterval(() => {
@@ -181,13 +204,33 @@ export class GameClient {
     this.backHome();
   }
 
+  /**
+   * La entrada o la carga fallaron, o no terminaron a tiempo: se sale de la sala (si se llegó a
+   * entrar) y el inicio muestra el aviso con «Reintentar», con el apodo y la dificultad (T-37.1).
+   */
+  private failStart(): void {
+    this.stopStartTimer();
+    this.startRequest = null;
+    this.startIds.clear();
+    if (this.state.room) this.send("room.leave", {});
+    this.backHome();
+    this.set({ startFailed: true });
+  }
+
+  private stopStartTimer(): void {
+    if (this.startTimer !== null) clearTimeout(this.startTimer);
+    this.startTimer = null;
+  }
+
   backHome(): void {
+    this.stopStartTimer();
     this.undoStack.length = 0;
     this.undoRun = null;
     this.set({
       ...INITIAL_STATE,
       settings: this.state.settings,
       notesEnabled: this.state.notesEnabled,
+      lastStart: this.state.lastStart,
     });
   }
 
@@ -492,11 +535,12 @@ export class GameClient {
         personalNotes: notes(you.personalNotes),
       });
     }
+    if (match) this.stopStartTimer();
     const request = this.startRequest;
     if (request && message.replyTo === request.id) {
       this.startRequest = null;
-      this.send("room.set_difficulty", { difficulty: request.difficulty });
-      this.send("match.start", {});
+      this.startIds.add(this.send("room.set_difficulty", { difficulty: request.difficulty }));
+      this.startIds.add(this.send("match.start", {}));
     }
   }
 
@@ -507,6 +551,8 @@ export class GameClient {
     for (const { cell, value } of puzzle.givens)
       locked[cell] = { value, source: "given", by: null };
     this.undoStack.length = 0;
+    this.stopStartTimer();
+    this.startIds.clear();
     this.set({
       phase: "playing",
       players: payload.players,
@@ -692,8 +738,15 @@ export class GameClient {
   private onError(message: ServerMessage<"error">): void {
     const replyTo = message.replyTo;
     const { code } = message.payload;
-    if (this.state.phase === "entering") {
+    const starting = this.state.phase === "entering" || this.state.phase === "loading";
+    if (starting && (code === "nickname.invalid" || code === "nickname.taken")) {
+      this.stopStartTimer();
       this.set({ phase: "home", enterError: code });
+      return;
+    }
+    // Cualquier otro error del arranque (o del servidor, sin `replyTo`) lo hace fallar.
+    if (starting && (replyTo === undefined || this.startIds.has(replyTo))) {
+      this.failStart();
       return;
     }
     if (replyTo === undefined) return;

@@ -686,6 +686,9 @@ Entre corchetes va la fase en que se implementa cada prueba.
 **R-34 Sin segunda oportunidad ni pausa (D8).**
 - T-34.1 El esquema no tiene mensajes para pedir una segunda oportunidad ni para pausar, así que esos tipos reciben `bad_request`. [U, F9]
 
+**R-37 Arranque que falla (F8, prueba en la red local).** Si la entrada a la sala o la carga de la partida fallan (un `error` del arranque o del servidor) o no terminan en 15 s, el cliente sale de la sala si llegó a entrar y vuelve al inicio con un aviso de error y «Reintentar», conservando el apodo y la dificultad. Nunca se queda en «Entrando…» para siempre.
+- T-37.1 Sin respuesta, a los 15 s aparece el aviso con «Reintentar», que vuelve a enviar `room.create` con el mismo apodo y la misma dificultad. Un `error` a `match.start` durante la carga, o un `error` del servidor sin `replyTo`, lo muestra en el acto. Un apodo en uso sigue siendo un error de campo, y una partida que empieza a tiempo cancela el plazo. [C, F8]
+
 ---
 
 ## 7. Casos límite
@@ -769,4 +772,4 @@ El inspector está activo por defecto en todas las pruebas I. Las pruebas E2E us
 | Limpieza automática | R-17 | T-17.1–5 |
 | Diseño visual | R-18 | T-18.1 |
 
-Todas las reglas de la visión (R-01 a R-07), las decisiones de F2 (R-19 a R-34), el motor (R-35) y la puntuación (R-36) tienen también sus pruebas en la sección 6.
+Todas las reglas de la visión (R-01 a R-07), las decisiones de F2 (R-19 a R-34), el motor (R-35), la puntuación (R-36) y el arranque del cliente (R-37) tienen también sus pruebas en la sección 6.

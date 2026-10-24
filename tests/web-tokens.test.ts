@@ -65,7 +65,7 @@ describe("F8 checklist: tokens.css is the only source of colors and fonts", () =
   it("tokens.css keeps the values of the F7 prototype, plus the tokens added in F8", () => {
     const prototype = path.resolve(import.meta.dirname, "../design/prototipo/tokens.css");
     // Agregados en F8, tras el punto de control (docs/diseno.md §2.3).
-    const added = ["--cage-width: 1.5px", "--cage-width-selected: 2.5px"];
+    const added = ["--cage-width: 2px", "--cage-width-selected: 3px"];
     const current = declarations(TOKENS);
     expect(current.filter((d) => !added.includes(d))).toEqual(declarations(prototype));
     for (const token of added) expect(current).toContain(token);

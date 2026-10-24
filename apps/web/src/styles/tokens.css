@@ -22,8 +22,8 @@
   --cell-line: var(--border); /* 1 px */
   --box-line: var(--ink); /* 2 px */
   --cage-line: #827968; /* 4,05:1 sobre paper · 3,39:1 sobre selection-tint */
-  --cage-width: 1.5px; /* F8: discontinua, más gruesa que 1 px; la caja sigue en 2 px continua ink */
-  --cage-width-selected: 2.5px; /* F8: jaula de la celda seleccionada (R-33) */
+  --cage-width: 2px; /* F8: discontinua; la caja también es de 2 px, pero continua e ink */
+  --cage-width-selected: 3px; /* F8: jaula de la celda seleccionada (R-33); entero, ver docs/diseno.md */
   --selection-tint: #e3e6d4; /* ink encima 12,13:1 */
   --related-tint: #efede2; /* ink encima 13,12:1 */
   --danger-tint: #f7e6e1; /* danger encima 4,87:1 */

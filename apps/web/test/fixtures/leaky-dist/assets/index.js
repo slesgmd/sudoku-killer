@@ -9,4 +9,5 @@ const d = [
   4, 1, 9, 6, 3, 5, 3, 4, 5, 2, 8, 6, 1, 7, 9,
 ];
 const e = "data:font/woff2;base64,d09GMgABAAAA";
-export { a, b, c, d, e };
+const f = [1116352408, 1899447441];
+export { a, b, c, d, e, f };
