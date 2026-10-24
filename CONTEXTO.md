@@ -7,7 +7,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 - **Plan:** versión 1.18. **SPEC:** versión 1.6.
 - **Fase actual:** F9, servidor de salas (3–6 h). F8 (cliente con servidor simulado) se cerró el 2026-10-24 con unas 3,4 h frente a 4–8 h; F6, el mismo día; F4, F5 y F7, el 2026-10-23.
-- **Próxima tarea exacta:** F9 en curso, con el plan aprobado (`docs/PLAN.md`, F9, subtareas F9a–F9f). F9a, F9b y F9c hechas. Sigue el punto de control del esquema de `matches` y `match_events` (esperar la aprobación del usuario) y después F9d (persistencia). **Antes de empezar F10:** recordarle al usuario la segunda prueba en papel de F5 (ver «Pendiente del usuario»).
+- **Próxima tarea exacta:** F9 en curso, con el plan aprobado (`docs/PLAN.md`, F9, subtareas F9a–F9f). F9a a F9d hechas (esquema de `matches` y `match_events` aprobado por el usuario). Sigue la configuración de la base local (script, con las ventanas que el usuario aprueba) y después F9e (`ws`, `pg`, configuración y comandos). **Antes de empezar F10:** recordarle al usuario la segunda prueba en papel de F5 (ver «Pendiente del usuario»).
 - **Cliente (F8):**
   - Protocolo v1 completo en `packages/protocol/src/v1/`. Reductor y modo Normal definitivos en `packages/game` (`decide`, `apply`, `replay`, `project`, `createNormalMode`); F9 los reutiliza sin reescribirlos.
   - Lo puro del banco está en `packages/bank` (dificultad, `regenerateSeed`, `canonicalPuzzle`); el servidor conserva el hash con `node:crypto` y la carga.
@@ -53,6 +53,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 - `pnpm install`: instala las dependencias y activa el hook de pre-commit (Husky y lint-staged).
 - `pnpm dev`: servidor (Node desde las fuentes, con `--watch`) y web (Vite, en localhost) en paralelo. En desarrollo, la web usa el servidor simulado (`apps/web/src/dev/sim/`, opciones `?lat=` y `?skew=`) y puede sumar bots compañeros (`?bot=2&pace=4000&errors=0.1&seed=1`).
+- Base de datos local: PostgreSQL 18 (servicio `postgresql-x64-18`), rol `sudoku_killer` sin privilegios y base `sudoku_killer`. `DATABASE_URL` va solo en `apps/server/.env` (no se versiona; la forma está en `apps/server/.env.example`). Nunca se muestra ni se registra en el log.
 - `pnpm dev:lan`: la web con `--host`, para probar desde el celular. **Solo en la red de casa, nunca en una red pública.**
 - `pnpm check`: typecheck, ESLint (con tipos) y Prettier. `pnpm test`: Vitest en todo el monorepo. `pnpm build`: `tsc` a `dist/` y Vite.
 - `pnpm test:corpus`: corpus de 1000 puzzles (A y B, calificador y cotas), el banco completo y la validación de la puntuación (semilla fija, unos 10 min; también en el workflow programado `corpus.yml`).

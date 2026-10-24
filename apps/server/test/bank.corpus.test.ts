@@ -20,7 +20,12 @@ describe("bank corpus", () => {
         const start = performance.now();
         const loaded = await loadBank(db, manifest);
         const loadSeconds = (performance.now() - start) / 1000;
-        expect(loaded).toEqual({ inserted: manifest.entries.length, existing: 0 });
+        expect(loaded).toEqual({
+          inserted: manifest.entries.length,
+          existing: 0,
+          reactivated: 0,
+          retired: 0,
+        });
 
         const repository = createPuzzleRepository(db);
         expect(await repository.countByDifficulty()).toEqual(

@@ -4,15 +4,20 @@
 // no tiene fichas ni sus hash.
 import type { PGlite } from "@electric-sql/pglite";
 import { createRng } from "@sudoku-killer/engine";
-import { createNormalMode, type MatchState } from "@sudoku-killer/game";
+import { createNormalMode, type MatchEvent, type MatchState } from "@sudoku-killer/game";
 import type { ClientMessage, ClientMessageType, ServerEnvelope } from "@sudoku-killer/protocol";
 import { PARAMS_V1 } from "@sudoku-killer/scoring";
 import { expect, onTestFinished } from "vitest";
 import { MemoryTransport, type MemoryClient } from "../../src/infra/memory-transport.ts";
 import { seededIds } from "../../src/infra/random.ts";
 import { createLogger } from "../../src/log/logger.ts";
-import { MemoryMatchRepository, type MatchRepository } from "../../src/match/repository.ts";
-import { directSink, type EventSink } from "../../src/match/sink.ts";
+import {
+  createMatchRepository,
+  type CommitBatch,
+  type MatchRepository,
+  type StoredMatch,
+} from "../../src/match/repository.ts";
+import { EventWriter } from "../../src/match/sink.ts";
 import { createPuzzleCatalog, type PuzzleCatalog } from "../../src/puzzles/catalog.ts";
 import { loadBank } from "../../src/puzzles/load-bank.ts";
 import { createPuzzleRepository } from "../../src/puzzles/repository.ts";
@@ -63,20 +68,51 @@ export function testBank(): Promise<TestBank> {
   return bank;
 }
 
+/**
+ * El repositorio real sobre PGlite, con un interruptor que hace fallar la base de datos a pedido
+ * (E-16). `events` sigue respondiendo: las pruebas leen el registro confirmado.
+ */
+export class FaultyRepository implements MatchRepository {
+  failing = false;
+  private readonly inner: MatchRepository;
+
+  constructor(inner: MatchRepository) {
+    this.inner = inner;
+  }
+
+  private guard<T>(run: () => Promise<T>): Promise<T> {
+    return this.failing ? Promise.reject(new Error("database unavailable")) : run();
+  }
+
+  commit(batch: CommitBatch): Promise<void> {
+    return this.guard(() => this.inner.commit(batch));
+  }
+
+  listRunning(): Promise<StoredMatch[]> {
+    return this.guard(() => this.inner.listRunning());
+  }
+
+  loadRunning(matchId: string): Promise<StoredMatch | null> {
+    return this.guard(() => this.inner.loadRunning(matchId));
+  }
+
+  events(matchId: string): Promise<MatchEvent[]> {
+    return this.inner.events(matchId);
+  }
+}
+
 export interface TestServerOptions {
   readonly seed?: number;
-  readonly repository?: MatchRepository;
-  readonly sink?: (repository: MatchRepository) => EventSink;
 }
 
 export type TestServer = Awaited<ReturnType<typeof createTestServer>>;
 
-export async function createTestServer({
-  seed = 1,
-  repository = new MemoryMatchRepository(),
-  sink = directSink,
-}: TestServerOptions = {}) {
-  const { catalog, solutions } = await testBank();
+export async function createTestServer({ seed = 1 }: TestServerOptions = {}) {
+  const { db, client, catalog, solutions } = await testBank();
+  // Las pruebas de un archivo comparten la base: cada servidor nuevo empieza sin partidas, para no
+  // reconstruir las de otra prueba. (TRUNCATE no pasa por el trigger de UPDATE y DELETE.)
+  await client.query("TRUNCATE match_events, matches");
+  const repository = new FaultyRepository(createMatchRepository(db));
   const clock = new FakeClock();
   const logs: string[] = [];
   const logger = createLogger({
@@ -84,9 +120,9 @@ export async function createTestServer({
     write: (line) => logs.push(line),
     now: () => clock.now(),
   });
-  let server: RoomServer | null = null;
+  let live: RoomServer | null = null;
   const matchState = (matchId: string): MatchState | undefined => {
-    for (const room of server?.rooms.values() ?? []) {
+    for (const room of live?.rooms.values() ?? []) {
       if (room.match?.state.id === matchId) return room.match.state;
     }
     return undefined;
@@ -98,49 +134,92 @@ export async function createTestServer({
       return state?.status === "locked" ? state.value : undefined;
     },
   });
-  const transport = new MemoryTransport((clientId, text) => {
-    inspector.check(clientId, text);
-  });
-  server = new RoomServer({
-    transport,
-    clock,
-    random: createRng(seed),
-    ids: seededIds(createRng(seed + 1_000)),
-    catalog,
-    sink: sink(repository),
-    logger,
-    mode,
-  });
-  await server.start();
   const tokens = new Set<string>();
-  const live = server;
+  let transport = new MemoryTransport();
+  let sink: EventWriter | null = null;
+  let generation = 0;
+
+  /** Arranca un servidor (el primero o el que sigue a un reinicio) sobre la misma base. */
+  const boot = async () => {
+    generation++;
+    transport = new MemoryTransport((clientId, text) => {
+      inspector.check(clientId, text);
+    });
+    // En las pruebas, el lote se escribe en cuanto se vacía la cola de microtareas: agrupa lo que
+    // llegó en la misma tanda sin depender del reloj falso. Los reintentos sí usan el reloj (E-16).
+    sink = new EventWriter({
+      repository,
+      clock,
+      logger,
+      schedule: (flush) => {
+        setImmediate(flush);
+      },
+    });
+    live = new RoomServer({
+      transport,
+      clock,
+      random: createRng(seed + generation),
+      ids: seededIds(createRng(seed + 1_000 * generation)),
+      catalog,
+      sink,
+      repository,
+      logger,
+      mode,
+    });
+    return live.start();
+  };
+  await boot();
+
+  const server = (): RoomServer => {
+    if (!live) throw new Error("No server");
+    return live;
+  };
 
   onTestFinished(() => {
     expect(inspector.violations, "leak inspector (SPEC §8.3)").toEqual([]);
-    const joined = logs.join("\n");
+    const joined = logs.join(" ");
     for (const token of tokens) expect(joined, "a token in the log").not.toContain(token);
     expect(joined, "a token hash in the log").not.toMatch(/[0-9a-f]{64}/);
   });
 
   const settle = async () => {
     for (let i = 0; i < 5; i++) {
-      await live.idle();
+      await server().idle();
       await new Promise((resolve) => setImmediate(resolve));
     }
   };
 
   const harness = {
-    server: live,
+    get server(): RoomServer {
+      return server();
+    },
+    get sink(): EventWriter {
+      if (!sink) throw new Error("No sink");
+      return sink;
+    },
     clock,
-    transport,
     repository,
     inspector,
     logs,
     settle,
     /** Avanza el reloj falso y procesa lo que dispare. */
     advance: (ms: number) => clock.advance(ms, settle),
+    /**
+     * Reinicio del servidor (E-15): el proceso viejo deja de existir sin avisar a nadie (sus salas
+     * no procesan nada más y sus conexiones se cortan) y arranca uno nuevo sobre la misma base.
+     * Devuelve cuántas salas reconstruyó.
+     */
+    async restart(): Promise<number> {
+      await settle();
+      const old = server();
+      for (const room of [...old.rooms.values()]) room.deleted = true;
+      await transport.stop(1006, "");
+      const restored = await boot();
+      await settle();
+      return restored;
+    },
     room(code: string): Room {
-      const room = live.rooms.get(code);
+      const room = server().rooms.get(code);
       if (!room) throw new Error(`No room ${code}`);
       return room;
     },

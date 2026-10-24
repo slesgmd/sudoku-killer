@@ -51,10 +51,15 @@ import type { Clock } from "../infra/clock.ts";
 import type { IdGenerator } from "../infra/random.ts";
 import { hashToken, newToken } from "../infra/tokens.ts";
 import type { Logger } from "../log/logger.ts";
-import type { MatchRecord } from "../match/repository.ts";
+import type { MatchRecord, StoredMatch } from "../match/repository.ts";
 import type { EventSink } from "../match/sink.ts";
 import type { PuzzleCatalog } from "../puzzles/catalog.ts";
-import { GRACE_MS, IDEMPOTENCY_ENTRIES, PRESENCE_WINDOW_MS } from "./limits.ts";
+import {
+  CLOSE_SERVICE_RESTART,
+  GRACE_MS,
+  IDEMPOTENCY_ENTRIES,
+  PRESENCE_WINDOW_MS,
+} from "./limits.ts";
 import { Lru } from "./lru.ts";
 
 /** La conexión de un cliente, como la ve una sala (la implementa `RoomServer`). */
@@ -79,6 +84,8 @@ export interface RoomDeps {
   readonly mode: GameMode;
   /** La sala se borró (R-14): sale del `RoomStore`. */
   readonly onDeleted: (room: Room) => void;
+  /** Se perdieron eventos sin confirmar (E-16): la sala se cerró y hay que reconstruirla. */
+  readonly onLost: (room: Room) => void;
 }
 
 interface Member {
@@ -160,13 +167,17 @@ export class Room {
     });
   }
 
-  /** Se resuelve cuando la cola y la bandeja de salida quedan vacías (para las pruebas). */
+  /**
+   * Se resuelve cuando la cola y la bandeja de salida quedan vacías, o cuando la base de datos deja
+   * de confirmar y la bandeja queda esperando (para las pruebas).
+   */
   async idle(): Promise<void> {
     for (;;) {
       const queue = this.queue;
       const outbox = this.outbox;
       await queue;
-      await outbox;
+      await Promise.race([outbox, this.deps.sink.stalled()]);
+      if (this.deps.sink.unavailable) return;
       if (queue === this.queue && outbox === this.outbox) return;
     }
   }
@@ -176,13 +187,44 @@ export class Room {
     this.outbox = this.outbox.then(async () => {
       try {
         if (after) await after;
-      } catch (error) {
-        // Un evento sin confirmar no se difunde (T-32.3).
-        this.deps.logger.error("event commit failed", { room: this.code, error });
+      } catch {
+        // Un evento sin confirmar no se difunde (T-32.3): la sala se reconstruye (E-16).
+        this.lost();
         return;
       }
-      deliver();
+      if (!this.deleted) deliver();
     });
+  }
+
+  /**
+   * E-16: se perdieron eventos que no se confirmaron. La sala se cierra (las conexiones con 1012, y
+   * el cliente se reconecta) y el servidor la reconstruye desde el registro confirmado.
+   */
+  private lost(): void {
+    if (this.deleted) return;
+    this.deleted = true;
+    this.cancelDeletion?.();
+    this.cancelDeletion = null;
+    for (const member of this.members.values()) {
+      member.cancelGrace?.();
+      member.cancelGrace = null;
+      const session = member.session;
+      member.session = null;
+      session?.unbind();
+      session?.close(CLOSE_SERVICE_RESTART, "service restart");
+    }
+    this.deps.logger.warn("room closed to rebuild from the log", { room: this.code });
+    this.deps.onLost(this);
+  }
+
+  /** La respuesta sale en el acto: no depende de ningún evento pendiente. */
+  private unavailable(session: Session, replyTo: string): void {
+    session.send({ v: 1, type: "error", payload: { code: "server.unavailable" }, replyTo });
+  }
+
+  /** Mientras la base de datos no confirma, se rechaza lo que agregaría eventos (E-16). */
+  private writesBlocked(): boolean {
+    return this.deps.sink.unavailable;
   }
 
   private recipients(): string[] {
@@ -343,6 +385,10 @@ export class Room {
 
   /** `room.create` y `room.join` (§4.2). La forma del apodo ya la comprobó quien llama. */
   join(session: Session, message: ClientMessage<"room.create" | "room.join">): void {
+    if (this.writesBlocked() && this.state === "running") {
+      this.unavailable(session, message.id);
+      return;
+    }
     const token = message.type === "room.join" ? message.payload.token : undefined;
     if (token !== undefined) {
       const tokenHash = hashToken(token);
@@ -445,12 +491,18 @@ export class Room {
     member.session = null;
     member.ready = false;
     this.setConnection(member, "disconnected", member.seat);
+    this.startGrace(member);
+    this.checkEmpty();
+  }
+
+  /** El plazo de gracia de 120 s (R-13): si no vuelve, expira. */
+  private startGrace(member: Member): void {
+    member.cancelGrace?.();
     member.cancelGrace = this.deps.clock.setTimeout(() => {
       this.enqueue(() => {
         this.expire(member);
       });
     }, GRACE_MS);
-    this.checkEmpty();
   }
 
   private expire(member: Member): void {
@@ -550,6 +602,72 @@ export class Room {
     this.deps.onDeleted(this);
   }
 
+  // --- Reconstrucción (ADR 0003, E-15 y E-16) ---
+
+  /**
+   * Una sala en curso reconstruida desde su registro confirmado. Quienes figuraban conectados pasan
+   * a `disconnected` (con su evento, así el registro sigue reproduciendo el estado), y todos los que
+   * tienen asiento reciben un plazo nuevo de 120 s para volver con su ficha (T-32.2). La caché de
+   * idempotencia se repuebla con los `clientMsgId` de los eventos (§4.6).
+   */
+  static restore(
+    deps: RoomDeps,
+    stored: StoredMatch,
+    puzzle: { readonly puzzle: PublicPuzzle; readonly solution: readonly number[] },
+  ): Room {
+    const [first, ...rest] = stored.events;
+    if (first?.type !== "match.started") throw new Error(`Match ${stored.match.id} has no start`);
+    const context = { mode: deps.mode, puzzle: puzzle.puzzle };
+    let state = initialState(first, context);
+    const replies = new Map<string, Map<string, readonly ServerEnvelope[]>>();
+    for (const event of rest) {
+      const applied = applyWithEffects(state, event, context);
+      state = applied.state;
+      const author = authorOf(event);
+      if (!author) continue;
+      const outgoing = messagesOf(event, state, applied.effects, deps.mode);
+      const copies = fanOut(outgoing, [author.playerId], author).map((d) => d.envelope);
+      const own = replies.get(author.playerId) ?? new Map<string, readonly ServerEnvelope[]>();
+      own.set(author.clientMsgId, copies);
+      replies.set(author.playerId, own);
+    }
+    if (state.endedAt !== null) throw new Error(`Match ${stored.match.id} already ended`);
+
+    const room = new Room(stored.match.roomCode, deps);
+    room.state = "running";
+    room.difficulty = stored.match.difficulty;
+    room.starterId = state.starterId;
+    room.playedPuzzleIds.push(puzzle.puzzle.id);
+    room.match = { state, puzzle: puzzle.puzzle, solution: puzzle.solution };
+    for (const player of state.players.values()) {
+      const cache = new Lru<string, readonly ServerEnvelope[]>(IDEMPOTENCY_ENTRIES);
+      for (const [id, copies] of replies.get(player.id) ?? []) cache.set(id, copies);
+      room.members.set(player.id, {
+        id: player.id,
+        nickname: player.nickname,
+        nicknameKey: nicknameKey(player.nickname),
+        seat: player.seat,
+        lastSeat: player.seat,
+        joinedAt: player.joinedAt,
+        tokenHash: player.tokenHash,
+        connection: player.connection,
+        settings: player.settings,
+        session: null,
+        ready: false,
+        cancelGrace: null,
+        replies: cache,
+        presence: { cell: null, sent: null, open: false },
+      });
+    }
+    for (const member of room.members.values()) {
+      if (member.connection === "connected")
+        room.setConnection(member, "disconnected", member.seat);
+      if (member.connection === "disconnected") room.startGrace(member);
+    }
+    room.checkEmpty();
+    return room;
+  }
+
   // --- Comandos de miembros ---
 
   /** Un comando de quien ya es miembro (§4.2). */
@@ -569,6 +687,10 @@ export class Room {
       this.release(null, () => {
         for (const envelope of cached) member.session?.send(envelope);
       });
+      return;
+    }
+    if (this.writesBlocked() && (this.state === "running" || message.type === "match.start")) {
+      this.unavailable(session, message.id);
       return;
     }
     const author: Author = { playerId: member.id, clientMsgId: message.id };
@@ -752,5 +874,19 @@ export class Room {
       }, PRESENCE_WINDOW_MS);
     };
     flush();
+  }
+}
+
+/** Autor y `clientMsgId` de los eventos que salen de un comando (para la idempotencia). */
+function authorOf(event: MatchEvent): Author | null {
+  switch (event.type) {
+    case "cell.solved":
+    case "cell.mistake":
+    case "hint.used":
+    case "note.op":
+    case "settings.changed":
+      return { playerId: event.payload.playerId, clientMsgId: event.payload.clientMsgId };
+    default:
+      return null;
   }
 }

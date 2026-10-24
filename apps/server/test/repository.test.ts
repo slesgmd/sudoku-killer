@@ -35,8 +35,18 @@ afterAll(async () => {
 describe("T-20.4 loading the bank", () => {
   it("inserts every sampled entry once, and a second load inserts nothing", SLOW, async () => {
     const total = sample.entries.length;
-    expect(await loadBank(db, sample)).toEqual({ inserted: total, existing: 0 });
-    expect(await loadBank(db, sample)).toEqual({ inserted: 0, existing: total });
+    expect(await loadBank(db, sample)).toEqual({
+      inserted: total,
+      existing: 0,
+      reactivated: 0,
+      retired: 0,
+    });
+    expect(await loadBank(db, sample)).toEqual({
+      inserted: 0,
+      existing: total,
+      reactivated: 0,
+      retired: 0,
+    });
     const counts = await createPuzzleRepository(db).countByDifficulty();
     expect(counts).toEqual(Object.fromEntries(DIFFICULTIES.map((d) => [d, PER_DIFFICULTY])));
   });
@@ -100,8 +110,10 @@ describe("T-20.3 database constraints", () => {
   const insert = (difficulty: string, level: number, seed: number) =>
     client.query(
       `INSERT INTO puzzles (size, box_rows, box_cols, difficulty, cages, givens, solution,
-        grader_max_level, grader_steps, grader_version, givens_reason, generator_version, seed)
-       VALUES (4, 2, 2, $1, '[]', '[]', '1234341221434321', $2, 1, '2', 'none', 'test', $3)`,
+        grader_max_level, grader_steps, grader_version, givens_reason, generator_version, seed,
+        hash, mapping_version)
+       VALUES (4, 2, 2, $1, '[]', '[]', '1234341221434321', $2, 1, '2', 'none', 'test', $3,
+        'test-' || $3::bigint::text, '2')`,
       [difficulty, level, seed],
     );
 

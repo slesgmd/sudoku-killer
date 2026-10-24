@@ -1,0 +1,404 @@
+{
+  "id": "58790a35-eba2-4ed5-aac4-5797e7fa23d3",
+  "prevId": "24c514f4-d011-47cf-839d-eec850b611f6",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.match_events": {
+      "name": "match_events",
+      "schema": "",
+      "columns": {
+        "match_id": {
+          "name": "match_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seq": {
+          "name": "seq",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "server_ts": {
+          "name": "server_ts",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "match_events_match_id_matches_id_fk": {
+          "name": "match_events_match_id_matches_id_fk",
+          "tableFrom": "match_events",
+          "tableTo": "matches",
+          "columnsFrom": [
+            "match_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "match_events_match_id_seq_pk": {
+          "name": "match_events_match_id_seq_pk",
+          "columns": [
+            "match_id",
+            "seq"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "match_events_seq_check": {
+          "name": "match_events_seq_check",
+          "value": "\"match_events\".\"seq\" >= 1"
+        },
+        "match_events_type_check": {
+          "name": "match_events_type_check",
+          "value": "type IN ('match.started', 'player.joined', 'player.connection', 'starter.changed', 'settings.changed', 'cell.solved', 'cell.mistake', 'hint.used', 'note.op', 'match.ended')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.matches": {
+      "name": "matches",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "room_code": {
+          "name": "room_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "puzzle_id": {
+          "name": "puzzle_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "difficulty": {
+          "name": "difficulty",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mode_id": {
+          "name": "mode_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scoring_params_version": {
+          "name": "scoring_params_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "protocol_version": {
+          "name": "protocol_version",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "log_version": {
+          "name": "log_version",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ended_at": {
+          "name": "ended_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "result": {
+          "name": "result",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "matches_running_idx": {
+          "name": "matches_running_idx",
+          "columns": [
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"matches\".\"ended_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "matches_puzzle_id_puzzles_id_fk": {
+          "name": "matches_puzzle_id_puzzles_id_fk",
+          "tableFrom": "matches",
+          "tableTo": "puzzles",
+          "columnsFrom": [
+            "puzzle_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "matches_difficulty_check": {
+          "name": "matches_difficulty_check",
+          "value": "difficulty IN ('easy', 'medium', 'hard', 'expert')"
+        },
+        "matches_result_check": {
+          "name": "matches_result_check",
+          "value": "result IN ('victory', 'defeat')"
+        },
+        "matches_ended_check": {
+          "name": "matches_ended_check",
+          "value": "(\"matches\".\"ended_at\" IS NULL) = (\"matches\".\"result\" IS NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.puzzles": {
+      "name": "puzzles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "size": {
+          "name": "size",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "box_rows": {
+          "name": "box_rows",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "box_cols": {
+          "name": "box_cols",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "difficulty": {
+          "name": "difficulty",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cages": {
+          "name": "cages",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "givens": {
+          "name": "givens",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "solution": {
+          "name": "solution",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grader_max_level": {
+          "name": "grader_max_level",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grader_steps": {
+          "name": "grader_steps",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grader_version": {
+          "name": "grader_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "givens_reason": {
+          "name": "givens_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "generator_version": {
+          "name": "generator_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seed": {
+          "name": "seed",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hash": {
+          "name": "hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mapping_version": {
+          "name": "mapping_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "retired_at": {
+          "name": "retired_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "puzzles_difficulty_idx": {
+          "name": "puzzles_difficulty_idx",
+          "columns": [
+            {
+              "expression": "difficulty",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "puzzles_generator_seed_idx": {
+          "name": "puzzles_generator_seed_idx",
+          "columns": [
+            {
+              "expression": "generator_version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "seed",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "puzzles_hash_idx": {
+          "name": "puzzles_hash_idx",
+          "columns": [
+            {
+              "expression": "hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "puzzles_difficulty_check": {
+          "name": "puzzles_difficulty_check",
+          "value": "difficulty IN ('easy', 'medium', 'hard', 'expert')"
+        },
+        "puzzles_givens_reason_check": {
+          "name": "puzzles_givens_reason_check",
+          "value": "givens_reason IN ('none', 'difficulty', 'uniqueness')"
+        },
+        "puzzles_grader_max_level_check": {
+          "name": "puzzles_grader_max_level_check",
+          "value": "\"puzzles\".\"grader_max_level\" BETWEEN 1 AND 5"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -15,7 +15,8 @@ import type { Clock } from "../infra/clock.ts";
 import type { IdGenerator } from "../infra/random.ts";
 import type { Link, LinkHandlers, Transport } from "../infra/transport.ts";
 import type { Logger } from "../log/logger.ts";
-import type { EventSink } from "../match/sink.ts";
+import type { MatchRepository, StoredMatch } from "../match/repository.ts";
+import { COMMIT_RETRY_MS, type EventSink } from "../match/sink.ts";
 import type { PuzzleCatalog } from "../puzzles/catalog.ts";
 import {
   CLOSE_SLOW_BYTES,
@@ -26,7 +27,7 @@ import {
   PING_BUCKET,
   PRESENCE_BUCKET,
 } from "./limits.ts";
-import { Room, type Session } from "./room.ts";
+import { Room, type RoomDeps, type Session } from "./room.ts";
 import { MemoryRoomStore, type RoomStore } from "./store.ts";
 import { TokenBucket } from "./token-bucket.ts";
 
@@ -37,6 +38,8 @@ export interface RoomServerOptions {
   readonly ids: IdGenerator;
   readonly catalog: PuzzleCatalog;
   readonly sink: EventSink;
+  /** Para reconstruir las partidas en curso (al arrancar y tras E-16). */
+  readonly repository: MatchRepository;
   readonly logger: Logger;
   readonly mode: GameMode;
   readonly store?: RoomStore;
@@ -132,6 +135,8 @@ class Connection implements Session {
 
 export class RoomServer {
   readonly rooms: RoomStore;
+  /** Códigos de las salas que se están reconstruyendo tras E-16: no se reparten. */
+  readonly rebuilding = new Set<string>();
   private readonly options: RoomServerOptions;
   private nextConnection = 1;
 
@@ -140,8 +145,59 @@ export class RoomServer {
     this.rooms = options.store ?? new MemoryRoomStore();
   }
 
-  start(): Promise<void> {
-    return this.options.transport.start((link) => this.accept(link));
+  /**
+   * Reconstruye las partidas en curso desde el registro (T-32.2, E-15) y después acepta conexiones.
+   * Devuelve cuántas salas reconstruyó.
+   */
+  async start(): Promise<number> {
+    const running = await this.options.repository.listRunning();
+    let restored = 0;
+    for (const stored of running) {
+      try {
+        await this.restore(stored);
+        restored++;
+      } catch (error) {
+        this.options.logger.error("match not restored", { matchId: stored.match.id, error });
+      }
+    }
+    if (running.length > 0) this.options.logger.info("matches restored", { restored });
+    await this.options.transport.start((link) => this.accept(link));
+    return restored;
+  }
+
+  /** Deja de aceptar conexiones, escribe lo pendiente y cierra las conexiones con `code`. */
+  async stop(code: number, reason: string): Promise<void> {
+    for (const room of [...this.rooms.values()]) await room.idle();
+    await this.options.sink.drain();
+    await this.options.transport.stop(code, reason);
+  }
+
+  private async restore(stored: StoredMatch): Promise<void> {
+    const puzzle = await this.options.catalog.get(stored.match.puzzleId);
+    const room = Room.restore(this.deps(), stored, puzzle);
+    this.rooms.add(room);
+  }
+
+  /** E-16: la sala perdió eventos sin confirmar; se reconstruye cuando la base responda. */
+  private recover(room: Room): void {
+    if (this.rooms.get(room.code) === room) this.rooms.delete(room.code);
+    const matchId = room.match?.state.id;
+    if (matchId === undefined) return;
+    this.rebuilding.add(room.code);
+    const attempt = () => {
+      void (async () => {
+        try {
+          const stored = await this.options.repository.loadRunning(matchId);
+          this.options.sink.recovered();
+          if (stored) await this.restore(stored);
+          this.rebuilding.delete(room.code);
+          this.options.logger.info("room rebuilt from the log", { room: room.code });
+        } catch {
+          this.options.clock.setTimeout(attempt, COMMIT_RETRY_MS);
+        }
+      })();
+    };
+    this.options.clock.setTimeout(attempt, COMMIT_RETRY_MS);
   }
 
   /** Se resuelve cuando todas las salas terminaron lo que tenían en cola (para las pruebas). */
@@ -167,10 +223,9 @@ export class RoomServer {
     };
   }
 
-  private newRoom(): Room {
+  private deps(): RoomDeps {
     const { clock, random, ids, catalog, sink, logger, mode } = this.options;
-    const code = generateRoomCode(random, (candidate) => this.rooms.has(candidate));
-    const room = new Room(code, {
+    return {
       clock,
       random,
       ids,
@@ -181,9 +236,20 @@ export class RoomServer {
       onDeleted: (deleted) => {
         if (this.rooms.get(deleted.code) === deleted) this.rooms.delete(deleted.code);
       },
-    });
+      onLost: (lost) => {
+        this.recover(lost);
+      },
+    };
+  }
+
+  private newRoom(): Room {
+    const code = generateRoomCode(
+      this.options.random,
+      (candidate) => this.rooms.has(candidate) || this.rebuilding.has(candidate),
+    );
+    const room = new Room(code, this.deps());
     this.rooms.add(room);
-    logger.info("room created", { room: code });
+    this.options.logger.info("room created", { room: code });
     return room;
   }
 
@@ -247,7 +313,12 @@ export class RoomServer {
           connection.error(message.id, "room.wrong_state");
           return;
         }
-        const room = this.rooms.get(message.payload.code.toUpperCase());
+        const code = message.payload.code.toUpperCase();
+        if (this.rebuilding.has(code)) {
+          connection.error(message.id, "server.unavailable");
+          return;
+        }
+        const room = this.rooms.get(code);
         if (!room || room.deleted) {
           connection.error(message.id, "room.not_found");
           return;

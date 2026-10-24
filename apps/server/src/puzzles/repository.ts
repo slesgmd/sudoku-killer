@@ -1,7 +1,7 @@
 // Acceso al banco de puzzles (ADR 0003). La solución solo sale por `getForServer`; `getPublic` no
 // lee esa columna ni la semilla (T-31.3 y T-20.4). La elección al azar sin repetir (R-21) está en
 // `catalog.ts`.
-import { asc, count, eq } from "drizzle-orm";
+import { and, asc, count, eq, isNull } from "drizzle-orm";
 import type { Difficulty, PublicPuzzle } from "@sudoku-killer/protocol";
 import type { Database } from "../db/database.ts";
 import { puzzles } from "../db/schema.ts";
@@ -36,8 +36,9 @@ export interface PuzzleRepository {
   getForServer(id: string): Promise<PuzzleRecord | null>;
   /** Lo que puede salir del servidor. `null` si no existe. */
   getPublic(id: string): Promise<PublicPuzzle | null>;
+  /** Puzzles vigentes (no retirados) por dificultad. */
   countByDifficulty(): Promise<Record<Difficulty, number>>;
-  /** Los `id` de una dificultad, en orden estable (para `pickPuzzle`). */
+  /** Los `id` vigentes de una dificultad, en orden estable (para `pickPuzzle`). */
   listIds(difficulty: Difficulty): Promise<string[]>;
 }
 
@@ -55,6 +56,7 @@ export function createPuzzleRepository(db: Database): PuzzleRepository {
       const rows = await db
         .select({ difficulty: puzzles.difficulty, count: count() })
         .from(puzzles)
+        .where(isNull(puzzles.retiredAt))
         .groupBy(puzzles.difficulty);
       const counts: Record<Difficulty, number> = { easy: 0, medium: 0, hard: 0, expert: 0 };
       for (const row of rows) counts[row.difficulty] = row.count;
@@ -64,7 +66,7 @@ export function createPuzzleRepository(db: Database): PuzzleRepository {
       const rows = await db
         .select({ id: puzzles.id })
         .from(puzzles)
-        .where(eq(puzzles.difficulty, difficulty))
+        .where(and(eq(puzzles.difficulty, difficulty), isNull(puzzles.retiredAt)))
         .orderBy(asc(puzzles.id));
       return rows.map((row) => row.id);
     },

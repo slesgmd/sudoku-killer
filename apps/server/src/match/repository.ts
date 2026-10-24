@@ -1,8 +1,11 @@
-// Partidas y su registro de eventos (ADR 0003 y 0004). Solo se agregan eventos: nunca se modifican
-// ni se borran. La implementación con Drizzle llega con la persistencia; el doble en memoria sirve
-// a las pruebas, también para provocar fallos de la base de datos (E-16).
+// Partidas y su registro de eventos (ADR 0003 y 0004), con Drizzle sobre PostgreSQL (PGlite en las
+// pruebas). Solo se agregan eventos: nunca se modifican ni se borran (un trigger lo impide). Cada
+// evento leído se valida con el esquema Zod del registro antes de reproducirlo.
+import { and, asc, eq, isNull } from "drizzle-orm";
+import { matchEventSchema, type MatchEvent } from "@sudoku-killer/game";
 import type { Difficulty } from "@sudoku-killer/protocol";
-import type { MatchEvent } from "@sudoku-killer/game";
+import type { Database } from "../db/database.ts";
+import { LOG_VERSION, matchEvents, matches } from "../db/schema.ts";
 
 /** Una fila de `matches`, sin el resultado. */
 export interface MatchRecord {
@@ -32,50 +35,96 @@ export interface MatchRepository {
   commit(batch: CommitBatch): Promise<void>;
   /** Partidas sin `ended_at`, con sus eventos en orden de `seq`. */
   listRunning(): Promise<StoredMatch[]>;
+  /** Una partida en curso con sus eventos; `null` si no existe o ya terminó. */
+  loadRunning(matchId: string): Promise<StoredMatch | null>;
   /** Los eventos de una partida, en orden de `seq`. */
   events(matchId: string): Promise<MatchEvent[]>;
 }
 
-/** Doble en memoria. `failing` hace fallar las confirmaciones (E-16). */
-export class MemoryMatchRepository implements MatchRepository {
-  failing = false;
-  private readonly matches = new Map<string, { match: MatchRecord; ended: boolean }>();
-  private readonly log = new Map<string, MatchEvent[]>();
+type MatchRow = typeof matches.$inferSelect;
 
-  commit(batch: CommitBatch): Promise<void> {
-    if (this.failing) return Promise.reject(new Error("database unavailable"));
-    for (const match of batch.matches) {
-      if (this.matches.has(match.id))
-        return Promise.reject(new Error(`duplicate match ${match.id}`));
-    }
-    for (const match of batch.matches) {
-      this.matches.set(match.id, { match, ended: false });
-      this.log.set(match.id, []);
-    }
-    for (const { matchId, event } of batch.events) {
-      const events = this.log.get(matchId);
-      if (!events) return Promise.reject(new Error(`unknown match ${matchId}`));
-      if (event.seq !== events.length + 1) {
-        return Promise.reject(new Error(`seq ${String(event.seq)} out of order in ${matchId}`));
-      }
-      events.push(structuredClone(event));
-      if (event.type === "match.ended") {
-        const entry = this.matches.get(matchId);
-        if (entry) entry.ended = true;
-      }
-    }
-    return Promise.resolve();
-  }
+function recordOf(row: MatchRow): MatchRecord {
+  return {
+    id: row.id,
+    roomCode: row.roomCode,
+    puzzleId: row.puzzleId,
+    difficulty: row.difficulty,
+    modeId: row.modeId,
+    scoringParamsVersion: row.scoringParamsVersion,
+    protocolVersion: row.protocolVersion,
+    startedAt: row.startedAt.getTime(),
+  };
+}
 
-  listRunning(): Promise<StoredMatch[]> {
-    return Promise.resolve(
-      [...this.matches.values()]
-        .filter((entry) => !entry.ended)
-        .map(({ match }) => ({ match, events: structuredClone(this.log.get(match.id) ?? []) })),
+export function createMatchRepository(db: Database): MatchRepository {
+  const events = async (matchId: string): Promise<MatchEvent[]> => {
+    const rows = await db
+      .select()
+      .from(matchEvents)
+      .where(eq(matchEvents.matchId, matchId))
+      .orderBy(asc(matchEvents.seq));
+    return rows.map((row) =>
+      matchEventSchema.parse({
+        seq: row.seq,
+        ts: row.serverTs.getTime(),
+        type: row.type,
+        payload: row.payload,
+      }),
     );
-  }
+  };
 
-  events(matchId: string): Promise<MatchEvent[]> {
-    return Promise.resolve(structuredClone(this.log.get(matchId) ?? []));
-  }
+  const stored = async (row: MatchRow): Promise<StoredMatch> => ({
+    match: recordOf(row),
+    events: await events(row.id),
+  });
+
+  return {
+    events,
+    async commit(batch) {
+      await db.transaction(async (tx) => {
+        if (batch.matches.length > 0) {
+          await tx.insert(matches).values(
+            batch.matches.map((match) => ({
+              ...match,
+              logVersion: LOG_VERSION,
+              startedAt: new Date(match.startedAt),
+            })),
+          );
+        }
+        if (batch.events.length > 0) {
+          await tx.insert(matchEvents).values(
+            batch.events.map(({ matchId, event }) => ({
+              matchId,
+              seq: event.seq,
+              type: event.type,
+              payload: event.payload,
+              serverTs: new Date(event.ts),
+            })),
+          );
+        }
+        for (const { matchId, event } of batch.events) {
+          if (event.type !== "match.ended") continue;
+          await tx
+            .update(matches)
+            .set({ endedAt: new Date(event.ts), result: event.payload.result })
+            .where(eq(matches.id, matchId));
+        }
+      });
+    },
+    async listRunning() {
+      const rows = await db
+        .select()
+        .from(matches)
+        .where(isNull(matches.endedAt))
+        .orderBy(asc(matches.startedAt));
+      return Promise.all(rows.map(stored));
+    },
+    async loadRunning(matchId) {
+      const [row] = await db
+        .select()
+        .from(matches)
+        .where(and(eq(matches.id, matchId), isNull(matches.endedAt)));
+      return row ? stored(row) : null;
+    },
+  };
 }
