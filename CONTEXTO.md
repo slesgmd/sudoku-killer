@@ -11,7 +11,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 - **Resultados de F5 que usa F6:**
   - Calificador con `unitCombination` acotada a 4 jaulas abiertas y 8 combinaciones (`GRADER_VERSION` "2", `docs/motor.md`).
   - Todo puzzle del banco tiene `graderMaxLevel` de 1 a 5, y en partidas simuladas `levelToDeduce` nunca devuelve `UNRATED` (T-20.5): F6 puede contar con eso.
-  - En 100 partidas simuladas del corpus, `levelToDeduce` dio 6190 de nivel 1, 1574 de nivel 2, 291 de nivel 3, 24 de nivel 4 y 3 de nivel 5, y tardó 0,91 ms de media (p95 5,5 ms).
+  - Distribución y tiempos de `levelToDeduce` (media 0,91 ms, p95 5,5 ms): `docs/motor.md`, «Cota de `unitCombination` (F5)».
 - **Banco (F5):**
   - Equivalencia versión 1 en `docs/dificultad.md`: fácil, nivel ≤ 2; media, nivel 3 con 1 paso de nivel 3; difícil, nivel 3 con más pasos o nivel 4; experto, nivel 5.
   - 2000 puzzles como manifiesto de semillas en `apps/server/bank/manifest.json` (ADR 0006).
