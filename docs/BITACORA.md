@@ -530,3 +530,62 @@ Al aprobar, agregó el nivel con los descartes públicos de los errores, las vid
 - Se activaron las alertas de vulnerabilidades de dependencias del repositorio recreado. Las actualizaciones automáticas de seguridad siguen desactivadas, por decisión del usuario.
 - Estado final: alertas de vulnerabilidades activas, actualizaciones automáticas de seguridad desactivadas, secret scanning y push protection activos.
 - Se borró el clon temporal de la reescritura. El respaldo del repositorio anterior se conserva.
+
+## 2026-10-24 — F8: cliente con servidor local simulado
+
+**Pedido del usuario al planificar:**
+- el reductor y el modo Normal definitivos, para que F9 los reutilice;
+- el protocolo v1 completo;
+- un `Transport` con servidor simulado que solo exista en desarrollo, verificado sobre el build;
+- la pantalla de partida del diseño (prioridades 1 y 2), jugable en PC y en celular;
+- un punto de control antes del bot y otro antes del cierre.
+
+Al aprobar, agregó:
+- push y CI en verde en cada subtarea;
+- una lista cerrada de módulos para el cliente de producción;
+- el hash del navegador igual al de `node:crypto`;
+- `pnpm dev:lan` solo para la red de casa;
+- el manifiesto solo en desarrollo;
+- la prioridad 3 y los pendientes de la entrega de F7, a F10.
+
+**Hecho:**
+- **F8a, protocolo:** los mensajes de §4.2 y §4.3 como uniones discriminadas con payloads estrictos, el snapshot y los códigos de error. Pruebas de esquema por mensaje, más T-07.1 (parte de esquema), T-10.2, T-16.1, T-25.6 y T-34.1, adelantadas a F8.
+- **F8b, `packages/bank` y `packages/game`:**
+  - `packages/bank` es un paquete nuevo con lo puro del banco: dificultad, `regenerateSeed` y `canonicalPuzzle`. El servidor conserva el hash y la carga.
+  - `packages/game` tiene `decide`, `apply`, `replay`, `project` y `createNormalMode`. El acierto guarda `level` y `graderVersion`.
+  - Propiedades: T-15.1 y la base de T-32.1 (en vivo igual a `replay`, y puntajes iguales a `scoreLog`). Unitarias de las reglas, cada una con su T.
+- **F8c, transporte y simulador:**
+  - Servidor simulado en memoria con los mismos esquemas y el mismo reductor, con latencia y desfase configurables.
+  - El puzzle se regenera desde el manifiesto y se comprueba contra su entrada.
+  - Núcleo del cliente con store propio.
+  - `check-dist` (T-31.2) revisa los módulos y el texto del build, con un fixture de control que lo hace fallar.
+  - Una partida completa automatizada llega a la victoria.
+- **F8d, interfaz:** tokens, fuentes locales, tablero con foco itinerante, las cuatro disposiciones, atajos, Ajustes y los estados de la prioridad 2. Pruebas de componentes: T-04.3, T-06.1, T-07.2, T-24.3, T-25.2, T-28.2 y T-33.1.
+- **Punto de control (PC y celular), siete correcciones:**
+  - los controles de capa a 320 px;
+  - los botones de visibilidad en PC;
+  - «Usar notas» como preferencia local (T-06.3);
+  - la actividad en una línea con «Ver actividad»;
+  - jaulas más gruesas;
+  - el dígito pendiente en el mismo ciclo del evento, con una prueba a 120 ms de latencia;
+  - capturas a 320, 360, 768, 1280, 1920 y 740 × 360.
+  - Además, el tiempo de carga del puzzle se muestra en pantalla en desarrollo.
+- **F8f, bot compañero:** entra por el protocolo y deduce con lo público, sin ver la solución. Usa una semilla, un ritmo y una tasa de errores a propósito, y deja de jugar sin vidas.
+- **Prueba con el bot y correcciones:**
+  - la red local, arreglada (abajo);
+  - el aviso con «Reintentar» si el arranque falla o tarda más de 15 s (R-37, T-37.1);
+  - jaulas de 2 px y de 3 px la seleccionada;
+  - el enlace al repositorio en el Inicio;
+  - una prueba de humo en WebKit por la IP de la red local, con el tamaño de un iPhone y de un iPad en vertical y en horizontal: sin solapamientos ni desplazamiento horizontal.
+- **Cierre:** PLAN 1.18, SPEC 1.6, notas en los ADR 0001 y 0004, `docs/diseno.md` (repaso de originalidad incluido), entrega de F7 con la lista de comprobación marcada, tema oscuro en ideas futuras y CONTEXTO.md.
+
+**Problemas y soluciones:**
+- **El calificador llegaba al build del cliente** por los imports del motor. Se agregó el punto de entrada `./model` del motor, que solo reexporta, y se corrigieron los imports, no el detector. Es la desviación registrada; el corpus siguió en verde.
+- **En las pruebas, el modo de desarrollo seguía activo y el build fallaba por el alias del manifiesto.** La prueba fuerza el modo de producción y comprueba que un build de desarrollo falla.
+- **Grosores fraccionarios:** Chromium redondea hacia abajo el ancho de los bordes. Las jaulas de 1,5 px se veían de 1 px, y 2,5 px habría igualado a la jaula seleccionada con las demás. Los dos grosores pasaron a ser enteros.
+- **«Entrando…» para siempre por la IP de la red local:** la página no es un contexto seguro, y el navegador no expone `crypto.randomUUID` ni `crypto.subtle`. Los identificadores pasaron a `crypto.getRandomValues`. El simulador usa un SHA-256 en JavaScript, solo en desarrollo y comprobado contra `node:crypto`, y `check-dist` rechaza sus constantes en el build.
+- **T-31.3 superaba el tiempo límite** con toda la suite en paralelo. Arma un programa de TypeScript: 1,4 s sola. Se le dio un tiempo límite propio, sin cambiar lo que revisa.
+
+**Tiempo real:** unas 3,4 h, frente a 4–8 h (el plan de F8 estimaba 6–10 h). No incluye las pruebas del usuario en PC, celular y tablet.
+
+**Siguiente:** F9 en modo plan. Antes, la segunda prueba en papel de F5, que sigue pendiente del usuario.

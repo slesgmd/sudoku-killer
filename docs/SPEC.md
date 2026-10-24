@@ -1,6 +1,6 @@
 # SPEC — Sudoku Killer Multijugador · v1
 
-- Versión del documento: 1.5 (F6, 2026-10-23). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2); R-20 suma el banco de puzzles (T-20.3 a T-20.5) y `PuzzleRecord` guarda `graderVersion` y `seed` (1.3); P2 y R-20 escalonan los números iniciales por dificultad y `givensReason` cambia `easy` por `difficulty` (1.4); F6 fija B, w, P, β y H, el nivel se calcula con los descartes públicos de los errores (§2.3 y §5), R-35 suma T-35.7 y T-35.8 y la nueva R-36 reúne las pruebas de la puntuación (1.5).
+- Versión del documento: 1.6 (F8, 2026-10-24). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2); R-20 suma el banco de puzzles (T-20.3 a T-20.5) y `PuzzleRecord` guarda `graderVersion` y `seed` (1.3); P2 y R-20 escalonan los números iniciales por dificultad y `givensReason` cambia `easy` por `difficulty` (1.4); F6 fija B, w, P, β y H, el nivel se calcula con los descartes públicos de los errores (§2.3 y §5), R-35 suma T-35.7 y T-35.8 y la nueva R-36 reúne las pruebas de la puntuación (1.5); F8 fija el destello en 1500 ms (§1.4 y T-04.3), el evento `cell.solved` guarda `level` y `graderVersion` (§5), T-31.2 describe su detector, las pruebas de esquema, T-15.1 y la base de T-32.1 se adelantan a F8, R-06 suma la preferencia local «Usar notas» (T-06.3) y la nueva R-37 cubre el arranque que falla (1.6).
 - Versión del protocolo: **1**
 - Fuente de las reglas: `docs/PLAN.md`, secciones 1 y 2, más las decisiones de producto de F2 (sección 1 de este documento).
 - Decisiones técnicas: `docs/adr/0001`–`0006`.
@@ -89,7 +89,7 @@ Parámetros que quedan pendientes con su dueño:
 - B, w, P, β y H: **resueltos en F6** (`docs/puntuacion.md`, `packages/scoring/src/params.v1.json`): B = 10, w = 1, 2, 3, 4 y 5 para los niveles 1 a 5, P = 90, β = 1 y H = 60. Se recalibran con registros de partidas reales en F11 y F13.
 - Mapeo de los niveles del calificador a las dificultades: **resuelto en F5** (`docs/dificultad.md`, versión 2, con números iniciales por dificultad). Se recalibra con la segunda muestra impresa de F5 y con partidas reales en F13.
 - Límites de velocidad y de tamaño de mensaje: valores iniciales en la sección 4.8; se calibran en F11.
-- Duración del destello de un error: F7.
+- Duración del destello de un error: **resuelta en F7 y F8**: 1500 ms (`--t-error-flash`, T-04.3).
 - Hosting: F12.
 
 ---
@@ -459,7 +459,7 @@ interface GameMode {
 - `onCorrect`: `B × w(level)` más β por cada unidad cerrada: un `ScoreChange` `correct` y uno `closure` por unidad, en el orden de `closedUnits`.
 - `onMistake`: `{ score: [−P], livesDelta: −1 }`.
 - `onHint`: `[−H]`, sin β aunque la pista cierre unidades.
-- Parámetros v1 (`params.v1.json`): B = 10, w = 1/2/3/4/5, P = 90, β = 1 y H = 60. `scoreLog(eventos, parámetros)` recalcula una partida con cualquier versión (T-32.4); conviene que el evento de un acierto guarde `level` y `graderVersion` (decisión de F9, `docs/puntuacion.md`).
+- Parámetros v1 (`params.v1.json`): B = 10, w = 1/2/3/4/5, P = 90, β = 1 y H = 60. `scoreLog(eventos, parámetros)` recalcula una partida con cualquier versión (T-32.4). El evento `cell.solved` guarda `level` y `graderVersion`, calculados al decidir la jugada (F8, ADR 0004): la reproducción no vuelve a calcular `levelToDeduce`, y un cambio de calificador no cambia el nivel de las partidas ya jugadas.
 - `outcome`: `victory` si no queda ninguna celda vacía. `defeat` si ningún jugador `active` tiene `connection ∈ {connected, disconnected}`. Si no, `null`.
 - `ranking`: ordena por puntaje descendente; a igual puntaje, menos errores; después, menor `scoreReachedAt`. Si todo empata, comparten posición; para mostrarlos se ordenan por apodo.
 
@@ -499,7 +499,7 @@ Entre corchetes va la fase en que se implementa cada prueba.
 **R-04 Jugadas visibles.** Los aciertos y los errores se notifican a todos con su autor. La celda acertada queda bloqueada. El número erróneo se muestra un instante y luego se retira.
 - T-04.1 Después de `cell.solved`, el snapshot de cualquier jugador incluye la celda en `locked`, con `by`. [I, F9]
 - T-04.2 Después de `cell.mistake`, el snapshot no guarda ningún valor en esa celda. [I, F9]
-- T-04.3 El cliente muestra el dígito erróneo con su autor durante un instante (duración definida en F7) y después la celda vuelve a quedar vacía. [C, F8]
+- T-04.3 El cliente muestra el dígito erróneo con su autor durante 1500 ms (`--t-error-flash`) y después la celda vuelve a quedar vacía. [C, F8]
 
 **R-05 Celda bloqueada / "ya resuelta" y jugadas simultáneas.** Una celda acertada queda bloqueada. Cualquier jugada posterior sobre ella recibe `cell.already_solved`, sin penalización y sin evento, sea su dígito correcto o incorrecto.
 - **Jugadas simultáneas** sobre la misma celda: el servidor las ordena con la cola de la sala (§4.6) y gana la primera que procesa. Si la primera es un acierto, la segunda (y las siguientes) recibe `cell.already_solved`, sin penalización y sin evento, aunque su autor todavía no hubiera visto el `cell.solved`.
@@ -517,7 +517,7 @@ Entre corchetes va la fase en que se implementa cada prueba.
 - T-06.3 Con «Usar notas» desactivado no se ve ningún control de notas, y N, G y Supr no envían mensajes; las teclas 1–9 solo colocan números. El ajuste no se envía al servidor. [C, F8]
 
 **R-07 Temporizador común.** Lo controla el servidor, no se pausa y no tiene límite (P9).
-- T-07.1 `match.started` y el snapshot incluyen `startedAt` y `serverNow`. No existe ningún comando de pausa: el esquema rechaza `match.pause` con `bad_request`. [U+I, F9]
+- T-07.1 `match.started` y el snapshot incluyen `startedAt` y `serverNow`. No existe ningún comando de pausa: el esquema rechaza `match.pause` con `bad_request`. [U, F8 (esquema); I, F9]
 - T-07.2 Con el reloj del cliente desfasado 10 minutos, el cronómetro mostrado coincide con el del servidor (±1 s), gracias al desfase que mide `sys.ping`. [C, F8 / E, F10]
 - T-07.3 Después de una reconstrucción por reinicio, el cronómetro es `ahora − startedAt` e incluye el tiempo de caída. [I, F9]
 
@@ -536,7 +536,7 @@ Entre corchetes va la fase en que se implementa cada prueba.
 
 **R-10 Creador.** Solo puede iniciar. No expulsa a nadie ni cierra la sala.
 - T-10.1 `match.start` de un jugador que no es starter recibe `forbidden`. [I, F9]
-- T-10.2 `room.kick` y `room.close` reciben `bad_request` (no existen). [U, F9]
+- T-10.2 `room.kick` y `room.close` reciben `bad_request` (no existen). [U, F8]
 
 **R-11 Traspaso del derecho de iniciar.**
 - T-11.1 Si el starter sale en el lobby, el derecho pasa al jugador con menor `joinedAt` y todos reciben `room.starter_changed`. [I, F9]
@@ -562,11 +562,11 @@ Entre corchetes va la fase en que se implementa cada prueba.
 - T-14.3 Si había una partida en curso, `match.ended{defeat}` queda en el registro antes del borrado. [I, F9]
 
 **R-15 Una celda correcta queda bloqueada para siempre.**
-- T-15.1 Propiedad: para cualquier secuencia de comandos, una celda `locked` nunca cambia de valor ni vuelve a `empty`. [U, F9, fast-check sobre el reductor]
+- T-15.1 Propiedad: para cualquier secuencia de comandos, una celda `locked` nunca cambia de valor ni vuelve a `empty`. [U, F8, fast-check sobre el reductor]
 - T-15.2 Un `note.add` sobre una celda bloqueada recibe `cell.locked`. [I, F9]
 
 **R-16 Notas grupales con operaciones explícitas, ordenadas por el servidor.**
-- T-16.1 El esquema acepta `note.add` y `note.remove`; un hipotético `note.toggle` recibe `bad_request`. [U, F9]
+- T-16.1 El esquema acepta `note.add` y `note.remove`; un hipotético `note.toggle` recibe `bad_request`. [U, F8]
 - T-16.2 Propiedad: con secuencias aleatorias de operaciones concurrentes de varios clientes, todos convergen al estado que define el orden del servidor (ADR 0005). [U, F10]
 - T-16.3 Un `note.add` de un candidato que ya está recibe `ack{applied:false}` y no genera evento. [I, F9]
 
@@ -623,7 +623,7 @@ Entre corchetes va la fase en que se implementa cada prueba.
 - T-25.3 Si después hubo una limpieza automática o se bloqueó la celda, `note.undo` recibe `undo.not_applicable{modified}`. [I, F9]
 - T-25.4 Deshacer la operación de otro jugador recibe `undo.not_applicable{not_owner}`. [I, F9]
 - T-25.5 Deshacer una nota personal sigue la misma regla, y solo el dueño recibe el resultado. [I, F9]
-- T-25.6 No existe un mensaje para deshacer `cell.place`: el esquema lo rechaza. [U, F9]
+- T-25.6 No existe un mensaje para deshacer `cell.place`: el esquema lo rechaza. [U, F8]
 
 **R-26 Salir y volver (D3, D3').**
 - T-26.1 Un `room.leave` durante una partida libera el asiento al instante (`connection = left`), y el jugador sigue en el ranking. [I, F9]
@@ -651,11 +651,11 @@ Entre corchetes va la fase en que se implementa cada prueba.
 
 **R-31 La solución nunca sale del servidor.**
 - T-31.1 El inspector de la sección 8.3 revisa todos los mensajes salientes de todas las pruebas I y E. [I, F9; E, F10–F11]
-- T-31.2 El build de producción del cliente no incluye el servidor simulado ni ninguna solución. [U, F8]
+- T-31.2 El build de producción del cliente no incluye el servidor simulado ni ninguna solución. Lo comprueba `apps/web/scripts/check-dist.ts` en cada `pnpm build`, con dos revisiones. En los módulos de cada chunk: nada de `src/dev/`, de `packages/bank` ni del manifiesto, y del motor y de `packages/game` solo los módulos de la lista permitida al cliente. En el texto emitido: el identificador `solution`, las claves del manifiesto, la marca del simulador, el SHA-256 en JavaScript del simulador y cualquier solución serializada (81 dígitos seguidos o un arreglo de 81 dígitos). Un fixture de control tiene que hacer fallar el detector, y el build real tiene que pasar. [U, F8]
 - T-31.3 `packages/protocol` no exporta ningún tipo con un campo `solution`: lo verifica un test de los tipos exportados. [U, F3/F9]
 
 **R-32 Registro de eventos reproducible.**
-- T-32.1 Propiedad: para partidas aleatorias, `replay(registro)` produce el mismo estado y los mismos puntajes que el servidor en vivo. [U, F9]
+- T-32.1 Propiedad: para partidas aleatorias, `replay(registro)` produce el mismo estado y los mismos puntajes que el servidor en vivo. [U, F8 (reductor y modo: `decide` y `apply` paso a paso frente a `replay`, y puntajes frente a `scoreLog`); I, F9 (servidor en vivo)]
 - T-32.2 Al reiniciar el servidor, las partidas sin `endedAt` se reconstruyen. Sus jugadores quedan `disconnected` con un plazo nuevo y pueden volver con su ficha. [I, F9]
 - T-32.3 Un evento que no se confirmó en la base de datos no se difunde. [I, F9]
 - T-32.4 Recalcular los puntajes con otra versión de los parámetros cambia los puntajes sin modificar el registro. [U, F6]
@@ -684,7 +684,7 @@ Entre corchetes va la fase en que se implementa cada prueba.
 - T-33.1 Al seleccionar una celda, el cliente resalta su jaula, además de la fila, la columna y la caja. [C, F8]
 
 **R-34 Sin segunda oportunidad ni pausa (D8).**
-- T-34.1 El esquema no tiene mensajes para pedir una segunda oportunidad ni para pausar, así que esos tipos reciben `bad_request`. [U, F9]
+- T-34.1 El esquema no tiene mensajes para pedir una segunda oportunidad ni para pausar, así que esos tipos reciben `bad_request`. [U, F8]
 
 **R-37 Arranque que falla (F8, prueba en la red local).** Si la entrada a la sala o la carga de la partida fallan (un `error` del arranque o del servidor) o no terminan en 15 s, el cliente sale de la sala si llegó a entrar y vuelve al inicio con un aviso de error y «Reintentar», conservando el apodo y la dificultad. Nunca se queda en «Entrando…» para siempre.
 - T-37.1 Sin respuesta, a los 15 s aparece el aviso con «Reintentar», que vuelve a enviar `room.create` con el mismo apodo y la misma dificultad. Un `error` a `match.start` durante la carga, o un `error` del servidor sin `replyTo`, lo muestra en el acto. Un apodo en uso sigue siendo un error de campo, y una partida que empieza a tiempo cancela el plazo. [C, F8]

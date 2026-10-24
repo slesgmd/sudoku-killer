@@ -18,12 +18,12 @@
 
 | `type` | `payload` |
 |---|---|
-| `match.started` | `puzzleId`, `difficulty`, `modeId`, `scoringParamsVersion`, `hintsTotal`, `starterId` y `players[]`, con `{ playerId, nickname, seat, joinedAt, tokenHash, autoCleanPersonalNotes }` |
+| `match.started` | `matchId`, `puzzleId`, `difficulty`, `modeId`, `scoringParamsVersion`, `hintsTotal`, `starterId` y `players[]`, con `{ playerId, nickname, seat, joinedAt, tokenHash, connection, autoCleanPersonalNotes }` |
 | `player.joined` | Entrada nueva a mitad de partida, con los mismos campos que un elemento de `players[]` |
 | `player.connection` | `{ playerId, connection, seat }`: desconexión, vuelta, expiración o salida |
 | `starter.changed` | `{ playerId \| null }` |
-| `settings.changed` | `{ playerId, autoCleanPersonalNotes }` |
-| `cell.solved` | `{ playerId, cell, value, clientMsgId }` |
+| `settings.changed` | `{ playerId, autoCleanPersonalNotes, clientMsgId }` |
+| `cell.solved` | `{ playerId, cell, value, level, graderVersion, clientMsgId }` |
 | `cell.mistake` | `{ playerId, cell, digit, clientMsgId }` |
 | `hint.used` | `{ playerId, cell, value, clientMsgId }` |
 | `note.op` | `{ layer, ownerId, playerId, cell, digit, op, clientMsgId, undoOf? }` |
@@ -71,3 +71,10 @@ El costo previsto es de 10 a 20 ms de latencia, que entra en el objetivo de p95 
 - Hay un paquete nuevo, `packages/game` (plan 1.04, F3).
 - La reproducción determinista se vuelve un invariante probado (T-32.1). Cualquier uso de `Date.now()` o `Math.random()` dentro del reductor es un error; se agrega una regla de lint en F3.
 - Cambiar la forma de un evento exige migrar o versionar el registro. Por eso los eventos llevan solo hechos mínimos.
+
+## Nota de F8 (2026-10-24): forma definitiva de los eventos
+- El reductor y el modo Normal quedaron en `packages/game` (`decide`, `apply`, `replay` y `project`). El servidor simulado de F8 los usa tal cual, y F9 los reutiliza sin reescribirlos.
+- `cell.solved` guarda `level` (el `levelToDeduce` antes de la jugada, con los descartes públicos) y `graderVersion`, calculados al decidir. La reproducción no vuelve a calcular el nivel, y una versión nueva del calificador no cambia la puntuación de las partidas ya jugadas. Era la recomendación de F6 (`docs/puntuacion.md`).
+- Cada entrada de jugador (`players[]` de `match.started` y `player.joined`) lleva su `connection`. Quien entra a mitad de partida puede llegar en cualquier estado de conexión, y la reproducción no tiene que adivinarlo.
+- `match.started` lleva `matchId` y `settings.changed` lleva `clientMsgId`, para la idempotencia.
+- La tabla de arriba ya refleja estos cambios. Las pruebas de propiedad T-15.1 y la base de T-32.1 (estado en vivo igual a `replay`, y puntajes iguales a `scoreLog`) corren desde F8.

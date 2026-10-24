@@ -20,7 +20,7 @@ Documentos relacionados:
 
 ## 2. Tokens
 
-Definidos en `design/prototipo/tokens.css`. Solo hay **tema claro** (un tema oscuro no está diseñado: pendiente, ver `design/entrega-f8.md`).
+Definidos en `design/prototipo/tokens.css`. Solo hay **tema claro**. El tema oscuro queda fuera de la v1 (`docs/IDEAS_FUTURAS.md`, sección 6).
 
 ### 2.1 Superficies y texto
 
@@ -149,7 +149,7 @@ Los tamaños del tablero salen de la celda: dígito = 52 % de la celda, suma = 1
 - **Bordes:** 1 px en toda la interfaz; 2 px solo en las cajas del tablero, la selección propia y el foco.
 - **Sombra flotante** (`--shadow-float`): solo diálogos y avisos.
 - **Foco:** contorno ink de 2 px con 2 px de separación. Es ink para no confundirse con la selección, que es accent.
-- **Área táctil mínima:** 44 × 44 px (`--target`). Excepción conocida: la celda del tablero a 360 px mide 37,3 px (el botón cubre la celda entera, bordes incluidos); la lupa ayuda a verificar la celda elegida. Ver los pendientes.
+- **Área táctil mínima:** 44 × 44 px (`--target`). Excepción conocida: la celda del tablero a 360 px mide 37,3 px (el botón cubre la celda entera, bordes incluidos); la lupa ayuda a verificar la celda elegida. Verificada en un celular en el punto de control de F8, sin cambios.
 - **Iconos:** SVG en línea, de trazo, 16 × 16 con trazo de 1,5 px y extremos redondeados, en `currentColor`. Dibujados para el prototipo; sin emojis ni biblioteca de iconos.
 
 ## 5. Componentes y sus estados
@@ -282,7 +282,7 @@ Partida (convención del prototipo en `game.css`; en producción, media queries)
 
 En móvil y horizontal, la cabecera es compacta (código, dificultad, cronómetro, pistas y menú «⋯»).
 
-Resto de pantallas (`screens.css`): `.L-movil` (< 600 px) y `.L-escritorio` (≥ 1024 px). **Pendiente:** el prototipo no dibuja estas pantallas entre 600 y 1023 px.
+Resto de pantallas (`screens.css`): `.L-movil` (< 600 px) y `.L-escritorio` (≥ 1024 px). **Pendiente para F10:** el prototipo no dibuja estas pantallas entre 600 y 1023 px.
 
 ## 9. Estados transversales
 
@@ -338,3 +338,12 @@ Cuatro tipos:
 **Conclusión:** nada del prototipo replica la interfaz de la app de referencia. Las coincidencias son convenciones del sudoku killer (retícula, jaulas con suma, teclado numérico, resaltado de fila, columna y caja) resueltas con forma propia. Cumple R-18 y T-18.1.
 
 **Para F8:** al implementar no se toman capturas ni recursos de la referencia; cualquier cambio de diseño que se acerque a ella se vuelve a revisar con esta lista.
+
+**Repaso al cerrar F8 (2026-10-24).** Cambios de diseño del punto de control y de la prueba con el bot, revisados con la misma lista:
+- **Jaulas de 2 px y de 3 px la seleccionada:** solo cambia el grosor de una forma propia (línea discontinua a 3 px hacia dentro, con esquinas cóncavas).
+- **Actividad en una línea con «Ver actividad»:** el registro de actividad no tiene equivalente en la referencia.
+- **«Usar notas»:** es una preferencia local que oculta las notas por capas, que la referencia no tiene. No se parece a sus ajustes de resaltado, que no se replican.
+- **Dígito pendiente inmediato** y **aviso con «Reintentar» al no poder empezar:** son estados propios, dibujados con los componentes del prototipo.
+- **Enlace al repositorio en el inicio:** es la marca de GitHub según sus pautas, no un recurso de la referencia.
+
+Ningún cambio acerca la interfaz a la de la referencia. T-18.1 sigue cumplida.

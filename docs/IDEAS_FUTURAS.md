@@ -35,3 +35,9 @@ Formato de cada entrada: título, descripción breve, origen (fecha y contexto) 
 - **Descripción:** una identidad que sobreviva al borrado de los datos del navegador (cuentas opcionales o un código personal), para que la regla D3 (volver sin 3 vidas nuevas) no se pueda evitar.
 - **Origen:** 2026-10-22, F2 (limitación aceptada de D3 para un grupo cerrado).
 - **Notas:** el plan de la v1 excluye las cuentas de usuario.
+
+## 6. Tema oscuro
+
+- **Descripción:** una paleta oscura con los mismos tokens (`tokens.css`), elegida por `prefers-color-scheme` o desde los ajustes.
+- **Origen:** 2026-10-24, cierre de F8 (pendiente de `design/entrega-f8.md` §4). El prototipo de F7 solo diseña el tema claro, y el usuario decidió dejarlo fuera de la v1.
+- **Notas:** hay que medir otra vez toda la matriz de contrastes (`docs/diseno.md` §2.5), incluidas las líneas de jaula y los colores de jugador, y revisar las sombras y la marca de GitHub del inicio, que pasaría a blanco.

@@ -47,34 +47,34 @@ F8 pide tablero, entrada de números, notas por capas con selector de vista y de
 
 ## 4. Pendientes
 
-No resueltos por el prototipo; se deciden en F8 o en la fase que se indica:
-- **Fotos:** son marcadores. Elegirlas y registrar fuente y licencia en `design/fotos.md`.
-- **Pantallas fuera de la partida entre 600 y 1023 px:** el prototipo solo dibuja móvil y escritorio.
+No resueltos por el prototipo; se deciden en F8 o en la fase que se indica. Al cerrar F8 (2026-10-24), los que siguen abiertos pasan a F10, como tarea con su criterio de aceptación (`docs/PLAN.md`, F10), salvo el tema oscuro, que queda fuera de la v1:
+- **Fotos:** son marcadores. Elegirlas y registrar fuente y licencia en `design/fotos.md`. **Pasa a F10.**
+- **Pantallas fuera de la partida entre 600 y 1023 px:** el prototipo solo dibuja móvil y escritorio. **Pasa a F10.**
 - ~~**Aviso de traspaso en la salida durante la partida**~~: resuelto en F8. Se agrega, con la condición de la decisión 2.
-- **Transiciones que no están dibujadas:** de «Entrando…» al lobby, del lobby a la partida para quienes esperan, de la partida a Resultados (automática o solo con «Ver resultados»), de Resultados al lobby para los demás, llegada directa a una partida en curso, vuelta con ficha a una sala llena y regreso al estado normal tras reconectar.
+- **Transiciones que no están dibujadas:** de «Entrando…» al lobby, del lobby a la partida para quienes esperan, de la partida a Resultados (automática o solo con «Ver resultados»), de Resultados al lobby para los demás, llegada directa a una partida en curso, vuelta con ficha a una sala llena y regreso al estado normal tras reconectar. **Pasan a F10.** F8 resolvió solo la de un arranque que falla: aviso con «Reintentar» en lugar de «Entrando…» para siempre (R-37).
 - ~~**Foco inicial de Ajustes**~~: resuelto en F8. Va al primer interruptor, y al cerrar cualquier diálogo el foco vuelve al control que lo abrió (`docs/diseno.md`, sección 7).
-- **Área táctil de la celda a 360 px:** 37,3 px, por debajo de los 44 px del sistema. Verificar en el celular junto con el anillo (decisión 6) y con las notas de 8 px, que dependen de la lupa.
-- **«Compartir»** en el lobby: no tiene comportamiento definido (por ejemplo, la hoja de compartir del sistema con un enlace a la sala).
+- ~~**Área táctil de la celda a 360 px**~~: verificada en el celular en el punto de control de F8, junto con el anillo (decisión 6) y las notas de 8 px con la lupa. Se mantienen sin cambios.
+- **«Compartir»** en el lobby: no tiene comportamiento definido (por ejemplo, la hoja de compartir del sistema con un enlace a la sala). **Pasa a F10.**
 - ~~**Asignación de colores de jugador**~~: resuelta en F8. El asiento N usa `--player-(N + 1)` (`docs/diseno.md`, sección 2.4).
-- **Tema oscuro:** no está diseñado. Si no entra en la v1, va a `docs/IDEAS_FUTURAS.md`.
-- ~~**Atajos de teclado**~~: implementados en F8. Se validan en el punto de control.
+- ~~**Tema oscuro**~~: queda fuera de la v1, en `docs/IDEAS_FUTURAS.md` (sección 6).
+- ~~**Atajos de teclado**~~: implementados en F8 y validados por el usuario en el punto de control.
 
 ## 5. Lista de comprobación de F8
 
-- [ ] Los tokens de `tokens.css` son la única fuente de colores, tipografía, espaciado, radios, sombras y tiempos.
-- [ ] Inter y Newsreader se sirven en local (woff2) con su licencia OFL; nada en base64 dentro del HTML.
-- [ ] Ningún par de colores marcado con ✕ en la matriz se usa en la interfaz.
-- [ ] Cada estado de la celda se distingue sin color y respeta la tabla de prioridad.
-- [ ] El tablero es una cuadrícula con foco itinerante, `aria-selected` y la etiqueta completa de cada celda.
-- [ ] Todos los atajos funcionan y la partida se puede jugar entera con teclado.
-- [ ] Los diálogos atrapan el foco, cierran con Esc cuando tienen cancelar y empiezan en la acción segura.
-- [ ] Los avisos usan `role="status"` o `role="alert"` según la tabla de estados, duran 6 s y se pausan con el cursor o el foco (decisión 4).
-- [ ] Con `prefers-reduced-motion` no hay sacudida ni puntos animados.
-- [ ] Las cuatro disposiciones de la partida se ven bien a 1280, 768, 360 y 740 × 360, sin desplazamiento horizontal de la página.
-- [ ] Ajustes solo aparece dentro de una sala (decisión 1).
-- [ ] El aviso de traspaso solo aparece si quien sale tiene el derecho (decisión 2).
-- [ ] «Volver a la sala» va al lobby, a la partida o a resultados según el estado (decisión 3).
-- [ ] Deshacer «Borrar notas» agrupa los `note.undo` en el cliente (decisión 5).
-- [ ] Anillo de mismo dígito, área táctil y notas de 8 px revisados en un celular real (decisión 6).
-- [ ] Los textos de la interfaz están preparados para i18n y coinciden con los del prototipo.
-- [ ] Revisión de originalidad repetida si el diseño cambia (`docs/diseno.md`, T-18.1).
+- [x] Los tokens de `tokens.css` son la única fuente de colores, tipografía, espaciado, radios, sombras y tiempos. Una prueba (`tests/web-tokens.test.ts`) falla con un color literal o una familia tipográfica fuera de los tokens. Las medidas fijas del tablero (la separación de 3 px de la jaula, por ejemplo) siguen el CSS del prototipo. F8 agregó dos tokens: `--cage-width` y `--cage-width-selected`.
+- [x] Inter y Newsreader se sirven en local (woff2) con su licencia OFL; nada en base64 dentro del HTML.
+- [x] Ningún par de colores marcado con ✕ en la matriz se usa en la interfaz.
+- [x] Cada estado de la celda se distingue sin color y respeta la tabla de prioridad.
+- [x] El tablero es una cuadrícula con foco itinerante, `aria-selected` y la etiqueta completa de cada celda.
+- [x] Todos los atajos funcionan y la partida se puede jugar entera con teclado.
+- [x] Los diálogos atrapan el foco, cierran con Esc cuando tienen cancelar y empiezan en la acción segura.
+- [x] Los avisos usan `role="status"` o `role="alert"` según la tabla de estados, duran 6 s y se pausan con el cursor o el foco (decisión 4).
+- [x] Con `prefers-reduced-motion` no hay sacudida ni puntos animados.
+- [x] Las cuatro disposiciones de la partida se ven bien a 1280, 768, 360 y 740 × 360, sin desplazamiento horizontal de la página. También a 320 y 1920, y en WebKit con el tamaño de un iPhone (390 × 844) y de un iPad (820 × 1180 y 1180 × 820).
+- [x] Ajustes solo aparece dentro de una sala (decisión 1).
+- [x] El aviso de traspaso solo aparece si quien sale tiene el derecho (decisión 2).
+- [ ] «Volver a la sala» va al lobby, a la partida o a resultados según el estado (decisión 3). **Pasa a F10:** F8 no tiene lobby ni resultados, y la partida terminada vuelve al inicio.
+- [x] Deshacer «Borrar notas» agrupa los `note.undo` en el cliente (decisión 5).
+- [x] Anillo de mismo dígito, área táctil y notas de 8 px revisados en un celular real (decisión 6), en el punto de control: sin cambios.
+- [x] Los textos de la interfaz están preparados para i18n y coinciden con los del prototipo.
+- [x] Revisión de originalidad repetida si el diseño cambia (`docs/diseno.md`, T-18.1): hecha al cerrar F8 para los cambios del punto de control y de la prueba con el bot.

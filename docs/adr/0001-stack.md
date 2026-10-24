@@ -46,3 +46,8 @@ Las versiones exactas se fijan en F3, en el `package.json` y en el lockfile.
 - TypeScript queda en **6.0.x**, no en la 7 (`latest`). La 7 es el compilador nativo y no expone la API de JS que necesitan `typescript-eslint` (8.72 admite `<6.1`) y el test T-31.3. Se revisa cuando `typescript-eslint` admita la 7.
 - Resto: ESLint 10, Prettier 3.9, Vitest 5, fast-check 4, Zod 4, Vite 8, React 19 y Husky 9 con lint-staged 17. Las versiones exactas están en los `package.json` y en `pnpm-lock.yaml`.
 - Los paquetes exportan sus fuentes con la condición `@sudoku-killer/source` (TypeScript, Vite, Vitest y `node --conditions` en desarrollo), y `dist/` en otro caso. Los imports relativos llevan la extensión `.ts` (`rewriteRelativeImportExtensions`), así Node 24 ejecuta las fuentes sin compilar.
+
+## Nota de F8 (2026-10-24): i18n sin librería
+- Los textos de la interfaz están en un catálogo propio (`apps/web/src/i18n/es.ts`) con claves tipadas y una función `t(clave, variables)`. Las variables van entre llaves, y los plurales como `{ one, other }` se eligen con `Intl.PluralRules`.
+- No se usa ninguna librería: la v1 tiene un solo idioma y unas 135 claves, y el tipo de las claves ya detecta un texto que falte. Si llega un segundo idioma, se agrega otro catálogo con el mismo tipo y se revisa esta decisión.
+- El estado del cliente es un store propio con `useSyncExternalStore`, como pedía este ADR.

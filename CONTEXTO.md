@@ -5,14 +5,19 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.17. **SPEC:** versión 1.5.
-- **Fase actual:** F8, cliente con servidor local simulado (4–8 h). F6 (puntuación) se cerró el 2026-10-24 con unas 2,2 h frente a 2–5 h; F4, F5 y F7, el 2026-10-23.
-- **Próxima tarea exacta:** F8 en modo plan (`docs/PLAN.md`, F8), con la entrega de F7 (`design/entrega-f8.md`).
+- **Plan:** versión 1.18. **SPEC:** versión 1.6.
+- **Fase actual:** F9, servidor de salas (3–6 h). F8 (cliente con servidor simulado) se cerró el 2026-10-24 con unas 3,4 h frente a 4–8 h; F6, el mismo día; F4, F5 y F7, el 2026-10-23.
+- **Próxima tarea exacta:** F9 en modo plan (`docs/PLAN.md`, F9). **Antes de empezar F9:** recordarle al usuario la segunda prueba en papel de F5 (ver «Pendiente del usuario»), porque un cambio de la equivalencia regenera el manifiesto que F9 carga.
+- **Cliente (F8):**
+  - Protocolo v1 completo en `packages/protocol/src/v1/`. Reductor y modo Normal definitivos en `packages/game` (`decide`, `apply`, `replay`, `project`, `createNormalMode`); F9 los reutiliza sin reescribirlos.
+  - Lo puro del banco está en `packages/bank` (dificultad, `regenerateSeed`, `canonicalPuzzle`); el servidor conserva el hash con `node:crypto` y la carga.
+  - Servidor simulado y bot solo en desarrollo (`apps/web/src/dev/`). `check-dist` revisa el build en cada `pnpm build` (T-31.2). El cliente de producción solo importa `@sudoku-killer/engine/model` y `@sudoku-killer/game/client`.
+  - Prioridad 3 (Inicio, Entrar, Lobby, Resultados y Ayuda), estados de red, decisión 3 y pendientes de `design/entrega-f8.md` §4: en F10, con su criterio de aceptación.
 - **Puntuación (F6, `docs/puntuacion.md`):**
   - Parámetros v1 (`packages/scoring/src/params.v1.json`): B = 10, w = 1/2/3/4/5, P = 90, β = 1 y H = 60.
   - El nivel se calcula con los descartes públicos de los errores (`BoardState.excluded`, `Match.excluded`).
   - `createScoring` encaja en `onCorrect`, `onMistake` y `onHint` de `GameMode` sin adaptar; `scoreLog` recalcula una partida; `rankPlayers` hace el ranking.
-  - F9 debería guardar `level` y `graderVersion` en el evento del acierto.
+  - El evento `cell.solved` guarda `level` y `graderVersion` (F8, ADR 0004).
   - Limitaciones conocidas (ventaja del veloz, Spearman 0,78) y qué medir en F11 y F13: `docs/puntuacion.md`, secciones 10 y 11. La primera prioridad es el tamaño de P.
 - **Banco (F5):**
   - Equivalencia versión 2 en `docs/dificultad.md`: fácil, 30 números iniciales y nivel 1; media, 22 y nivel 2; difícil, 10 y nivel 3 o 4 con algún paso de nivel 3; experto, 0 y nivel 5.
@@ -20,8 +25,8 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
   - 2000 puzzles como manifiesto de semillas en `apps/server/bank/manifest.json` (ADR 0006), con el generador "2".
   - Tabla `puzzles` con Drizzle, `PuzzleRepository` y `loadBank` en `apps/server/src/`.
   - F9 hereda el driver de PostgreSQL, `bank:load`, la comprobación al arrancar y la elección sin repetir.
-- **Pendiente del usuario:** la segunda prueba en papel con `design/muestra-f5/muestra.html` (equivalencia versión 2); los resultados se anotan en `docs/dificultad.md`, sección 6. Si las dificultades no se distinguen, se ajusta la equivalencia y se regenera el manifiesto antes de F9.
-- **Diseño (F7):** prototipo en `design/prototipo/` (`npx serve design/prototipo`), guía en `docs/diseno.md` y entrega a F8 con siete decisiones en `design/entrega-f8.md`.
+- **Pendiente del usuario (antes de F9):** la segunda prueba en papel con `design/muestra-f5/muestra.html` (equivalencia versión 2); los resultados se anotan en `docs/dificultad.md`, sección 6. Si las dificultades no se distinguen, se ajusta la equivalencia y se regenera el manifiesto antes de F9.
+- **Diseño (F7 y F8):** prototipo en `design/prototipo/` (`npx serve design/prototipo`), guía en `docs/diseno.md` (con las decisiones de las pruebas de F8) y entrega a F8 en `design/entrega-f8.md`.
 
 ## Reglas clave
 
@@ -77,9 +82,10 @@ evidence/              evidencia local de REA (ignorada por git)
 packages/engine        motor del puzzle (puro)
 packages/protocol      mensajes y esquemas Zod (nunca la solución, T-31.3)
 packages/scoring       puntuación (pura) y parámetros (src/params.v1.json)
-packages/game          reductor de la partida y GameMode (puro)
+packages/game          reductor de la partida y GameMode (puro); punto de entrada `client` para la web
+packages/bank          banco puro: dificultad, regeneración de semillas y forma canónica (F8)
 apps/server            servidor de salas; banco (bank/manifest.json), esquema, migraciones (drizzle/) y simulador de la puntuación (scripts/scoring-sim/)
-apps/web               cliente React y Vite
+apps/web               cliente React y Vite; servidor simulado y bot solo en desarrollo (src/dev/), check-dist (scripts/)
 tests/                 pruebas del repositorio (reglas de lint)
 ```
 

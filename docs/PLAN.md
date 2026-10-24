@@ -1,7 +1,7 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.17
-Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F5 hecha (2026-10-23) · F6 hecha (2026-10-24) · F7 hecha (2026-10-23)
+Versión del plan: 1.18
+Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F5 hecha (2026-10-23) · F6 hecha (2026-10-24) · F7 hecha (2026-10-23) · F8 hecha (2026-10-24)
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
 ---
@@ -118,13 +118,13 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 | F5 | Banco de puzzles y dificultad | 2–4 | F4 | Hecha | ~2,0 (1,2 + 0,8 por los números iniciales por dificultad) |
 | F6 | Sistema de puntuación | 2–5 | F4 | Hecha | ~2,2 |
 | F7 | Diseño visual propio | 10 | F2 (puede ir en paralelo con F4–F6) | Hecha | ~1,5 |
-| F8 | Cliente con servidor local simulado | 4–8 | F4, F7 | Pendiente | |
+| F8 | Cliente con servidor local simulado | 4–8 | F4, F7 | Hecha | ~3,4 |
 | F9 | Servidor de salas | 3–6 | F3, F5, F6 | Pendiente | |
-| F10 | Integración en tiempo real | 4–8 | F8, F9 | Pendiente | |
+| F10 | Integración en tiempo real | 5–10 | F8, F9 | Pendiente | |
 | F11 | Pruebas integrales, carga y seguridad | 3–6 | F10 | Pendiente | |
 | F12 | Despliegue privado | 2–4 | F11 | Pendiente | |
 | F13 | Beta cerrada y cierre de la v1 | 10 (+1–2 semanas de calendario) | F12 | Pendiente | |
-| **Total** | | **unas 45–66 h** (40–61 h de F5 a F13 y unas 4,8 h reales de F0 a F4; la estimación original era de 130–230 h) | | | |
+| **Total** | | **unas 46–68 h** (41–63 h de F5 a F13 y unas 4,8 h reales de F0 a F4; la estimación original era de 130–230 h). F10 pasó de 4–8 h a 5–10 h al cerrar F8 (plan 1.18). | | | |
 
 Equivale a unas **2,5–4,5 semanas** dedicando 15–20 horas por semana, más las 1–2 semanas de calendario de la beta. Si otra persona trabaja F7 en paralelo, el total se reduce en unas 10 h.
 
@@ -147,7 +147,7 @@ Equivale a unas **2,5–4,5 semanas** dedicando 15–20 horas por semana, más l
 | F13 | 10–20 (+1–2 semanas) | 10 (+1–2 semanas) | Beta con personas: el calendario no se acorta. Se propusieron 4–8 h; el usuario la fijó en 10 h. |
 | **F5–F13** | **96–171** | **40–61** | |
 
-Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, frente a 130–230 h. La columna «Horas estimadas» de la tabla de arriba ya usa estos valores. Se vuelve a comparar al cerrar F5 y F10.
+Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, frente a 130–230 h. La columna «Horas estimadas» de la tabla de arriba ya usa estos valores. Se vuelve a comparar al cerrar F5 y F10. Desde el plan 1.18, con F10 en 5–10 h, el total es de unas 46–68 h.
 
 **Comparación al cerrar F5 (2026-10-23):**
 - F5 llevó unas 2,0 h frente a 2–4 h (entre el 50 % y el 100 %), con los números iniciales por dificultad incluidos, y F7, unas 1,5 h frente a 10 h (15 %).
@@ -498,6 +498,44 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - Pruebas de componentes en verde.
 - La versión de producción no incluye el servidor simulado (verificado en el build).
 
+**Al aprobar el plan, el usuario pidió:**
+- push y CI en verde en cada subtarea;
+- en el cliente de producción, solo el protocolo, i18n, React, la geometría y las máscaras del motor y `@sudoku-killer/game/client`, verificado por `check-dist` (ante un falso positivo se corrigen los imports, nunca el detector);
+- el hash con `crypto.subtle` igual al de `node:crypto`;
+- `pnpm dev` en localhost y `pnpm dev:lan` solo para la red de casa;
+- el manifiesto importado solo en desarrollo;
+- la prioridad 3 y los pendientes de `entrega-f8.md` §4, a F10.
+
+**Subtareas:**
+
+| Subtarea | Contenido | Estado |
+|---|---|---|
+| F8a | Protocolo v1 completo (`packages/protocol/src/v1/`) y pruebas de esquema (T-07.1 en su parte de esquema, T-10.2, T-16.1, T-25.6 y T-34.1). | Hecha |
+| F8b | `packages/bank` (dificultad, regeneración y forma canónica, que antes estaban en el servidor) y `packages/game` definitivo: `decide`, `apply`, `replay`, `project` y `createNormalMode`, con T-15.1 y la base de T-32.1. | Hecha |
+| F8c | `Transport`, servidor simulado (`apps/web/src/dev/sim/`), núcleo del cliente, T-31.2 con `check-dist` y una partida completa automatizada hasta la victoria. | Hecha |
+| F8d | Pantalla de partida (prioridades 1 y 2), tokens, fuentes locales, atajos y pruebas de componentes (T-04.3, T-06.1, T-07.2, T-24.3, T-25.2, T-28.2 y T-33.1). | Hecha |
+| F8e | Punto de control en PC y celular, con siete correcciones. | Hecha |
+| F8f | Bot compañero (`?bot=N&pace=&errors=&seed=`), que juega por el protocolo sin ver la solución. | Hecha |
+| F8g | Correcciones de la prueba con el bot y cierre. | Hecha |
+
+**Estado:** hecha el 2026-10-24, en unas 3,4 h, frente a 4–8 h. El plan de F8 estimaba 6–10 h porque el protocolo y `packages/game` estaban vacíos. Las horas no incluyen las pruebas del usuario en PC, celular y tablet.
+- **Decisiones de las pruebas del usuario** (en `docs/diseno.md` y en la SPEC):
+  - «Usar notas» es una preferencia local (`localStorage`), sin cambio de protocolo (R-06, T-06.3);
+  - la actividad ocupa una línea, con el historial a pedido en «Ver actividad»;
+  - las jaulas pasan a 2 px y la seleccionada a 3 px, porque Chromium dibuja los grosores fraccionarios redondeados hacia abajo;
+  - el dígito pendiente se dibuja en el mismo ciclo del evento, aun con latencia;
+  - si el arranque falla o no termina en 15 s, el inicio muestra un aviso con «Reintentar» (R-37, T-37.1);
+  - el Inicio tiene un enlace al repositorio con la marca de GitHub.
+- **Arreglo de la red local:** por `http://<IP>` la página no es un contexto seguro, y el navegador no expone `crypto.randomUUID` ni `crypto.subtle`. Los identificadores salen de `crypto.getRandomValues`. El simulador usa un SHA-256 en JavaScript (solo en desarrollo) y no omite la comprobación del hash.
+- **Tiempos de carga del simulador:** `docs/dificultad.md` §5.1. La carga más lenta medida es de unos 280 ms, así que no hace falta un Worker.
+- **Desviaciones registradas:**
+  - `packages/engine` suma el punto de entrada `./model` (`src/model.ts`), que solo reexporta la geometría, las máscaras y la limpieza de notas, para que el cliente no arrastre el calificador. No hay lógica nueva, y el corpus siguió en verde.
+  - Hay un paquete nuevo, `packages/bank`, con lo puro del banco que antes estaba en `apps/server`.
+  - Las pruebas de esquema, T-15.1 y la base de T-32.1 se adelantaron de F9 a F8 (SPEC 1.6).
+  - El evento `cell.solved` guarda `level` y `graderVersion`, y cada jugador de `match.started` y `player.joined` lleva su `connection` (ADR 0004, nota de F8).
+  - La prueba de humo en WebKit (iPhone y iPad por la IP de la red local) se corrió fuera del repositorio. Las pruebas E2E con Playwright siguen en F11.
+  - Se llevaron a F10 la prioridad 3, los estados de red, la decisión 3 y los pendientes de `entrega-f8.md` §4. El tema oscuro quedó fuera de la v1 (`docs/IDEAS_FUTURAS.md`).
+
 ### F9 — Servidor de salas (3–6 h; original 15–25 h)
 **Tareas:**
 - Creación y unión a salas por código, con apodos únicos.
@@ -520,7 +558,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - Pruebas de cada transición de estado y de cada caso límite de la SPEC.
 - El test de "la solución nunca sale del servidor" está en verde.
 
-### F10 — Integración en tiempo real (4–8 h; original 15–25 h)
+### F10 — Integración en tiempo real (5–10 h; antes 4–8 h; original 15–25 h)
 **Tareas:**
 - Conectar el cliente al servidor real.
 - Actualizaciones optimistas con reconciliación por número de secuencia.
@@ -531,10 +569,18 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - Notas personales guardadas en el servidor para que sobrevivan a una reconexión.
 - Reconexión transparente para el jugador.
 
+- **Prioridad 3 completa de `design/entrega-f8.md` y estados de red** (sumada al cerrar F8, plan 1.18):
+  - las pantallas Inicio, Entrar o crear, Lobby, Resultados y Ayuda;
+  - los estados de red: reconectando, servidor no disponible, sesión en otra pestaña, versión incompatible, demasiadas acciones, acción no permitida, no se pudo deshacer y se recuperaron X de Y notas;
+  - la decisión 3: «Volver a la sala» lleva al lobby, a la partida o a resultados según el estado de la sala;
+  - los pendientes de `entrega-f8.md` §4: las fotos con su fuente y licencia en `design/fotos.md`, las pantallas fuera de la partida entre 600 y 1023 px, el comportamiento de «Compartir» en el lobby y las transiciones no dibujadas, incluida la vuelta con ficha a una sala llena.
+  - El inicio mínimo de F8 (apodo y dificultad, con el enlace al repositorio y el aviso con «Reintentar») se reemplaza por el Inicio completo, que conserva las dos cosas.
+
 **Criterios de aceptación:**
 - 6 pestañas jugando una partida completa.
 - Clics simultáneos en la misma celda resueltos según la regla.
 - Desconexión y vuelta dentro del plazo sin pérdida de estado.
+- Cada pantalla de la prioridad 3 y cada estado de red se ven con sus estados a 360 y a 1280 px, sin desplazamiento horizontal, y los pendientes de `entrega-f8.md` §4 quedan resueltos o decididos por el usuario. «Volver a la sala» cumple la decisión 3.
 
 ### F11 — Pruebas integrales, carga y seguridad (3–6 h; original 10–16 h)
 **Tareas:**
@@ -636,3 +682,10 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
   - SPEC 1.5 (§2.3, §5, T-19.6, T-35.7, T-35.8 y R-36) y `docs/puntuacion.md`.
 - **1.16:** la memoria del proyecto pasa a `CONTEXTO.md` y se actualizan sus referencias. La sección 4 pasa a llamarse «Protocolo de trabajo» y su redacción, como la de la sección 5 y la de F0, queda neutra respecto de las herramientas. La CI suma el job `attribution-guard`.
 - **1.17:** historial reescrito y repositorio recreado. Los 38 commits conservan autor, fecha y árbol final, con otros identificadores; la revisión de secretos no encontró ninguno real. No cambia el alcance ni las estimaciones de las fases.
+- **1.18:** F8 hecha (~3,4 h reales frente a 4–8 h).
+  - Protocolo v1 completo, `packages/bank`, `packages/game` definitivo, servidor simulado solo para desarrollo (verificado sobre el build con `check-dist`), pantalla de partida con las prioridades 1 y 2 y bot compañero.
+  - Decisiones de las pruebas del usuario: «Usar notas» como preferencia local, la actividad en una línea con el historial a pedido, el grosor de las jaulas, el dígito pendiente inmediato, el aviso con «Reintentar» y el enlace a GitHub en el Inicio.
+  - Desviación: el punto de entrada `./model` de `packages/engine`, sin lógica nueva.
+  - F10 suma la prioridad 3 completa de `entrega-f8.md`, los estados de red, la decisión 3 y los pendientes de su §4, con su criterio de aceptación. Pasa de 4–8 h a 5–10 h, y el total de la v1 queda en unas 46–68 h.
+  - El tema oscuro va a `docs/IDEAS_FUTURAS.md`.
+  - SPEC 1.6; ADR 0001 (i18n propio) y ADR 0004 (forma definitiva de los eventos), con notas de F8.
