@@ -94,6 +94,22 @@ Generado el 2026-10-23 con `pnpm --filter @sudoku-killer/server bank:generate` (
 - **Pruebas:**
   - CI: una muestra del manifiesto en `apps/server/test/bank.test.ts` y `repository.test.ts`, con PGlite.
   - `pnpm test:corpus`: el banco completo en `apps/server/test/bank.corpus.test.ts`, que lo carga, lo verifica y juega una partida simulada por puzzle (T-20.5). Con la versión 2 (2026-10-23), los 2000 puzzles se cargaron y verificaron en 421 s, en paralelo con los otros corpus. Las 131 000 llamadas a `levelToDeduce` de las 2000 partidas dieron siempre un nivel entre 1 y el del puzzle, nunca `UNRATED`.
+- **Parte pura en `packages/bank` (F8):** la equivalencia (`difficulty.ts`), el esquema del manifiesto y `regenerateSeed` pasaron del servidor a un paquete puro, para que el servidor simulado del cliente regenere las mismas semillas sin copiar las reglas. El hash con `node:crypto` y la carga siguen en `apps/server`.
+
+### 5.1 Carga en el servidor simulado del cliente (F8)
+
+En desarrollo, el servidor simulado (`apps/web/src/dev/sim/`) toma una semilla al azar de la dificultad pedida en el manifiesto, la regenera en el navegador con `regenerateSeed` y comprueba la dificultad, la calificación y el hash (`crypto.subtle`, idéntico al de `node:crypto`, con una prueba sobre una muestra) contra su entrada. El manifiesto se importa con el alias `@dev/bank-manifest`, que solo existe al servir en desarrollo y en las pruebas: un build no lo resuelve, y `check-dist` confirma que no queda en el de producción (T-31.2).
+
+Tiempo de carga (regenerar y calcular el hash), medido en Node con las primeras 50 semillas de cada dificultad (`pnpm --filter @sudoku-killer/web sim:measure`, 2026-10-24):
+
+| Dificultad | Mediana | p95 | Máximo |
+|---|---|---|---|
+| Fácil | 110 ms | 161 ms | 277 ms |
+| Media | 110 ms | 156 ms | 213 ms |
+| Difícil | 157 ms | 264 ms | 275 ms |
+| Experto | 54 ms | 87 ms | 101 ms |
+
+El experto es el más rápido porque no lleva números iniciales: `addGivens` califica el puzzle con cada número que agrega. En el navegador, el simulador escribe el tiempo de cada carga en la consola (`[sim] … loaded in N ms`). Los tiempos en PC y en celular se anotan en el punto de control de F8; si en el celular pasan de unos 1,5 s, se propone mover la carga a un Worker.
 
 ## 6. Prueba manual
 

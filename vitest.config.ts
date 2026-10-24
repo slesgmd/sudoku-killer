@@ -1,5 +1,6 @@
 import { defaultServerConditions } from "vite";
 import { configDefaults, defineConfig } from "vitest/config";
+import { devAliases } from "./apps/web/vite.config.ts";
 
 export const conditions = ["@sudoku-killer/source", ...defaultServerConditions];
 
@@ -7,7 +8,8 @@ export const conditions = ["@sudoku-killer/source", ...defaultServerConditions];
 export const CORPUS_TESTS = "**/*.corpus.test.ts";
 
 export default defineConfig({
-  resolve: { conditions },
+  // El alias del manifiesto para el servidor simulado del cliente (solo desarrollo y pruebas).
+  resolve: { conditions, alias: devAliases },
   ssr: { resolve: { conditions } },
   test: {
     include: [

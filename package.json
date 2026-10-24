@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "dev:lan": "pnpm --parallel --filter \"./apps/*\" --if-present dev:lan",
     "build": "pnpm -r build",
     "typecheck": "tsc --noEmit -p tsconfig.json && pnpm -r typecheck",
     "lint": "eslint --max-warnings=0 --cache --cache-location node_modules/.cache/eslint/ .",

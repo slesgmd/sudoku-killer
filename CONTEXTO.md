@@ -46,7 +46,8 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 ## Comandos
 
 - `pnpm install`: instala las dependencias y activa el hook de pre-commit (Husky y lint-staged).
-- `pnpm dev`: servidor (Node desde las fuentes, con `--watch`) y web (Vite) en paralelo.
+- `pnpm dev`: servidor (Node desde las fuentes, con `--watch`) y web (Vite, en localhost) en paralelo. En desarrollo, la web usa el servidor simulado (`apps/web/src/dev/sim/`, opciones `?lat=` y `?skew=`).
+- `pnpm dev:lan`: la web con `--host`, para probar desde el celular. **Solo en la red de casa, nunca en una red pública.**
 - `pnpm check`: typecheck, ESLint (con tipos) y Prettier. `pnpm test`: Vitest en todo el monorepo. `pnpm build`: `tsc` a `dist/` y Vite.
 - `pnpm test:corpus`: corpus de 1000 puzzles (A y B, calificador y cotas), el banco completo y la validación de la puntuación (semilla fija, unos 10 min; también en el workflow programado `corpus.yml`).
 - Servidor: `pnpm --filter @sudoku-killer/server bank:generate` (manifiesto, unos 13 min), `bank:sample` (muestra imprimible) y `db:generate` (migraciones de Drizzle en `apps/server/drizzle/`).

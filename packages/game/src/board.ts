@@ -1,5 +1,5 @@
 // Consultas sobre el tablero de una partida que comparten el reductor, `decide` y el cliente.
-import { cageIndexByCell, layoutOf } from "@sudoku-killer/engine";
+import { cageIndexByCell, layoutOf } from "@sudoku-killer/engine/model";
 import type { ClosedUnit } from "@sudoku-killer/scoring";
 import type { NoteLayer, PublicPuzzle } from "@sudoku-killer/protocol";
 import type { CellState, PlayerId } from "./types.ts";

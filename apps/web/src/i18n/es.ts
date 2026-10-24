@@ -1,5 +1,162 @@
-// Textos de la interfaz en español. La librería de i18n se elige en F8 (ADR 0001).
+// Textos de la interfaz en español (catálogo propio, ADR 0001, nota de F8). Las variables van entre
+// llaves; los plurales, como `{ one, other }` según `count`. Coinciden con los del prototipo de F7.
+export type Message = string | { readonly one: string; readonly other: string };
+
 export const es = {
   appTitle: "Sudoku Killer",
-  placeholder: "Cliente en construcción (F8). Protocolo v{version}.",
-} as const;
+
+  // Inicio mínimo (F8: la pantalla completa es de F10)
+  "home.title": "Un tablero, varias cabezas.",
+  "home.lead": "Partida de prueba contra el servidor simulado de desarrollo.",
+  "home.nickname": "Tu apodo",
+  "home.nicknameHint": "De 2 a 16 caracteres.",
+  "home.nicknameInvalid": "El apodo tiene que tener de 2 a 16 caracteres.",
+  "home.difficulty": "Dificultad",
+  "home.start": "Empezar partida",
+  "home.starting": "Entrando…",
+  "home.unavailable": "El servidor todavía no está disponible en esta versión.",
+  "difficulty.easy": "Fácil",
+  "difficulty.medium": "Media",
+  "difficulty.hard": "Difícil",
+  "difficulty.expert": "Experto",
+  "difficulty.easyNote": "Incluye algunos números iniciales",
+
+  // Cabecera
+  "head.room": "Sala",
+  "head.difficulty": "Dificultad",
+  "head.time": "Tiempo",
+  "head.hints": "Pistas",
+  "head.hintsValue": "{left}/{total}",
+  "head.settings": "Ajustes",
+  "head.leave": "Salir",
+  "head.menu": "Menú: Ajustes, Salir",
+  "head.menuLeave": "Salir de la sala",
+  "head.activity": "Actividad",
+
+  // Tablero y celdas
+  "board.label": "Tablero",
+  "cell.position": "Fila {row}, columna {col}",
+  "cell.short": "F{row} C{col}",
+  "cell.cage": "jaula de {sum}",
+  "cell.empty": "vacía",
+  "cell.given": "{value}, número inicial",
+  "cell.solved": "{value}, resuelta por {name}",
+  "cell.hint": "{value}, pista usada por {name}",
+  "cell.pending": "{value}, pendiente de confirmación",
+  "cell.mistake": "vacía; {name} acaba de fallar con un {digit}",
+  "cell.groupNotes": "notas grupales {digits}",
+  "cell.personalNotes": "notas personales {digits}",
+  "cell.sameDigit": "mismo número que la celda seleccionada",
+  "cell.presence": "{names} está aquí",
+  "cell.presenceMany": "{names} están aquí",
+  "list.and": "{a} y {b}",
+  magnifier: "Lupa · {cell}",
+
+  // Controles
+  "mode.label": "Modo de entrada",
+  "mode.number": "Número",
+  "mode.notes": "Notas",
+  "layer.label": "Capa de escritura",
+  "layer.personal": "Personal",
+  "layer.group": "Grupal",
+  "visibility.label": "Capas visibles",
+  "visibility.personal": "Notas personales",
+  "visibility.group": "Notas grupales",
+  "visibility.shown": "visibles",
+  "visibility.hidden": "ocultas",
+  "tool.clear": "Borrar",
+  "tool.clearLabel": "Borrar las notas de la capa {layer} en la celda",
+  "tool.undo": "Deshacer",
+  "tool.undoLabel": "Deshacer tus últimas notas",
+  "tool.hint": "Pista · {left}",
+  "tool.hintLabel": "Pista, quedan {left}",
+  "tool.hintSpectator": "Pista no disponible para espectadores",
+  "tool.hintNone": "Pista: no quedan pistas",
+  "tool.hintPickEmpty": "Pista: elige una celda vacía",
+  "key.number": "Número {digit}, {remaining}",
+  "key.note": "Nota {digit}, {remaining}",
+  "key.remaining": { one: "queda {count}", other: "quedan {count}" },
+  "key.done": "completo",
+  "key.unavailable": "no disponible ahora",
+  "keypad.label": "Teclado numérico",
+
+  // Jugadores
+  "players.label": "Jugadores",
+  "players.swipe": "Desliza para ver todos",
+  "players.you": "tú",
+  "players.lives": "{lives} vidas de {total}",
+  "players.points": "{score} puntos",
+  "players.spectator": "Espectador",
+  "players.disconnected": "Desconectado",
+  "players.left": "Salió",
+  "players.starter": "Inicia la partida",
+  "players.freeSeats": { one: "{count} asiento libre", other: "{count} asientos libres" },
+
+  // Actividad
+  "activity.label": "Actividad",
+  "activity.empty": "Todavía no hay jugadas.",
+  "activity.solved": "{name} · acierto en {cell}",
+  "activity.mistake": "{name} · error en {cell}",
+  "activity.hint": "{name} · pista en {cell}",
+  "activity.joined": "{name} entró en la partida",
+  "activity.left": "{name} salió de la sala",
+  "activity.spectator": "{name} pasó a espectador",
+  "activity.show": "Mostrar la actividad",
+  "activity.hide": "Ocultar la actividad",
+
+  // Estados (docs/diseno.md §9)
+  loading: "Cargando la partida…",
+  "toast.close": "Cerrar aviso",
+  "state.ownMistake": "El {digit} no va en {cell}. {lives}",
+  "state.livesLeft": { one: "Te queda {count} vida.", other: "Te quedan {count} vidas." },
+  "state.nowSpectator":
+    "Te quedaste sin vidas. Ahora eres espectador: puedes seguir escribiendo notas.",
+  "state.spectatorNotice": "Eres espectador: solo puedes escribir notas.",
+  "state.alreadySolved":
+    "{name} resolvió {cell} un instante antes. Tu jugada no cuenta y no pierdes vida.",
+  "state.alreadySolvedAnon": "{cell} ya estaba resuelta. Tu jugada no cuenta y no pierdes vida.",
+  "state.hintForbidden": "No se usó la pista: ya eres espectador y solo puedes escribir notas.",
+  "state.placeForbidden":
+    "No se colocó el número: ya eres espectador y solo puedes escribir notas.",
+  "state.hintNone": "No se usó la pista: el equipo ya no tiene pistas.",
+  "state.rateLimited":
+    "Vas muy rápido: la última acción no se envió. Espera un momento y repítela.",
+  "state.undoModifiedGroup": "No se pudo deshacer: otra persona cambió esa nota grupal después.",
+  "state.undoModifiedPersonal": "No se pudo deshacer: una limpieza automática cambió esa nota.",
+  "state.undoLocked": "No se pudo deshacer: la celda ya está resuelta.",
+  "state.recovered": "Se recuperaron {done} de {total} notas.",
+  "state.recoveredRest": {
+    one: "La otra cambió después de que la borraras.",
+    other: "Las otras {count} cambiaron después de que las borraras.",
+  },
+  "state.nothingToUndo": "No hay notas tuyas para deshacer.",
+  "state.error": "No se pudo completar la acción ({code}).",
+  "ended.victory": "La partida terminó. El equipo completó el tablero en {time}.",
+  "ended.defeat": "La partida terminó. Ningún jugador activo seguía en la partida.",
+  "ended.home": "Volver al inicio",
+
+  // Diálogos
+  "dialog.close": "Cerrar",
+  "dialog.cancel": "Cancelar",
+  "hint.title": "¿Usar una pista en {cell}?",
+  "hint.cost": "Cuesta −{points} puntos a quien la usa y no da bonus.",
+  "hint.left": {
+    one: "Queda {count} pista para todo el equipo.",
+    other: "Quedan {count} pistas para todo el equipo.",
+  },
+  "hint.confirm": "Usar pista",
+  "leave.title": "¿Salir de la sala?",
+  "leave.body": "Tu asiento queda libre al momento.",
+  "leave.starter": "El derecho de iniciar pasará a {name} y no vuelve a ti aunque regreses.",
+  "leave.stay": "Quedarme",
+  "leave.confirm": "Salir de la sala",
+  "settings.title": "Ajustes",
+  "settings.autoClean": "Limpiar notas personales automáticamente",
+  "settings.autoCleanHelp":
+    "Cuando alguien acierta un número, ese número se quita de tus notas personales en su fila, columna, caja y jaula. Las notas grupales se limpian siempre.",
+  "settings.on": "Sí",
+  "settings.off": "No",
+  "settings.motion": "El movimiento reducido sigue la preferencia de tu sistema.",
+} as const satisfies Record<string, Message>;
+
+export type MessageKey = keyof typeof es;

@@ -5,16 +5,22 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "dev:lan": "vite --host",
+    "build": "vite build && node scripts/check-dist.ts",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "sim:measure": "node --conditions=@sudoku-killer/source scripts/measure-sim-load.ts"
   },
   "dependencies": {
+    "@sudoku-killer/engine": "workspace:*",
+    "@sudoku-killer/game": "workspace:*",
     "@sudoku-killer/protocol": "workspace:*",
+    "@sudoku-killer/scoring": "workspace:*",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
   "devDependencies": {
+    "@sudoku-killer/bank": "workspace:*",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2"

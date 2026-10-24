@@ -8,6 +8,11 @@
       "@sudoku-killer/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./model": {
+      "@sudoku-killer/source": "./src/model.ts",
+      "types": "./dist/model.d.ts",
+      "default": "./dist/model.js"
     }
   },
   "files": [
