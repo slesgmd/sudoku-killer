@@ -661,3 +661,28 @@ describe("§4.6 idempotency and §4.8 rate limits", () => {
     expect(client.last("sys.pong")?.payload).toEqual({ t0: 42, serverNow: h.clock.now() });
   });
 });
+
+describe("E-17 a slow consumer", () => {
+  it("above 256 KiB buffered, presence is dropped; above 1 MiB the connection closes with 1013 and a reconnection gets a snapshot", async () => {
+    const h = await createTestServer();
+    const { code, clients } = await started(h, ["Ana", "Bea"]);
+    const [ana, bea] = clients;
+    if (!ana || !bea?.token) throw new Error();
+    bea.link.bufferedAmount = 300 * 1024;
+    const mark = bea.mark();
+    await ana.send("presence.select", { cell: 3 });
+    expect(bea.since(mark)).toEqual([]);
+    // Los mensajes del registro no se descartan.
+    const cell = firstEmpty(h, code);
+    await ana.send("cell.place", { cell, digit: answer(h, code, cell) });
+    expect(bea.all("cell.solved", mark)).toHaveLength(1);
+    bea.link.bufferedAmount = 2 * 1024 * 1024;
+    const next = firstEmpty(h, code);
+    await ana.send("cell.place", { cell: next, digit: answer(h, code, next) });
+    expect(bea.link.closed?.code).toBe(1013);
+    const back = welcomeOf(await h.client().join(code, "Bea", bea.token));
+    expect(back.payload.snapshot.match?.locked.map((l) => l.cell)).toEqual(
+      expect.arrayContaining([cell, next]),
+    );
+  });
+});

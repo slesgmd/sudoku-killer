@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --conditions=@sudoku-killer/source --watch src/index.ts",
+    "dev": "node --conditions=@sudoku-killer/source --env-file-if-exists=.env --watch src/index.ts",
     "build": "tsc -p tsconfig.build.json",
-    "start": "node dist/index.js",
+    "start": "node --env-file-if-exists=.env dist/index.js",
     "typecheck": "tsc --noEmit",
     "bank:generate": "node --conditions=@sudoku-killer/source scripts/generate-bank.ts",
     "bank:sample": "node --conditions=@sudoku-killer/source scripts/print-sample.ts",
@@ -14,7 +14,10 @@
     "scoring:simulate": "node --conditions=@sudoku-killer/source scripts/simulate-scoring.ts",
     "scoring:calibrate": "node --conditions=@sudoku-killer/source scripts/calibrate-scoring.ts",
     "db:setup-local": "node --conditions=@sudoku-killer/source scripts/setup-local-db.ts",
-    "db:check-local": "node --env-file=.env scripts/check-local-db.ts"
+    "db:check-local": "node --env-file-if-exists=.env scripts/check-local-db.ts",
+    "db:migrate": "node --conditions=@sudoku-killer/source --env-file-if-exists=.env scripts/migrate.ts",
+    "bank:load": "node --conditions=@sudoku-killer/source --env-file-if-exists=.env scripts/load-bank.ts",
+    "demo": "node --conditions=@sudoku-killer/source --env-file-if-exists=.env scripts/demo-match.ts"
   },
   "dependencies": {
     "@sudoku-killer/bank": "workspace:*",

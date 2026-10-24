@@ -165,9 +165,15 @@ export class RoomServer {
     return restored;
   }
 
-  /** Deja de aceptar conexiones, escribe lo pendiente y cierra las conexiones con `code`. */
+  /**
+   * Apagado ordenado: las salas terminan lo que tenían en cola y se detienen (sin plazos ni eventos
+   * nuevos), se escribe lo pendiente y se cierran las conexiones con `code`.
+   */
   async stop(code: number, reason: string): Promise<void> {
-    for (const room of [...this.rooms.values()]) await room.idle();
+    for (const room of [...this.rooms.values()]) {
+      await room.idle();
+      room.shutdown();
+    }
     await this.options.sink.drain();
     await this.options.transport.stop(code, reason);
   }

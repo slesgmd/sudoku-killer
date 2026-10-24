@@ -1,0 +1,176 @@
+// Transporte de producción con `ws` (ADR 0002): una sola ruta, `/ws`, sobre un servidor HTTP.
+// - El handshake solo se acepta desde los orígenes permitidos; uno ausente o ajeno recibe 403
+//   (protección contra conexiones desde otros sitios).
+// - `maxPayload` de 16 KiB: un mensaje más grande cierra con 1009 (lo hace `ws`).
+// - `permessage-deflate` desactivado.
+// - Heartbeat: ping cada 15 s; si no llegó el pong del anterior, la conexión se termina.
+// - Los mensajes binarios no son del protocolo: llegan al servidor como texto inválido.
+import { createServer, type IncomingMessage, type Server } from "node:http";
+import type { Duplex } from "node:stream";
+import { WebSocketServer, type WebSocket } from "ws";
+import type { Logger } from "../log/logger.ts";
+import type { Clock } from "./clock.ts";
+import type { Link, LinkHandlers, Transport } from "./transport.ts";
+
+export const WS_PATH = "/ws";
+export const MAX_PAYLOAD_BYTES = 16 * 1024;
+export const HEARTBEAT_MS = 15_000;
+
+export interface WsTransportOptions {
+  readonly host: string;
+  readonly port: number;
+  /** Orígenes permitidos, como `https://ejemplo.org` (sin barra final). */
+  readonly allowedOrigins: readonly string[];
+  readonly clock: Clock;
+  readonly logger: Logger;
+  readonly heartbeatMs?: number;
+}
+
+/** Un origen comparable: minúsculas y sin barra final. */
+export function normalizeOrigin(origin: string): string {
+  return origin.trim().toLowerCase().replace(/\/+$/, "");
+}
+
+function reject(socket: Duplex, status: 403 | 404): void {
+  const text = status === 403 ? "Forbidden" : "Not Found";
+  socket.end(
+    `HTTP/1.1 ${String(status)} ${text}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`,
+  );
+}
+
+export class WsTransport implements Transport {
+  private readonly options: WsTransportOptions;
+  private readonly allowed: ReadonlySet<string>;
+  private http: Server | null = null;
+  private wss: WebSocketServer | null = null;
+  private readonly alive = new Map<WebSocket, boolean>();
+  private cancelHeartbeat: (() => void) | null = null;
+
+  constructor(options: WsTransportOptions) {
+    this.options = options;
+    this.allowed = new Set(options.allowedOrigins.map(normalizeOrigin));
+  }
+
+  /** El puerto en que escucha (útil con el puerto 0 en las pruebas). */
+  get port(): number {
+    const address = this.http?.address();
+    return typeof address === "object" && address ? address.port : this.options.port;
+  }
+
+  async start(accept: (link: Link) => LinkHandlers): Promise<void> {
+    const { logger } = this.options;
+    const wss = new WebSocketServer({
+      noServer: true,
+      maxPayload: MAX_PAYLOAD_BYTES,
+      perMessageDeflate: false,
+    });
+    const http = createServer((_request, response) => {
+      response.writeHead(404, { "content-length": "0" });
+      response.end();
+    });
+    http.on("upgrade", (request: IncomingMessage, socket: Duplex, head: Buffer) => {
+      const path = new URL(request.url ?? "/", "http://localhost").pathname;
+      if (path !== WS_PATH) {
+        reject(socket, 404);
+        return;
+      }
+      const origin = request.headers.origin;
+      if (origin === undefined || !this.allowed.has(normalizeOrigin(origin))) {
+        // El origen rechazado no se registra completo: puede ser cualquier texto.
+        logger.warn("websocket origin rejected", { hasOrigin: origin !== undefined });
+        reject(socket, 403);
+        return;
+      }
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        this.connected(ws, accept);
+      });
+    });
+    this.http = http;
+    this.wss = wss;
+    await new Promise<void>((resolve, reject) => {
+      http.once("error", reject);
+      http.listen(this.options.port, this.options.host, () => {
+        http.off("error", reject);
+        resolve();
+      });
+    });
+    this.scheduleHeartbeat();
+  }
+
+  private connected(ws: WebSocket, accept: (link: Link) => LinkHandlers): void {
+    this.alive.set(ws, true);
+    const link: Link = {
+      send: (text) => {
+        if (ws.readyState === ws.OPEN) ws.send(text);
+      },
+      get bufferedAmount() {
+        return ws.bufferedAmount;
+      },
+      close: (code, reason) => {
+        ws.close(code, reason);
+      },
+    };
+    const handlers = accept(link);
+    let closed = false;
+    const done = () => {
+      if (closed) return;
+      closed = true;
+      this.alive.delete(ws);
+      handlers.closed();
+    };
+    ws.on("pong", () => {
+      this.alive.set(ws, true);
+    });
+    ws.on("message", (data, isBinary) => {
+      // Un mensaje binario no es JSON del protocolo: el servidor responde `bad_request`.
+      handlers.message(isBinary ? "" : (data as Buffer).toString("utf8"));
+    });
+    ws.on("close", done);
+    ws.on("error", (error) => {
+      this.options.logger.debug("websocket error", { error: error.message });
+    });
+  }
+
+  /** Cada 15 s: se termina la conexión que no respondió el ping anterior, y se envía uno nuevo. */
+  private scheduleHeartbeat(): void {
+    const { clock, heartbeatMs = HEARTBEAT_MS } = this.options;
+    this.cancelHeartbeat = clock.setTimeout(() => {
+      for (const [ws, alive] of [...this.alive]) {
+        if (!alive) {
+          ws.terminate();
+          continue;
+        }
+        this.alive.set(ws, false);
+        ws.ping();
+      }
+      this.scheduleHeartbeat();
+    }, heartbeatMs);
+  }
+
+  async stop(code: number, reason: string): Promise<void> {
+    this.cancelHeartbeat?.();
+    this.cancelHeartbeat = null;
+    for (const ws of this.alive.keys()) ws.close(code, reason);
+    const wss = this.wss;
+    const http = this.http;
+    await new Promise<void>((resolve) => {
+      if (wss) {
+        wss.close(() => {
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
+    await new Promise<void>((resolve) => {
+      if (!http) {
+        resolve();
+        return;
+      }
+      http.closeAllConnections();
+      http.close(() => {
+        resolve();
+      });
+    });
+  }
+}

@@ -573,7 +573,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | F9b | Núcleo del servidor: interfaces de §8.2, `RoomStore`, cola por sala, lobby, ciclo de vida, fichas, plazos, E-08, inspector de filtración y logger. | Hecha |
 | F9c | Partida en vivo, presencia, idempotencia, límites de velocidad y T-32.1 contra el servidor. | Hecha |
 | F9d | Punto de control (esquema aprobado por el usuario) y después persistencia: `matches` y `match_events`, group commit, reconstrucción, E-16 y retiro de puzzles. | Hecha |
-| F9e | Producción: `ws`, `pg`, configuración, `db:migrate` y `bank:load`. | Pendiente |
+| F9e | Base local configurada con el script aprobado por el usuario (`db:setup-local`) y producción: `ws`, `pg`, configuración, `db:migrate` y `bank:load`. | Hecha |
 | F9f | Demostración y cierre. | Pendiente |
 
 ### F10 — Integración en tiempo real (5–10 h; antes 4–8 h; original 15–25 h)

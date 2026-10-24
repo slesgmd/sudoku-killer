@@ -222,6 +222,20 @@ export class Room {
     session.send({ v: 1, type: "error", payload: { code: "server.unavailable" }, replyTo });
   }
 
+  /**
+   * Apagado del servidor: la sala deja de procesar y cancela sus plazos. Lo que ya decidió se
+   * termina de escribir; quienes estaban conectados quedan `disconnected` al reconstruirla.
+   */
+  shutdown(): void {
+    this.deleted = true;
+    this.cancelDeletion?.();
+    this.cancelDeletion = null;
+    for (const member of this.members.values()) {
+      member.cancelGrace?.();
+      member.cancelGrace = null;
+    }
+  }
+
   /** Mientras la base de datos no confirma, se rechaza lo que agregaría eventos (E-16). */
   private writesBlocked(): boolean {
     return this.deps.sink.unavailable;
