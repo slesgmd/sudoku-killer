@@ -14,7 +14,7 @@ describe("T-31.3 protocol exports never carry the solution", () => {
     expect(findForbiddenFields(entry, FORBIDDEN)).toEqual([]);
   });
 
-  it("the detector finds `solution` in interfaces, aliases, Zod schemas and signatures", () => {
+  it("the detector finds `solution` in interfaces, aliases, Zod schemas, unions and signatures", () => {
     const fixture = path.resolve(import.meta.dirname, "fixtures/leaky.ts");
     const leakyExports = new Set(findForbiddenFields(fixture, FORBIDDEN).map(exportOf));
     expect([...leakyExports].sort()).toEqual([
@@ -23,6 +23,7 @@ describe("T-31.3 protocol exports never carry the solution", () => {
       "LeakyState",
       "leakyFactory",
       "leakySchema",
+      "leakyUnion",
     ]);
   });
 });

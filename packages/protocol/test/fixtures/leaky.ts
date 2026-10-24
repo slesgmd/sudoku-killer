@@ -18,3 +18,8 @@ export function leakyFactory(): { puzzle: { solution: number[] } } {
 export const clean = { cells: [] as number[] };
 
 export type LeakyInferred = z.infer<typeof leakySchema>;
+
+export const leakyUnion = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("a") }),
+  z.object({ type: z.literal("b"), solution: z.string() }),
+]);

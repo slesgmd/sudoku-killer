@@ -70,7 +70,9 @@ export function findForbiddenFields(entryFile: string, forbidden: readonly strin
       for (const member of type.types) walk(member, where, depth + 1);
     }
     for (const argument of typeArguments(type)) walk(argument, `${where}<>`, depth + 1);
-    if (isExternal(type)) return;
+    // Una tupla (como las opciones de `z.discriminatedUnion`) se recorre por sus elementos, que ya
+    // son sus argumentos de tipo: sus miembros son los métodos de `Array` y recorrerlos no termina.
+    if (isExternal(type) || checker.isTupleType(type)) return;
 
     for (const property of checker.getPropertiesOfType(type)) {
       const propertyPath = `${where}.${property.name}`;
