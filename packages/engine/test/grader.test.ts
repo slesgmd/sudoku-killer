@@ -28,6 +28,7 @@ import {
   expectSoundGrade,
 } from "./helpers/grader.ts";
 import { GEOMETRY_4, GEOMETRY_6, GEOMETRY_9, killerArb } from "./helpers/grids.ts";
+import { withExtraGivens } from "./helpers/generated.ts";
 import { assertProperty } from "./helpers/property.ts";
 import { boxCagesPuzzle, shiftFirstSum } from "./helpers/puzzles.ts";
 
@@ -43,8 +44,8 @@ describe.each<[Geometry, number]>([
 ])("grader on generated puzzles ($size)", (geometry, numRuns) => {
   it("T-35.4: lowest level first, and no deduction contradicts the solution", SLOW, () => {
     assertProperty(
-      fc.property(seedArb, fc.integer({ min: 0, max: 6 }), (seed, easyGivens) => {
-        const { puzzle, solution } = generatePuzzle({ seed, geometry, easyGivens });
+      fc.property(seedArb, fc.integer({ min: 0, max: 6 }), (seed, extra) => {
+        const { puzzle, solution } = withExtraGivens(generatePuzzle({ seed, geometry }), extra);
         expectSoundGrade(puzzle, solution);
       }),
       { numRuns },

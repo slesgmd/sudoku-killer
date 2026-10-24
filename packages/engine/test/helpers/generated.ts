@@ -4,6 +4,7 @@ import { expect } from "vitest";
 import {
   MAX_CAGE_SIZE,
   MIN_CAGE_SIZE,
+  addGivens,
   solveA,
   solveB,
   validateSolution,
@@ -12,8 +13,11 @@ import {
 } from "@sudoku-killer/engine";
 import { at } from "../../src/model/at.ts";
 
-/** T-20.1 y T-20.2 sobre un puzzle generado, con comprobaciones independientes del generador. */
-export function expectSoundPuzzle(generated: GeneratedPuzzle, easyGivens = 0): void {
+/**
+ * T-20.1 y T-20.2 sobre un puzzle generado, con comprobaciones independientes del generador.
+ * `extraGivens`: números agregados con `addGivens` (por la dificultad).
+ */
+export function expectSoundPuzzle(generated: GeneratedPuzzle, extraGivens = 0): void {
   const { puzzle, solution, givensReason, stats } = generated;
   expect(validateStructure(puzzle)).toEqual([]);
   expect(validateSolution(puzzle, solution)).toEqual([]);
@@ -35,11 +39,19 @@ export function expectSoundPuzzle(generated: GeneratedPuzzle, easyGivens = 0): v
 
   // T-20.2: los números iniciales y su motivo.
   for (const { cell, value } of puzzle.givens) expect(at(solution, cell)).toBe(value);
-  expect(puzzle.givens).toHaveLength(stats.uniquenessGivens + easyGivens);
+  expect(puzzle.givens).toHaveLength(stats.uniquenessGivens + extraGivens);
   if (givensReason === "none") expect(puzzle.givens).toEqual([]);
   else expect(puzzle.givens.length).toBeGreaterThan(0);
   expect(givensReason).toBe(
-    easyGivens > 0 ? "easy" : stats.uniquenessGivens > 0 ? "uniqueness" : "none",
+    extraGivens > 0 ? "difficulty" : stats.uniquenessGivens > 0 ? "uniqueness" : "none",
   );
   expect(stats.discarded).toBe(stats.candidates - 1);
+}
+
+/** El puzzle con `extra` números iniciales más, sin guarda (para variar los estados de prueba). */
+export function withExtraGivens(generated: GeneratedPuzzle, extra: number): GeneratedPuzzle {
+  const count = Math.min(generated.solution.length, generated.puzzle.givens.length + extra);
+  const added = addGivens(generated, { count, seed: generated.puzzle.cages.length });
+  if (!added) throw new Error("addGivens without a guard always reaches the count");
+  return added.generated;
 }

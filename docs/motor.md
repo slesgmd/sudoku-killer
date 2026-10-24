@@ -183,9 +183,9 @@ No se adoptaron:
 
 ## Generador (F4d)
 
-`generatePuzzle({ seed, geometry = 9×9, easyGivens = 0, maxNodes = 1000, maxAdjustments = 40, maxCandidates = 1000, cageSizeWeights = [3, 4, 2, 1] })` → `{ puzzle, solution, givensReason, stats }`.
-- `seed`: entero de 32 bits sin signo. Con la misma semilla y las mismas opciones, el resultado es idéntico (T-35.6). `GENERATOR_VERSION` cambia cuando un cambio del generador altera lo que sale de una semilla.
-- `givensReason` (SPEC §2.2, R-20): `none` sin números iniciales; `uniqueness` si hicieron falta para la unicidad; `easy` si se pidieron `easyGivens` (aunque también haya alguno de unicidad).
+`generatePuzzle({ seed, geometry = 9×9, maxNodes = 1000, maxAdjustments = 40, maxCandidates = 1000, cageSizeWeights = [3, 4, 2, 1] })` → `{ puzzle, solution, givensReason, stats }`.
+- `seed`: entero de 32 bits sin signo. Con la misma semilla y las mismas opciones, el resultado es idéntico (T-35.6). `GENERATOR_VERSION` cambia cuando un cambio del generador altera lo que sale de una semilla: "1" en F4d y "2" desde F5, con `addGivens` en lugar de la opción `easyGivens`.
+- `givensReason` (SPEC §2.2, R-20): `none` sin números iniciales; `uniqueness` si hicieron falta para la unicidad; `difficulty` si se agregaron con `addGivens` (aunque también haya alguno de unicidad).
 - `stats`: candidatos empezados y descartados, particiones repetidas, reajustes de jaulas y números iniciales de unicidad del puzzle aceptado, y nodos de A (en todos los candidatos) y de B (en la verificación).
 - Lanza `RangeError` con opciones inválidas y `Error` si ningún candidato se acepta en `maxCandidates` o si los solvers discrepan.
 
@@ -197,6 +197,7 @@ No se adoptaron:
 | `grid.ts` | `randomGrid`: backtracking con MRV y candidatos en orden aleatorio. |
 | `cages.ts` | `partitionCages` y `recut`. |
 | `generate.ts` | `generatePuzzle`. |
+| `givens.ts` | `addGivens`: números iniciales por dificultad (F5). |
 
 ### Algoritmo
 1. **Cuadrícula** completa aleatoria.
@@ -204,12 +205,24 @@ No se adoptaron:
 3. **Sumas**, desde la cuadrícula.
 4. **Unicidad** con `solveA` y `maxNodes`. Si A agota el presupuesto en cualquier llamada, el candidato se **descarta entero** y se genera otro desde el paso 1.
 5. **Reajuste.** Con dos soluciones, se toma una celda donde difieren y se vuelve a cortar su jaula: se parte en dos si tiene 4 o 5 celdas y, si no, se recorta junto con una jaula vecina en dos jaulas nuevas. Las jaulas salen siempre de la cuadrícula, así que esta sigue siendo solución. Tras `maxAdjustments` reajustes (o si ningún corte es posible), se agrega en una de esas celdas el número inicial de la cuadrícula. Se repite el paso 4 hasta la unicidad.
-6. Con `easyGivens`, se agregan esos números iniciales en celdas al azar.
-7. **Verificación**: `validateStructure`, `validateSolution` y **`solveB`**, que tiene que encontrar una sola solución, la misma. Si no, es un error de un solver y se lanza `Error`.
+6. **Verificación**: `validateStructure`, `validateSolution` y **`solveB`**, que tiene que encontrar una sola solución, la misma. Si no, es un error de un solver y se lanza `Error`.
+
+### Números iniciales por dificultad (`addGivens`, F5)
+`addGivens(generated, { count, seed, keep? })` → `{ generated, result }` o `null`.
+- **Qué hace:** agrega números de la solución hasta que el puzzle tenga `count` en total, contando los de unicidad.
+- **Orden de las celdas:** vueltas por las cajas en un orden al azar, con una celda al azar de cada caja por vuelta. Así quedan repartidos entre las cajas. El orden sale de la semilla mezclada con una constante, para no repetir la secuencia con que `generatePuzzle` armó la cuadrícula.
+- **Guarda (`keep`):** cada número se agrega solo si el puzzle, calificado con él, la cumple. El banco la usa como piso de la dificultad: algún paso de nivel 2 en media y de nivel 3 en difícil. Si se recorren todas las celdas sin llegar a `count`, devuelve `null`.
+- **Unicidad:** se confirma con A y con B en el puzzle final. Una discrepancia lanza `Error`; números de la solución no pueden quitar la unicidad.
+- **`result`:** la calificación del puzzle final, con todos sus números.
+- **Por qué con guarda** (medición del 2026-10-23, `docs/dificultad.md`): los números al azar bajan el nivel muy rápido. Con 10 números, el 99 % de los puzzles queda en nivel 2, y con 22, el 69 % se resuelve solo con singles. Con la guarda, las cantidades pedidas se alcanzan en el 87 % al 100 % de los candidatos.
 
 ### Pruebas
 - `test/rng.test.ts` (T-35.6): misma semilla, misma secuencia; semillas vecinas distintas; `int` uniforme (chi-cuadrado); `shuffle` es una permutación; entradas inválidas.
-- `test/generator.test.ts`, versión rápida en la CI con semillas aleatorias en 4×4, 6×6 y 9×9: propiedades T-20.1 y T-20.2 (`test/helpers/generated.ts`: estructura válida, jaulas de 2 a 5 celdas sin repetidos y con su suma, solución única para A y para B sin presupuesto, números iniciales de la solución y su motivo), T-35.6 (mismo resultado con la misma semilla y opciones, incluidos `easyGivens`), sin reajustes la unicidad viene de números iniciales, el descarte por presupuesto (con `maxNodes: 2`, el puzzle aceptado en el candidato `c` hace fallar `maxCandidates: c − 1`) y las opciones inválidas.
+- `test/generator.test.ts`, versión rápida en la CI con semillas aleatorias en 4×4, 6×6 y 9×9: propiedades T-20.1 y T-20.2 (`test/helpers/generated.ts`: estructura válida, jaulas de 2 a 5 celdas sin repetidos y con su suma, solución única para A y para B sin presupuesto, números iniciales de la solución y su motivo), T-35.6 (mismo resultado con la misma semilla y opciones, también en `addGivens`), sin reajustes la unicidad viene de números iniciales, el descarte por presupuesto (con `maxNodes: 2`, el puzzle aceptado en el candidato `c` hace fallar `maxCandidates: c − 1`) y las opciones inválidas.
+- `addGivens`, en la CI (`test/generator.test.ts`):
+  - T-20.2: números de la solución, A y B siguen con una sola solución y `givensReason` pasa a `difficulty`; jaulas y solución no cambian.
+  - Reparto entre las cajas: sin números de unicidad, como mucho 1 de diferencia.
+  - Con guarda, el resultado la cumple y es la calificación con todos los números. `null` si la guarda rechaza todo. Opciones inválidas.
 - `test/generator.corpus.test.ts` (T-20.1, T-35.1): **1000 puzzles 9×9** (semillas 1 a 1000) con unicidad confirmada por A y por B sin presupuesto, todos distintos. Imprime el tiempo de generación y los descartes. No corre en `pnpm test` (excluido en `vitest.config.ts`): `pnpm test:corpus` en local y el workflow `corpus.yml`, programado cada lunes con semillas nuevas (desde `run_number × 1000`) y manual con la semilla y la cantidad que se elijan. Si falla, el mensaje dice la semilla, que se agrega como caso fijo.
 
 ### Mediciones
@@ -308,7 +321,7 @@ Regiones de la regla del 45: cada fila, columna y caja, y cada unión de 2 a `si
 **Memoria por jaula y grupo.** El filtro exacto depende solo de los candidatos de sus celdas, así que el contexto guarda el último resultado de cada jaula y de cada grupo, con las máscaras con que se calculó, y lo reutiliza si no cambiaron. No cambia ningún resultado: lo comprueba la prueba de determinismo con y sin memoria.
 
 ### Pruebas
-- `test/grader.test.ts` (T-35.4 y T-35.5), en la CI, con puzzles de `generatePuzzle` en 4×4, 6×6 y 9×9 (algunos con `easyGivens`):
+- `test/grader.test.ts` (T-35.4 y T-35.5), en la CI, con puzzles de `generatePuzzle` en 4×4, 6×6 y 9×9 (algunos con números de `addGivens`):
   - Se reproduce la traza de `grade` con un estado propio. Antes de cada paso, ninguna técnica anterior en `TECHNIQUES` encuentra nada (**menor nivel primero**). La técnica del paso encuentra exactamente esas deducciones, **ninguna contradice la solución** (no coloca un dígito equivocado ni quita el correcto) y, después de aplicarlas, el dígito de la solución sigue entre los candidatos de cada celda. Si termina, el tablero es la solución; si no, ninguna técnica encuentra nada (no adivina).
   - Desde estados con celdas correctas al azar, ninguna deducción de ninguna técnica contradice la solución.
   - En 4×4 con cualquier número de soluciones (con la fuerza bruta como oráculo, y a veces con una suma desplazada para que no haya ninguna), cada deducción vale en todas las soluciones; con varias, el resultado es `exceedsTechniques`; sin ninguna, nunca `solved`.
@@ -336,7 +349,7 @@ Semillas 1 a 1000 (9×9, opciones por defecto del generador), Node 24.21, AMD Ry
 | 5 | 85 (8,5 %) | — |
 | Exceden las técnicas | **70 (7,0 %)** | 232 (23,2 %) |
 
-- Ningún puzzle es de nivel 1: sin números iniciales no hay ningún single al empezar, y hace falta al menos una combinación de jaula. Con `easyGivens` puede haberlos (F5).
+- Ningún puzzle es de nivel 1: sin números iniciales no hay ningún single al empezar, y hace falta al menos una combinación de jaula. Con los números iniciales por dificultad sí los hay: el fácil del banco es de nivel 1 (F5).
 - Los niveles 4 y 5 resuelven 162 de los 232 puzzles que excedían los niveles 1 a 3. Los niveles 2 y 3 no cambian: las técnicas nuevas solo se usan cuando las anteriores no deducen nada.
 - Pasos por puzzle: mediana 51, máximo 98. Pasos por nivel en todo el corpus: 35 831 de nivel 1, 11 458 de nivel 2, 2030 de nivel 3, 634 de nivel 4 y 245 de nivel 5.
 - Uso por técnica: ver el informe para F5. En killer, las técnicas de jaula y de unidad hacen casi todo el trabajo: Y-Wing y Swordfish no se usaron nunca en el corpus, porque antes deduce algo otra técnica. Se quedan porque son correctas (tienen su oráculo y deducen en estados al azar) y baratas, y otros puzzles pueden necesitarlas.

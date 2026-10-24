@@ -10,11 +10,18 @@ import { partitionCages, recut, sideNeighbours, type CageSizeWeights } from "./c
 import { randomGrid } from "./grid.ts";
 import { createRng, shuffle, type Rng } from "./rng.ts";
 
-/** Por qué un puzzle tiene números iniciales (SPEC §2.2, R-20). */
-export type GivensReason = "none" | "easy" | "uniqueness";
+/**
+ * Por qué un puzzle tiene números iniciales (SPEC §2.2, R-20): `uniqueness` si el generador los
+ * necesitó para la unicidad; `difficulty` si se agregaron por la dificultad (`addGivens`), aunque
+ * también haya alguno de unicidad.
+ */
+export type GivensReason = "none" | "difficulty" | "uniqueness";
 
-/** Cambia cuando un cambio del generador altera los puzzles que salen de una semilla. */
-export const GENERATOR_VERSION = "1";
+/**
+ * Cambia cuando un cambio del generador altera los puzzles que salen de una semilla. "2" (F5):
+ * los números iniciales extra salen de `addGivens`, repartidos por cajas, en lugar de `easyGivens`.
+ */
+export const GENERATOR_VERSION = "2";
 
 /** Presupuesto de nodos de `solveA` por llamada (medido en docs/motor.md). */
 export const DEFAULT_MAX_NODES = 1000;
@@ -34,8 +41,6 @@ export interface GenerateOptions {
   /** Entero de 32 bits sin signo. La misma semilla y opciones dan el mismo puzzle (T-35.6). */
   readonly seed: number;
   readonly geometry?: Geometry;
-  /** Números iniciales extra del nivel fácil (`givensReason: "easy"`). Por defecto 0. */
-  readonly easyGivens?: number;
   /** Presupuesto de nodos de cada llamada a `solveA`; si se agota, el candidato se descarta. */
   readonly maxNodes?: number;
   /** Reajustes de jaulas antes de recurrir a números iniciales para la unicidad. */
@@ -70,7 +75,6 @@ export interface GeneratedPuzzle {
 
 interface Settings {
   readonly geometry: Geometry;
-  readonly easyGivens: number;
   readonly maxNodes: number;
   readonly maxAdjustments: number;
   readonly weights: CageSizeWeights;
@@ -190,17 +194,12 @@ function resolveSettings(options: GenerateOptions): Settings {
   if (!isValidGeometry(geometry) || geometry.size < 4) {
     throw new RangeError("The generator needs a valid geometry of size 4 or more");
   }
-  const easyGivens = options.easyGivens ?? 0;
-  if (!Number.isInteger(easyGivens) || easyGivens < 0) {
-    throw new RangeError(`Invalid easyGivens ${String(easyGivens)}`);
-  }
   const maxAdjustments = options.maxAdjustments ?? DEFAULT_MAX_ADJUSTMENTS;
   if (!Number.isInteger(maxAdjustments) || maxAdjustments < 0) {
     throw new RangeError(`Invalid maxAdjustments ${String(maxAdjustments)}`);
   }
   return {
     geometry,
-    easyGivens,
     // `solveA` comprueba el presupuesto; los pesos, `weightedIndex`.
     maxNodes: options.maxNodes ?? DEFAULT_MAX_NODES,
     maxAdjustments,
@@ -234,25 +233,9 @@ export function generatePuzzle(options: GenerateOptions): GeneratedPuzzle {
   for (let candidates = 1; candidates <= maxCandidates; candidates++) {
     const accepted = candidate(settings, rng, counters);
     if (!accepted) continue;
-    let { puzzle } = accepted;
-    const { grid, adjustments, uniquenessGivens } = accepted;
+    const { puzzle, grid, adjustments, uniquenessGivens } = accepted;
 
-    let givensReason: GivensReason = uniquenessGivens > 0 ? "uniqueness" : "none";
-    if (settings.easyGivens > 0) {
-      const free = shuffle(
-        rng,
-        grid.flatMap((_, cell) => (puzzle.givens.some((g) => g.cell === cell) ? [] : [cell])),
-      );
-      if (free.length < settings.easyGivens) {
-        throw new RangeError(`Cannot add ${String(settings.easyGivens)} givens`);
-      }
-      const extra = free.slice(0, settings.easyGivens).map((cell) => ({
-        cell,
-        value: at(grid, cell),
-      }));
-      puzzle = { ...puzzle, givens: [...puzzle.givens, ...extra].sort((a, b) => a.cell - b.cell) };
-      givensReason = "easy";
-    }
+    const givensReason: GivensReason = uniquenessGivens > 0 ? "uniqueness" : "none";
 
     const structure = validateStructure(puzzle);
     const solution = validateSolution(puzzle, grid);

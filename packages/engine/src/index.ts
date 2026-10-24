@@ -48,6 +48,7 @@ export {
   type GenerationStats,
   type GivensReason,
 } from "./generator/generate.ts";
+export { addGivens, type AddGivensOptions, type PuzzleWithGivens } from "./generator/givens.ts";
 export {
   MAX_TECHNIQUE_LEVEL,
   UNRATED,
