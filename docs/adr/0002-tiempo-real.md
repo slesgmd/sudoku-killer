@@ -59,3 +59,11 @@ Se usa **WebSocket con la librería `ws`** y un **protocolo propio**: JSON con e
 - Tenemos control total y una superficie mínima, a cambio de implementar y probar el heartbeat, la reconexión, el límite de velocidad y la saturación. Esto se agrega a F9 y a sus pruebas I.
 - El `Transport` en memoria para las pruebas y el servidor simulado de F8 salen de la misma interfaz.
 - Pendiente para F11: calibrar los límites con la prueba de carga.
+
+## Nota de F9 (2026-10-24): implementación
+- El adaptador `ws` está en `apps/server/src/infra/ws-transport.ts`, detrás de la interfaz `Transport`; las pruebas usan un transporte en memoria con el mismo contrato.
+- **Origen:** el handshake solo se acepta si `Origin` está en `ALLOWED_ORIGINS` (variable de entorno, separada por comas; en desarrollo, `http://localhost:5173`). Un origen ausente o ajeno recibe HTTP 403, y una ruta distinta de `/ws`, 404.
+- **Heartbeat:** ping cada 15 s; se termina la conexión que no respondió el anterior (entre 15 y 30 s sin pong). Usa el `Clock` del servidor, así la prueba avanza un reloj falso.
+- **Límites:** cubeta de comandos de 20 por segundo con ráfagas de 40 (`rate_limited`); presencia, 50 por segundo con ráfaga de 50, y ping, 2 por segundo con ráfaga de 5, descartando lo que sobra. Un mensaje binario recibe `bad_request`.
+- **Cierres:** 1001 (apagado), 1009, 1012 (sala cerrada para reconstruirla, E-16), 1013, 4000, 4001 y 4002 (sin sala en 30 s). SPEC §4.4.
+- Para F10: en desarrollo, Vite reenvía `/ws` al servidor (proxy), así el servidor sigue en 127.0.0.1 y `ALLOWED_ORIGINS` incluye el origen de `dev:lan` solo en desarrollo.

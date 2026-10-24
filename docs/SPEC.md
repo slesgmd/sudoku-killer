@@ -1,6 +1,6 @@
 # SPEC — Sudoku Killer Multijugador · v1
 
-- Versión del documento: 1.6 (F8, 2026-10-24). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2); R-20 suma el banco de puzzles (T-20.3 a T-20.5) y `PuzzleRecord` guarda `graderVersion` y `seed` (1.3); P2 y R-20 escalonan los números iniciales por dificultad y `givensReason` cambia `easy` por `difficulty` (1.4); F6 fija B, w, P, β y H, el nivel se calcula con los descartes públicos de los errores (§2.3 y §5), R-35 suma T-35.7 y T-35.8 y la nueva R-36 reúne las pruebas de la puntuación (1.5); F8 fija el destello en 1500 ms (§1.4 y T-04.3), el evento `cell.solved` guarda `level` y `graderVersion` (§5), T-31.2 describe su detector, las pruebas de esquema, T-15.1 y la base de T-32.1 se adelantan a F8, R-06 suma la preferencia local «Usar notas» (T-06.3) y la nueva R-37 cubre el arranque que falla (1.6).
+- Versión del documento: 1.7 (F9, 2026-10-24). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2); R-20 suma el banco de puzzles (T-20.3 a T-20.5) y `PuzzleRecord` guarda `graderVersion` y `seed` (1.3); P2 y R-20 escalonan los números iniciales por dificultad y `givensReason` cambia `easy` por `difficulty` (1.4); F6 fija B, w, P, β y H, el nivel se calcula con los descartes públicos de los errores (§2.3 y §5), R-35 suma T-35.7 y T-35.8 y la nueva R-36 reúne las pruebas de la puntuación (1.5); F8 fija el destello en 1500 ms (§1.4 y T-04.3), el evento `cell.solved` guarda `level` y `graderVersion` (§5), T-31.2 describe su detector, las pruebas de esquema, T-15.1 y la base de T-32.1 se adelantan a F8, R-06 suma la preferencia local «Usar notas» (T-06.3) y la nueva R-37 cubre el arranque que falla (1.6); F9 fija las cubetas de presencia y de ping, los cierres 4002 y 1012, el 403 por origen, el apodo en grafemas, la persistencia de §2.5 y el registro de las desconexiones al reconstruir (1.7).
 - Versión del protocolo: **1**
 - Fuente de las reglas: `docs/PLAN.md`, secciones 1 y 2, más las decisiones de producto de F2 (sección 1 de este documento).
 - Decisiones técnicas: `docs/adr/0001`–`0006`.
@@ -44,7 +44,7 @@ Resumen de `PLAN.md` §1 y §2. Las reglas detalladas están en la sección 6.
 | P8 | No hay chat en la v1. | — |
 | P9 | No hay límite de tiempo: el cronómetro cuenta hacia arriba. | R-07 |
 | D1 | Se puede iniciar con 1 jugador. | R-30 |
-| D2 | El código de sala tiene 6 caracteres del alfabeto `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, sin 0, O, 1, I ni L.<br>El apodo tiene de 2 a 16 caracteres y es único en la sala, sin distinguir mayúsculas.<br>**El apodo de un jugador con ficha queda reservado hasta que termina la partida**, aunque haya salido o expirado, porque sigue en el ranking. Se libera al terminar la partida. Fuera de una partida, se libera al salir o al expirar. | R-09, R-27 |
+| D2 | El código de sala tiene 6 caracteres del alfabeto `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, sin 0, O, 1, I ni L.<br>El apodo tiene de 2 a 16 caracteres (grafemas, como los ve una persona, después de NFKC y de recortar los espacios) y es único en la sala, sin distinguir mayúsculas.<br>**El apodo de un jugador con ficha queda reservado hasta que termina la partida**, aunque haya salido o expirado, porque sigue en el ranking. Se libera al terminar la partida. Fuera de una partida, se libera al salir o al expirar. | R-09, R-27 |
 | D3 | Quien sale a propósito libera su asiento al instante. Si vuelve a la misma partida con su ficha, recupera vidas, puntos y notas, siempre que haya cupo. Si tenía 0 vidas, vuelve como espectador. **Nunca entra como jugador nuevo con 3 vidas.**<br>Limitación aceptada para un grupo cerrado: borrar los datos del navegador borra la ficha y evita esta regla. | R-26 |
 | D3' | Lo mismo se aplica a quien **expiró**, es decir, quien superó los 2 minutos de desconexión. El plazo de 2 minutos solo garantiza el asiento; pasado ese plazo, el jugador vuelve si hay cupo. Si no fuera así, bastaría con desconectarse 2 minutos para recuperar las vidas. | R-13, R-26 |
 | D4 | Si no queda ningún jugador **activo**, la partida termina en derrota. Cuentan como activos los conectados y los desconectados que siguen dentro del plazo de gracia. | R-01 |
@@ -207,6 +207,11 @@ type CellState =
 ### 2.5 Persistencia
 Tablas `puzzles`, `matches` y `match_events`; ver ADR 0003. Los eventos del registro se describen en el ADR 0004 y en la sección 4.6.
 
+Esquema aprobado por el usuario en el punto de control de F9 (migración `0002_matches`):
+- `matches`: `id` (el `matchId`, lo genera el servidor), `room_code`, `puzzle_id` (clave foránea a `puzzles`), `difficulty`, `mode_id`, `scoring_params_version`, `protocol_version`, `log_version` (forma de los eventos, hoy 1), `started_at`, `ended_at` y `result`. `ended_at` y `result` son nulos a la vez; se escriben en la misma transacción que `match.ended`. Un índice parcial lista las partidas en curso.
+- `match_events`: `(match_id, seq)` como clave primaria, `type` (los 10 tipos), `payload` (jsonb, el del evento tal cual) y `server_ts` (al milisegundo). Solo se agregan filas: un trigger rechaza `UPDATE` y `DELETE`. Al leer, cada evento se valida con su esquema Zod.
+- `puzzles` nunca pierde filas: `hash` (el del manifiesto) es único, `mapping_version` guarda la equivalencia y `retired_at` marca los puzzles que salieron del manifiesto. `(generator_version, seed)` es un índice común, porque con otra equivalencia la misma semilla da otro puzzle. Solo se eligen puzzles vigentes; las partidas viejas conservan su clave foránea.
+
 ---
 
 ## 3. Máquinas de estado
@@ -364,7 +369,9 @@ interface RankingEntry { playerId; nickname; score; mistakes; scoreReachedAt; po
 | `cell.locked` | Nota sobre una celda bloqueada. |
 | `hint.none_left` | No quedan pistas. |
 | `undo.not_applicable` | `reason`: `modified` (otro jugador, una limpieza o un bloqueo cambiaron ese candidato), `not_owner` o `unknown_op`. |
-| `server.unavailable` | La base de datos no responde (ADR 0004). |
+| `server.unavailable` | La base de datos no responde (ADR 0004), la sala se está reconstruyendo tras un fallo (E-16) o el servidor tuvo un error interno. Nunca lleva detalles. |
+
+Códigos de cierre de la conexión: 1001 (apagado del servidor), 1009 (mensaje de más de 16 KiB), 1012 (la sala se cerró para reconstruirla, E-16), 1013 (saturación, E-17), 4000 (versión, E-19), 4001 (reemplazo, E-08) y 4002 (la conexión no entró a ninguna sala en 30 s, ADR 0002). Un handshake con un `Origin` ausente o fuera de `ALLOWED_ORIGINS` recibe HTTP 403, y una ruta distinta de `/ws`, 404.
 
 Un error **nunca** cambia vidas ni puntos.
 
@@ -406,7 +413,7 @@ Se envía al entrar, al volver con ficha y tras una reconstrucción del servidor
 | Límite | Valor |
 |---|---|
 | Tamaño máximo de un mensaje entrante | 16 KiB (`maxPayload`); si se supera, se cierra la conexión con el código 1009 |
-| Velocidad de comandos | Cubeta de 20 por segundo, con ráfagas de hasta 40, por conexión. `presence.select` y `sys.ping` tienen cubetas propias. |
+| Velocidad de comandos | Cubeta de 20 por segundo, con ráfagas de hasta 40, por conexión; lo que sobra recibe `rate_limited`. `presence.select` tiene su cubeta (50 por segundo, ráfaga de 50) y `sys.ping` la suya (2 por segundo, ráfaga de 5); lo que sobra de esas dos se descarta sin aviso. |
 | Difusión de presencia | Como máximo una cada 100 ms por jugador; solo se envía la última selección |
 | Heartbeat | Ping del servidor cada 15 s; la conexión se corta si pasan 30 s sin pong |
 | Ping de aplicación del cliente | Cada 5 s; sirve para sincronizar el reloj y detectar caídas desde el cliente |
@@ -656,7 +663,7 @@ Entre corchetes va la fase en que se implementa cada prueba.
 
 **R-32 Registro de eventos reproducible.**
 - T-32.1 Propiedad: para partidas aleatorias, `replay(registro)` produce el mismo estado y los mismos puntajes que el servidor en vivo. [U, F8 (reductor y modo: `decide` y `apply` paso a paso frente a `replay`, y puntajes frente a `scoreLog`); I, F9 (servidor en vivo)]
-- T-32.2 Al reiniciar el servidor, las partidas sin `endedAt` se reconstruyen. Sus jugadores quedan `disconnected` con un plazo nuevo y pueden volver con su ficha. [I, F9]
+- T-32.2 Al reiniciar el servidor, las partidas sin `endedAt` se reconstruyen. Sus jugadores quedan `disconnected` con un plazo nuevo y pueden volver con su ficha. Quien figuraba conectado recibe un evento `player.connection{disconnected}` con la hora del arranque, así el registro sigue reproduciendo el estado. [I, F9]
 - T-32.3 Un evento que no se confirmó en la base de datos no se difunde. [I, F9]
 - T-32.4 Recalcular los puntajes con otra versión de los parámetros cambia los puntajes sin modificar el registro. [U, F6]
 
@@ -710,7 +717,7 @@ Entre corchetes va la fase en que se implementa cada prueba.
 | E-13 | Se deshace una nota grupal que otro jugador modificó | `undo.not_applicable{modified}` y un aviso. | T-25.2 |
 | E-14 | Un jugador nuevo pide el apodo de alguien que salió | `nickname.taken` hasta que termine la partida. | T-27.1, T-27.2 |
 | E-15 | El servidor se reinicia durante una partida | La partida se reconstruye desde el registro, con plazos de gracia nuevos. El cronómetro sigue desde `startedAt`. Las salas en lobby se pierden. | T-32.2, T-07.3 |
-| E-16 | La base de datos falla al confirmar eventos | No se difunde nada que no esté confirmado. Los comandos que cambian el estado reciben `server.unavailable`. Si el fallo persiste más de 10 s, la sala se cierra y se reconstruye desde el registro confirmado; ningún cliente vio los eventos perdidos. | T-32.3 |
+| E-16 | La base de datos falla al confirmar eventos | No se difunde nada que no esté confirmado, ni siquiera las respuestas sin evento que vienen después. Los comandos que cambian el estado reciben `server.unavailable`; la presencia y el ping siguen. El lote se reintenta cada segundo. Si el fallo dura 10 s, la sala se cierra (las conexiones con 1012), se reconstruye desde el registro confirmado cuando la base responde, y mientras tanto `room.join` a ese código recibe `server.unavailable`. Ningún cliente vio los eventos perdidos; el cliente reenvía sus pendientes con el mismo `id`. | T-32.3, prueba I en F9 |
 | E-17 | Un cliente consume demasiado lento | Primero se descarta la presencia y después se cierra con 1013. El cliente se reconecta y recibe un snapshot. | Prueba I en F9, carga en F11 |
 | E-18 | Llega un mensaje inválido, demasiado grande o de un tipo desconocido | `bad_request` sin cambio de estado; si es demasiado grande, se cierra con 1009. | T-10.2, T-16.1 |
 | E-19 | El cliente usa otra versión del protocolo | `protocol.unsupported` y cierre con 4000. | Prueba U en F9 |

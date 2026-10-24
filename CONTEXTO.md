@@ -5,9 +5,13 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.18. **SPEC:** versión 1.6.
-- **Fase actual:** F9, servidor de salas (3–6 h). F8 (cliente con servidor simulado) se cerró el 2026-10-24 con unas 3,4 h frente a 4–8 h; F6, el mismo día; F4, F5 y F7, el 2026-10-23.
-- **Próxima tarea exacta:** F9 en curso, con el plan aprobado (`docs/PLAN.md`, F9, subtareas F9a–F9f). F9a a F9d hechas (esquema de `matches` y `match_events` aprobado por el usuario). F9e hecha (base local configurada y banco completo cargado). Sigue F9f (demostración y cierre de F9). **Antes de empezar F10:** recordarle al usuario la segunda prueba en papel de F5 (ver «Pendiente del usuario»).
+- **Plan:** versión 1.19. **SPEC:** versión 1.7.
+- **Fase actual:** F10, integración en tiempo real (5–10 h). F9 (servidor de salas) se cerró el 2026-10-24 con unas 1,9 h frente a 3–6 h; F6 y F8, el mismo día; F4, F5 y F7, el 2026-10-23.
+- **Próxima tarea exacta:** F10 en modo plan (`docs/PLAN.md`, F10). **Antes de empezar F10:** recordarle al usuario la segunda prueba en papel de F5 (ver «Pendiente del usuario»); si cambia la equivalencia, se regenera el manifiesto y se vuelve a ejecutar `bank:load`.
+- **Servidor (F9):**
+  - `apps/server/src/`: `rooms/` (actor por sala con cola y bandeja de salida ordenada), `match/` (repositorio y group commit), `infra/` (`Transport` en memoria y `ws`, reloj, azar y fichas), `config/` y `app.ts`.
+  - Esquema en SPEC §2.5. El registro se confirma antes de difundir, las partidas se reconstruyen al arrancar y E-16 cierra con 1012.
+  - Pruebas I con `createTestServer` (`apps/server/test/helpers/server.ts`): PGlite, reloj falso e inspector de filtración siempre activo.
 - **Cliente (F8):**
   - Protocolo v1 completo en `packages/protocol/src/v1/`. Reductor y modo Normal definitivos en `packages/game` (`decide`, `apply`, `replay`, `project`, `createNormalMode`); F9 los reutiliza sin reescribirlos.
   - Lo puro del banco está en `packages/bank` (dificultad, `regenerateSeed`, `canonicalPuzzle`); el servidor conserva el hash con `node:crypto` y la carga.
@@ -25,7 +29,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
   - Los números iniciales salen de `addGivens` (motor), con guarda, repartidos por cajas y con semilla. Cada semilla pertenece a una sola dificultad.
   - 2000 puzzles como manifiesto de semillas en `apps/server/bank/manifest.json` (ADR 0006), con el generador "2".
   - Tabla `puzzles` con Drizzle, `PuzzleRepository` y `loadBank` en `apps/server/src/`.
-  - F9 hereda el driver de PostgreSQL, `bank:load`, la comprobación al arrancar y la elección sin repetir.
+  - Base local cargada con el banco completo (500 vigentes por dificultad). Los puzzles que salen del manifiesto quedan retirados, no borrados (ADR 0006, nota de F9).
 - **Pendiente del usuario (antes de F10):** la segunda prueba en papel con `design/muestra-f5/muestra.html` (equivalencia versión 2); los resultados se anotan en `docs/dificultad.md`, sección 6. Si las dificultades no se distinguen, se ajusta la equivalencia, se regenera el manifiesto y se vuelve a cargar con `bank:load`; los puzzles que salen del manifiesto quedan retirados, no borrados (F9).
 - **Diseño (F7 y F8):** prototipo en `design/prototipo/` (`npx serve design/prototipo`), guía en `docs/diseno.md` (con las decisiones de las pruebas de F8) y entrega a F8 en `design/entrega-f8.md`.
 

@@ -589,3 +589,58 @@ Al aprobar, agregó:
 **Tiempo real:** unas 3,4 h, frente a 4–8 h (el plan de F8 estimaba 6–10 h). No incluye las pruebas del usuario en PC, celular y tablet.
 
 **Siguiente:** F9 en modo plan. Antes, la segunda prueba en papel de F5, que sigue pendiente del usuario.
+
+## 2026-10-24 — F9: Servidor de salas
+
+**Hecho:**
+- **Plan aprobado con ajustes del usuario:**
+  - PostgreSQL 18 local con un rol propio sin privilegios;
+  - la ruta `apps/server/.env`;
+  - el SQL en «SQL Shell (psql)»;
+  - la nota del proxy de `/ws` para F10;
+  - la revisión de las migraciones automáticas en F12;
+  - el retiro de puzzles en vez de borrarlos.
+- **F9a, piezas puras:** el apodo (en grafemas, D2) y la forma del código en `packages/protocol`; el código de sala, los asientos, el traspaso y el snapshot del lobby en `packages/game`; el esquema Zod del registro y `pickPuzzle` en `packages/bank`. El simulador de F8 y el Inicio dejaron sus copias.
+- **F9b, núcleo:**
+  - las interfaces de §8.2, con un transporte en memoria;
+  - `RoomStore` y un actor por sala con su cola y una bandeja de salida ordenada;
+  - el lobby, el ciclo de vida, las fichas de 128 bits (solo su SHA-256), los plazos, la purga, el borrado y E-08;
+  - errores sin detalles internos y un log que tapa fichas y URLs de la base;
+  - el inspector de filtración siempre activo, con una prueba de control por regla.
+- **F9c, partida en vivo:** la presencia agrupada, la idempotencia con LRU, los límites de velocidad y las pruebas I de cada T-xx. T-32.1 contra el servidor real, con una comprobación de que la propiedad detecta un evento faltante.
+- **Punto de control:** el usuario aprobó el esquema de `matches` y `match_events` y los cambios en `puzzles`.
+- **F9d, persistencia:**
+  - la migración `0002_matches` con el trigger de solo agregar;
+  - el repositorio con Drizzle, que valida cada evento al leerlo;
+  - el group commit con la confirmación antes de difundir;
+  - la reconstrucción al arrancar (T-32.2, T-07.3, E-15);
+  - E-16, con reintentos, rechazo de comandos y reconstrucción a los 10 s;
+  - E-07 después de un reinicio;
+  - el retiro de puzzles con su prueba.
+  - Las pruebas I pasaron a correr sobre PGlite.
+- **Base local:**
+  - `db:setup-local` generó la contraseña del rol y creó el rol y la base; el usuario escribió la contraseña de `postgres` en la ventana de psql;
+  - `listen_addresses` pasó a `'localhost'`, con una copia de `postgresql.conf` y el servicio reiniciado con permiso de administrador;
+  - verificado: conexión sin mostrar la URL y el puerto 5432 solo en 127.0.0.1 y ::1;
+  - `bank:load` dejó 500 puzzles vigentes por dificultad.
+- **F9e, producción:**
+  - el adaptador `ws` (orígenes permitidos, 16 KiB, heartbeat);
+  - la configuración desde el entorno con Zod y `.env.example`;
+  - `pg`, `db:migrate` y `bank:load`;
+  - el apagado ordenado;
+  - pruebas con conexiones `ws` reales y E-17.
+  - El servidor compilado reconstruyó una partida después de un corte forzado.
+- **F9f, cierre:**
+  - la demostración `demo`: dos clientes Node por `ws` juegan hasta la victoria contra la base local y contra PGlite, con una nota, un error y una pista, y validan cada mensaje;
+  - SPEC 1.7, PLAN 1.19 y las notas de F9 en los ADR 0002, 0003, 0004 y 0006.
+
+**Problemas y soluciones:**
+- **Pruebas de lint por tiempo:** con la CPU ocupada por las pruebas nuevas, el primer caso de cada archivo de lint pasaba los 5 s. La causa era la carga de la configuración y los plugins de ESLint (unos 1,8 s en reposo). Pasó a un `beforeAll` con su propio plazo, sin subir el límite de ningún caso.
+- **Un índice único que habría ocultado cambios del banco:** `(generator_version, seed)` era único, y con una equivalencia nueva la misma semilla da otro puzzle. La identidad pasó al `hash` del manifiesto.
+- **Esperas infinitas en las pruebas de E-16:** con la base caída, la bandeja de la sala espera una confirmación que no llega. La espera de las pruebas también termina cuando el destino de los eventos queda sin poder confirmar.
+- **La demostración no terminaba:** los plazos de 120 s de las salas seguían programados después del apagado. El apagado ordenado ahora detiene las salas y cancela sus plazos antes de escribir lo pendiente.
+- **La contraseña del rol nunca podía pasar por un comando:** psql recibe solo el verificador SCRAM-SHA-256, calculado con `node:crypto`. La contraseña queda únicamente en `apps/server/.env`.
+
+**Tiempo real:** unas 1,9 h, frente a 3–6 h (el plan aprobado estimaba 6–7 h). No incluye la revisión del usuario ni el tiempo de las ventanas de configuración de la base.
+
+**Siguiente:** F10 en modo plan. Antes, la segunda prueba en papel de F5, que sigue pendiente del usuario.

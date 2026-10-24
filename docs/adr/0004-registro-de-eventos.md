@@ -78,3 +78,10 @@ El costo previsto es de 10 a 20 ms de latencia, que entra en el objetivo de p95 
 - Cada entrada de jugador (`players[]` de `match.started` y `player.joined`) lleva su `connection`. Quien entra a mitad de partida puede llegar en cualquier estado de conexión, y la reproducción no tiene que adivinarlo.
 - `match.started` lleva `matchId` y `settings.changed` lleva `clientMsgId`, para la idempotencia.
 - La tabla de arriba ya refleja estos cambios. Las pruebas de propiedad T-15.1 y la base de T-32.1 (estado en vivo igual a `replay`, y puntajes iguales a `scoreLog`) corren desde F8.
+
+## Nota de F9 (2026-10-24): confirmación y fallos
+- **Group commit:** un `EventWriter` para todas las salas escribe un lote cada 10 ms, o en cuanto hay 64 eventos, en una transacción, de a un lote por vez y en orden. `matches` se inserta con su `match.started`, y se cierra en la misma transacción que su `match.ended`.
+- **Bandeja de salida por sala:** cada mensaje sale después de que se confirman los eventos anteriores, incluidas las respuestas que no generan evento (como `cell.already_solved`). Así ningún cliente ve algo que dependa de un evento sin confirmar (T-32.3). El snapshot se arma al decidir y sale en ese mismo orden. La presencia y `sys.pong` no esperan.
+- **Fallo de la base (E-16):** el lote se reintenta cada segundo y los comandos que cambian el estado reciben `server.unavailable`. A los 10 s se rechazan los lotes pendientes: sus salas se cierran con 1012 y se reconstruyen desde lo confirmado cuando la base responde.
+- **Forma del registro:** sin cambios respecto de la nota de F8. Cada evento leído se valida con `matchEventSchema` (`packages/game`), y `matches.log_version` permite versionar la forma si alguna vez cambia.
+- T-32.1 contra el servidor real: con partidas aleatorias de varios jugadores (incluidas salidas, caídas, vueltas con ficha, entradas nuevas y saltos del reloj), el estado en vivo coincide con `replay` del registro confirmado en PGlite.

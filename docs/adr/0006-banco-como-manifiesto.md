@@ -44,3 +44,9 @@ Con el banco completo tarda unos minutos (generar y calificar unas 2000 semillas
   - Entonces se genera un manifiesto nuevo. Las filas ya cargadas siguen en la base de datos, con su `generator_version` y su `grader_version`, y las partidas viejas siguen apuntando a ellas.
 - El índice único `(generator_version, seed)` permite que convivan bancos de distintas versiones del generador.
 - `pnpm test:corpus` regenera y verifica el banco completo (`bank.corpus.test.ts`). La CI verifica una muestra.
+
+## Nota de F9 (2026-10-24): cambios del manifiesto
+- **Ninguna fila se borra al cambiar el manifiesto** (pedido del usuario al aprobar F9). `loadBank` inserta los puzzles nuevos (por `hash`), reactiva los que vuelven a estar en el manifiesto y marca `retired_at` en los que ya no están, en una transacción. Devuelve cuántos insertó, cuántos ya estaban, cuántos reactivó y cuántos retiró.
+- `listIds` y la elección del servidor solo usan puzzles vigentes. Las partidas viejas conservan su clave foránea al puzzle retirado y se siguen reproduciendo.
+- El índice `(generator_version, seed)` ya no es único: una equivalencia nueva con el mismo generador da otros números iniciales para la misma semilla, y la fila vieja tiene que convivir con la nueva.
+- `bank:load` usa `DATABASE_URL`, aplica las migraciones y carga el manifiesto completo. En la base local tardó unos minutos y dejó 500 puzzles vigentes por dificultad. El servidor no arranca si alguna dificultad no tiene puzzles vigentes.

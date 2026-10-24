@@ -1,7 +1,7 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.18
-Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F5 hecha (2026-10-23) · F6 hecha (2026-10-24) · F7 hecha (2026-10-23) · F8 hecha (2026-10-24)
+Versión del plan: 1.19
+Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F5 hecha (2026-10-23) · F6 hecha (2026-10-24) · F7 hecha (2026-10-23) · F8 hecha (2026-10-24) · F9 hecha (2026-10-24)
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
 ---
@@ -119,7 +119,7 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 | F6 | Sistema de puntuación | 2–5 | F4 | Hecha | ~2,2 |
 | F7 | Diseño visual propio | 10 | F2 (puede ir en paralelo con F4–F6) | Hecha | ~1,5 |
 | F8 | Cliente con servidor local simulado | 4–8 | F4, F7 | Hecha | ~3,4 |
-| F9 | Servidor de salas | 3–6 | F3, F5, F6 | Pendiente | |
+| F9 | Servidor de salas | 3–6 | F3, F5, F6 | Hecha | ~1,9 |
 | F10 | Integración en tiempo real | 5–10 | F8, F9 | Pendiente | |
 | F11 | Pruebas integrales, carga y seguridad | 3–6 | F10 | Pendiente | |
 | F12 | Despliegue privado | 2–4 | F11 | Pendiente | |
@@ -574,7 +574,16 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | F9c | Partida en vivo, presencia, idempotencia, límites de velocidad y T-32.1 contra el servidor. | Hecha |
 | F9d | Punto de control (esquema aprobado por el usuario) y después persistencia: `matches` y `match_events`, group commit, reconstrucción, E-16 y retiro de puzzles. | Hecha |
 | F9e | Base local configurada con el script aprobado por el usuario (`db:setup-local`) y producción: `ws`, `pg`, configuración, `db:migrate` y `bank:load`. | Hecha |
-| F9f | Demostración y cierre. | Pendiente |
+| F9f | Demostración (`demo`: dos clientes Node por `ws` hasta la victoria) y cierre. | Hecha |
+
+**Estado:** hecha el 2026-10-24, en unas 1,9 h, frente a 3–6 h. El plan aprobado estimaba 6–7 h por la persistencia, la reconstrucción, el adaptador `ws` y la demostración. Las horas no incluyen la revisión del usuario ni las ventanas de la configuración de la base.
+- **Desviaciones registradas:**
+  - Las reglas puras de la sala (apodo, código, asientos, traspaso y snapshot del lobby) quedaron en `packages/protocol` y `packages/game`, y el simulador de F8 y el Inicio las usan. El apodo se mide en grafemas (SPEC 1.7).
+  - El esquema Zod del registro está en `packages/game`.
+  - El doble en memoria del repositorio de partidas se reemplazó por el repositorio real sobre PGlite en todas las pruebas, con un envoltorio que hace fallar la base a pedido (E-16).
+  - Las pruebas de lint del repositorio cargan ESLint en un `beforeAll`: con la CPU ocupada por las pruebas nuevas, el primer caso de cada archivo pasaba los 5 s. Se investigó la causa (la carga de la configuración y los plugins) y no se subió ningún límite de los casos.
+  - La base local se configuró con `db:setup-local` (la contraseña del rol sale de `node:crypto` y psql solo recibe su verificador SCRAM-SHA-256) y `listen_addresses` pasó a `'localhost'`, con una copia de `postgresql.conf`.
+- Valores nuevos de la SPEC 1.7: las cubetas de presencia y de ping, los cierres 4002 y 1012, el 403 por origen y el registro de las desconexiones al reconstruir. Notas de F9 en los ADR 0002, 0003, 0004 y 0006.
 
 ### F10 — Integración en tiempo real (5–10 h; antes 4–8 h; original 15–25 h)
 **Tareas:**
@@ -708,3 +717,9 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
   - F10 suma la prioridad 3 completa de `entrega-f8.md`, los estados de red, la decisión 3 y los pendientes de su §4, con su criterio de aceptación. Pasa de 4–8 h a 5–10 h, y el total de la v1 queda en unas 46–68 h.
   - El tema oscuro va a `docs/IDEAS_FUTURAS.md`.
   - SPEC 1.6; ADR 0001 (i18n propio) y ADR 0004 (forma definitiva de los eventos), con notas de F8.
+- **1.19:** F9 hecha (~1,9 h reales frente a 3–6 h).
+  - Servidor de salas autoritativo: `RoomStore` y una cola por sala, lobby y ciclo de vida completos, fichas de 128 bits (solo su SHA-256), plazos de 120 s, purga y borrado, idempotencia, límites de velocidad, saturación, heartbeat y lista de orígenes permitidos.
+  - Persistencia con el esquema aprobado en el punto de control: `matches` y `match_events` (solo se agregan filas), group commit con confirmación antes de difundir, reconstrucción tras un reinicio y fallo de la base (E-16). Los puzzles que salen del manifiesto se retiran, no se borran.
+  - Base local en PostgreSQL 18 con un rol sin privilegios, solo en localhost; banco completo cargado. Pruebas con PGlite, el inspector de filtración siempre activo y T-32.1 contra el servidor real.
+  - F12 suma la revisión de las migraciones automáticas al arrancar.
+  - SPEC 1.7 y notas de F9 en los ADR 0002, 0003, 0004 y 0006.

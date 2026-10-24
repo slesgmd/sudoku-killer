@@ -63,3 +63,10 @@ La v1 corre en una sola instancia (`PLAN.md` §3), con las interfaces `RoomStore
 - Los despliegues de F12 interrumpen la partida unos segundos, pero no la pierden.
 - El arranque tarda más cuantas más partidas haya en curso. Es despreciable con la carga prevista; hay que medirlo en F11.
 - La tabla `match_events` crece sin límite. En la v1 se conserva todo; la retención se revisa en F13.
+
+## Nota de F9 (2026-10-24): esquema y reconstrucción
+- **Esquema aprobado por el usuario en el punto de control de F9** (migración `0002_matches`, SPEC §2.5): `matches` suma `log_version` y un índice parcial de las partidas en curso; `match_events` tiene un trigger que rechaza `UPDATE` y `DELETE`.
+- **El banco nunca pierde filas.** `puzzles` suma `hash` (único), `mapping_version` y `retired_at`. El índice `(generator_version, seed)` deja de ser único: con otra equivalencia, la misma semilla da otro puzzle, y `ON CONFLICT DO NOTHING` se habría quedado con la fila vieja. Detalle en el ADR 0006.
+- **Reconstrucción:** al arrancar, antes de aceptar conexiones, el servidor reproduce las partidas sin `ended_at` y registra un `player.connection{disconnected}` por cada jugador que figuraba conectado. Todos los que tienen asiento reciben un plazo nuevo de 120 s. La caché de idempotencia se repuebla con los `clientMsgId` de los eventos.
+- **Base de datos:** `pg` en producción y en desarrollo (PostgreSQL 18 local, con un rol propio sin privilegios y la base `sudoku_killer`, creados con `db:setup-local`); PGlite en memoria en las pruebas, con las mismas migraciones. `DATABASE_URL` solo llega por el entorno (`apps/server/.env` en desarrollo) y nunca se registra.
+- **Migraciones al arrancar:** el servidor aplica las pendientes al iniciar (una sola instancia). En F12 hay que revisarlo: en producción, una migración destructiva no debe aplicarse sola.
