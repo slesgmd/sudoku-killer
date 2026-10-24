@@ -50,7 +50,9 @@ Los valores propuestos no llegaban al mínimo sobre alguna superficie o tinte y 
 |---|---|---|
 | `--cell-line` | `= border` | Línea de celda, 1 px |
 | `--box-line` | `= ink` | Línea de caja, 2 px |
-| `--cage-line` | `#827968` | Jaula: 1 px discontinua a 3 px del borde; 2 px en la jaula seleccionada |
+| `--cage-line` | `#827968` | Jaula: línea discontinua a 3 px del borde |
+| `--cage-width` | `1.5px` | Grosor de la línea de jaula (F8; antes 1 px) |
+| `--cage-width-selected` | `2.5px` | Grosor en la jaula de la celda seleccionada (F8; antes 2 px) |
 | `--selection-tint` | `#E3E6D4` | Celda propia (con borde accent de 2 px) |
 | `--related-tint` | `#EFEDE2` | Fila, columna, caja y jaula de la celda seleccionada |
 | `--danger-tint` | `#F7E6E1` | Fondo del error durante el destello |
@@ -171,7 +173,8 @@ Disposición: 3 × 3 en 1280; 9 en fila en 768; 5 + 4 escalonadas en 360 y en ho
 ### 5.4 Capas de notas
 - **Modo:** segmentado Número / Notas (atajo N). El espectador solo tiene Notas.
 - **Capa de escritura:** Personal / Grupal (atajo G), activa solo en modo Notas.
-- **Visibilidad:** un botón de ojo por capa (`.vis`). Oculta: ojo tachado, borde discontinuo y `aria-pressed="false"`.
+- **Visibilidad:** un botón de ojo por capa (`.vis`). Oculta: ojo tachado, borde discontinuo y `aria-pressed="false"`. En escritorio se ve la forma corta («Personales», «Grupales») bajo «Mostrar notas»; el nombre accesible es el completo («Notas personales»). Desde 320 px y por debajo de 360, la capa y su ojo van en dos filas.
+- **«Usar notas» (F8, preferencia local):** un interruptor de Ajustes, activado por defecto, que se guarda solo en el navegador (`localStorage`, `sk:pref:useNotes`) y no viaja por el protocolo (SPEC, R-06). Desactivado, se ocultan el selector Número / Notas, la capa de escritura, la visibilidad, la lupa y «Borrar»; el tablero no dibuja notas, N, G y Supr no hacen nada, y las teclas 1–9 solo colocan números. «Usar notas» va primero en Ajustes y recibe el foco inicial.
 
 ### 5.5 Jugadores
 - **Monograma** (`.mono`, 32 px; 24 y 20 px en tamaños menores): círculo con el color del jugador y la inicial en paper. **Desconectado:** fondo paper, inicial y **contorno discontinuo** de su color. **Asiento libre:** círculo discontinuo border y «Asiento libre» / «N asientos libres».
@@ -188,7 +191,7 @@ Disposición: 3 × 3 en 1280; 9 en fila en 768; 5 + 4 escalonadas en 360 y en ho
 | Aviso integrado (`.notice`) | Panel paper con borde ink, icono info | Información fija en la pantalla (espectador, sala borrada, traspaso) |
 | Nota de campo (`.fnote`) y error de campo (`.ferr`) | Texto 13 px con icono info o danger | Formulario de Entrar |
 
-Ubicación del aviso breve: en la línea de estado (360 y 768), bajo los jugadores (1280) o superpuesto a la derecha del tablero (horizontal).
+Ubicación del aviso breve: en la línea de estado (360 y 768), bajo los jugadores (1280) o superpuesto a la derecha del tablero (horizontal). El texto de cada aviso queda también en el registro de actividad, con un icono de información: la decisión 4 (avisos de 6 s) depende de eso.
 
 ### 5.7 Diálogos (`.scrim` + `.dialog`)
 Fondo ink al 45 %; panel paper de hasta 440 px, radio 10, sombra flotante. Título 18/600, cuerpo 15/22, acciones a la derecha (en móvil, apiladas a todo el ancho con la principal arriba). `role="dialog"` o `alertdialog`, `aria-modal`, foco atrapado, Esc cancela cuando hay cancelar, foco inicial en la acción segura («Cancelar», «Quedarme»). Sin botón de cancelar, el diálogo es bloqueante.
@@ -203,7 +206,7 @@ Fondo ink al 45 %; panel paper de hasta 440 px, radio 10, sombra flotante. Títu
 - **Espera** (`.waiting`): bloque surface con tres puntos animados y el texto «Esperando a que …».
 - **Puntos en botón** (`.bdots`): para «Entrando…» y cargas.
 - **Esqueleto** (`.skel`) para la carga inicial.
-- **Registro de actividad:** monograma de 20 px, texto «Tomás · error en F7 C3» y tiempo de partida en tnum. En 360 y 768 queda plegado en un botón que muestra la última entrada (`aria-expanded`); en horizontal, detrás de un botón de cabecera.
+- **Registro de actividad (más sobrio desde F8):** monograma de 20 px, texto «Tomás · error en F7 C3» y tiempo de partida en tnum. En 1280, una sola línea con la última entrada bajo los jugadores y «Ver actividad», que abre el historial completo en un diálogo. En 360 y 768 queda plegado en un botón que muestra la última entrada (`aria-expanded`); en horizontal, detrás de un botón de cabecera. Una región oculta con `role="log"` anuncia cada entrada nueva, y el historial incluye los textos de los avisos.
 - **Menú compacto** (`.menu`): Ayuda, Ajustes y Salir en móvil y horizontal.
 - **Marcador de foto** (`.ph`): rectángulo surface con aspa y leyenda de la foto prevista (ver `design/fotos.md`).
 - **Controles de prueba** (`.testbar`, barra oscura): solo del prototipo, **no forman parte de la interfaz**.
@@ -212,7 +215,7 @@ Fondo ink al 45 %; panel paper de hasta 440 px, radio 10, sombra flotante. Títu
 
 ### 6.1 Dibujo
 - Celda paper; líneas de celda de 1 px (border) y de caja de 2 px (ink).
-- **Jaula:** línea discontinua de 1 px a 3 px hacia dentro, con esquinas cóncavas resueltas; 2 px en la jaula de la celda seleccionada.
+- **Jaula:** línea discontinua de 1,5 px (`--cage-width`) a 3 px hacia dentro, con esquinas cóncavas resueltas; 2,5 px (`--cage-width-selected`) en la jaula de la celda seleccionada. Se distingue de la línea de caja (2 px continua en ink) por el trazo discontinuo, el color y la separación de 3 px. El contraste de `--cage-line` no cambia: 4,05 sobre paper, 3,39 sobre selección, 3,66 sobre relación y 3,55 sobre error (mínimo 3:1).
 - **Suma:** arriba a la izquierda de la celda ancla (la de menor índice), con el fondo de la celda para cortar la línea.
 - **Variante A (elegida): franja superior reservada.** Todas las celdas reservan arriba la altura de la suma. Las notas ocupan el resto en una cuadrícula 3 × 3 con **posición fija por dígito** en todo el tablero.
 - **Notas:** grupales en ink 600; personales en accent 400 subrayadas; en las dos capas, ink 600 subrayado en accent.
@@ -229,7 +232,7 @@ Fondo ink al 45 %; panel paper de hasta 440 px, radio 10, sombra flotante. Títu
 | Error | danger-tint, dígito danger **tachado** con la **inicial del autor** a su lado, sacudida breve; 1500 ms y lo ven todos |
 | Selección propia | selection-tint y borde accent de 2 px |
 | Relacionada | related-tint (fila, columna, caja y jaula) |
-| Jaula seleccionada | Línea de jaula de 2 px |
+| Jaula seleccionada | Línea de jaula de 2,5 px |
 | Presencia | Contorno de 1,5 px del color del compañero e inicial arriba a la derecha; «+N» si hay varios; 2 px más adentro si coincide con tu selección |
 | Mismo dígito | **Anillo ink** de 1,5 px alrededor de los dígitos bloqueados iguales al de la celda seleccionada; sin color ni fondo; siempre activo |
 
@@ -246,7 +249,7 @@ Fondo ink al 45 %; panel paper de hasta 440 px, radio 10, sombra flotante. Títu
 | 7 | Presencia | Contorno de 1,5 px y la inicial arriba a la derecha; «+N» si hay varios. Ocupa la franja libre de la variante A. Nunca tapa un dígito: el dígito se centra bajo la suma. |
 | 8 | Suma de jaula | Siempre visible, con el fondo de la celda para cortar la línea. |
 | 9 | Notas | Debajo de todo lo anterior. La capa oculta no se dibuja. |
-| 10 | Línea de jaula | 2 px en la jaula seleccionada, 1 px en el resto. |
+| 10 | Línea de jaula | 2,5 px en la jaula seleccionada, 1,5 px en el resto. |
 | 11 | Fondo | danger-tint, luego selection-tint, luego related-tint, luego paper. |
 
 ## 7. Accesibilidad
@@ -258,7 +261,7 @@ Fondo ink al 45 %; panel paper de hasta 440 px, radio 10, sombra flotante. Títu
 - **Etiqueta de cada celda:** «Fila 2, columna 7, jaula de 10, vacía, notas grupales 1 y 2, notas personales 2 y 4», «…, 3, resuelta por Rafa», «…, pista usada por Valeria», «…, pendiente de confirmación», «…, vacía; Tomás acaba de fallar con un 3», más «mismo número que la celda seleccionada» y «Valeria está aquí».
 - **Regiones vivas:** avisos con `role="status"` (polite) o `role="alert"` (assertive) según la tabla de estados; región oculta `aria-live` con la última actividad; `aria-busy` durante las cargas; cronómetro `role="timer"` con `aria-live="off"`.
 - **Diálogos:** foco atrapado, Esc, foco inicial en la acción segura y vuelta al control que lo abrió (confirmado en F8, con prueba de componente).
-- **Foco inicial de Ajustes (resuelto en F8):** en el interruptor, en el lobby y en la partida, porque es el único control del diálogo y la razón de abrirlo. Activarlo exige Espacio o Intro, así que no hay cambios por accidente. «Cerrar» y la X cierran, igual que Esc.
+- **Foco inicial de Ajustes (resuelto en F8):** en el primer interruptor («Usar notas»), en el lobby y en la partida, porque los interruptores son los controles del diálogo y la razón de abrirlo. Activarlo exige Espacio o Intro, así que no hay cambios por accidente. «Cerrar» y la X cierran, igual que Esc.
 - **Movimiento reducido:** con `prefers-reduced-motion`, sin sacudida del error ni animación de los puntos.
 - **Texto oculto** donde la forma no basta: puntos, vidas, «Puesto 2, empate», código deletreado («H P Q 6 N Z»).
 - **Áreas táctiles** de 44 px, salvo la celda del tablero a 360 px (37,3 px; sección 4).

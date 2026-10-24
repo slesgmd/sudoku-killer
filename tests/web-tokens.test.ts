@@ -62,9 +62,13 @@ describe("F8 checklist: tokens.css is the only source of colors and fonts", () =
     expect(findings).toEqual([]);
   });
 
-  it("tokens.css keeps the values of the F7 prototype", () => {
+  it("tokens.css keeps the values of the F7 prototype, plus the tokens added in F8", () => {
     const prototype = path.resolve(import.meta.dirname, "../design/prototipo/tokens.css");
-    expect(declarations(TOKENS)).toEqual(declarations(prototype));
+    // Agregados en F8, tras el punto de control (docs/diseno.md §2.3).
+    const added = ["--cage-width: 1.5px", "--cage-width-selected: 2.5px"];
+    const current = declarations(TOKENS);
+    expect(current.filter((d) => !added.includes(d))).toEqual(declarations(prototype));
+    for (const token of added) expect(current).toContain(token);
   });
 
   it("Inter and Newsreader are local woff2 files with their OFL license, never inlined", () => {

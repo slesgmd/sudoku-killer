@@ -3,6 +3,7 @@
 // - `skew`: desfase del reloj del servidor respecto del navegador, en milisegundos (T-07.2).
 import { createRng } from "@sudoku-killer/engine";
 import type { Transport } from "../../transport/types.ts";
+import { reportLoadTime } from "../load-time.ts";
 import { loadPuzzle } from "./puzzles.ts";
 import { SimServer } from "./server.ts";
 import { createSimTransport } from "./transport.ts";
@@ -31,6 +32,7 @@ export function createDevTransport(params: URLSearchParams): Transport {
         console.info(
           `[sim] ${difficulty}: seed ${String(loaded.entry.seed)} loaded in ${loaded.ms.toFixed(0)} ms`,
         );
+        reportLoadTime({ ms: loaded.ms, difficulty, seed: loaded.entry.seed });
         return loaded;
       },
     });

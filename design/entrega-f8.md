@@ -52,7 +52,7 @@ No resueltos por el prototipo; se deciden en F8 o en la fase que se indica:
 - **Pantallas fuera de la partida entre 600 y 1023 px:** el prototipo solo dibuja móvil y escritorio.
 - ~~**Aviso de traspaso en la salida durante la partida**~~: resuelto en F8. Se agrega, con la condición de la decisión 2.
 - **Transiciones que no están dibujadas:** de «Entrando…» al lobby, del lobby a la partida para quienes esperan, de la partida a Resultados (automática o solo con «Ver resultados»), de Resultados al lobby para los demás, llegada directa a una partida en curso, vuelta con ficha a una sala llena y regreso al estado normal tras reconectar.
-- ~~**Foco inicial de Ajustes**~~: resuelto en F8. Va al interruptor, y al cerrar cualquier diálogo el foco vuelve al control que lo abrió (`docs/diseno.md`, sección 7).
+- ~~**Foco inicial de Ajustes**~~: resuelto en F8. Va al primer interruptor, y al cerrar cualquier diálogo el foco vuelve al control que lo abrió (`docs/diseno.md`, sección 7).
 - **Área táctil de la celda a 360 px:** 37,3 px, por debajo de los 44 px del sistema. Verificar en el celular junto con el anillo (decisión 6) y con las notas de 8 px, que dependen de la lupa.
 - **«Compartir»** en el lobby: no tiene comportamiento definido (por ejemplo, la hoja de compartir del sistema con un enlace a la sala).
 - ~~**Asignación de colores de jugador**~~: resuelta en F8. El asiento N usa `--player-(N + 1)` (`docs/diseno.md`, sección 2.4).

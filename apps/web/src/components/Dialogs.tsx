@@ -1,5 +1,5 @@
 // Diálogos de la partida (docs/diseno.md §9): confirmación de pista, de salida y Ajustes.
-import { useRef } from "react";
+import { useRef, type RefObject } from "react";
 import { PARAMS_V1 } from "@sudoku-killer/scoring";
 import type { PublicPlayer } from "@sudoku-killer/protocol";
 import { t } from "../i18n/index.ts";
@@ -87,48 +87,86 @@ export function LeaveDialog({
   );
 }
 
-/** Ajustes: el foco inicial va al interruptor, que es el único control (docs/diseno.md). */
+/** Un interruptor de Ajustes (§5.8): etiqueta, ayuda y «Sí» / «No» bajo la pista. */
+function Switch({
+  label,
+  help,
+  checked,
+  onChange,
+  switchRef,
+}: {
+  readonly label: string;
+  readonly help: string;
+  readonly checked: boolean;
+  readonly onChange: (value: boolean) => void;
+  readonly switchRef?: RefObject<HTMLButtonElement | null>;
+}) {
+  return (
+    <button
+      ref={switchRef}
+      className="switch"
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => {
+        onChange(!checked);
+      }}
+    >
+      <span className="stext">
+        <span className="slabel">{label}</span>
+        <span className="shelp">{help}</span>
+      </span>
+      <span className="sside" aria-hidden="true">
+        <span className="track" />
+        <span className="sstate">{checked ? t("settings.on") : t("settings.off")}</span>
+      </span>
+    </button>
+  );
+}
+
+/**
+ * Ajustes: el foco inicial va al primer interruptor (docs/diseno.md §7). «Usar notas» es una
+ * preferencia local del navegador; la limpieza automática se guarda en el servidor.
+ */
 export function SettingsDialog({
+  useNotes,
+  onUseNotes,
   autoClean,
   onChange,
   onClose,
 }: {
+  readonly useNotes: boolean;
+  readonly onUseNotes: (value: boolean) => void;
   readonly autoClean: boolean;
   readonly onChange: (value: boolean) => void;
   readonly onClose: () => void;
 }) {
-  const toggle = useRef<HTMLButtonElement>(null);
+  const first = useRef<HTMLButtonElement>(null);
   return (
     <Dialog
       title={t("settings.title")}
       closeLabel={t("dialog.close")}
       onCancel={onClose}
-      initialFocus={toggle}
+      initialFocus={first}
       actions={
         <button className="btn secondary" type="button" onClick={onClose}>
           {t("dialog.close")}
         </button>
       }
     >
-      <button
-        ref={toggle}
-        className="switch"
-        type="button"
-        role="switch"
-        aria-checked={autoClean}
-        onClick={() => {
-          onChange(!autoClean);
-        }}
-      >
-        <span className="stext">
-          <span className="slabel">{t("settings.autoClean")}</span>
-          <span className="shelp">{t("settings.autoCleanHelp")}</span>
-        </span>
-        <span className="sside" aria-hidden="true">
-          <span className="track" />
-          <span className="sstate">{autoClean ? t("settings.on") : t("settings.off")}</span>
-        </span>
-      </button>
+      <Switch
+        switchRef={first}
+        label={t("settings.useNotes")}
+        help={t("settings.useNotesHelp")}
+        checked={useNotes}
+        onChange={onUseNotes}
+      />
+      <Switch
+        label={t("settings.autoClean")}
+        help={t("settings.autoCleanHelp")}
+        checked={autoClean}
+        onChange={onChange}
+      />
       <p className="small muted">{t("settings.motion")}</p>
     </Dialog>
   );

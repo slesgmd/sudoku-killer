@@ -513,6 +513,8 @@ Entre corchetes va la fase en que se implementa cada prueba.
 **R-06 Notas en dos capas.** Cada jugador elige qué capas ve (personal, grupal o ambas) y en cuál escribe.
 - T-06.1 El selector de vista oculta y muestra cada capa por separado, y el selector de escritura determina el `layer` que se envía. [C, F8]
 - T-06.2 Un `note.add` personal llega solo al dueño; uno grupal llega a todos. [I, F9]
+- **Preferencia local del cliente, «Usar notas» (F8):** cada jugador puede desactivar las notas en Ajustes. Se guarda solo en su navegador, no cambia el protocolo ni `settings.update` y no afecta a los demás. Desactivada, el cliente oculta los controles de notas y no dibuja notas; las notas existentes no se borran.
+- T-06.3 Con «Usar notas» desactivado no se ve ningún control de notas, y N, G y Supr no envían mensajes; las teclas 1–9 solo colocan números. El ajuste no se envía al servidor. [C, F8]
 
 **R-07 Temporizador común.** Lo controla el servidor, no se pausa y no tiene límite (P9).
 - T-07.1 `match.started` y el snapshot incluyen `startedAt` y `serverNow`. No existe ningún comando de pausa: el esquema rechaza `match.pause` con `bad_request`. [U+I, F9]

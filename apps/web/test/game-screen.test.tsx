@@ -161,9 +161,10 @@ describe("T-25.2 undo of a group note that someone else changed", () => {
       replyTo: undo?.id ?? "",
       payload: { code: "undo.not_applicable", reason: "modified" },
     });
-    expect(
-      screen.getByText("No se pudo deshacer: otra persona cambió esa nota grupal después."),
-    ).toBeTruthy();
+    const notice = "No se pudo deshacer: otra persona cambió esa nota grupal después.";
+    expect(document.querySelector(".toast")?.textContent).toBe(notice);
+    // Decisión 4: lo que dice el aviso queda también en el historial.
+    expect(screen.getByRole("log").textContent).toBe(notice);
     expect(cellButton(2, 2).getAttribute("aria-label")).toMatch(/notas grupales 4$/);
   });
 });

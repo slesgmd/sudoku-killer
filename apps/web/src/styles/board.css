@@ -115,16 +115,16 @@
   bottom: -2px;
 }
 
-/* Líneas de jaula: 1 px discontinua, 3 px hacia dentro; 2 px en la jaula seleccionada */
+/* Líneas de jaula: discontinuas, 3 px hacia dentro (--cage-width; --cage-width-selected en la jaula seleccionada) */
 .cg {
-  --w: 1px;
+  --w: var(--cage-width);
   position: absolute;
   pointer-events: none;
   z-index: 1;
   border: 0 dashed var(--cage-line);
 }
 .cg.hot {
-  --w: 2px;
+  --w: var(--cage-width-selected);
 }
 .cg.t {
   top: 3px;

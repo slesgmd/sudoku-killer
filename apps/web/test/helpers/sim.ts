@@ -23,12 +23,15 @@ export interface HarnessOptions {
   readonly clientNow?: () => number;
   /** Primera semilla de la dificultad, en lugar de una al azar. */
   readonly first?: boolean;
+  /** Latencia del transporte simulado, en milisegundos (`?lat=`). */
+  readonly latencyMs?: number;
 }
 
 export function createHarness({
   serverNow = () => Date.now(),
   clientNow,
   first = true,
+  latencyMs = 0,
 }: HarnessOptions = {}): SimHarness {
   let solution: readonly number[] = [];
   const rng = createRng(7);
@@ -47,7 +50,7 @@ export function createHarness({
     },
   });
   const client = new GameClient({
-    transport: createSimTransport(server),
+    transport: createSimTransport(server, latencyMs),
     ...(clientNow ? { now: clientNow } : {}),
   });
   const settle = async () => {

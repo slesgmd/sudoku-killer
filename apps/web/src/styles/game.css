@@ -634,3 +634,65 @@
     min-height: 44px;
   }
 }
+
+/* Actividad en una línea (escritorio) y su historial */
+.actline {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+  padding-top: var(--s-2);
+  border-top: var(--bw) solid var(--border);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+}
+.actline .stxt,
+.statusbtn .stxt {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.actline .btn {
+  flex: none;
+  padding: 0 var(--s-2);
+  margin-right: calc(-1 * var(--s-2));
+}
+.actmark {
+  display: inline-flex;
+  flex: none;
+  width: 20px;
+  justify-content: center;
+  color: var(--info);
+}
+.actmark svg {
+  width: 16px;
+  height: 16px;
+}
+.acthistory {
+  max-height: 60dvh;
+  overflow-y: auto;
+  margin: 0 calc(-1 * var(--s-2));
+  padding: 0 var(--s-2);
+}
+.acthistory .actrow {
+  min-height: 36px;
+  border-bottom: var(--bw) solid var(--border);
+}
+.acthistory .actrow:last-child {
+  border-bottom: 0;
+}
+
+/* Los botones de visibilidad no se salen de su columna */
+.visrow .btn {
+  min-width: 0;
+  padding: 0 var(--s-2);
+}
+
+/* Desde 320 px: la capa de escritura y su ojo, en dos filas */
+@media (max-width: 359px) {
+  .layers {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

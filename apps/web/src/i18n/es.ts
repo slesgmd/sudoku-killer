@@ -60,9 +60,11 @@ export const es = {
   "layer.label": "Capa de escritura",
   "layer.personal": "Personal",
   "layer.group": "Grupal",
-  "visibility.label": "Capas visibles",
+  "visibility.label": "Mostrar notas",
   "visibility.personal": "Notas personales",
+  "visibility.personalShort": "Personales",
   "visibility.group": "Notas grupales",
+  "visibility.groupShort": "Grupales",
   "visibility.shown": "visibles",
   "visibility.hidden": "ocultas",
   "tool.clear": "Borrar",
@@ -96,6 +98,7 @@ export const es = {
   // Actividad
   "activity.label": "Actividad",
   "activity.empty": "Todavía no hay jugadas.",
+  "activity.open": "Ver actividad",
   "activity.solved": "{name} · acierto en {cell}",
   "activity.mistake": "{name} · error en {cell}",
   "activity.hint": "{name} · pista en {cell}",
@@ -149,6 +152,9 @@ export const es = {
   "leave.stay": "Quedarme",
   "leave.confirm": "Salir de la sala",
   "settings.title": "Ajustes",
+  "settings.useNotes": "Usar notas",
+  "settings.useNotesHelp":
+    "Si lo desactivas, se ocultan las notas y sus controles, y solo colocas números. Se guarda solo en este navegador.",
   "settings.autoClean": "Limpiar notas personales automáticamente",
   "settings.autoCleanHelp":
     "Cuando alguien acierta un número, ese número se quita de tus notas personales en su fila, columna, caja y jaula. Las notas grupales se limpian siempre.",

@@ -13,6 +13,7 @@ import type {
 } from "@sudoku-killer/protocol";
 import { t } from "../i18n/index.ts";
 import type { Transport } from "../transport/types.ts";
+import { USE_NOTES_KEY, browserPrefs, type Prefs } from "./prefs.ts";
 import {
   INITIAL_STATE,
   me,
@@ -38,6 +39,8 @@ export interface GameClientOptions {
   readonly transport: Transport;
   /** Reloj del cliente; puede estar desfasado respecto del servidor. */
   readonly now?: () => number;
+  /** Preferencias locales (por defecto, localStorage). */
+  readonly prefs?: Prefs;
 }
 
 interface UndoGroup {
@@ -76,10 +79,13 @@ export class GameClient {
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
   /** Último asiento conocido de cada jugador, para su color (docs/diseno.md §2.4). */
   private readonly seats = new Map<string, number>();
+  private readonly prefs: Prefs;
 
-  constructor({ transport, now = () => Date.now() }: GameClientOptions) {
+  constructor({ transport, now = () => Date.now(), prefs = browserPrefs }: GameClientOptions) {
     this.transport = transport;
     this.now = now;
+    this.prefs = prefs;
+    this.state = { ...INITIAL_STATE, notesEnabled: prefs.get(USE_NOTES_KEY) !== "0" };
     this.idPrefix = Math.floor(now()).toString(36);
     this.unsubscribe = transport.subscribe((message) => {
       this.receive(message);
@@ -160,7 +166,7 @@ export class GameClient {
 
   /** Inicio mínimo de F8: crea la sala, elige la dificultad e inicia la partida. */
   start(nickname: string, difficulty: Difficulty): void {
-    this.set({ ...INITIAL_STATE, phase: "entering" });
+    this.set({ ...INITIAL_STATE, phase: "entering", notesEnabled: this.state.notesEnabled });
     this.startRequest = { id: this.send("room.create", { nickname }), difficulty };
     if (this.pingTimer === null) {
       this.ping();
@@ -178,7 +184,11 @@ export class GameClient {
   backHome(): void {
     this.undoStack.length = 0;
     this.undoRun = null;
-    this.set({ ...INITIAL_STATE, settings: this.state.settings });
+    this.set({
+      ...INITIAL_STATE,
+      settings: this.state.settings,
+      notesEnabled: this.state.notesEnabled,
+    });
   }
 
   select(cell: number | null): void {
@@ -202,6 +212,7 @@ export class GameClient {
   }
 
   toggleMode(): void {
+    if (!this.state.notesEnabled) return;
     if (!this.canPlace()) {
       this.set({ mode: "notes" });
       return;
@@ -214,6 +225,7 @@ export class GameClient {
   }
 
   toggleLayer(): void {
+    if (!this.state.notesEnabled) return;
     this.set({ layer: this.state.layer === "personal" ? "group" : "personal" });
   }
 
@@ -223,6 +235,12 @@ export class GameClient {
 
   dismissToast(id: number): void {
     this.set({ toasts: this.state.toasts.filter((toast) => toast.id !== id) });
+  }
+
+  /** «Usar notas» (preferencia local, sin protocolo): sin notas, el modo queda en Número. */
+  setNotesEnabled(notesEnabled: boolean): void {
+    this.prefs.set(USE_NOTES_KEY, notesEnabled ? "1" : "0");
+    this.set(notesEnabled ? { notesEnabled } : { notesEnabled, mode: "number" });
   }
 
   setAutoClean(autoCleanPersonalNotes: boolean): void {
@@ -253,13 +271,13 @@ export class GameClient {
   input(digit: number): void {
     const cell = this.editableCell();
     if (cell === null) return;
-    if (this.state.mode === "number" && this.canPlace()) {
+    if ((this.state.mode === "number" || !this.state.notesEnabled) && this.canPlace()) {
       const id = this.send("cell.place", { cell, digit });
       const pending = new Map(this.state.pending).set(cell, { id, digit });
       this.set({ pending });
       return;
     }
-    if (this.state.mode === "notes" || !this.canPlace()) {
+    if (this.state.notesEnabled && (this.state.mode === "notes" || !this.canPlace())) {
       const layer = this.state.layer;
       const present = ((viewNotes(this.state, layer)[cell] ?? 0) & digitBit(digit)) !== 0;
       this.noteOps([{ layer, op: present ? "remove" : "add", cell, digit }]);
@@ -269,7 +287,7 @@ export class GameClient {
   /** «Borrar»: quita las notas de la capa activa en la celda (un grupo de deshacer, decisión 5). */
   clearNotes(): void {
     const cell = this.editableCell();
-    if (cell === null) return;
+    if (cell === null || !this.state.notesEnabled) return;
     const layer = this.state.layer;
     const mask = viewNotes(this.state, layer)[cell] ?? 0;
     const ops: Omit<PendingNote, "id">[] = [];
@@ -323,11 +341,13 @@ export class GameClient {
 
   // --- Avisos y actividad ---
 
+  /** Un aviso breve; su texto también queda en el historial de actividad (decisión 4). */
   private toast(role: Toast["role"], text: string): void {
     this.set({ toasts: [...this.state.toasts, { id: this.nextKey++, role, text }] });
+    this.log("notice", this.state.playerId ?? "", null, text);
   }
 
-  private log(kind: ActivityKind, playerId: string, cell: number | null): void {
+  private log(kind: ActivityKind, playerId: string, cell: number | null, text?: string): void {
     const startedAt = this.state.match?.startedAt ?? this.serverNow();
     const entry = {
       key: this.nextKey++,
@@ -335,6 +355,7 @@ export class GameClient {
       playerId,
       cell,
       elapsed: Math.max(0, this.serverNow() - startedAt),
+      ...(text === undefined ? {} : { text }),
     };
     this.set({ activity: [...this.state.activity, entry] });
   }

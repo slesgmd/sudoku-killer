@@ -9,6 +9,7 @@ import type {
 } from "@sudoku-killer/protocol";
 import { useSyncExternalStore } from "react";
 import { GameClient } from "../../src/game/client.ts";
+import { memoryPrefs, type Prefs } from "../../src/game/prefs.ts";
 import { GameScreen } from "../../src/screens/GameScreen.tsx";
 import { Listeners, type Transport, type TransportStatus } from "../../src/transport/types.ts";
 
@@ -92,7 +93,7 @@ export function player(id: string, nickname: string, seat: number): PublicPlayer
 export const ME = player("p-ines", "Inés", 0);
 export const TOMAS = player("p-tomas", "Tomás", 1);
 
-function Screen({ client }: { readonly client: GameClient }) {
+export function Screen({ client }: { readonly client: GameClient }) {
   const state = useSyncExternalStore(client.subscribe, client.getState);
   return <GameScreen client={client} state={state} />;
 }
@@ -110,9 +111,10 @@ export function mountGame({
   now,
   startedAt = 1_000_000,
   serverNow = startedAt,
-}: { now?: () => number; startedAt?: number; serverNow?: number } = {}): Mounted {
+  prefs = memoryPrefs(),
+}: { now?: () => number; startedAt?: number; serverNow?: number; prefs?: Prefs } = {}): Mounted {
   const transport = fakeTransport();
-  const client = new GameClient({ transport, ...(now ? { now } : {}) });
+  const client = new GameClient({ transport, prefs, ...(now ? { now } : {}) });
   client.start("Inés", "easy");
   const create = transport.last("room.create");
   render(<Screen client={client} />);

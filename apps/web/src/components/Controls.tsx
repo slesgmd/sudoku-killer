@@ -1,5 +1,6 @@
 // Controles de la partida (docs/diseno.md §5.2–5.4): modo Número / Notas, capa de escritura,
 // visibilidad de cada capa, herramientas (Borrar, Deshacer, Pista) y teclado con contadores.
+import { flushSync } from "react-dom";
 import type { NoteLayer } from "@sudoku-killer/protocol";
 import type { GameClient } from "../game/client.ts";
 import { remainingByDigit, type ClientState } from "../game/state.ts";
@@ -116,19 +117,22 @@ function VisButton({
   readonly wide: boolean;
 }) {
   const shown = state.visible[layer];
+  // El nombre accesible es completo («Notas personales»); en escritorio se ve la forma corta, que
+  // cabe en la columna lateral y está contenida en el nombre (WCAG 2.5.3).
   const name = t(layer === "personal" ? "visibility.personal" : "visibility.group");
+  const short = t(layer === "personal" ? "visibility.personalShort" : "visibility.groupShort");
   return (
     <button
       className="btn vis"
       type="button"
       aria-pressed={press(shown)}
-      aria-label={wide ? undefined : name}
+      aria-label={name}
       onClick={() => {
         client.toggleVisible(layer);
       }}
     >
       <Icon name={shown ? "eye" : "eyeOff"} />
-      {wide ? <span className={layer === "personal" ? "vis-p" : "vis-g"}>{name}</span> : null}
+      {wide ? <span className={layer === "personal" ? "vis-p" : "vis-g"}>{short}</span> : null}
     </button>
   );
 }
@@ -178,7 +182,7 @@ export function hintBlock(state: ClientState, canPlace: boolean): string | null 
 }
 
 export function Tools({ state, client, disabled, canPlace, onHint, stack }: ToolsProps) {
-  const notesMode = !canPlace || state.mode === "notes";
+  const notesMode = state.notesEnabled && (!canPlace || state.mode === "notes");
   const hintsLeft = state.match?.hintsLeft ?? 0;
   const blocked = disabled ? t("tool.hintPickEmpty") : hintBlock(state, canPlace);
   const cls = `btn${stack ? " stack" : ""}`;
@@ -230,9 +234,11 @@ export function Tools({ state, client, disabled, canPlace, onHint, stack }: Tool
   );
 }
 
-export function Keypad({ state, client, disabled, canPlace }: ControlProps) {
+export function Keypad({ state, client, disabled: blocked, canPlace }: ControlProps) {
   const remaining = remainingByDigit(state);
-  const notesMode = !canPlace || state.mode === "notes";
+  const notesMode = state.notesEnabled && (!canPlace || state.mode === "notes");
+  // Sin notas, un espectador no puede escribir nada con el teclado.
+  const disabled = blocked || (!canPlace && !state.notesEnabled);
   const size = state.match?.puzzle.size ?? 9;
   return (
     <div className="keys pg-keys" role="group" aria-label={t("keypad.label")}>
@@ -253,7 +259,12 @@ export function Keypad({ state, client, disabled, canPlace }: ControlProps) {
             aria-label={t(notesMode ? "key.note" : "key.number", { digit, remaining: status })}
             aria-disabled={disabled ? "true" : undefined}
             onClick={() => {
-              if (!disabled) client.input(digit);
+              // Sincrónico: el dígito pendiente se ve en el mismo ciclo del toque.
+              if (!disabled) {
+                flushSync(() => {
+                  client.input(digit);
+                });
+              }
             }}
           >
             {digit}

@@ -33,11 +33,15 @@ export interface Flash {
   readonly key: number;
 }
 
-export type ActivityKind = "solved" | "mistake" | "hint" | "joined" | "left" | "spectator";
+/** `notice`: el texto de un aviso, para que quede en el historial (decisión 4). */
+export type ActivityKind =
+  "solved" | "mistake" | "hint" | "joined" | "left" | "spectator" | "notice";
 
 export interface ActivityEntry {
   readonly key: number;
   readonly kind: ActivityKind;
+  /** Texto del aviso (`notice`). */
+  readonly text?: string;
   readonly playerId: string;
   readonly cell: number | null;
   /** Tiempo de partida, en milisegundos. */
@@ -90,6 +94,8 @@ export interface ClientState {
   readonly mode: InputMode;
   readonly layer: NoteLayer;
   readonly visible: { readonly personal: boolean; readonly group: boolean };
+  /** «Usar notas»: preferencia local del cliente (prefs.ts). Sin notas no hay controles ni notas. */
+  readonly notesEnabled: boolean;
   /** Hora del servidor − hora del cliente, medida con `sys.ping` (T-07.2). */
   readonly clockOffset: number;
   readonly canUndo: boolean;
@@ -117,6 +123,7 @@ export const INITIAL_STATE: ClientState = {
   mode: "number",
   layer: "personal",
   visible: { personal: true, group: true },
+  notesEnabled: true,
   clockOffset: 0,
   canUndo: false,
   enterError: null,

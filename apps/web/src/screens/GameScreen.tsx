@@ -1,6 +1,7 @@
 // Pantalla de partida (design/pantallas.md §1.4) en las cuatro disposiciones, con los atajos de
 // teclado (docs/diseno.md §7) y los estados que produce el modo simulado (entrega-f8.md §3).
 import { useCallback, useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import { Activity, activityText } from "../components/Activity.tsx";
 import { Board } from "../components/Board.tsx";
 import {
@@ -86,7 +87,7 @@ export function GameScreen({
   // Atajos de teclado (§7): flechas, 1–9, N, G, Supr, Ctrl+Z y H. Esc lo maneja cada diálogo.
   useEffect(() => {
     if (dialog !== null) return;
-    const onKey = (event: KeyboardEvent) => {
+    const handle = (event: KeyboardEvent) => {
       const target = event.target;
       if (target instanceof Element && target.closest("input, textarea, select")) return;
       if (event.altKey) return;
@@ -136,6 +137,12 @@ export function GameScreen({
           return;
       }
     };
+    // Sincrónico: la jugada se ve en la celda en el mismo ciclo del evento (jugada inmediata).
+    const onKey = (event: KeyboardEvent) => {
+      flushSync(() => {
+        handle(event);
+      });
+    };
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
@@ -146,6 +153,7 @@ export function GameScreen({
     setDialog(null);
   };
   const lastActivity = state.activity.at(-1);
+  const notes = state.notesEnabled;
   const toasts = (
     <Toasts
       toasts={state.toasts}
@@ -162,7 +170,7 @@ export function GameScreen({
       </div>
     ) : null;
   const controls = { state, client, disabled, canPlace };
-  const tools = <Tools {...controls} onHint={openHint} stack={false} />;
+  const tools = <Tools {...controls} onHint={openHint} stack={layout === "desktop"} />;
 
   return (
     <div className="pg">
@@ -325,7 +333,9 @@ export function GameScreen({
           state={state}
           colorOf={colorOf}
           onSelect={(cell) => {
-            client.select(cell);
+            flushSync(() => {
+              client.select(cell);
+            });
           }}
         />
         {loading ? (
@@ -348,6 +358,7 @@ export function GameScreen({
             <Players state={state} colorOf={colorOf} variant="list" loading={loading} />
             {spectatorNotice}
             {toasts}
+            <Activity state={state} colorOf={colorOf} variant="line" />
           </>
         ) : (
           <>
@@ -360,11 +371,14 @@ export function GameScreen({
       <div className="pg-side">
         {layout === "desktop" ? (
           <>
-            <Activity state={state} colorOf={colorOf} variant="list" />
-            <div className="ctlgroup">
-              <ModeSeg {...controls} kbd />
-            </div>
-            <LayersWide {...controls} />
+            {notes ? (
+              <>
+                <div className="ctlgroup">
+                  <ModeSeg {...controls} kbd />
+                </div>
+                <LayersWide {...controls} />
+              </>
+            ) : null}
             <Keypad {...controls} />
             {tools}
           </>
@@ -376,31 +390,30 @@ export function GameScreen({
             ) : (
               <Activity state={state} colorOf={colorOf} variant="fold" />
             )}
-            <div className="pg-ctl">
-              {compact ? (
-                <figure className="lupa">
-                  <Board state={state} colorOf={colorOf} onSelect={() => undefined} single />
-                  {layout === "mobile" && state.selected !== null ? (
-                    <figcaption className="pts">
-                      {t("magnifier", { cell: selectedName })}
-                    </figcaption>
-                  ) : null}
-                </figure>
-              ) : null}
-              <div className="ctl-stack">
-                <ModeSeg {...controls} kbd={false} />
-                <LayersCompact {...controls} />
+            {notes ? (
+              <div className="pg-ctl">
+                {compact ? (
+                  <figure className="lupa">
+                    <Board state={state} colorOf={colorOf} onSelect={() => undefined} single />
+                    {layout === "mobile" && state.selected !== null ? (
+                      <figcaption className="pts">
+                        {t("magnifier", { cell: selectedName })}
+                      </figcaption>
+                    ) : null}
+                  </figure>
+                ) : null}
+                <div className="ctl-stack">
+                  <ModeSeg {...controls} kbd={false} />
+                  <LayersCompact {...controls} />
+                </div>
               </div>
-            </div>
+            ) : null}
             {compact ? tools : null}
             <Keypad {...controls} />
             {compact ? null : tools}
-            {layout === "landscape" ? (
-              <Activity state={state} colorOf={colorOf} variant="fold" />
-            ) : null}
           </>
         )}
-        <div className="sr-only" aria-live="polite">
+        <div className="sr-only" role="log" aria-live="polite">
           {lastActivity ? activityText(state, lastActivity) : ""}
         </div>
       </div>
@@ -432,6 +445,10 @@ export function GameScreen({
       {dialog === "settings" ? (
         <SettingsDialog
           autoClean={state.settings.autoCleanPersonalNotes}
+          useNotes={notes}
+          onUseNotes={(value) => {
+            client.setNotesEnabled(value);
+          }}
           onChange={(value) => {
             client.setAutoClean(value);
           }}

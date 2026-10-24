@@ -117,8 +117,10 @@ export function Board({ state, colorOf, onSelect, single = false }: BoardProps) 
   }, [selected, single]);
 
   const size = geometry?.size ?? 9;
-  const group = state.visible.group ? viewNotes(state, "group") : null;
-  const personal = state.visible.personal ? viewNotes(state, "personal") : null;
+  // Sin «Usar notas» no se dibuja ninguna nota (preferencia local, R-06).
+  const group = state.notesEnabled && state.visible.group ? viewNotes(state, "group") : null;
+  const personal =
+    state.notesEnabled && state.visible.personal ? viewNotes(state, "personal") : null;
   const myId = me(state)?.id ?? null;
   const selLocked = selected === null ? null : (state.locked[selected]?.value ?? null);
   const presenceAt = new Map<number, string[]>();
