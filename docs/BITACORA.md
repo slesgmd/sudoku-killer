@@ -524,3 +524,9 @@ Al aprobar, agregó el nivel con los descartes públicos de los errores, las vid
 **Tiempo real:** menos de 1 h.
 
 **Siguiente:** F8 en modo plan.
+
+## 2026-10-24 — Alertas de seguridad de dependencias
+
+- Se activaron las alertas de vulnerabilidades de dependencias del repositorio recreado. Las actualizaciones automáticas de seguridad siguen desactivadas, por decisión del usuario.
+- Estado final: alertas de vulnerabilidades activas, actualizaciones automáticas de seguridad desactivadas, secret scanning y push protection activos.
+- Se borró el clon temporal de la reescritura. El respaldo del repositorio anterior se conserva.
