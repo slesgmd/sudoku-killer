@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "bank:generate": "node --conditions=@sudoku-killer/source scripts/generate-bank.ts",
     "bank:sample": "node --conditions=@sudoku-killer/source scripts/print-sample.ts",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "scoring:simulate": "node --conditions=@sudoku-killer/source scripts/simulate-scoring.ts"
   },
   "dependencies": {
     "@sudoku-killer/engine": "workspace:*",
@@ -20,6 +21,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@sudoku-killer/scoring": "workspace:*",
     "@electric-sql/pglite": "0.5.8",
     "drizzle-kit": "0.31.11"
   }
