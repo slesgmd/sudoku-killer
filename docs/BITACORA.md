@@ -504,3 +504,23 @@ Al aprobar, agregó el nivel con los descartes públicos de los errores, las vid
 **Tiempo real:** menos de 1 h.
 
 **Siguiente:** auditoría del historial (paso 8) y decisión del usuario. Después, F8 en modo plan.
+
+## 2026-10-24 — Historial reescrito y repositorio recreado
+
+**Hecho:**
+- Revisión de secretos en todo el historial y en el árbol (claves y tokens, cadenas de conexión, archivos de entorno, claves privadas, capturas de red y configuraciones locales): ningún secreto real. Los 19 hallazgos eran falsos positivos, la propiedad `pass` de las metas del simulador de puntuación.
+- Respaldo local completo del repositorio anterior, fuera de las carpetas sincronizadas, que se conserva hasta nueva orden.
+- Historial reescrito en un clon nuevo con reglas neutras para los mensajes y los contenidos, sin cambiar el sentido de las frases. Mismos 38 commits, mismos autores y fechas, y el árbol final es idéntico al anterior.
+- Verificaciones sobre el historial completo (mensajes, contenidos, rutas, autores y correos): 0 coincidencias. Instalación, `check`, `test` y `build` en verde sobre el clon.
+- Repositorio remoto recreado vacío, con la misma URL, y historial subido sin credenciales en la URL. La CI (`check` y `attribution-guard`) quedó en verde y `Corpus` figura como workflow programado.
+- Seguridad del repositorio nuevo: secret scanning y push protection activos; alertas de Dependabot y actualizaciones de seguridad de Dependabot desactivadas (sin cambios, pendiente de decisión).
+- El repositorio de trabajo apunta al historial nuevo, con el árbol limpio.
+
+**Problemas y soluciones:**
+- La primera corrida de la reescritura falló por una regla con un escape no válido en el reemplazo, y la segunda dejó una frase de PLAN sin regla. Se corrigieron las reglas y se repitió todo en un clon nuevo.
+- Las versiones intermedias de `scripts/strip-attribution.mjs` quedaron con marcadores neutros en lugar de los patrones; la versión final no cambió.
+- Se perdieron las ejecuciones anteriores de Actions al recrear el repositorio.
+
+**Tiempo real:** menos de 1 h.
+
+**Siguiente:** F8 en modo plan.

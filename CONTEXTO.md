@@ -5,7 +5,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.16. **SPEC:** versión 1.5.
+- **Plan:** versión 1.17. **SPEC:** versión 1.5.
 - **Fase actual:** F8, cliente con servidor local simulado (4–8 h). F6 (puntuación) se cerró el 2026-10-24 con unas 2,2 h frente a 2–5 h; F4, F5 y F7, el 2026-10-23.
 - **Próxima tarea exacta:** F8 en modo plan (`docs/PLAN.md`, F8), con la entrega de F7 (`design/entrega-f8.md`).
 - **Puntuación (F6, `docs/puntuacion.md`):**
@@ -21,7 +21,6 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
   - Tabla `puzzles` con Drizzle, `PuzzleRepository` y `loadBank` en `apps/server/src/`.
   - F9 hereda el driver de PostgreSQL, `bank:load`, la comprobación al arrancar y la elección sin repetir.
 - **Pendiente del usuario:** la segunda prueba en papel con `design/muestra-f5/muestra.html` (equivalencia versión 2); los resultados se anotan en `docs/dificultad.md`, sección 6. Si las dificultades no se distinguen, se ajusta la equivalencia y se regenera el manifiesto antes de F9.
-- **Pendiente del usuario (historial):** decidir si se reescribe el historial de git, se recrea el repositorio o se pasa a privado, según la auditoría de la limpieza de atribuciones (`docs/BITACORA.md`, 2026-10-24). No bloquea F8.
 - **Diseño (F7):** prototipo en `design/prototipo/` (`npx serve design/prototipo`), guía en `docs/diseno.md` y entrega a F8 con siete decisiones en `design/entrega-f8.md`.
 
 ## Reglas clave
