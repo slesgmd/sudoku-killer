@@ -392,3 +392,50 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 **Tiempo real de F5:** unas 1,2 h, frente a las 2–4 h aprobadas. La comparación está en el PLAN, sección 5: la recalibración se mantiene.
 
 **Siguiente:** F6, sistema de puntuación, empezando en modo plan.
+
+## 2026-10-23 — F5: números iniciales por dificultad
+
+**Pedido del usuario:**
+- Tras la prueba en papel con la primera muestra, escalonar los números iniciales por dificultad, en reemplazo de la decisión b). Los objetivos eran unos 30, 22, 10 y 0.
+- Medir antes de regenerar nada, con un punto de control.
+- Después aprobó: 30 / 22 / 10 / 0, con bandas que no se solapan (fácil, nivel 1; media, nivel 2; difícil, nivel 3 o 4 con algún paso de nivel 3; experto, nivel 5); celdas con guarda, repartidas por cajas y con semilla; semillas separadas por dificultad; `GENERATOR_VERSION` "2"; y la confirmación de la unicidad también con A.
+- Pidió detenerse si alguna tasa bajaba del 50 % o si el banco tardaba más de 30 minutos. No pasó ninguna de las dos cosas.
+
+**Resultado de la prueba en papel:** sin números iniciales, los puzzles resultan difíciles, incluido el fácil.
+
+**Medición previa:**
+- Se probaron tres cantidades por dificultad y tres formas de elegir las celdas: al azar, repartidas por cajas y con guarda (repartidas por cajas y agregadas solo si el puzzle mantiene el piso de su banda).
+- Sin guarda, los números bajan el nivel demasiado rápido:
+  - con 10 números, el 99 % de los puzzles queda en nivel 2, y el difícil sale en el 0,8 % (al azar) o el 0,5 % (por cajas), 31 o 50 minutos para 500;
+  - con 22 números, el 69 % se resuelve solo con singles.
+- Con guarda, las cantidades pedidas salen en el 87 % al 100 % de los candidatos, en menos de 2 minutos por dificultad.
+- La unicidad se comprobó con A en 920 puzzles con números iniciales.
+
+**Hecho:**
+- **Motor:**
+  - `addGivens(generated, { count, seed, keep })`, en `src/generator/givens.ts`: recorre las celdas por vueltas entre las cajas, saltea las que no cumplen la guarda y confirma la unicidad con A y con B.
+  - Reemplaza a la opción `easyGivens` de `generatePuzzle`. `givensReason` pasa a `'none' | 'difficulty' | 'uniqueness'` y `GENERATOR_VERSION` pasa a "2".
+  - Pruebas: T-20.2, reparto entre cajas, guarda, determinismo (T-35.6) y opciones inválidas. Las pruebas del calificador que usaban `easyGivens` ahora usan `addGivens` sin guarda.
+- **Servidor:**
+  - `DIFFICULTY_RULES` (equivalencia versión 2) con cantidad, piso y banda de cada dificultad; `difficultyOfSeed` (resto al dividir por 4).
+  - `evaluateSeed` y `buildBank` saltan las semillas de las dificultades ya completas, y el manifiesto guarda los números iniciales de cada dificultad.
+  - Migración del `CHECK` de `givens_reason`.
+  - Pruebas de las bandas (que no se solapan) y del manifiesto.
+- **Banco nuevo:**
+  - semillas 1 a 62 079, 17 090 candidatos en 13,1 minutos;
+  - tasas: fácil 99,0 %, media 100 %, difícil 88,5 % y experto 3,2 %;
+  - pasos (mediana): 14, 13, 25 y 71.
+- **Documentación y muestra:**
+  - SPEC 1.4 (P2, §2.2, T-20.2 y T-20.3);
+  - `docs/dificultad.md`, con la versión 2, la medición y la versión 1 como historia; `docs/motor.md` y ADR 0006;
+  - muestra nueva con la semilla 2026.
+
+**Observación para la segunda prueba en papel:** la guarda deja el mínimo de técnica que pide la banda. Todas las medias necesitan un solo paso de nivel 2 (una necesita dos) y todas las difíciles, uno solo de nivel 3. Fácil y media tienen casi los mismos pasos: las distingue la técnica.
+
+**Problemas y soluciones:**
+- La generación del banco lanzada en segundo plano desde una subshell terminó junto con el comando que la lanzó, sin escribir nada. Se volvió a lanzar como tarea de fondo.
+- Dos pruebas de carga con PGlite pasaron del límite de 5 s, porque ahora cada semilla regenera sus números con la guarda. Se les dio el mismo margen que a las otras pruebas lentas.
+
+**Tiempo real:** unas 0,8 h. F5 suma unas 2,0 h, frente a las 2–4 h aprobadas.
+
+**Siguiente:** la segunda prueba en papel (pendiente del usuario) y F6, sistema de puntuación, en modo plan.
