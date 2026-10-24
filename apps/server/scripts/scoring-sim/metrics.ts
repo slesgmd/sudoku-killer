@@ -244,14 +244,20 @@ export interface DeltaSummary {
   readonly mean: number;
   readonly p95: number;
   readonly max: number;
-  /** Proporción de ramas en que pedir la pista dio más (Δ > 0). */
+  /** Proporción de casos con Δ > 0. */
   readonly positive: number;
+  /** Extremo superior del intervalo de confianza del 95 % de la media. */
+  readonly upper95: number;
 }
 
-function summarize(deltas: readonly number[]): DeltaSummary {
+export function summarize(deltas: readonly number[]): DeltaSummary {
+  const m = mean(deltas);
+  const variance =
+    deltas.length < 2 ? NaN : deltas.reduce((t, d) => t + (d - m) ** 2, 0) / (deltas.length - 1);
   return {
     n: deltas.length,
-    mean: mean(deltas),
+    mean: m,
+    upper95: m + 1.96 * Math.sqrt(variance / deltas.length),
     p95: quantile(deltas, 0.95),
     max: deltas.length === 0 ? NaN : Math.max(...deltas),
     positive: deltas.filter((d) => d > 0).length / deltas.length,
@@ -266,6 +272,9 @@ export interface HintMetrics {
   /** Lo mismo con la rama placebo (la misma espera, sin pista): el ruido de desviar la partida. */
   readonly placeboSelf: DeltaSummary;
   readonly placeboSteal: DeltaSummary;
+  /** Efecto neto de la pista, rama por rama: Δ con la pista menos Δ con el placebo. */
+  readonly netSelf: DeltaSummary;
+  readonly netSteal: DeltaSummary;
 }
 
 export function hints(records: readonly GameRecord[], scorer: Scorer): HintMetrics {
@@ -289,11 +298,14 @@ export function hints(records: readonly GameRecord[], scorer: Scorer): HintMetri
       stealList.push(d - ((scores[v] ?? 0) - (without[v] ?? 0)));
     }
   }
+  const net = (a: readonly number[], b: readonly number[]) => a.map((x, i) => x - (b[i] ?? 0));
   return {
     self: summarize(self),
     steal: summarize(steal),
     placeboSelf: summarize(placeboSelf),
     placeboSteal: summarize(placeboSteal),
+    netSelf: summarize(net(self, placeboSelf)),
+    netSteal: summarize(net(steal, placeboSteal)),
   };
 }
 
@@ -336,6 +348,10 @@ export interface GuessMetrics {
   /** Errores por adivinanza. */
   readonly mistakesPerGuess: number;
   readonly guessesPerGuesser: number;
+  /** Lo mismo por nivel de técnica del adivinador (2 o 3). */
+  readonly bySkill: Readonly<
+    Record<number, { readonly delta: DeltaSummary; readonly episodes: DeltaSummary }>
+  >;
 }
 
 /** Puntos propios de un hecho con los parámetros del modelo propio. */
@@ -353,6 +369,15 @@ export function guessing(
 ): GuessMetrics {
   const deltas: number[] = [];
   const episodes: number[] = [];
+  const bySkill = new Map<number, { delta: number[]; episodes: number[] }>();
+  const skillList = (skill: number) => {
+    let entry = bySkill.get(skill);
+    if (!entry) {
+      entry = { delta: [], episodes: [] };
+      bySkill.set(skill, entry);
+    }
+    return entry;
+  };
   let guesses = 0;
   let guessMistakes = 0;
   for (const record of records) {
@@ -372,13 +397,16 @@ export function guessing(
         }
       }
       episodes.push(sum);
+      skillList(record.bots[Number(first.playerId)]?.skill ?? 0).episodes.push(sum);
     }
     if (!record.noGuess) continue;
     const guessed = scorer(record, record.full).scores;
     const deduced = scorer(record, record.noGuess).scores;
     record.bots.forEach((bot, seat) => {
       if (bot.kind !== "guesser") return;
-      deltas.push((guessed[seat] ?? 0) - (deduced[seat] ?? 0));
+      const d = (guessed[seat] ?? 0) - (deduced[seat] ?? 0);
+      deltas.push(d);
+      skillList(bot.skill).delta.push(d);
       guesses += record.full.bots[seat]?.guesses ?? 0;
       guessMistakes += record.full.bots[seat]?.guessMistakes ?? 0;
     });
@@ -389,6 +417,14 @@ export function guessing(
     episodes: summarize(episodes),
     mistakesPerGuess: guesses === 0 ? NaN : guessMistakes / guesses,
     guessesPerGuesser: guesses / deltas.length,
+    bySkill: Object.fromEntries(
+      [...bySkill]
+        .sort(([a], [b]) => a - b)
+        .map(([skill, x]) => [
+          skill,
+          { delta: summarize(x.delta), episodes: summarize(x.episodes) },
+        ]),
+    ),
   };
 }
 
@@ -575,8 +611,144 @@ export function drift(records: readonly GameRecord[]): DriftMetrics {
   };
 }
 
+export interface KindShare {
+  /** Cuota media de puntaje, 100 = la parte justa de su mesa (1/n del total). */
+  readonly score: number;
+  /** Cuota media de aporte, en la misma escala. */
+  readonly aporte: number;
+  readonly bots: number;
+}
+
+export interface EquityMetrics {
+  /** Bloque A: por tipo de bot. */
+  readonly general: Readonly<Record<BotKind, KindShare>>;
+  /** Bloque B: la cuota del veloz dentro del par del duelo (50 = mitad). */
+  readonly duel: {
+    readonly score: number;
+    readonly aporte: number;
+    /** Duelos que gana el veloz por puntaje y por aporte, en %. */
+    readonly winRate: number;
+    readonly aporteWinRate: number;
+    readonly games: number;
+  };
+  /** La mayor diferencia, en puntos, entre cuota de puntaje y de aporte (general y duelo). */
+  readonly maxGap: number;
+}
+
+const positive = (x: number): number => Math.max(0, x);
+
+/**
+ * Equidad: la cuota de puntaje de cada tipo de bot frente a su cuota de aporte. Las cuotas usan las
+ * partes positivas (un puntaje negativo cuenta como 0), normalizadas para que 100 sea la parte justa
+ * de la mesa; en el duelo, la cuota del veloz dentro del par.
+ */
+export function equity(records: readonly GameRecord[], scorer: Scorer): EquityMetrics {
+  const acc = Object.fromEntries(
+    BOT_KINDS.map((k) => [k, { score: 0, aporte: 0, bots: 0 }]),
+  ) as Record<BotKind, { score: number; aporte: number; bots: number }>;
+  const duel = { score: 0, aporte: 0, wins: 0, aporteWins: 0, games: 0 };
+  for (const record of records) {
+    if (record.block === "C") continue;
+    const measured = contributionOf(record);
+    if (!measured) continue;
+    const { scores } = scorer(record, record.full);
+    if (record.block === "A") {
+      if (measured.some((a) => a === null)) continue;
+      const sTotal = scores.reduce((t, x) => t + positive(x), 0);
+      const aTotal = measured.reduce<number>((t, x) => t + positive(x ?? 0), 0);
+      if (sTotal === 0 || aTotal === 0) continue;
+      const n = record.bots.length;
+      record.bots.forEach((bot, seat) => {
+        const entry = acc[bot.kind];
+        entry.score += (100 * n * positive(scores[seat] ?? 0)) / sTotal;
+        entry.aporte += (100 * n * positive(measured[seat] ?? 0)) / aTotal;
+        entry.bots++;
+      });
+      continue;
+    }
+    if (!record.duel) continue;
+    const { fast, logic } = record.duel;
+    const aFast = positive(measured[fast] ?? 0);
+    const aLogic = positive(measured[logic] ?? 0);
+    const sFast = positive(scores[fast] ?? 0);
+    const sLogic = positive(scores[logic] ?? 0);
+    if (aFast + aLogic === 0 || sFast + sLogic === 0) continue;
+    duel.games++;
+    duel.score += (100 * sFast) / (sFast + sLogic);
+    duel.aporte += (100 * aFast) / (aFast + aLogic);
+    if ((scores[fast] ?? 0) > (scores[logic] ?? 0)) duel.wins++;
+    if ((measured[fast] ?? 0) > (measured[logic] ?? 0)) duel.aporteWins++;
+  }
+  const general = Object.fromEntries(
+    BOT_KINDS.map((k) => {
+      const { score, aporte, bots } = acc[k];
+      return [k, { score: score / bots, aporte: aporte / bots, bots }];
+    }),
+  ) as Record<BotKind, KindShare>;
+  const duelShares = {
+    score: duel.score / duel.games,
+    aporte: duel.aporte / duel.games,
+    winRate: (100 * duel.wins) / duel.games,
+    aporteWinRate: (100 * duel.aporteWins) / duel.games,
+    games: duel.games,
+  };
+  const gaps = [
+    ...BOT_KINDS.map((k) => Math.abs(general[k].score - general[k].aporte)),
+    Math.abs(duelShares.score - duelShares.aporte),
+    Math.abs(duelShares.winRate - duelShares.aporteWinRate),
+  ];
+  return { general, duel: duelShares, maxGap: Math.max(...gaps) };
+}
+
+export interface CeilingMetrics {
+  /** Por estrato: Spearman con el puntaje, techo (raíz de la confiabilidad de la media) y su razón. */
+  readonly strata: readonly {
+    readonly difficulty: Difficulty;
+    readonly size: number;
+    readonly rho: number;
+    readonly ceiling: number;
+    readonly ratio: number;
+  }[];
+  /** La menor razón entre los estratos con al menos `MIN_STRATUM` observaciones. */
+  readonly minRatio: number;
+}
+
+/** Spearman de cada estrato relativo a su techo de confiabilidad. */
+export function againstCeiling(
+  correlationMetrics: CorrelationMetrics,
+  reliable: ReliabilityMetrics,
+): CeilingMetrics {
+  const strata = correlationMetrics.strata.flatMap((x) => {
+    const mean = reliable.ofMean.find((m) => m.difficulty === x.difficulty && m.size === x.size);
+    if (!mean) return [];
+    const ceiling = Math.sqrt(Math.max(0, mean.rho));
+    return [
+      {
+        difficulty: x.difficulty,
+        size: x.size,
+        rho: x.rho,
+        ceiling,
+        ratio: x.rho / ceiling,
+        n: x.n,
+      },
+    ];
+  });
+  const eligible = strata.filter(({ n }) => n >= MIN_STRATUM).map(({ ratio }) => ratio);
+  return {
+    strata: strata.map(({ difficulty, size, rho, ceiling, ratio }) => ({
+      difficulty,
+      size,
+      rho,
+      ceiling,
+      ratio,
+    })),
+    minRatio: eligible.length === 0 ? NaN : Math.min(...eligible),
+  };
+}
+
 export interface Metrics {
   readonly correlation: CorrelationMetrics;
+  readonly equity: EquityMetrics;
   readonly duels: DuelMetrics;
   readonly hints: HintMetrics;
   readonly closureShare: ShareMetrics;
@@ -591,6 +763,7 @@ export function evaluate(
 ): Metrics {
   return {
     correlation: correlation(records, scorer),
+    equity: equity(records, scorer),
     duels: duels(records, scorer),
     hints: hints(records, scorer),
     closureShare: closureShare(records, params),

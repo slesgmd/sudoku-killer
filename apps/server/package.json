@@ -11,7 +11,8 @@
     "bank:generate": "node --conditions=@sudoku-killer/source scripts/generate-bank.ts",
     "bank:sample": "node --conditions=@sudoku-killer/source scripts/print-sample.ts",
     "db:generate": "drizzle-kit generate",
-    "scoring:simulate": "node --conditions=@sudoku-killer/source scripts/simulate-scoring.ts"
+    "scoring:simulate": "node --conditions=@sudoku-killer/source scripts/simulate-scoring.ts",
+    "scoring:calibrate": "node --conditions=@sudoku-killer/source scripts/calibrate-scoring.ts"
   },
   "dependencies": {
     "@sudoku-killer/engine": "workspace:*",
