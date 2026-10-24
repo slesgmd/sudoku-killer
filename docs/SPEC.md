@@ -1,6 +1,6 @@
 # SPEC — Sudoku Killer Multijugador · v1
 
-- Versión del documento: 1.4 (F5, 2026-10-23). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2); R-20 suma el banco de puzzles (T-20.3 a T-20.5) y `PuzzleRecord` guarda `graderVersion` y `seed` (1.3); P2 y R-20 escalonan los números iniciales por dificultad y `givensReason` cambia `easy` por `difficulty` (1.4).
+- Versión del documento: 1.5 (F6, 2026-10-23). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2); R-20 suma el banco de puzzles (T-20.3 a T-20.5) y `PuzzleRecord` guarda `graderVersion` y `seed` (1.3); P2 y R-20 escalonan los números iniciales por dificultad y `givensReason` cambia `easy` por `difficulty` (1.4); F6 fija B, w, P, β y H, el nivel se calcula con los descartes públicos de los errores (§2.3 y §5), R-35 suma T-35.7 y T-35.8 y la nueva R-36 reúne las pruebas de la puntuación (1.5).
 - Versión del protocolo: **1**
 - Fuente de las reglas: `docs/PLAN.md`, secciones 1 y 2, más las decisiones de producto de F2 (sección 1 de este documento).
 - Decisiones técnicas: `docs/adr/0001`–`0006`.
@@ -34,7 +34,7 @@ Resumen de `PLAN.md` §1 y §2. Las reglas detalladas están en la sección 6.
 
 | ID | Decisión | Regla |
 |---|---|---|
-| P1 | **Pistas compartidas por el equipo: 3 por partida.**<br>• Las usa un jugador activo sobre una celda vacía que él elige. El servidor coloca el valor correcto y bloquea la celda.<br>• No da bonus de cierre a nadie, no cuesta vidas y se avisa a todos quién la usó.<br>• **Le cuesta −H puntos a quien la usa** (H se calibra en F6). Así no sirve para quitarles celdas difíciles a otros jugadores. | R-19 |
+| P1 | **Pistas compartidas por el equipo: 3 por partida.**<br>• Las usa un jugador activo sobre una celda vacía que él elige. El servidor coloca el valor correcto y bloquea la celda.<br>• No da bonus de cierre a nadie, no cuesta vidas y se avisa a todos quién la usó.<br>• **Le cuesta −H puntos a quien la usa** (H = 60, fijado en F6: `docs/puntuacion.md`). Así no sirve para quitarles celdas difíciles a otros jugadores. | R-19 |
 | P2 | Jaulas de 2 a 5 celdas; no hay jaulas de 1 celda. Los números iniciales se escalonan por dificultad: 30 en fácil, 22 en media, 10 en difícil y ninguno en experto, además de los que el generador necesite para que la solución sea única. Cambio aprobado en F5 (2026-10-23) tras la prueba en papel; antes solo había números iniciales en el fácil o por unicidad. | R-20 |
 | P3 | 4 niveles: fácil, media, difícil y experto. Los elige quien puede iniciar, antes de cada partida. | R-21 |
 | P4 | Al terminar, la sala vuelve al lobby y la partida siguiente empieza con todos activos (3 vidas, 0 puntos). El ranking es por partida; no hay ranking acumulado. | R-22 |
@@ -76,17 +76,17 @@ Incluye las 14 preguntas de `docs/referencia.md` y la pregunta de pistas de `PLA
 | ref-5 | Resaltado de la jaula seleccionada | Sí (D10). | F7 (diseño), F8 (implementación) |
 | ref-6 | Deshacer | Solo notas, con comprobación (R-25). | Cerrada |
 | ref-7 | ¿Se puede borrar o sobrescribir un número correcto? | No: la celda queda bloqueada para siempre (R-15). | Cerrada |
-| ref-8 | Pista en ejecución | R-19. El valor de H se fija en F6. | F6 |
+| ref-8 | Pista en ejecución | R-19. H = 60 (F6, `docs/puntuacion.md`). | Cerrada |
 | ref-9 | Pausa | No hay pausa (R-07, R-34). | Cerrada |
 | ref-10 | Segunda oportunidad | No hay (D8). | Cerrada |
 | ref-11 | `checkMistakes` | No aplica: todo error cuenta (R-03). | Cerrada |
-| ref-12 | Multiplicador por completar áreas | No aplica: usamos el bonus β. | F6 |
+| ref-12 | Multiplicador por completar áreas | No aplica: usamos el bonus β = 1 por unidad cerrada (F6). | Cerrada |
 | ref-13 | ¿El temporizador sigue con la pestaña oculta? | El tiempo lo lleva el servidor y no se pausa (R-07). | Cerrada |
 | ref-14 | Cambio de dificultad en ejecución | No aplica: la dificultad se elige en el lobby (R-21). | Cerrada |
-| plan | Pistas en la v1 | P1 y R-19. | F6 (H) |
+| plan | Pistas en la v1 | P1 y R-19, con H = 60 (F6). | Cerrada |
 
 Parámetros que quedan pendientes con su dueño:
-- B, w, P, β y H: F6.
+- B, w, P, β y H: **resueltos en F6** (`docs/puntuacion.md`, `packages/scoring/src/params.v1.json`): B = 10, w = 1, 2, 3, 4 y 5 para los niveles 1 a 5, P = 90, β = 1 y H = 60. Se recalibran con registros de partidas reales en F11 y F13.
 - Mapeo de los niveles del calificador a las dificultades: **resuelto en F5** (`docs/dificultad.md`, versión 2, con números iniciales por dificultad). Se recalibra con la segunda muestra impresa de F5 y con partidas reales en F13.
 - Límites de velocidad y de tamaño de mensaje: valores iniciales en la sección 4.8; se calibran en F11.
 - Duración del destello de un error: F7.
@@ -186,6 +186,7 @@ interface Match {
   cells: CellState[];
   groupNotes: Uint16Array;
   hintsLeft: number;             // P1: 3
+  excluded: Array<{ cell: number; digit: number }>;  // dígitos de los errores (públicos), para levelToDeduce (F6)
   lastNoteOp: Map<string, number>;          // `group:${cell}:${digit}` | `personal:${playerId}:${cell}:${digit}` → seq de la última modificación (P7)
   recentClientMsgIds: Map<PlayerId, LRU<string, CachedResult>>;  // idempotencia (E-07)
 }
@@ -432,7 +433,7 @@ interface PlacementContext {
   state: Readonly<MatchState>;          // estado ANTES de aplicar
   playerId: PlayerId; cell: number; value: number; at: number;
   closedUnits: Array<{ unit: Bonus['unit']; index: number }>;   // unidades que esta jugada completa
-  levelToDeduce: number;                // engine.levelToDeduce(cell, state) — F4
+  levelToDeduce: number;                // engine.levelToDeduce(cell, { puzzle, values, excluded }) — F4 y F6
 }
 
 interface ScoreChange { playerId: PlayerId; delta: number; reason: 'correct' | 'closure' | 'mistake' | 'hint' }
@@ -450,11 +451,15 @@ interface GameMode {
 }
 ```
 
+**Nivel con descartes públicos (F6).** `levelToDeduce` se calcula sobre el estado anterior a la jugada, con los dígitos colocados y con los dígitos de los errores anteriores (`Match.excluded`), que todos vieron en `cell.mistake`. Un error nunca es el dígito de la solución, así que descartarlo no la contradice y el nivel no sube (T-35.8). Así, después de un error entre 2 candidatos, la celda vale lo que vale con un candidato menos, y adivinar «hasta acertar» no cobra el nivel alto (`docs/puntuacion.md`).
+
 **Modo Normal (boceto)**
 - `can`: `active` puede hacer todas las acciones. `spectator` puede hacer `note.*` y `presence`.
-- `onCorrect`: `B × w(level)` más β por cada unidad cerrada, a través de `packages/scoring` con `params.v1.json`.
+- La puntuación sale de `createScoring(PARAMS_V1)` (`packages/scoring`), cuyas funciones tienen estas firmas (T-36.5): el modo las usa sin adaptarlas.
+- `onCorrect`: `B × w(level)` más β por cada unidad cerrada: un `ScoreChange` `correct` y uno `closure` por unidad, en el orden de `closedUnits`.
 - `onMistake`: `{ score: [−P], livesDelta: −1 }`.
-- `onHint`: `[−H]`.
+- `onHint`: `[−H]`, sin β aunque la pista cierre unidades.
+- Parámetros v1 (`params.v1.json`): B = 10, w = 1/2/3/4/5, P = 90, β = 1 y H = 60. `scoreLog(eventos, parámetros)` recalcula una partida con cualquier versión (T-32.4); conviene que el evento de un acierto guarde `level` y `graderVersion` (decisión de F9, `docs/puntuacion.md`).
 - `outcome`: `victory` si no queda ninguna celda vacía. `defeat` si ningún jugador `active` tiene `connection ∈ {connected, disconnected}`. Si no, `null`.
 - `ranking`: ordena por puntaje descendente; a igual puntaje, menos errores; después, menor `scoreReachedAt`. Si todo empata, comparten posición; para mostrarlos se ordenan por apodo.
 
@@ -581,7 +586,7 @@ Entre corchetes va la fase en que se implementa cada prueba.
 - T-19.3 Una pista sobre una celda bloqueada recibe `cell.already_solved` y no gasta pista. [I, F9]
 - T-19.4 Un espectador que usa `hint.use` recibe `forbidden`. [I, F9]
 - T-19.5 Si la pista completa una fila, columna, caja o jaula, nadie recibe β. [U, F6]
-- T-19.6 La simulación de F6 incluye el uso de pistas y muestra que pedir una pista nunca da más puntos que no pedirla. [U, F6]
+- T-19.6 La simulación de F6 incluye el uso de pistas y muestra que pedir una pista no da más puntos que no pedirla, incluido lo que suman las celdas que deja fáciles, y que tampoco compensa usarla para quitarle a otro la celda difícil que está pensando. Se mide en ramas pareadas (con y sin la pista, más un placebo con la misma espera): el efecto neto sobre el propio puntaje y sobre la diferencia con la víctima es ≤ 0 en media. Rama por rama no se exige, porque la partida se desvía y el ruido va en los dos sentidos. [U, F6: versión reducida en la CI y completa en `pnpm test:corpus`]
 
 **R-20 Puzzles (P2).**
 - T-20.1 Propiedad sobre los puzzles generados: jaulas de 2 a 5 celdas, conectadas, que cubren todas las celdas, sin dígitos repetidos y con la suma correcta. Ambos solvers confirman que la solución es única. [U, F4]
@@ -660,6 +665,16 @@ Entre corchetes va la fase en que se implementa cada prueba.
 - T-35.4 El calificador es correcto: en cada paso de `grade`, el dígito de la solución de cada celda sigue entre sus candidatos. [U, F4]
 - T-35.5 `levelToDeduce(cell, state)` devuelve un nivel entre 1 y `UNRATED`. Vale 1 si la celda es un single, y no sube al agregar celdas bloqueadas correctas. [U, F4]
 - T-35.6 Con la misma semilla y las mismas opciones, el generador produce el mismo puzzle. [U, F4]
+- T-35.7 `levelsToDeduce(board)` da en una sola pasada el `levelToDeduce` de cada celda vacía, y sus puntos fijos por nivel son coherentes: una celda tiene un solo candidato en el punto fijo del nivel L si y solo si su nivel es ≤ L, y la solución nunca sale de los candidatos. [U, F6]
+- T-35.8 Los descartes públicos (`excluded`, dígitos de errores) no contradicen la solución y no suben ningún nivel. Con 2 candidatos en el punto fijo del nivel L y el falso descartado, la celda queda de nivel ≤ L. [U, F6]
+
+**R-36 Puntuación (F6).** El puntaje es una función pura del registro de hechos y de la versión de los parámetros (`packages/scoring`, `docs/puntuacion.md`).
+- T-36.1 Determinismo: `scoreLog` da lo mismo dos veces, con copias del registro y sin modificarlo. [U, F6]
+- T-36.2 Cotas: un acierto da entre B·w(1) y B·w(5) + 4β; un error, −P; una pista, −H. [U, F6]
+- T-36.3 Monotonía: más aciertos del mismo nivel dan más puntos, y un nivel mayor da al menos los mismos puntos. [U, F6]
+- T-36.4 Independencia del orden de los hechos que no se afectan: permutar hechos con su contexto (nivel y unidades cerradas) y su `at` no cambia puntajes, errores ni `scoreReachedAt`. [U, F6]
+- T-36.5 `createScoring` encaja en las firmas de `onCorrect`, `onMistake` y `onHint` de la sección 5 sin adaptarlas (prueba de tipos). [U, F6]
+- T-36.6 La simulación de F6 es determinista (da lo mismo en el hilo actual, en otro orden y en varios hilos) y, con los parámetros vigentes, adivinar tiene un valor esperado negativo frente a deducir para los adivinadores de nivel 2 y 3, P y H cumplen sus reglas (P > B·(w(5) + w(3)), H = B·w(5) + 10) y β no pasa del 20 % de los puntos de una partida. [U, F6: determinismo en la CI; metas en `pnpm test:corpus` y `scoring:simulate`]
 
 ### Reglas del cliente
 
@@ -752,4 +767,4 @@ El inspector está activo por defecto en todas las pruebas I. Las pruebas E2E us
 | Limpieza automática | R-17 | T-17.1–5 |
 | Diseño visual | R-18 | T-18.1 |
 
-Todas las reglas de la visión (R-01 a R-07), las decisiones de F2 (R-19 a R-34) y el motor (R-35) tienen también sus pruebas en la sección 6.
+Todas las reglas de la visión (R-01 a R-07), las decisiones de F2 (R-19 a R-34), el motor (R-35) y la puntuación (R-36) tienen también sus pruebas en la sección 6.

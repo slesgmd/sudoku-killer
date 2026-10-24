@@ -1,7 +1,7 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.14
-Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F5 hecha (2026-10-23) · F7 hecha (2026-10-23)
+Versión del plan: 1.15
+Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F5 hecha (2026-10-23) · F6 hecha (2026-10-24) · F7 hecha (2026-10-23)
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
 ---
@@ -116,7 +116,7 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 | F3 | Monorepo y calidad | 3–5 | F2 | Hecha | ~0,3 |
 | F4 | Motor del puzzle | 20–35 | F3 | Hecha | ~3,4 (F4a ~0,3 + 0,1 de corrección · F4b ~0,6 · F4c ~1,1 · F4d ~0,4 · F4e ~0,4 · F4f ~0,5) |
 | F5 | Banco de puzzles y dificultad | 2–4 | F4 | Hecha | ~2,0 (1,2 + 0,8 por los números iniciales por dificultad) |
-| F6 | Sistema de puntuación | 2–5 | F4 | Pendiente | |
+| F6 | Sistema de puntuación | 2–5 | F4 | Hecha | ~2,2 |
 | F7 | Diseño visual propio | 10 | F2 (puede ir en paralelo con F4–F6) | Hecha | ~1,5 |
 | F8 | Cliente con servidor local simulado | 4–8 | F4, F7 | Pendiente | |
 | F9 | Servidor de salas | 3–6 | F3, F5, F6 | Pendiente | |
@@ -422,6 +422,49 @@ Al aprobar el plan, el usuario pidió además:
 - Se cumplen todas las métricas objetivo.
 - **Revisión constante:** el modelo se recalibra en F11 y en F13 usando registros de partidas reales.
 
+**Pedido del usuario al planificar (2026-10-23):**
+- modelo puro con las firmas de `GameMode`, nivel calculado sobre el estado anterior;
+- una métrica de aporte real independiente de la fórmula;
+- la condición sobre P para k = 2;
+- pistas que nunca den más puntos, incluido lo que dejan libre;
+- estimar y contener el tiempo de la simulación;
+- propiedades en la CI y la simulación completa fuera de ella;
+- un punto de control después de la primera simulación.
+
+**Al aprobar el plan, el usuario agregó:**
+- el nivel se calcula con los descartes públicos de los errores;
+- vidas y derrotas en el simulador, con la tasa por dificultad y por tipo de bot;
+- robustez con dos perfiles alternativos de T(L);
+- en el punto de control, los puntos por segundo de cada nivel y el puntaje típico;
+- no forzar la calibración si P o H quedan desproporcionados.
+
+**Subtareas:**
+
+| Subtarea | Contenido | Estado |
+|---|---|---|
+| F6a | Motor: descartes públicos en `BoardState` y `levelsToDeduce` (T-35.7 y T-35.8). | Hecha |
+| F6b | `packages/scoring`: parámetros con Zod, `createScoring`, `scoreLog` y `rankPlayers` (T-02.1 a T-02.3, T-19.5, T-32.4 y T-36.1 a T-36.5). | Hecha |
+| F6c | Simulador (`apps/server/scripts/scoring-sim/`): bots, vidas, R-05, pistas con placebo, aporte contrafáctico con réplicas, modelo de velocidad e hilos de trabajo. Punto de control con los parámetros iniciales. | Hecha |
+| F6d | Metas nuevas, calibración (`scoring:calibrate`) y validación con semillas nuevas. | Hecha |
+| F6e | `docs/puntuacion.md`, SPEC 1.5, prueba del corpus y cierre. | Hecha |
+
+**Estado:** hecha el 2026-10-24, en unas 2,2 h, frente a 2–5 h. Detalle en `docs/puntuacion.md`.
+- **Parámetros v1:** B = 10, w = 1/2/3/4/5, P = 90, β = 1 y H = 60.
+- **Nivel con descartes públicos:** el dígito de un error se descarta para `levelToDeduce`, y así adivinar «hasta acertar» no cobra el nivel alto.
+- **Condición corregida:** P > B·(w(L) + w(s)), con s el nivel del adivinador.
+- **Aporte real:** el tiempo que el equipo pierde sin el jugador, medido con réplicas. No usa la fórmula de puntuación.
+- **Cambio de metas en el punto de control** (decisión del usuario):
+  - el aporte independiente muestra que el veloz y el lógico aportan lo mismo (el veloz aporta más en el 49 % de los duelos), así que la meta del 55 % se reemplazó por una de equidad entre cuotas de puntaje y de aporte;
+  - el Spearman se mide contra el techo de confiabilidad del aporte;
+  - el adivinador queda fuera de la equidad a propósito: que adivinar no se premie es lo buscado.
+- **Calibración:** ninguna de las 81 combinaciones de la grilla cumplió la equidad. El usuario eligió la más cercana, con P = 90.
+- **Validación** (semilla 2, 10 000 partidas, 8 réplicas, tres perfiles de T(L)):
+  - Se cumplen las metas exigidas: P y H con sus reglas, adivinar con EV negativo frente a deducir (nivel 2 con su intervalo de confianza y nivel 3 en media), pista y robo con efecto neto negativo frente al placebo, y β con p95 de 9,9 %.
+  - **Limitaciones conocidas:** el veloz gana alrededor del 57 % de los duelos (49 % por aporte), el Spearman agrupado es de 0,78 y los estratos de experto quedan por debajo del techo. Los resultados dependen del modelo del mundo.
+- **Para F11 y F13:** la primera prioridad es recalibrar el tamaño de P (hoy es el 78 % del puntaje mediano de un jugador en fácil), con la opción de escalarlo por dificultad. Qué medir: `docs/puntuacion.md`, sección 11.
+- **Para F9:** guardar `level` y `graderVersion` en el evento del acierto, y los descartes en `Match.excluded`.
+- **Desviación registrada:** la meta «pedir una pista nunca da más puntos» se mide en media frente a un placebo. Rama por rama la partida se desvía y el ruido va en los dos sentidos.
+
 ### F7 — Diseño visual propio (10 h; original 10–20 h)
 **Tareas:**
 - Definir la identidad propia: tono, paleta, tipografía e iconografía, todas creadas desde cero.
@@ -586,3 +629,8 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
   - Equivalencia versión 2: 30, 22, 10 y 0 números, con bandas de nivel 1, 2, 3–4 y 5 que no se solapan.
   - `addGivens` con guarda, repartido por cajas; una dificultad por semilla; `GENERATOR_VERSION` "2".
   - Manifiesto regenerado; SPEC 1.4; F5 suma unas 0,8 h (unas 2,0 h en total).
+- **1.15:** F6 hecha (~2,2 h reales frente a 2–5 h).
+  - Parámetros v1: B = 10, w = 1/2/3/4/5, P = 90, β = 1 y H = 60, con el nivel calculado con los descartes públicos de los errores.
+  - Las metas de F6 se cambiaron en el punto de control, por decisión del usuario. La de equidad (cuota de puntaje frente a cuota de aporte, entre veloz y lógico) reemplaza a la del 55 %, y el Spearman se mide contra el techo de confiabilidad.
+  - Las brechas que quedan son limitaciones conocidas, que se recalibran en F11 y F13 con partidas reales.
+  - SPEC 1.5 (§2.3, §5, T-19.6, T-35.7, T-35.8 y R-36) y `docs/puntuacion.md`.

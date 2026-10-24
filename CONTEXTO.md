@@ -5,13 +5,15 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.14. **SPEC:** versión 1.4.
-- **Fase actual:** F6, sistema de puntuación (2–5 h). F5 (banco y dificultad) se cerró el 2026-10-23 con unas 2,0 h frente a 2–4 h, incluidos los números iniciales por dificultad; F4 y F7, el mismo día.
-- **Próxima tarea exacta:** F6 en modo plan (`docs/PLAN.md`, F6).
-- **Resultados de F5 que usa F6:**
-  - Calificador con `unitCombination` acotada a 4 jaulas abiertas y 8 combinaciones (`GRADER_VERSION` "2", `docs/motor.md`).
-  - Todo puzzle del banco tiene `graderMaxLevel` de 1 a 5, y en partidas simuladas `levelToDeduce` nunca devuelve `UNRATED` (T-20.5): F6 puede contar con eso.
-  - Distribución y tiempos de `levelToDeduce` (media 0,91 ms, p95 5,5 ms): `docs/motor.md`, «Cota de `unitCombination` (F5)».
+- **Plan:** versión 1.15. **SPEC:** versión 1.5.
+- **Fase actual:** F8, cliente con servidor local simulado (4–8 h). F6 (puntuación) se cerró el 2026-10-24 con unas 2,2 h frente a 2–5 h; F4, F5 y F7, el 2026-10-23.
+- **Próxima tarea exacta:** F8 en modo plan (`docs/PLAN.md`, F8), con la entrega de F7 (`design/entrega-f8.md`).
+- **Puntuación (F6, `docs/puntuacion.md`):**
+  - Parámetros v1 (`packages/scoring/src/params.v1.json`): B = 10, w = 1/2/3/4/5, P = 90, β = 1 y H = 60.
+  - El nivel se calcula con los descartes públicos de los errores (`BoardState.excluded`, `Match.excluded`).
+  - `createScoring` encaja en `onCorrect`, `onMistake` y `onHint` de `GameMode` sin adaptar; `scoreLog` recalcula una partida; `rankPlayers` hace el ranking.
+  - F9 debería guardar `level` y `graderVersion` en el evento del acierto.
+  - Limitaciones conocidas (ventaja del veloz, Spearman 0,78) y qué medir en F11 y F13: `docs/puntuacion.md`, secciones 10 y 11. La primera prioridad es el tamaño de P.
 - **Banco (F5):**
   - Equivalencia versión 2 en `docs/dificultad.md`: fácil, 30 números iniciales y nivel 1; media, 22 y nivel 2; difícil, 10 y nivel 3 o 4 con algún paso de nivel 3; experto, 0 y nivel 5.
   - Los números iniciales salen de `addGivens` (motor), con guarda, repartidos por cajas y con semilla. Cada semilla pertenece a una sola dificultad.
@@ -46,8 +48,9 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 - `pnpm install`: instala las dependencias y activa el hook de pre-commit (Husky y lint-staged).
 - `pnpm dev`: servidor (Node desde las fuentes, con `--watch`) y web (Vite) en paralelo.
 - `pnpm check`: typecheck, ESLint (con tipos) y Prettier. `pnpm test`: Vitest en todo el monorepo. `pnpm build`: `tsc` a `dist/` y Vite.
-- `pnpm test:corpus`: corpus de 1000 puzzles (A y B, calificador y cotas) y el banco completo (unos 9 min; también en el workflow programado `corpus.yml`).
+- `pnpm test:corpus`: corpus de 1000 puzzles (A y B, calificador y cotas), el banco completo y la validación de la puntuación (semilla fija, unos 10 min; también en el workflow programado `corpus.yml`).
 - Servidor: `pnpm --filter @sudoku-killer/server bank:generate` (manifiesto, unos 13 min), `bank:sample` (muestra imprimible) y `db:generate` (migraciones de Drizzle en `apps/server/drizzle/`).
+- Puntuación: `scoring:simulate` (simulación Monte Carlo, unos 14 min con 8 réplicas) y `scoring:calibrate` (grilla), en el mismo paquete.
 - Pruebas de propiedades: `assertProperty` (`packages/engine/test/helpers/property.ts`), no `fc.assert` (lint). Cada semilla que falle se agrega a `regressions` (`docs/motor.md`).
 - Los paquetes exportan sus fuentes con la condición `@sudoku-killer/source`. Los imports relativos llevan la extensión `.ts`.
 - TypeScript fijado en 6.0.x: `typescript-eslint` no admite la 7 (ADR 0001, nota de F3).
@@ -67,13 +70,14 @@ docs/adr/              decisiones técnicas (README con plantilla e índice)
 docs/motor.md          motor del puzzle: API, algoritmos y mediciones (F4)
 docs/diseno.md         guía de estilo y revisión de originalidad (F7)
 docs/dificultad.md     equivalencia de dificultades, banco y prueba manual (F5)
+docs/puntuacion.md     fórmulas, simulación, calibración y limitaciones de la puntuación (F6)
 design/                prototipo (prototipo/), pantallas, entrega a F8, fotos y muestra de F5 (muestra-f5/)
 evidence/              evidencia local de REA (ignorada por git)
 packages/engine        motor del puzzle (puro)
 packages/protocol      mensajes y esquemas Zod (nunca la solución, T-31.3)
-packages/scoring       puntuación (pura)
+packages/scoring       puntuación (pura) y parámetros (src/params.v1.json)
 packages/game          reductor de la partida y GameMode (puro)
-apps/server            servidor de salas; banco (bank/manifest.json), esquema y migraciones (drizzle/)
+apps/server            servidor de salas; banco (bank/manifest.json), esquema, migraciones (drizzle/) y simulador de la puntuación (scripts/scoring-sim/)
 apps/web               cliente React y Vite
 tests/                 pruebas del repositorio (reglas de lint)
 ```

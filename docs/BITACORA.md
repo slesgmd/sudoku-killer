@@ -439,3 +439,50 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 **Tiempo real:** unas 0,8 h. F5 suma unas 2,0 h, frente a las 2–4 h aprobadas.
 
 **Siguiente:** la segunda prueba en papel (pendiente del usuario) y F6, sistema de puntuación, en modo plan.
+
+## 2026-10-24 — F6: sistema de puntuación
+
+**Pedido del usuario al planificar:**
+- modelo puro en `packages/scoring`, con las firmas de `GameMode`;
+- simulación Monte Carlo de 10 000 partidas como mínimo, con bots lógico, veloz y adivinador, pistas y R-05;
+- una métrica de aporte real independiente de la fórmula;
+- las métricas objetivo y la estimación del tiempo de la simulación;
+- un punto de control antes de calibrar.
+
+Al aprobar, agregó el nivel con los descartes públicos de los errores, las vidas en el simulador, la robustez frente a T(L) y no forzar la calibración si P o H quedaban desproporcionados.
+
+**Hecho:**
+- **F6a, motor:**
+  - `BoardState.excluded` (descartes públicos) y `levelsToDeduce`, que da el nivel de todas las celdas y los puntos fijos por nivel en una pasada.
+  - Pruebas T-35.7 y T-35.8. `GRADER_VERSION` no cambia.
+- **F6b, `packages/scoring`:**
+  - `params.v1.json` con esquema Zod, `createScoring` (`onCorrect`, `onMistake` y `onHint`), `scoreLog` y `rankPlayers`.
+  - 16 pruebas: T-02.1 a T-02.3, T-19.5, T-32.4 y T-36.1 a T-36.5, esta última de tipos.
+- **F6c, simulador** (`apps/server/scripts/scoring-sim/`):
+  - eventos discretos en tiempo virtual, con bots, vidas y derrota, R-05 con tiempo de reacción y pistas compartidas;
+  - el bloque de pistas tiene ramas con pista, sin pista y placebo;
+  - el aporte contrafáctico se mide con réplicas, y hay un modelo de comparación por velocidad;
+  - hilos de trabajo, con el mismo resultado en cualquier cantidad de hilos.
+- **Punto de control** (parámetros iniciales, semilla 1):
+  - el veloz ganaba el 62,8 % de los duelos, pero su aporte solo superaba al del lógico en el 49,2 %;
+  - bajar al 55 % exigía P ≈ 370;
+  - el Spearman por estrato estaba limitado por la confiabilidad del aporte.
+  - El usuario cambió las metas: equidad entre cuotas de puntaje y de aporte, entre veloz y lógico; Spearman contra el techo de confiabilidad; EV de adivinar frente a deducir.
+- **F6d:**
+  - Grilla de 81 combinaciones (`scoring:calibrate`): ninguna cumplió la equidad, y la más cercana quedó en 10,2 puntos.
+  - El usuario eligió w = 1/2/3/4/5, β = 1, H = 60 y P = 90.
+  - Validación con la semilla 2, 8 réplicas y tres perfiles de T(L): se cumplen las metas exigidas. El adivinador de nivel 3 tiene media negativa frente a deducir (−2,4), pero su intervalo toca el 0; el usuario decidió exigir la media.
+- **F6e:** `docs/puntuacion.md`, SPEC 1.5, `docs/motor.md`, la prueba del corpus, PLAN 1.15 y CONTEXTO.md.
+
+**Problemas y soluciones:**
+- **Expertos ausentes en las corridas parciales:** el manifiesto está en orden de semilla y los expertos llegan mucho más tarde. Los puzzles se intercalan por dificultad.
+- **Submuestra de robustez:** al intercalar, quedó solo con fáciles; ahora se toma por bloques de 4.
+- **Ningún robo en la primera prueba:** exigir nivel ≥ 3 en la celda de la víctima era demasiado. Se bajó a ≥ 2, y la pista normal va a la celda más difícil del tablero.
+- **Comparar adivinar contra esperar trababa las mesas** de solo adivinadores. La alternativa pasó a ser deducir fuera de su alcance.
+- **Ramas con pista que daban más puntos:** era la desviación de la partida, como mostró el placebo (el 30 % de sus ramas da más). La meta se mide en media frente al placebo.
+- **Prueba del corpus con 1000 partidas:** el nivel 3 dio +5,7 por ruido. La prueba repite la validación con una semilla fija.
+- **Condición analítica:** la primera versión usaba w(1) después del error; la correcta usa w(s), el nivel del adivinador.
+
+**Tiempo real:** unas 2,2 h, frente a 2–5 h. Las simulaciones largas (de 7 a 14 minutos cada una) corrieron en paralelo con el resto del trabajo.
+
+**Siguiente:** F8, cliente con servidor local simulado, en modo plan. Sigue pendiente del usuario la segunda prueba en papel de F5.
