@@ -7,7 +7,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 - **Plan:** versión 1.18. **SPEC:** versión 1.6.
 - **Fase actual:** F9, servidor de salas (3–6 h). F8 (cliente con servidor simulado) se cerró el 2026-10-24 con unas 3,4 h frente a 4–8 h; F6, el mismo día; F4, F5 y F7, el 2026-10-23.
-- **Próxima tarea exacta:** F9 en curso, con el plan aprobado (`docs/PLAN.md`, F9, subtareas F9a–F9f). F9a hecha. Sigue F9b (núcleo del servidor). Antes de F9d, punto de control del esquema de `matches` y `match_events`. **Antes de empezar F10:** recordarle al usuario la segunda prueba en papel de F5 (ver «Pendiente del usuario»).
+- **Próxima tarea exacta:** F9 en curso, con el plan aprobado (`docs/PLAN.md`, F9, subtareas F9a–F9f). F9a y F9b hechas. Sigue F9c (partida en vivo, presencia, idempotencia, límites y T-32.1). Antes de F9d, punto de control del esquema de `matches` y `match_events`. **Antes de empezar F10:** recordarle al usuario la segunda prueba en papel de F5 (ver «Pendiente del usuario»).
 - **Cliente (F8):**
   - Protocolo v1 completo en `packages/protocol/src/v1/`. Reductor y modo Normal definitivos en `packages/game` (`decide`, `apply`, `replay`, `project`, `createNormalMode`); F9 los reutiliza sin reescribirlos.
   - Lo puro del banco está en `packages/bank` (dificultad, `regenerateSeed`, `canonicalPuzzle`); el servidor conserva el hash con `node:crypto` y la carga.

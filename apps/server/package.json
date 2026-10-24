@@ -19,11 +19,11 @@
     "@sudoku-killer/engine": "workspace:*",
     "@sudoku-killer/game": "workspace:*",
     "@sudoku-killer/protocol": "workspace:*",
+    "@sudoku-killer/scoring": "workspace:*",
     "drizzle-orm": "0.45.4",
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@sudoku-killer/scoring": "workspace:*",
     "@electric-sql/pglite": "0.5.8",
     "drizzle-kit": "0.31.11"
   }

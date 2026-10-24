@@ -220,6 +220,9 @@ importers:
       '@sudoku-killer/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
+      '@sudoku-killer/scoring':
+        specifier: workspace:*
+        version: link:../../packages/scoring
       drizzle-orm:
         specifier: 0.45.4
         version: 0.45.4(@electric-sql/pglite@0.5.8)
@@ -230,9 +233,6 @@ importers:
       '@electric-sql/pglite':
         specifier: 0.5.8
         version: 0.5.8
-      '@sudoku-killer/scoring':
-        specifier: workspace:*
-        version: link:../../packages/scoring
       drizzle-kit:
         specifier: 0.31.11
         version: 0.31.11

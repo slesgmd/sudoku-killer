@@ -29,3 +29,5 @@ export type UndoReason = (typeof UNDO_REASONS)[number];
 export const CLOSE_UNSUPPORTED = 4000;
 /** La misma ficha se abrió en otra pestaña (E-08). */
 export const CLOSE_REPLACED = 4001;
+/** La conexión no entró a ninguna sala en 30 s (ADR 0002). */
+export const CLOSE_NO_ROOM = 4002;

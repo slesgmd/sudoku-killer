@@ -570,7 +570,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | Subtarea | Contenido | Estado |
 |---|---|---|
 | F9a | Piezas puras en sus paquetes: apodo y código de sala en `packages/protocol` (T-09.3); código, asientos, traspaso y snapshot del lobby en `packages/game` (T-09.4); esquema Zod de los eventos; `pickPuzzle` en `packages/bank` (T-21.2). El simulador y el Inicio las usan. | Hecha |
-| F9b | Núcleo del servidor: interfaces de §8.2, `RoomStore`, cola por sala, lobby, ciclo de vida, fichas, plazos, E-08, inspector de filtración y logger. | Pendiente |
+| F9b | Núcleo del servidor: interfaces de §8.2, `RoomStore`, cola por sala, lobby, ciclo de vida, fichas, plazos, E-08, inspector de filtración y logger. | Hecha |
 | F9c | Partida en vivo, presencia, idempotencia, límites de velocidad y T-32.1 contra el servidor. | Pendiente |
 | F9d | Punto de control y después persistencia: `matches` y `match_events`, group commit, reconstrucción, E-16 y retiro de puzzles. | Pendiente |
 | F9e | Producción: `ws`, `pg`, configuración, `db:migrate` y `bank:load`. | Pendiente |
