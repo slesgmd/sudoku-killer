@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --conditions=@sudoku-killer/source --env-file-if-exists=.env --watch src/index.ts",
+    "dev:lan": "node --conditions=@sudoku-killer/source --env-file-if-exists=.env --watch src/index.ts --lan",
     "build": "tsc -p tsconfig.build.json",
     "start": "node --env-file-if-exists=.env dist/index.js",
     "typecheck": "tsc --noEmit",

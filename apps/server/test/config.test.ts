@@ -1,7 +1,14 @@
 // Configuración desde el entorno: los errores nombran la variable y apps/server/.env, nunca el valor;
 // y las pruebas no usan `DATABASE_URL` (siempre PGlite en memoria).
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import { ConfigError, DEV_ORIGIN, loadConfig } from "../src/config/config.ts";
+import type { NetworkInterfaceInfo } from "node:os";
+import {
+  ConfigError,
+  DEV_ORIGIN,
+  isPrivateIPv4,
+  lanOrigins,
+  loadConfig,
+} from "../src/config/config.ts";
 import { table } from "./helpers/play.ts";
 import { createTestServer, testBank } from "./helpers/server.ts";
 
@@ -52,6 +59,82 @@ describe("server configuration", () => {
     expect(() =>
       loadConfig({ DATABASE_URL: URL_WITH_SECRET, ALLOWED_ORIGINS: "javascript:alert(1)" }),
     ).toThrow(/ALLOWED_ORIGINS no es válida/);
+  });
+});
+
+function ipv4(address: string, internal = false): NetworkInterfaceInfo {
+  return {
+    address,
+    netmask: "255.255.255.0",
+    family: "IPv4",
+    mac: "00:00:00:00:00:00",
+    internal,
+    cidr: null,
+  };
+}
+
+const INTERFACES: NodeJS.Dict<NetworkInterfaceInfo[]> = {
+  lo: [ipv4("127.0.0.1", true)],
+  wifi: [
+    ipv4("192.168.1.20"),
+    {
+      address: "fe80::1",
+      netmask: "ffff:ffff:ffff:ffff::",
+      family: "IPv6",
+      mac: "00:00:00:00:00:00",
+      internal: false,
+      cidr: null,
+      scopeid: 1,
+    },
+  ],
+  vpn: [ipv4("10.8.0.2")],
+  docker: [ipv4("172.17.0.1")],
+  public: [ipv4("203.0.113.7"), ipv4("172.32.0.1")],
+};
+
+describe("dev:lan origins (F10, only in development)", () => {
+  it("recognizes only private IPv4 addresses (RFC 1918)", () => {
+    for (const address of ["10.0.0.1", "172.16.0.1", "172.31.255.254", "192.168.0.10"]) {
+      expect(isPrivateIPv4(address), address).toBe(true);
+    }
+    for (const address of [
+      "127.0.0.1",
+      "172.15.0.1",
+      "172.32.0.1",
+      "8.8.8.8",
+      "192.169.0.1",
+      "x",
+    ]) {
+      expect(isPrivateIPv4(address), address).toBe(false);
+    }
+  });
+
+  it("lists the Vite origin on each private IPv4 of the machine", () => {
+    expect(lanOrigins(INTERFACES)).toEqual([
+      "http://192.168.1.20:5173",
+      "http://10.8.0.2:5173",
+      "http://172.17.0.1:5173",
+    ]);
+  });
+
+  it("--lan adds them to ALLOWED_ORIGINS; without it, nothing changes", () => {
+    const env = { DATABASE_URL: URL_WITH_SECRET };
+    expect(loadConfig(env, { interfaces: INTERFACES }).allowedOrigins).toEqual([DEV_ORIGIN]);
+    expect(loadConfig(env, { lan: true, interfaces: INTERFACES }).allowedOrigins).toEqual([
+      DEV_ORIGIN,
+      "http://192.168.1.20:5173",
+      "http://10.8.0.2:5173",
+      "http://172.17.0.1:5173",
+    ]);
+  });
+
+  it("--lan is refused in production", () => {
+    expect(() =>
+      loadConfig(
+        { DATABASE_URL: URL_WITH_SECRET, NODE_ENV: "production" },
+        { lan: true, interfaces: INTERFACES },
+      ),
+    ).toThrow(/solo para desarrollo/);
   });
 });
 

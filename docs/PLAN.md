@@ -626,7 +626,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | F10a | Registros previos: segunda prueba en papel, plan aprobado y nota de F12. | Hecha |
 | F10b | Transporte WebSocket con reconexión (inmediata en móvil), ficha en `sk:token:<code>`, bandeja de pendientes con el mismo `id` (E-07), reconciliación por `seq` y vigilancia del pong; pruebas en vivo en Node contra el servidor real. | Hecha |
 | F10c | Notas optimistas como módulo puro (`game/notes.ts`) y T-16.2 con clientes reales frente a un servidor modelo (orden, idempotencia, entregas desordenadas y cortes). | Hecha |
-| F10d | Desarrollo: proxy de `/ws`, orígenes de `dev:lan`, simulador solo con `?sim=1` y bots como clientes Node. | Pendiente |
+| F10d | Desarrollo: proxy de `/ws`, orígenes de `dev:lan`, simulador solo con `?sim=1` y bots como clientes Node. | Hecha |
 | F10e | Inicio, Entrar o crear, Lobby, Resultados y Ayuda, con rutas por hash y Compartir. | Pendiente |
 | F10f | Estados de red, transiciones y decisión 3. | Pendiente |
 | F10g | E2E con Playwright (6 contextos, T-05.4, T-07.2, T-13.5 y E-08) e inspector sobre el tráfico WS; job `e2e` en la CI. | Pendiente |

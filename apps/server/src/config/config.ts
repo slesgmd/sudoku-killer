@@ -1,6 +1,7 @@
 // Configuración del servidor, solo desde variables de entorno (validadas con Zod). En desarrollo se
 // cargan desde `apps/server/.env` (no se versiona; la forma está en `apps/server/.env.example`). Un
 // error de configuración dice qué variable falta o no vale, nunca su valor.
+import { networkInterfaces, type NetworkInterfaceInfo } from "node:os";
 import { z } from "zod";
 import { normalizeOrigin } from "../infra/ws-transport.ts";
 import type { LogLevel } from "../log/logger.ts";
@@ -15,8 +16,40 @@ export interface Config {
   readonly logLevel: LogLevel;
 }
 
+/** El puerto de Vite en desarrollo. */
+export const DEV_WEB_PORT = 5173;
+
 /** El origen de `pnpm dev` (Vite en localhost). */
-export const DEV_ORIGIN = "http://localhost:5173";
+export const DEV_ORIGIN = `http://localhost:${String(DEV_WEB_PORT)}`;
+
+/** 10/8, 172.16/12 y 192.168/16 (RFC 1918): las direcciones de una red local. */
+export function isPrivateIPv4(address: string): boolean {
+  const parts = address.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) {
+    return false;
+  }
+  const [a = -1, b = -1] = parts;
+  return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+}
+
+/**
+ * Los orígenes de `pnpm dev:lan`: la web de Vite en cada IPv4 privada de esta máquina. Solo para
+ * desarrollo en la red de casa; en producción los orígenes salen de `ALLOWED_ORIGINS`.
+ */
+export function lanOrigins(
+  interfaces: NodeJS.Dict<NetworkInterfaceInfo[]> = networkInterfaces(),
+  port = DEV_WEB_PORT,
+): string[] {
+  const origins = new Set<string>();
+  for (const list of Object.values(interfaces)) {
+    for (const info of list ?? []) {
+      if (info.family === "IPv4" && !info.internal && isPrivateIPv4(info.address)) {
+        origins.add(`http://${info.address}:${String(port)}`);
+      }
+    }
+  }
+  return [...origins];
+}
 
 const originList = z
   .string()
@@ -34,7 +67,14 @@ const schema = z.object({
   PORT: z.coerce.number().int().min(0).max(65_535).default(8080),
   ALLOWED_ORIGINS: originList.default([DEV_ORIGIN]),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+  NODE_ENV: z.string().optional(),
 });
+
+export interface LoadConfigOptions {
+  /** `pnpm dev:lan`: suma los orígenes de la red local (solo fuera de producción). */
+  readonly lan?: boolean;
+  readonly interfaces?: NodeJS.Dict<NetworkInterfaceInfo[]>;
+}
 
 export class ConfigError extends Error {
   constructor(message: string) {
@@ -44,7 +84,10 @@ export class ConfigError extends Error {
 }
 
 /** Lee la configuración. Lanza `ConfigError` con los nombres de las variables que fallan. */
-export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
+export function loadConfig(
+  env: NodeJS.ProcessEnv = process.env,
+  { lan = false, interfaces }: LoadConfigOptions = {},
+): Config {
   const parsed = schema.safeParse(env);
   if (!parsed.success) {
     const problems = parsed.error.issues.map((issue) => {
@@ -55,12 +98,19 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       `Configuración inválida: ${[...new Set(problems)].join(", ")}. Defínelas en ${ENV_FILE} (ver apps/server/.env.example) o en el entorno.`,
     );
   }
-  const { DATABASE_URL, HOST, PORT, ALLOWED_ORIGINS, LOG_LEVEL } = parsed.data;
+  const { DATABASE_URL, HOST, PORT, ALLOWED_ORIGINS, LOG_LEVEL, NODE_ENV } = parsed.data;
+  if (lan && NODE_ENV === "production") {
+    throw new ConfigError(
+      "Configuración inválida: --lan (pnpm dev:lan) es solo para desarrollo en la red de casa, no para producción.",
+    );
+  }
   return {
     databaseUrl: DATABASE_URL,
     host: HOST,
     port: PORT,
-    allowedOrigins: ALLOWED_ORIGINS,
+    allowedOrigins: lan
+      ? [...new Set([...ALLOWED_ORIGINS, ...lanOrigins(interfaces)])]
+      : ALLOWED_ORIGINS,
     logLevel: LOG_LEVEL,
   };
 }

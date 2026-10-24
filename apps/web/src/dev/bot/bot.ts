@@ -34,7 +34,12 @@ export interface BotOptions {
   /** Probabilidad de equivocarse a propósito en cada jugada, de 0 a 1. */
   readonly errorRate: number;
   readonly scheduler?: Scheduler;
+  /** Avisos para quien lo lanzó (entró, no pudo entrar, terminó). Nunca incluyen la ficha. */
+  readonly onNotice?: (text: string) => void;
 }
+
+/** Intentos con otro apodo si el pedido ya está en uso («Tomás 2», «Tomás 3», …). */
+const NICKNAME_ATTEMPTS = 5;
 
 /** Lo que el bot sabe de la partida: solo lo que llega por el protocolo. */
 export interface BotBoard {
@@ -93,14 +98,18 @@ export class Bot {
   private board: BotBoard | null = null;
   private playerId: string | null = null;
   private active = true;
+  private stopped = false;
   private timer: unknown = null;
   private nextId = 1;
   /** La ficha de la sala, para volver si la conexión cae (solo en memoria). */
   private token: string | null = null;
   private readonly unsubscribeStatus: () => void;
+  private nickname: string;
+  private nicknameAttempts = 0;
 
   constructor(options: BotOptions) {
     this.options = options;
+    this.nickname = options.nickname;
     this.rng = createRng(options.seed >>> 0);
     this.scheduler = options.scheduler ?? realScheduler;
     this.unsubscribe = options.transport.subscribe((message) => {
@@ -117,12 +126,13 @@ export class Bot {
   private join(): void {
     this.send("room.join", {
       code: this.options.code,
-      nickname: this.options.nickname,
+      nickname: this.nickname,
       ...(this.token === null ? {} : { token: this.token }),
     });
   }
 
   stop(): void {
+    this.stopped = true;
     this.active = false;
     if (this.timer !== null) this.scheduler.clearTimeout(this.timer);
     this.unsubscribe();
@@ -174,6 +184,7 @@ export class Bot {
   private receive(message: ServerEnvelope): void {
     switch (message.type) {
       case "room.welcome": {
+        if (this.playerId === null) this.options.onNotice?.(`${this.nickname} entró a la sala.`);
         this.playerId = message.payload.playerId;
         this.token = message.payload.token ?? this.token;
         const match = message.payload.snapshot.match;
@@ -191,6 +202,8 @@ export class Bot {
         const values = new Array<number>(puzzle.size * puzzle.size).fill(0);
         for (const { cell, value } of puzzle.givens) values[cell] = value;
         this.board = { puzzle, values, excluded: [] };
+        // Cada partida empieza con todos activos (P4).
+        this.active = !this.stopped;
         this.schedule();
         return;
       }
@@ -208,7 +221,23 @@ export class Bot {
       }
       case "match.ended":
         this.active = false;
+        this.options.onNotice?.(
+          `${this.nickname}: la partida terminó (${message.payload.result}).`,
+        );
         return;
+      case "error": {
+        const { code } = message.payload;
+        if (this.playerId !== null) return;
+        if (code === "nickname.taken" && this.nicknameAttempts < NICKNAME_ATTEMPTS) {
+          this.nicknameAttempts++;
+          this.nickname = `${this.options.nickname} ${String(this.nicknameAttempts + 1)}`;
+          this.join();
+          return;
+        }
+        this.options.onNotice?.(`${this.nickname} no pudo entrar: ${code}.`);
+        this.stop();
+        return;
+      }
       default:
         return;
     }

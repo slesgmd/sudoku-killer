@@ -9,7 +9,8 @@
     "build": "vite build && node scripts/check-dist.ts",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "sim:measure": "node --conditions=@sudoku-killer/source scripts/measure-sim-load.ts"
+    "sim:measure": "node --conditions=@sudoku-killer/source scripts/measure-sim-load.ts",
+    "bots": "node --conditions=@sudoku-killer/source scripts/bots.ts"
   },
   "dependencies": {
     "@sudoku-killer/engine": "workspace:*",

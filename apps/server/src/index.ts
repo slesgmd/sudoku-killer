@@ -1,5 +1,6 @@
 // Servidor de salas (F9): configuración desde el entorno, migraciones, comprobación del banco,
 // reconstrucción de las partidas en curso y WebSocket en /ws. Apagado ordenado con SIGINT y SIGTERM.
+// Con `--lan` (`pnpm dev:lan`), acepta también la web servida en las IP de la red local (F10).
 import { startApp } from "./app.ts";
 import { ConfigError, loadConfig } from "./config/config.ts";
 import { connect, migrateDatabase } from "./db/connect.ts";
@@ -9,7 +10,7 @@ import { EmptyBankError } from "./puzzles/catalog.ts";
 
 function configOrExit() {
   try {
-    return loadConfig();
+    return loadConfig(process.env, { lan: process.argv.includes("--lan") });
   } catch (error) {
     if (error instanceof ConfigError) {
       console.error(error.message);

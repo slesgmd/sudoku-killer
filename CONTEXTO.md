@@ -7,7 +7,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 - **Plan:** versión 1.20. **SPEC:** versión 1.7.
 - **Fase actual:** F10, integración en tiempo real (5–10 h), con el plan aprobado (F10a a F10i). F9 (servidor de salas) se cerró el 2026-10-24 con unas 1,9 h frente a 3–6 h; F6 y F8, el mismo día; F4, F5 y F7, el 2026-10-23.
-- **Próxima tarea exacta:** F10d, desarrollo: proxy de `/ws` en Vite, orígenes de `dev:lan`, simulador solo con `?sim=1` (ya aplicado en `transport/index.ts`) y bots como clientes Node (`docs/PLAN.md`, F10). F10b y F10c dejaron el transporte WebSocket, la sesión, la reconexión y T-16.2.
+- **Próxima tarea exacta:** F10e, pantallas de la prioridad 3 (Inicio, Entrar o crear, Lobby, Resultados y Ayuda) con rutas por hash y Compartir (`docs/PLAN.md`, F10). F10d dejó el proxy de `/ws`, `dev:lan` en el servidor y los bots Node.
 - **Servidor (F9):**
   - `apps/server/src/`: `rooms/` (actor por sala con cola y bandeja de salida ordenada), `match/` (repositorio y group commit), `infra/` (`Transport` en memoria y `ws`, reloj, azar y fichas), `config/` y `app.ts`.
   - Esquema en SPEC §2.5. El registro se confirma antes de difundir, las partidas se reconstruyen al arrancar y E-16 cierra con 1012.
@@ -55,9 +55,9 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 ## Comandos
 
 - `pnpm install`: instala las dependencias y activa el hook de pre-commit (Husky y lint-staged).
-- `pnpm dev`: servidor (Node desde las fuentes, con `--watch`; lee `apps/server/.env`, WebSocket en `ws://127.0.0.1:8080/ws`) y web (Vite, en localhost) en paralelo. En desarrollo, la web usa el servidor simulado (`apps/web/src/dev/sim/`, opciones `?lat=` y `?skew=`) y puede sumar bots compañeros (`?bot=2&pace=4000&errors=0.1&seed=1`).
+- `pnpm dev`: servidor (Node desde las fuentes, con `--watch`; lee `apps/server/.env`, WebSocket en `ws://127.0.0.1:8080/ws`) y web (Vite en `localhost:5173`, puerto fijo) en paralelo. La web juega contra el servidor real: Vite reenvía `/ws` a 127.0.0.1:8080. Con `?sim=1`, el servidor simulado de F8 (`apps/web/src/dev/sim/`, opciones `?lat=`, `?skew=` y bots `?bot=2&pace=4000&errors=0.1&seed=1`). Bots contra el servidor real: `pnpm --filter @sudoku-killer/web bots --code CODIGO [--count 2 --pace 4000 --errors 0.1]`.
 - Base de datos local: PostgreSQL 18 (servicio `postgresql-x64-18`), rol `sudoku_killer` sin privilegios y base `sudoku_killer`. `DATABASE_URL` va solo en `apps/server/.env` (no se versiona; la forma está en `apps/server/.env.example`). Nunca se muestra ni se registra en el log.
-- `pnpm dev:lan`: la web con `--host`, para probar desde el celular. **Solo en la red de casa, nunca en una red pública.**
+- `pnpm dev:lan`: servidor con `--lan` (suma a los orígenes permitidos la web en cada IP privada de la máquina; se rechaza en producción) y web con `--host`, para probar desde el celular. **Solo en la red de casa, nunca en una red pública.**
 - `pnpm check`: typecheck, ESLint (con tipos) y Prettier. `pnpm test`: Vitest en todo el monorepo. `pnpm build`: `tsc` a `dist/` y Vite.
 - `pnpm test:corpus`: corpus de 1000 puzzles (A y B, calificador y cotas), el banco completo y la validación de la puntuación (semilla fija, unos 10 min; también en el workflow programado `corpus.yml`).
 - Servidor: `pnpm --filter @sudoku-killer/server bank:generate` (manifiesto, unos 13 min), `bank:sample` (muestra imprimible), `db:generate` (migraciones de Drizzle en `apps/server/drizzle/`), `db:migrate`, `bank:load` (banco completo, unos minutos), `db:setup-local` (crea el rol y la base locales y escribe `DATABASE_URL`, sin mostrarla), `db:check-local` y `demo` (dos clientes por `ws` hasta la victoria; `--pglite` para no usar la base local).

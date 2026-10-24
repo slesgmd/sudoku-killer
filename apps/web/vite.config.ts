@@ -11,6 +11,16 @@ export const devAliases = {
   "@dev/bank-manifest": fileURLToPath(new URL("../server/bank/manifest.json", import.meta.url)),
 };
 
+/**
+ * El WebSocket del juego (`/ws`) se reenvía al servidor de salas, que sigue escuchando solo en
+ * 127.0.0.1 (F10). El `Origin` del navegador llega tal cual: el servidor lo compara con su lista de
+ * orígenes permitidos (con `pnpm dev:lan`, también las IP de la red local). `SK_WS_TARGET` cambia el
+ * destino (las pruebas E2E usan otro puerto).
+ */
+const wsProxy = {
+  "/ws": { target: process.env["SK_WS_TARGET"] ?? "ws://127.0.0.1:8080", ws: true },
+};
+
 /** Escribe la lista de módulos de cada chunk del build para `check-dist` (T-31.2). */
 function moduleReport(): Plugin {
   return {
@@ -29,6 +39,10 @@ export default defineConfig(({ command }) => ({
     conditions: ["@sudoku-killer/source", ...defaultClientConditions],
     alias: command === "serve" ? devAliases : {},
   },
+  // Puerto fijo: el servidor solo acepta el origen de 5173 (y el de las IP locales con dev:lan).
+  // Si está ocupado, Vite falla en lugar de pasar a otro puerto que el servidor rechazaría.
+  server: { proxy: wsProxy, strictPort: true },
+  preview: { proxy: wsProxy },
   build: {
     // Nada se incrusta en base64: las fuentes van como archivos woff2 (entrega-f8.md §5).
     assetsInlineLimit: 0,
