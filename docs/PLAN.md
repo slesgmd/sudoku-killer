@@ -15,7 +15,7 @@ Sudoku killer web en el que hasta 6 personas, identificadas solo con un apodo, s
 - **Ranking individual de aporte:** gana el ranking quien más puntos suma.
 - **Vidas:** cada jugador tiene 3. Al llegar a 0 pasa a espectador y conserva sus puntos.
 - **Jugadas visibles para todos:** cada jugada correcta o errónea se notifica a todos indicando quién la hizo. La celda correcta queda bloqueada. El número erróneo se muestra un instante y luego se retira.
-- **Jugadas simultáneas** en la misma celda: gana la primera que llega al servidor. La segunda recibe "ya resuelta" y no se penaliza.
+- **Jugadas simultáneas** en la misma celda: el servidor las ordena y gana la primera que procesa. Si es un acierto, las siguientes reciben "ya resuelta" y no se penalizan. Si es un error, el error cuenta, la celda sigue libre y la siguiente jugada se evalúa con normalidad (SPEC R-05).
 - **Notas en dos capas:** personales y grupales. Cada jugador elige qué capas ve y en cuál escribe.
 - **Temporizador común** controlado por el servidor. No se pausa.
 
@@ -106,7 +106,7 @@ El modo competitivo entre amigos y cualquier idea nueva se registran en `docs/ID
 
 ## 5. Resumen de fases
 
-Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas, con un margen de ±40 %.
+Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas, con un margen de ±40 %. Desde el cierre de F4, las de F5 a F13 son las de la recalibración aprobada (abajo); las de F0 a F4 son las originales.
 
 | Fase | Nombre | Horas estimadas | Depende de | Estado | Horas reales |
 |---|---|---|---|---|---|
@@ -115,39 +115,39 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 | F2 | Especificación y arquitectura | 6–10 | F1 | Hecha | ~0,4 |
 | F3 | Monorepo y calidad | 3–5 | F2 | Hecha | ~0,3 |
 | F4 | Motor del puzzle | 20–35 | F3 | Hecha | ~3,4 (F4a ~0,3 + 0,1 de corrección · F4b ~0,6 · F4c ~1,1 · F4d ~0,4 · F4e ~0,4 · F4f ~0,5) |
-| F5 | Banco de puzzles y dificultad | 6–12 | F4 | Pendiente | |
-| F6 | Sistema de puntuación | 10–18 | F4 | Pendiente | |
-| F7 | Diseño visual propio | 10–20 | F2 (puede ir en paralelo con F4–F6) | Pendiente | |
-| F8 | Cliente con servidor local simulado | 15–25 | F4, F7 | Pendiente | |
-| F9 | Servidor de salas | 15–25 | F3, F5, F6 | Pendiente | |
-| F10 | Integración en tiempo real | 15–25 | F8, F9 | Pendiente | |
-| F11 | Pruebas integrales, carga y seguridad | 10–16 | F10 | Pendiente | |
-| F12 | Despliegue privado | 5–10 | F11 | Pendiente | |
-| F13 | Beta cerrada y cierre de la v1 | 10–20 (+1–2 semanas de calendario) | F12 | Pendiente | |
-| **Total** | | **130–230 h** | | | |
+| F5 | Banco de puzzles y dificultad | 2–4 | F4 | Pendiente | |
+| F6 | Sistema de puntuación | 2–5 | F4 | Pendiente | |
+| F7 | Diseño visual propio | 10 | F2 (puede ir en paralelo con F4–F6) | Pendiente | |
+| F8 | Cliente con servidor local simulado | 4–8 | F4, F7 | Pendiente | |
+| F9 | Servidor de salas | 3–6 | F3, F5, F6 | Pendiente | |
+| F10 | Integración en tiempo real | 4–8 | F8, F9 | Pendiente | |
+| F11 | Pruebas integrales, carga y seguridad | 3–6 | F10 | Pendiente | |
+| F12 | Despliegue privado | 2–4 | F11 | Pendiente | |
+| F13 | Beta cerrada y cierre de la v1 | 10 (+1–2 semanas de calendario) | F12 | Pendiente | |
+| **Total** | | **unas 45–66 h** (40–61 h de F5 a F13 y unas 4,8 h reales de F0 a F4; la estimación original era de 130–230 h) | | | |
 
-Equivale a unas **7–15 semanas** dedicando 15–20 horas por semana. Si otra persona trabaja F7 en paralelo, el total se reduce entre 1 y 2 semanas.
+Equivale a unas **2,5–4,5 semanas** dedicando 15–20 horas por semana, más las 1–2 semanas de calendario de la beta. Si otra persona trabaja F7 en paralelo, el total se reduce en unas 10 h.
 
-### Recalibración propuesta al cerrar F4 (pendiente de aprobación del usuario)
+### Recalibración al cerrar F4 (aprobada por el usuario el 2026-10-23, con F7 y F13 en 10 h)
 
 **Evidencia.** F4 llevó unas **3,4 h reales** frente a las 20–35 h estimadas: entre el 10 % y el 17 % de la estimación. Cada subfase quedó por debajo de su rango (la más larga, F4c, con 1,1 h frente a 3–5 h). De F0 a F4 se usaron unas **4,8 h** frente a 34–60 h: entre el 8 % y el 14 %. Las horas reales son las de las sesiones de trabajo anotadas en la BITÁCORA, y no cuentan el tiempo que el usuario dedica a revisar fuera de ellas.
 
-**Por qué no aplicar el mismo factor a todo.** F4 era código puro con oráculos automáticos (dos solvers, fuerza bruta, corpus), el caso más favorable. Las fases siguientes tienen partes que no se aceleran igual: interfaz que hay que mirar en el navegador (F7, F8), integración en tiempo real con más ciclos de depuración (F10), cuentas, dominio y secretos del usuario (F12), y pruebas con personas (F5, F13). La propuesta usa entre el 25 % y el 35 % de la estimación original, el doble de lo observado, como margen.
+**Por qué no aplicar el mismo factor a todo.** F4 era código puro con oráculos automáticos (dos solvers, fuerza bruta, corpus), el caso más favorable. Las fases siguientes tienen partes que no se aceleran igual: interfaz que hay que mirar en el navegador (F7, F8), integración en tiempo real con más ciclos de depuración (F10), cuentas, dominio y secretos del usuario (F12), y pruebas con personas (F5, F13). La propuesta usaba entre el 25 % y el 35 % de la estimación original, el doble de lo observado, como margen. El usuario la aprobó con un cambio: F7 y F13 quedan en 10 h cada una.
 
-| Fase | Estimación original (h) | Propuesta (h) | Motivo |
+| Fase | Estimación original (h) | Aprobada (h) | Motivo |
 |---|---|---|---|
 | F5 | 6–12 | 2–4 | El lote y los histogramas son automáticos; la prueba manual con jugadores es tiempo de personas. |
 | F6 | 10–18 | 2–5 | Paquete puro con simulación Monte Carlo, parecido a F4. |
-| F7 | 10–20 | 4–8 | Las iteraciones de diseño dependen de la revisión del usuario. |
+| F7 | 10–20 | 10 | Las iteraciones de diseño dependen de la revisión del usuario. Se propusieron 4–8 h; el usuario la fijó en 10 h. |
 | F8 | 15–25 | 4–8 | Interfaz en React; se verifica en el navegador. |
 | F9 | 15–25 | 3–6 | El protocolo y las reglas ya están en la SPEC; pruebas con PGlite. |
 | F10 | 15–25 | 4–8 | Mayor riesgo de integración (reconexión, concurrencia). |
 | F11 | 10–16 | 3–6 | Playwright, carga y seguridad, automatizables. |
 | F12 | 5–10 | 2–4 | Requiere cuentas, dominio y secretos del usuario. |
-| F13 | 10–20 (+1–2 semanas) | 4–8 (+1–2 semanas) | Beta con personas: el calendario no se acorta. |
-| **F5–F13** | **96–171** | **28–57** | |
+| F13 | 10–20 (+1–2 semanas) | 10 (+1–2 semanas) | Beta con personas: el calendario no se acorta. Se propusieron 4–8 h; el usuario la fijó en 10 h. |
+| **F5–F13** | **96–171** | **40–61** | |
 
-Con lo ya hecho (unas 4,8 h), el total de la v1 quedaría en unas **33–62 h**, frente a 130–230 h. Si el usuario la aprueba, la columna «Horas estimadas» de la tabla de arriba se reemplaza por la propuesta y se sube la versión del plan; si no, se mantienen las estimaciones originales. Se vuelve a comparar al cerrar F5 y F10.
+Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, frente a 130–230 h. La columna «Horas estimadas» de la tabla de arriba ya usa estos valores. Se vuelve a comparar al cerrar F5 y F10.
 
 ---
 
@@ -283,7 +283,7 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 quedaría en unas **33–62 h**,
 - 100 % de los puzzles con solución única.
 - Tiempo medio de generación medido y documentado.
 
-### F5 — Banco de puzzles y calibración de dificultad (6–12 h)
+### F5 — Banco de puzzles y calibración de dificultad (2–4 h; original 6–12 h)
 **Tareas:**
 - Script de generación por lotes.
 - Esquema de base de datos `puzzles` (la solución solo se guarda en el servidor).
@@ -300,16 +300,12 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 quedaría en unas **33–62 h**,
 
 **Datos de partida (corpus de F4f, 1000 puzzles 9×9 sin números iniciales, `docs/motor.md`):** nivel máximo 2 en 100, 3 en 668, 4 en 77, 5 en 85, y 70 que exceden todas las técnicas. Ninguno es de nivel 1. Pasos por puzzle: mediana 51.
 
-**Decisiones pendientes** (registradas al cerrar F4, 2026-10-23, a pedido del usuario; se resuelven al empezar F5):
-- **a) Puzzles que exceden todas las técnicas:** se excluyen del banco de la v1. Son el 7,0 % del corpus. El script de lotes los descarta y registra cuántos. Así, todo puzzle del banco tiene `graderMaxLevel` entre 1 y 5, y como agregar celdas correctas no sube el nivel (T-35.5), `levelToDeduce` nunca devuelve `UNRATED` en una partida, porque el servidor solo coloca dígitos correctos. F6 puede contar con eso.
-- **b) Rendimiento bajo del nivel fácil:** solo el 10 % de los puzzles generados se resuelve con técnicas de nivel 2 o menos (ninguno con nivel 1). Hay que evaluar cómo compensarlo:
-  1. Generar más puzzles y filtrar: para 500 fáciles hacen falta unos 5000 candidatos, unos 6 minutos a unos 70 ms cada uno (generación y calificación).
-  2. Agregar números iniciales en el nivel fácil (`easyGivens`, que la decisión P2 de la SPEC permite). Baja el nivel, pero cambia la experiencia.
-  3. Ajustar `cageSizeWeights` hacia jaulas más chicas.
+**Decisiones** (registradas al cerrar F4 como pendientes y aprobadas por el usuario el 2026-10-23):
+- **a) Puzzles que exceden todas las técnicas: se excluyen del banco de la v1.** Son el 7,0 % del corpus. El script de lotes los descarta y registra cuántos. Así, todo puzzle del banco tiene `graderMaxLevel` entre 1 y 5, y como agregar celdas correctas no sube el nivel (T-35.5), `levelToDeduce` nunca devuelve `UNRATED` en una partida, porque el servidor solo coloca dígitos correctos. F6 puede contar con eso.
+- **b) Nivel fácil: se obtiene generando más puzzles y filtrando.** Solo el 10 % de los puzzles generados se resuelve con técnicas de nivel 2 o menos (ninguno con nivel 1): para 500 fáciles hacen falta unos 5000 candidatos, unos 6 minutos a unos 70 ms cada uno (generación y calificación). Los números iniciales del nivel fácil (`easyGivens`, que permite la decisión P2 de la SPEC) se usan solo si la prueba manual muestra que el fácil resulta difícil. Ajustar `cageSizeWeights` hacia jaulas más chicas queda descartado.
+- **c) La equivalencia entre los niveles del calificador y las dificultades del juego se decide en F5**, con el informe para F5 del calificador (`docs/motor.md`, «Informe para F5»): uso de cada técnica y peso de `unitCombination` en el nivel 5.
 
-  Se mide cada opción en F5 y se decide con el usuario (decisión P2).
-
-### F6 — Sistema de puntuación (10–18 h)
+### F6 — Sistema de puntuación (2–5 h; original 10–18 h)
 **Modelo inicial** (los parámetros viven en `scoring/params.v1.json` y se versionan):
 - **Acierto en la celda c:** `V(c) = B × w(nivelParaDeducir(c, estado actual))`. Recompensa resolver celdas difíciles, no correr por las fáciles. Valores iniciales: B = 10 y pesos w = 1; 1,5; 2; 3 para los niveles 1 a 4 o más.
 - **Error:** `−P` además de perder una vida. P se calibra para que adivinar entre 2 o más candidatos tenga un valor esperado negativo frente a deducir.
@@ -340,7 +336,7 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 quedaría en unas **33–62 h**,
 - Se cumplen todas las métricas objetivo.
 - **Revisión constante:** el modelo se recalibra en F11 y en F13 usando registros de partidas reales.
 
-### F7 — Diseño visual propio (10–20 h)
+### F7 — Diseño visual propio (10 h; original 10–20 h)
 **Tareas:**
 - Definir la identidad propia: tono, paleta, tipografía e iconografía, todas creadas desde cero.
 - Tokens de diseño (colores, espaciados, tipografías).
@@ -356,7 +352,7 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 quedaría en unas **33–62 h**,
 - Guía de estilo en `docs/diseno.md`.
 - Revisión explícita de que nada replica la interfaz de la app de referencia.
 
-### F8 — Cliente con servidor local simulado (15–25 h)
+### F8 — Cliente con servidor local simulado (4–8 h; original 15–25 h)
 **Tareas:**
 - `apps/web` implementando el diseño de F7.
 - El cliente se comunica mediante la interfaz `Transport`. Para desarrollo, se usa un servidor simulado en memoria; solo en ese modo existe la solución en el navegador.
@@ -367,7 +363,7 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 quedaría en unas **33–62 h**,
 - Pruebas de componentes en verde.
 - La versión de producción no incluye el servidor simulado (verificado en el build).
 
-### F9 — Servidor de salas (15–25 h)
+### F9 — Servidor de salas (3–6 h; original 15–25 h)
 **Tareas:**
 - Creación y unión a salas por código, con apodos únicos.
 - Ciclo de vida completo según la sección 2.
@@ -385,7 +381,7 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 quedaría en unas **33–62 h**,
 - Pruebas de cada transición de estado y de cada caso límite de la SPEC.
 - El test de "la solución nunca sale del servidor" está en verde.
 
-### F10 — Integración en tiempo real (15–25 h)
+### F10 — Integración en tiempo real (4–8 h; original 15–25 h)
 **Tareas:**
 - Conectar el cliente al servidor real.
 - Actualizaciones optimistas con reconciliación por número de secuencia.
@@ -401,7 +397,7 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 quedaría en unas **33–62 h**,
 - Clics simultáneos en la misma celda resueltos según la regla.
 - Desconexión y vuelta dentro del plazo sin pérdida de estado.
 
-### F11 — Pruebas integrales, carga y seguridad (10–16 h)
+### F11 — Pruebas integrales, carga y seguridad (3–6 h; original 10–16 h)
 **Tareas:**
 - Pruebas E2E con Playwright para los flujos principales y los casos límite.
 - Pruebas de caos: cortes de red aleatorios.
@@ -414,7 +410,7 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 quedaría en unas **33–62 h**,
 - 0 fallos E2E.
 - Hallazgos documentados.
 
-### F12 — Despliegue privado (5–10 h)
+### F12 — Despliegue privado (2–4 h; original 5–10 h)
 **Tareas:**
 - Hosting elegido por ADR.
 - HTTPS y WSS.
@@ -427,7 +423,7 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 quedaría en unas **33–62 h**,
 - Una partida real entre dispositivos distintos funciona.
 - Restaurar un respaldo funciona.
 
-### F13 — Beta cerrada y cierre de la v1 (10–20 h, más 1–2 semanas de calendario)
+### F13 — Beta cerrada y cierre de la v1 (10 h, más 1–2 semanas de calendario; original 10–20 h)
 **Tareas:**
 - Partidas con el grupo cerrado.
 - Formulario de retroalimentación.
@@ -478,3 +474,6 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 quedaría en unas **33–62 h**,
   - Calificador de niveles 4 y 5 con el pedido del usuario registrado en F4. Corpus: 0 deducciones erróneas y el 7 % de los puzzles excede todas las técnicas. `levelToDeduce`: p95 de 9,2 ms.
   - F5 suma los datos de partida del corpus y dos decisiones pendientes: excluir del banco los puzzles que exceden las técnicas, y cómo compensar el rendimiento bajo del nivel fácil (decisión P2).
   - La sección 5 suma una recalibración propuesta de F5 a F13 (de 96–171 h a 28–57 h), pendiente de aprobación. La tabla mantiene las estimaciones originales hasta entonces.
+  - Después del cierre, aprobado por el usuario (2026-10-23): la recalibración, con un cambio (F7 y F13 en 10 h cada una). F5 a F13 pasan de 96–171 h a 40–61 h y el total de la v1 queda en unas 45–66 h. Se actualizaron la tabla de la sección 5 y los encabezados de F5 a F13.
+  - Decisiones de F5 aprobadas: los puzzles que exceden todas las técnicas se excluyen del banco; el fácil se obtiene generando más y filtrando (`easyGivens` solo si la prueba manual muestra que resulta difícil; las jaulas más chicas quedan descartadas); la equivalencia entre niveles y dificultades se decide en F5 con el informe del calificador (`docs/motor.md`).
+  - Sección 1: la frase de jugadas simultáneas coincide con R-05 (si la primera jugada es un error, la celda sigue libre).

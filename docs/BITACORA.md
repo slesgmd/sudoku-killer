@@ -293,3 +293,27 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 **Tiempo real:** unos 0,5 h (13:09 a 13:40 aproximadamente).
 
 **Siguiente:** F5, banco de puzzles y calibración de dificultad. Empieza por las decisiones pendientes a) y b) y por la aprobación de la recalibración.
+
+
+## 2026-10-23 — Correcciones posteriores a F4f e informe para F5
+
+**Pedido del usuario:** quitar de la bitácora las menciones de quién ejecutó cada sesión; confirmar el límite de 50 ms del p95 de `levelToDeduce`; versionar la monotonía de `levelToDeduce` con los niveles 4 y 5 (las 9000 comparaciones en el corpus y una versión reducida en la CI, con T-35.5); un informe para F5 sin cambiar el calificador (uso por técnica, peso de `unitCombination` en el nivel 5 y una variante acotada propuesta); registrar las decisiones aprobadas de F5 y la recalibración aprobada (F7 y F13 en 10 h), y alinear la frase de jugadas simultáneas del plan con R-05.
+
+**Estado encontrado:** la sesión anterior se cortó sin dejar cambios en el repositorio (árbol limpio, sin stash), así que todos los puntos se hicieron desde el commit de F4f. El límite de 50 ms ya figuraba bien en todos los documentos, y ningún documento versionado decía que `unitCombination` estuviera fuera de una lista cerrada.
+
+**Hecho:**
+- Bitácora: se quitaron las menciones de quién ejecutó cada sesión (commit aparte).
+- `test/helpers/grader.ts`: `expectMonotoneLevels` (T-35.5), que sigue celdas vacías desde los números iniciales mientras se agregan tandas de celdas correctas. En la CI (`grader.test.ts`): 4 puzzles 9×9 de nivel 4 y 5, 180 comparaciones. En el corpus: 200 puzzles, 9000 comparaciones, sin ninguna subida.
+- `test/helpers/grader-report.ts` y el corpus: uso por técnica (puzzles, pasos y deducciones), `grade` sin `unitCombination` en los puzzles de nivel 5 y, para cada deducción de `unitCombination`, las jaulas y combinaciones de la unidad más chica que la justifica. El calificador no cambió.
+- `docs/motor.md`: informe para F5 y propuesta de una variante acotada de `unitCombination` (como mucho 4 jaulas abiertas y 8 combinaciones), sin implementar.
+- `docs/PLAN.md` (1.11): recalibración aprobada en la sección 5 y en los encabezados de F5 a F13 (F5 a F13, 40–61 h; total de la v1, unas 45–66 h), decisiones a), b) y c) de F5 y la sección 1 alineada con R-05.
+
+**Resultados:** `unitCombination` se usa en los 85 puzzles de nivel 5 y, sin ella, los 85 exceden las técnicas. Por deducción: 5 jaulas abiertas de mediana (p95 6, máximo 8) y 7 combinaciones de mediana (p95 52, máximo 825). Con la cota propuesta entra el 36,9 % de las deducciones. Solo 1 puzzle de nivel 5 tiene todas sus deducciones dentro, pero es una cota inferior: lo que conservaría la variante se mide en F5. Y-Wing y Swordfish siguen sin usarse.
+
+**Problemas y soluciones:**
+- El corpus imprimía pasos por técnica, pero no deducciones ni puzzles. Se reproduce la traza de `grade` con un estado propio para contarlos y para analizar cada unidad sin tocar el calificador.
+- `gradeWithout` repite el bucle de `grade`. Para comprobar que la réplica es fiel, en los puzzles de nivel 5 que no usan `unitCombination` se exige el mismo resultado que `grade` (no hubo ninguno: los 85 la usan).
+
+**Tiempo real:** unos 0,4 h (18:45 a 19:10 aproximadamente).
+
+**Siguiente:** F5, con las decisiones aprobadas. Empieza por el script de lotes y por la equivalencia entre niveles y dificultades, que se decide con el informe (incluida la medición real de la variante acotada si se adopta).
