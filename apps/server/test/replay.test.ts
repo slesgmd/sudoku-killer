@@ -12,7 +12,10 @@ import { createTestServer, mode, testBank, type TestClient } from "./helpers/ser
 const PLAYERS = 3;
 
 const who = fc.nat(PLAYERS - 1);
-/** Quien no es el jugador 0 puede salir, caerse y volver: el 0 mantiene viva la sala. */
+/**
+ * Quien no es el jugador 0 puede salir, caerse y volver: el 0 mantiene viva la sala. Llega hasta
+ * `PLAYERS` para alcanzar también a los que entran después; `otherSeat` nunca da el 0.
+ */
 const other = fc.integer({ min: 1, max: PLAYERS });
 const actionArb = fc.oneof(
   {
@@ -58,6 +61,11 @@ const actionArb = fc.oneof(
   },
 );
 
+/** El asiento de `other`: entre el 1 y el último, nunca el 0 (que con `% length` caería en el 0). */
+function otherSeat(who: number, seats: number): number {
+  return 1 + ((who - 1) % (seats - 1));
+}
+
 interface Seat {
   client: TestClient;
   readonly nickname: string;
@@ -71,6 +79,16 @@ beforeAll(async () => {
 }, 60_000);
 
 describe("R-32 reproducible log", () => {
+  it("T-32.1 the harness never makes player 0 leave, drop or come back", () => {
+    for (let seats = PLAYERS; seats <= PLAYERS + 5; seats++) {
+      for (let who = 1; who <= PLAYERS; who++) {
+        const seat = otherSeat(who, seats);
+        expect(seat).toBeGreaterThanOrEqual(1);
+        expect(seat).toBeLessThan(seats);
+      }
+    }
+  });
+
   it("T-32.1 replay(log) equals the live server state", { timeout: 180_000 }, async () => {
     await assertAsyncProperty(
       fc.asyncProperty(
@@ -95,7 +113,13 @@ describe("R-32 reproducible log", () => {
 
           for (const action of actions) {
             if (h.room(code).state !== "running") break;
-            const seat = "who" in action ? seats[action.who % seats.length] : undefined;
+            const index =
+              action.kind === "leave" || action.kind === "drop" || action.kind === "back"
+                ? otherSeat(action.who, seats.length)
+                : "who" in action
+                  ? action.who % seats.length
+                  : undefined;
+            const seat = index === undefined ? undefined : seats[index];
             const client = seat?.inside ? seat.client : undefined;
             switch (action.kind) {
               case "place": {
@@ -176,7 +200,11 @@ describe("R-32 reproducible log", () => {
           expect(mode.ranking(replayed)).toEqual(mode.ranking(match.state));
         },
       ),
-      { numRuns: 40 },
+      {
+        numRuns: 40,
+        // El «jugador 3» de 3 asientos era el 0: se caían todos y la sala se borraba (bien) a los 120 s.
+        regressions: [{ seed: -1802840427 }],
+      },
     );
   });
 });
