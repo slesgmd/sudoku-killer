@@ -5,9 +5,9 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.19. **SPEC:** versión 1.7.
-- **Fase actual:** F10, integración en tiempo real (5–10 h). F9 (servidor de salas) se cerró el 2026-10-24 con unas 1,9 h frente a 3–6 h; F6 y F8, el mismo día; F4, F5 y F7, el 2026-10-23.
-- **Próxima tarea exacta:** F10 en modo plan (`docs/PLAN.md`, F10). **Antes de empezar F10:** recordarle al usuario la segunda prueba en papel de F5 (ver «Pendiente del usuario»); si cambia la equivalencia, se regenera el manifiesto y se vuelve a ejecutar `bank:load`.
+- **Plan:** versión 1.20. **SPEC:** versión 1.7.
+- **Fase actual:** F10, integración en tiempo real (5–10 h), con el plan aprobado (F10a a F10i). F9 (servidor de salas) se cerró el 2026-10-24 con unas 1,9 h frente a 3–6 h; F6 y F8, el mismo día; F4, F5 y F7, el 2026-10-23.
+- **Próxima tarea exacta:** F10b, transporte WebSocket, sesión y reconexión (`docs/PLAN.md`, F10, subtareas aprobadas el 2026-10-24).
 - **Servidor (F9):**
   - `apps/server/src/`: `rooms/` (actor por sala con cola y bandeja de salida ordenada), `match/` (repositorio y group commit), `infra/` (`Transport` en memoria y `ws`, reloj, azar y fichas), `config/` y `app.ts`.
   - Esquema en SPEC §2.5. El registro se confirma antes de difundir, las partidas se reconstruyen al arrancar y E-16 cierra con 1012.
@@ -30,7 +30,6 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
   - 2000 puzzles como manifiesto de semillas en `apps/server/bank/manifest.json` (ADR 0006), con el generador "2".
   - Tabla `puzzles` con Drizzle, `PuzzleRepository` y `loadBank` en `apps/server/src/`.
   - Base local cargada con el banco completo (500 vigentes por dificultad). Los puzzles que salen del manifiesto quedan retirados, no borrados (ADR 0006, nota de F9).
-- **Pendiente del usuario (antes de F10):** la segunda prueba en papel con `design/muestra-f5/muestra.html` (equivalencia versión 2); los resultados se anotan en `docs/dificultad.md`, sección 6. Si las dificultades no se distinguen, se ajusta la equivalencia, se regenera el manifiesto y se vuelve a cargar con `bank:load`; los puzzles que salen del manifiesto quedan retirados, no borrados (F9).
 - **Diseño (F7 y F8):** prototipo en `design/prototipo/` (`npx serve design/prototipo`), guía en `docs/diseno.md` (con las decisiones de las pruebas de F8) y entrega a F8 en `design/entrega-f8.md`.
 
 ## Reglas clave

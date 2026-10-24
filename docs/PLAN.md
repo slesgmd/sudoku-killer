@@ -1,6 +1,6 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.19
+Versión del plan: 1.20
 Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F5 hecha (2026-10-23) · F6 hecha (2026-10-24) · F7 hecha (2026-10-23) · F8 hecha (2026-10-24) · F9 hecha (2026-10-24)
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
@@ -153,7 +153,7 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, fre
 - F5 llevó unas 2,0 h frente a 2–4 h (entre el 50 % y el 100 %), con los números iniciales por dificultad incluidos, y F7, unas 1,5 h frente a 10 h (15 %).
 - De F0 a F7 van unas 8,3 h reales.
 - La recalibración se mantiene sin cambios. F5 y F7 quedaron por debajo, pero las fases que vienen (F8 a F13) tienen la interfaz, la integración en tiempo real, el despliegue y la beta con personas, que se aceleran menos.
-- La prueba en papel de F5 la hizo el usuario fuera de las sesiones y no entra en estas horas. La segunda muestra queda pendiente.
+- La prueba en papel de F5 la hizo el usuario fuera de las sesiones y no entra en estas horas. La segunda muestra se probó el 2026-10-24 (`docs/dificultad.md`, sección 6): las dificultades se distinguen y la equivalencia versión 2 se mantiene.
 - Próxima comparación: al cerrar F10.
 
 ---
@@ -609,6 +609,30 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - Desconexión y vuelta dentro del plazo sin pérdida de estado.
 - Cada pantalla de la prioridad 3 y cada estado de red se ven con sus estados a 360 y a 1280 px, sin desplazamiento horizontal, y los pendientes de `entrega-f8.md` §4 quedan resueltos o decididos por el usuario. «Volver a la sala» cumple la decisión 3.
 
+**Al aprobar el plan, el usuario decidió y pidió (2026-10-24):**
+- sin fotos en la v1 (pantallas en una columna centrada);
+- «Compartir» con la hoja del sistema y el enlace `…/#/sala/CODIGO` (nunca con la ficha); sin hoja, se copia el enlace, y sin portapapeles, un diálogo con el enlace seleccionado;
+- Resultados solo con «Ver resultados»; si quien inicia vuelve al lobby antes, todos pasan al lobby con un aviso;
+- al recargar con `#/sala/CODIGO` y la ficha guardada, la sesión se reanuda sola; sin ficha, se abre Entrar con el código;
+- reconexión inmediata en móvil con `visibilitychange`, `pageshow` (página restaurada de la caché) y `online`, sin esperar la vigilancia del pong ni la espera exponencial;
+- Playwright sin reintentos automáticos (`retries: 0`), también en la CI; un fallo intermitente se investiga;
+- para F12, la clave de acceso del grupo pasa a ser obligatoria (ver F12);
+- check, test, build, commit, push y CI en verde en cada subtarea, y un punto de control con PC, celular y iPad antes del cierre.
+
+**Subtareas** (unas 9 h estimadas):
+
+| Subtarea | Contenido | Estado |
+|---|---|---|
+| F10a | Registros previos: segunda prueba en papel, plan aprobado y nota de F12. | Hecha |
+| F10b | Transporte WebSocket con reconexión (inmediata en móvil), ficha en `sk:token:<code>`, bandeja de pendientes con el mismo `id` (E-07), reconciliación por `seq` y vigilancia del pong; pruebas en vivo en Node contra el servidor real. | Pendiente |
+| F10c | Notas optimistas como módulo puro y T-16.2. | Pendiente |
+| F10d | Desarrollo: proxy de `/ws`, orígenes de `dev:lan`, simulador solo con `?sim=1` y bots como clientes Node. | Pendiente |
+| F10e | Inicio, Entrar o crear, Lobby, Resultados y Ayuda, con rutas por hash y Compartir. | Pendiente |
+| F10f | Estados de red, transiciones y decisión 3. | Pendiente |
+| F10g | E2E con Playwright (6 contextos, T-05.4, T-07.2, T-13.5 y E-08) e inspector sobre el tráfico WS; job `e2e` en la CI. | Pendiente |
+| F10h | Punto de control del usuario y correcciones. | Pendiente |
+| F10i | Cierre y recalibración. | Pendiente |
+
 ### F11 — Pruebas integrales, carga y seguridad (3–6 h; original 10–16 h)
 **Tareas:**
 - Pruebas E2E con Playwright para los flujos principales y los casos límite.
@@ -628,7 +652,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - HTTPS y WSS.
 - Base de datos gestionada y respaldos.
 - Variables de entorno.
-- Clave de acceso del grupo cerrado (opcional, recomendada).
+- Clave de acceso del grupo cerrado: **obligatoria** con el juego en internet (nota de F10). La lista de orígenes permitidos (`ALLOWED_ORIGINS`) no autentica: solo frena a otros sitios web en un navegador, y cualquier script puede enviar el `Origin` que quiera.
 - Logs y métricas básicas.
 - Revisar las migraciones automáticas al arrancar (F9): en producción, una migración destructiva no debe aplicarse sola.
 
@@ -723,3 +747,4 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
   - Base local en PostgreSQL 18 con un rol sin privilegios, solo en localhost; banco completo cargado. Pruebas con PGlite, el inspector de filtración siempre activo y T-32.1 contra el servidor real.
   - F12 suma la revisión de las migraciones automáticas al arrancar.
   - SPEC 1.7 y notas de F9 en los ADR 0002, 0003, 0004 y 0006.
+- **1.20:** plan de F10 aprobado por el usuario (2026-10-24), con las subtareas F10a a F10i y sus decisiones (sin fotos en la v1, Compartir, paso a Resultados, reanudación al recargar, reconexión inmediata en móvil y Playwright sin reintentos). F10a hecha. La segunda prueba en papel de F5 confirma la equivalencia versión 2 (`docs/dificultad.md`, sección 6). F12: la clave de acceso del grupo pasa a ser obligatoria con el juego en internet, porque la lista de orígenes no autentica.

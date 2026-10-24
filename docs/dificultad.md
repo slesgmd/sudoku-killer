@@ -23,7 +23,7 @@ Cómo se arma cada dificultad del juego a partir de la calificación de un puzzl
 
 **Una semilla, una dificultad:** la dificultad de una semilla es su resto al dividirla por 4 (0 fácil, 1 media, 2 difícil, 3 experto). Los números iniciales se agregan a un puzzle ya generado, así que sin esta regla un fácil y una media podrían compartir cuadrícula y jaulas.
 
-**Consecuencia de la guarda** (sección 4): la guarda agrega números mientras el piso se mantenga, así que deja el mínimo de técnica que la banda exige. En el banco actual, todas las medias necesitan un solo paso de nivel 2 (combinación de jaula), salvo una que necesita dos. Todas las difíciles necesitan un solo paso de nivel 3 (regla del 45). La segunda prueba en papel dirá si eso alcanza para distinguirlas.
+**Consecuencia de la guarda** (sección 4): la guarda agrega números mientras el piso se mantenga, así que deja el mínimo de técnica que la banda exige. En el banco actual, todas las medias necesitan un solo paso de nivel 2 (combinación de jaula), salvo una que necesita dos. Todas las difíciles necesitan un solo paso de nivel 3 (regla del 45). La segunda prueba en papel (2026-10-24, sección 6) mostró que alcanza para distinguirlas.
 
 ## 2. Prueba en papel y decisión
 
@@ -122,7 +122,11 @@ El experto es el más rápido porque no lleva números iniciales: `addGivens` ca
 
 | Puzzle | Persona | Tiempo | ¿Terminado? | Dificultad percibida (1 a 5) | Comentarios |
 |---|---|---|---|---|---|
-| (pendiente) | | | | | |
+| Un medio y un difícil de la muestra versión 2 | Usuario | No anotado | Sí, los dos | No anotada en números | La diferencia entre el medio y el difícil se nota, y el fácil se siente fácil. |
+
+**Resultado de la segunda prueba (2026-10-24):** las dificultades se distinguen en el orden esperado. Una sola persona resolvió dos puzzles, así que es una señal y no una medición; la calibración sigue con partidas reales en F13.
+- La equivalencia versión 2 se mantiene, incluida la guarda que deja un solo paso de nivel 2 en las medias y uno de nivel 3 en las difíciles (sección 1).
+- No se regenera el manifiesto ni se vuelve a cargar el banco.
 
 ## 7. Historia: versión 1 (sin números iniciales por dificultad)
 
