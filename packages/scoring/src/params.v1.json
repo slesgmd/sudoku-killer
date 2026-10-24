@@ -1,0 +1,8 @@
+{
+  "version": "v1",
+  "base": 10,
+  "weights": [1, 1.5, 2, 3, 4],
+  "mistakePenalty": 60,
+  "closureBonus": 2,
+  "hintPenalty": 50
+}
