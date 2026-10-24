@@ -6,6 +6,7 @@ import {
   GENERATOR_VERSION,
   GRADER_VERSION,
   UNIT_COMBINATION_BOUND,
+  addGivens,
   generatePuzzle,
   grade,
   type GeneratedPuzzle,
@@ -13,7 +14,12 @@ import {
 } from "@sudoku-killer/engine";
 import { DIFFICULTIES, difficultySchema, type Difficulty } from "@sudoku-killer/protocol";
 import { z } from "zod";
-import { DIFFICULTY_MAPPING_VERSION, difficultyOf } from "./difficulty.ts";
+import {
+  DIFFICULTY_MAPPING_VERSION,
+  DIFFICULTY_RULES,
+  difficultyOfSeed,
+  givensByDifficulty,
+} from "./difficulty.ts";
 
 /** Puzzles por dificultad del banco de la v1 (criterio de aceptación de F5). */
 export const DEFAULT_PER_DIFFICULTY = 500;
@@ -32,6 +38,8 @@ export const manifestSchema = z.object({
   graderVersion: z.string(),
   mappingVersion: z.string(),
   unitCombinationBound: z.object({ maxOpenCages: z.int(), maxCombinations: z.int() }),
+  /** Números iniciales de cada dificultad (equivalencia vigente). */
+  givens: z.record(difficultySchema, z.int().nonnegative()),
   baseSeed: z.int().nonnegative(),
   perDifficulty: z.int().positive(),
   /** En orden de semilla. */
@@ -57,35 +65,56 @@ export function puzzleHash(generated: GeneratedPuzzle): string {
   return createHash("sha256").update(canonicalPuzzle(generated)).digest("hex").slice(0, 16);
 }
 
-/** Una semilla generada, calificada y clasificada. */
+/** Una semilla generada para su dificultad, con sus números iniciales y su calificación. */
 export interface BankCandidate {
   readonly seed: number;
+  /** La dificultad de la semilla (`difficultyOfSeed`). */
+  readonly difficulty: Difficulty;
+  /** Si el puzzle final cumple la banda de su dificultad y entra al banco. */
+  readonly accepted: boolean;
+  /** El puzzle final, o el base si la guarda no dejó llegar a la cantidad de números. */
   readonly generated: GeneratedPuzzle;
   readonly result: GradeResult;
-  /** `null` si se excluye (excede las técnicas). */
-  readonly difficulty: Difficulty | null;
   readonly hash: string;
 }
 
+/**
+ * Genera el puzzle de la semilla, le agrega los números iniciales de su dificultad (repartidos por
+ * cajas, con la guarda del piso de la banda) y lo califica con ellos.
+ */
 export function evaluateSeed(seed: number): BankCandidate {
-  const generated = generatePuzzle({ seed });
-  const result = grade(generated.puzzle);
-  return { seed, generated, result, difficulty: difficultyOf(result), hash: puzzleHash(generated) };
+  const difficulty = difficultyOfSeed(seed);
+  const rule = DIFFICULTY_RULES[difficulty];
+  const base = generatePuzzle({ seed });
+  const withGivens =
+    rule.givens > 0 ? addGivens(base, { count: rule.givens, seed, keep: rule.floor }) : null;
+  const generated = withGivens?.generated ?? base;
+  const result = withGivens?.result ?? grade(base.puzzle);
+  const reached = rule.givens === 0 || withGivens !== null;
+  return {
+    seed,
+    difficulty,
+    accepted: reached && rule.accepts(result),
+    generated,
+    result,
+    hash: puzzleHash(generated),
+  };
 }
 
-/** Lo que se mide al generar el banco (docs/dificultad.md). */
+/** Lo que se mide al generar el banco, por dificultad (docs/dificultad.md). */
+export interface DifficultyStats {
+  /** Semillas de la dificultad evaluadas (candidatos). */
+  readonly candidates: number;
+  /** De ellas, las que entraron al banco. */
+  readonly accepted: number;
+  /** Milisegundos por candidato (generar, agregar números, calificar y hash). */
+  readonly msPerCandidate: number;
+}
+
 export interface BankStats {
-  /** Semillas evaluadas (candidatos). */
-  readonly seeds: number;
-  /** Semillas excluidas porque exceden las técnicas. */
-  readonly excluded: number;
-  /** Por dificultad: semillas evaluadas hasta completarla y cuántas calificaban en total. */
-  readonly filledAfter: Readonly<Record<Difficulty, number>>;
-  readonly qualifying: Readonly<Record<Difficulty, number>>;
-  /** Candidatos internos de `generatePuzzle` (incluye los descartados por presupuesto). */
-  readonly generatorCandidates: number;
-  /** Milisegundos por semilla (generar, calificar y hash) y en total. */
-  readonly msPerSeed: number;
+  /** Última semilla recorrida, desde `baseSeed`. */
+  readonly lastSeed: number;
+  readonly byDifficulty: Readonly<Record<Difficulty, DifficultyStats>>;
   readonly totalMs: number;
 }
 
@@ -97,72 +126,68 @@ export interface BuildBankOptions {
 }
 
 /**
- * Recorre las semillas desde `baseSeed` en orden y se queda con las primeras `perDifficulty` de
- * cada dificultad, hasta completarlas todas. Las que exceden las técnicas se cuentan y se
- * descartan. Determinista: las mismas opciones dan el mismo manifiesto. Lanza si un fácil usa
- * técnicas de nivel 4 o más (no puede pasar con `difficultyOf`; es la garantía de F5).
+ * Recorre las semillas desde `baseSeed` en orden. Cada semilla es de una sola dificultad; si esa
+ * dificultad ya tiene sus `perDifficulty`, la semilla se salta sin evaluarla. Se queda con las
+ * primeras que cumplen la banda, hasta completarlas todas. Determinista: las mismas opciones dan el
+ * mismo manifiesto.
  */
 export function buildBank({
   baseSeed = 1,
   perDifficulty = DEFAULT_PER_DIFFICULTY,
   onCandidate,
 }: BuildBankOptions = {}): { manifest: Manifest; stats: BankStats } {
-  const counts = Object.fromEntries(DIFFICULTIES.map((d) => [d, 0])) as Record<Difficulty, number>;
-  const filledAfter = { ...counts };
-  const qualifying = { ...counts };
+  const zero = (): Record<Difficulty, number> => ({ easy: 0, medium: 0, hard: 0, expert: 0 });
+  const accepted = zero();
+  const candidates = zero();
+  const ms = zero();
   const entries: ManifestEntry[] = [];
-  let excluded = 0;
-  let generatorCandidates = 0;
   let seed = baseSeed;
   const start = performance.now();
 
-  while (DIFFICULTIES.some((d) => counts[d] < perDifficulty)) {
+  for (; DIFFICULTIES.some((d) => accepted[d] < perDifficulty); seed++) {
+    const difficulty = difficultyOfSeed(seed);
+    if (accepted[difficulty] >= perDifficulty) continue;
+    const begin = performance.now();
     const candidate = evaluateSeed(seed);
+    ms[difficulty] += performance.now() - begin;
+    candidates[difficulty]++;
     onCandidate?.(candidate);
-    generatorCandidates += candidate.generated.stats.candidates;
-    const { difficulty, result } = candidate;
-    if (difficulty === null) {
-      excluded++;
-    } else {
-      qualifying[difficulty]++;
-      if (difficulty === "easy" && result.stepsByLevel.slice(4).some((steps) => steps > 0)) {
-        throw new Error(`Seed ${String(seed)}: an easy puzzle uses level 4 or more`);
-      }
-      if (counts[difficulty] < perDifficulty) {
-        counts[difficulty]++;
-        if (counts[difficulty] === perDifficulty) filledAfter[difficulty] = seed - baseSeed + 1;
-        entries.push({
-          seed,
-          difficulty,
-          graderMaxLevel: result.maxLevel,
-          graderSteps: result.steps,
-          hash: candidate.hash,
-        });
-      }
-    }
-    seed++;
+    if (!candidate.accepted) continue;
+    accepted[difficulty]++;
+    entries.push({
+      seed,
+      difficulty,
+      graderMaxLevel: candidate.result.maxLevel,
+      graderSteps: candidate.result.steps,
+      hash: candidate.hash,
+    });
   }
 
-  const totalMs = performance.now() - start;
-  const seeds = seed - baseSeed;
+  const stat = (d: Difficulty): DifficultyStats => ({
+    candidates: candidates[d],
+    accepted: accepted[d],
+    msPerCandidate: ms[d] / Math.max(1, candidates[d]),
+  });
   return {
     manifest: {
       generatorVersion: GENERATOR_VERSION,
       graderVersion: GRADER_VERSION,
       mappingVersion: DIFFICULTY_MAPPING_VERSION,
       unitCombinationBound: { ...UNIT_COMBINATION_BOUND },
+      givens: givensByDifficulty(),
       baseSeed,
       perDifficulty,
       entries,
     },
     stats: {
-      seeds,
-      excluded,
-      filledAfter,
-      qualifying,
-      generatorCandidates,
-      msPerSeed: totalMs / seeds,
-      totalMs,
+      lastSeed: seed - 1,
+      byDifficulty: {
+        easy: stat("easy"),
+        medium: stat("medium"),
+        hard: stat("hard"),
+        expert: stat("expert"),
+      },
+      totalMs: performance.now() - start,
     },
   };
 }
@@ -175,21 +200,28 @@ export function serializeManifest({ entries, ...header }: Manifest): string {
 }
 
 /**
- * Comprueba que el manifiesto corresponde al motor actual: mismas versiones del generador, del
- * calificador y de la equivalencia, y la misma cota. Lanza `Error` si no.
+ * Comprueba que el manifiesto corresponde al motor y a la equivalencia actuales: mismas versiones
+ * del generador, del calificador y de la equivalencia, la misma cota y los mismos números iniciales.
+ * Lanza `Error` si no.
  */
 export function assertCurrentManifest(manifest: Manifest): void {
+  const givens = givensByDifficulty();
   const expected = {
     generatorVersion: GENERATOR_VERSION,
     graderVersion: GRADER_VERSION,
     mappingVersion: DIFFICULTY_MAPPING_VERSION,
     unitCombinationBound: { ...UNIT_COMBINATION_BOUND },
+    givens: DIFFICULTIES.map((d) => givens[d]),
   };
   const actual = {
     generatorVersion: manifest.generatorVersion,
     graderVersion: manifest.graderVersion,
     mappingVersion: manifest.mappingVersion,
-    unitCombinationBound: manifest.unitCombinationBound,
+    unitCombinationBound: {
+      maxOpenCages: manifest.unitCombinationBound.maxOpenCages,
+      maxCombinations: manifest.unitCombinationBound.maxCombinations,
+    },
+    givens: DIFFICULTIES.map((d) => manifest.givens[d]),
   };
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(
@@ -200,7 +232,7 @@ export function assertCurrentManifest(manifest: Manifest): void {
 
 /**
  * Regenera la entrada y comprueba que da el mismo puzzle (hash), la misma calificación y la misma
- * dificultad. Lanza `Error` con la semilla si no.
+ * dificultad, y que entra en su banda. Lanza `Error` con la semilla si no.
  */
 export function verifyEntry(entry: ManifestEntry): BankCandidate {
   const candidate = evaluateSeed(entry.seed);
@@ -212,9 +244,9 @@ export function verifyEntry(entry: ManifestEntry): BankCandidate {
     hash: candidate.hash,
   };
   const keys = Object.keys(actual) as (keyof ManifestEntry)[];
-  if (keys.some((key) => actual[key] !== entry[key])) {
+  if (!candidate.accepted || keys.some((key) => actual[key] !== entry[key])) {
     throw new Error(
-      `Bank seed ${String(entry.seed)} no longer matches the manifest: ${JSON.stringify(actual)}`,
+      `Bank seed ${String(entry.seed)} no longer matches the manifest: ${JSON.stringify({ ...actual, accepted: candidate.accepted })}`,
     );
   }
   return candidate;

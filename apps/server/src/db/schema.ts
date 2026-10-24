@@ -27,7 +27,7 @@ export const DIFFICULTY_VALUES = [
 ] as const satisfies readonly Difficulty[];
 export const GIVENS_REASON_VALUES = [
   "none",
-  "easy",
+  "difficulty",
   "uniqueness",
 ] as const satisfies readonly GivensReason[];
 

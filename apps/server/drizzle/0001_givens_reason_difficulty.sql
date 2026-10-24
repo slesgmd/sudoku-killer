@@ -1,0 +1,2 @@
+ALTER TABLE "puzzles" DROP CONSTRAINT "puzzles_givens_reason_check";--> statement-breakpoint
+ALTER TABLE "puzzles" ADD CONSTRAINT "puzzles_givens_reason_check" CHECK (givens_reason IN ('none', 'difficulty', 'uniqueness'));

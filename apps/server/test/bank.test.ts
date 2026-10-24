@@ -1,7 +1,8 @@
-// Manifiesto del banco (F5, ADR 0006). T-20.3: ningún puzzle excede las técnicas y ningún fácil usa
-// nivel 4 o más; cada dificultad tiene sus 500. T-20.4 (muestra): cada semilla regenera el mismo
-// puzzle. T-20.5 (muestra): en partidas simuladas, `levelToDeduce` nunca devuelve `UNRATED`. El
-// banco completo se verifica en `bank.corpus.test.ts`.
+// Manifiesto del banco (F5, ADR 0006). T-20.3: cada puzzle cumple la banda de su dificultad (versión
+// 2), ninguno excede las técnicas y cada dificultad tiene sus 500. T-20.2 y T-20.4 (muestra): cada
+// semilla regenera el mismo puzzle, con los números iniciales de su dificultad. T-20.5 (muestra): en
+// partidas simuladas, `levelToDeduce` nunca devuelve `UNRATED`. El banco completo se verifica en
+// `bank.corpus.test.ts`.
 import { readFileSync } from "node:fs";
 import { DIFFICULTIES } from "@sudoku-killer/protocol";
 import { describe, expect, it } from "vitest";
@@ -13,6 +14,7 @@ import {
   serializeManifest,
   verifyEntry,
 } from "../src/puzzles/bank.ts";
+import { DIFFICULTY_RULES, difficultyOfSeed } from "../src/puzzles/difficulty.ts";
 import { expectGameNeverUnrated, readManifest, sampleOf } from "./helpers/bank.ts";
 
 const SLOW = { timeout: 120_000 };
@@ -40,10 +42,11 @@ describe("T-20.3 bank manifest", () => {
     expect(seeds[0]).toBeGreaterThanOrEqual(manifest.baseSeed);
   });
 
-  it("levels fit the difficulty: no easy puzzle needs level 4 or more, none exceeds", () => {
-    const allowed = { easy: [1, 2], medium: [3], hard: [3, 4], expert: [5] } as const;
+  it("levels fit the difficulty without overlapping, and each seed is of its own difficulty", () => {
+    const allowed = { easy: [1], medium: [2], hard: [3, 4], expert: [5] } as const;
     for (const { seed, difficulty, graderMaxLevel } of manifest.entries) {
       expect(allowed[difficulty], `seed ${String(seed)}`).toContain(graderMaxLevel);
+      expect(difficultyOfSeed(seed), `seed ${String(seed)}`).toBe(difficulty);
     }
   });
 
@@ -61,9 +64,22 @@ describe("T-20.3 bank manifest", () => {
   });
 });
 
-describe("T-20.4 bank entries regenerate the same puzzle (sample)", () => {
-  it("each sampled seed gives the same hash, grade and difficulty", SLOW, () => {
-    for (const entry of sampleOf(manifest, 3).entries) verifyEntry(entry);
+describe("T-20.2 and T-20.4 bank entries regenerate the same puzzle (sample)", () => {
+  it("each sampled seed gives the same hash, grade and difficulty, with its givens", SLOW, () => {
+    for (const entry of sampleOf(manifest, 3).entries) {
+      const { generated, result } = verifyEntry(entry);
+      const { givens, uniquenessGivens } = {
+        givens: generated.puzzle.givens.length,
+        uniquenessGivens: generated.stats.uniquenessGivens,
+      };
+      const rule = DIFFICULTY_RULES[entry.difficulty];
+      const seed = `seed ${String(entry.seed)}`;
+      expect(givens, seed).toBe(Math.max(rule.givens, uniquenessGivens));
+      expect(generated.givensReason, seed).toBe(
+        givens > uniquenessGivens ? "difficulty" : uniquenessGivens > 0 ? "uniqueness" : "none",
+      );
+      expect(rule.accepts(result), seed).toBe(true);
+    }
   });
 
   it("a changed entry is rejected with its seed", () => {

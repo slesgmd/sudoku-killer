@@ -1,24 +1,74 @@
-// Equivalencia entre los niveles del calificador y las dificultades del juego (F5,
-// docs/dificultad.md). La media y la difícil se separan por los pasos de nivel 3 (regla del 45):
-// necesitarla varias veces exige encontrar más regiones.
+// Dificultades del juego (F5, docs/dificultad.md): cuántos números iniciales lleva cada una, la
+// guarda con que se agregan y la banda de niveles que tiene que cumplir el puzzle, calificado con
+// sus números. Las bandas no se solapan: cada dificultad sube un nivel de técnica.
 import type { GradeResult } from "@sudoku-killer/engine";
-import type { Difficulty } from "@sudoku-killer/protocol";
+import { DIFFICULTIES, type Difficulty } from "@sudoku-killer/protocol";
 
-/** Cambia cuando cambia la equivalencia: el banco guardado deja de corresponder. */
-export const DIFFICULTY_MAPPING_VERSION = "1";
+/** Cambia cuando cambian las reglas de abajo: el banco guardado deja de corresponder. */
+export const DIFFICULTY_MAPPING_VERSION = "2";
+
+export interface DifficultyRule {
+  /** Números iniciales en total, incluidos los de unicidad (0: solo los de unicidad). */
+  readonly givens: number;
+  /**
+   * Piso de la guarda de `addGivens`: un número se agrega solo si el puzzle lo sigue cumpliendo.
+   * Mientras el puzzle exceda las técnicas, no hay piso (un número más puede hacerlo resoluble).
+   */
+  readonly floor: (result: GradeResult) => boolean;
+  /** Banda que tiene que cumplir el puzzle final para entrar al banco. */
+  readonly accepts: (result: GradeResult) => boolean;
+}
+
+const solved = (result: GradeResult): boolean => result.status === "solved";
+const stepsAt = (result: GradeResult, level: number): number => result.stepsByLevel[level] ?? 0;
 
 /**
- * Dificultad de un puzzle calificado con `TECHNIQUES`, o `null` si se excluye del banco porque
- * excede las técnicas (decisión a de F5).
- * - Fácil: nivel máximo 2 o menos.
- * - Media: nivel máximo 3 con un solo paso de nivel 3.
- * - Difícil: nivel máximo 3 con 2 o más pasos de nivel 3, o nivel máximo 4.
- * - Experto: nivel máximo 5 (con `unitCombination` acotada).
+ * Versión 2 (aprobada el 2026-10-23, tras la prueba en papel):
+ * - Fácil: 30 números, nivel máximo 1.
+ * - Media: 22 números, nivel máximo 2 (con algún paso de nivel 2).
+ * - Difícil: 10 números, nivel máximo 3 o 4, con algún paso de nivel 3.
+ * - Experto: sin números (salvo los de unicidad), nivel máximo 5 con `unitCombination` acotada.
  */
-export function difficultyOf({ status, maxLevel, stepsByLevel }: GradeResult): Difficulty | null {
-  if (status !== "solved") return null;
-  if (maxLevel <= 2) return "easy";
-  if (maxLevel === 3) return (stepsByLevel[3] ?? 0) === 1 ? "medium" : "hard";
-  if (maxLevel === 4) return "hard";
-  return "expert";
+export const DIFFICULTY_RULES: Readonly<Record<Difficulty, DifficultyRule>> = {
+  easy: {
+    givens: 30,
+    floor: () => true,
+    accepts: (r) => solved(r) && r.maxLevel === 1,
+  },
+  medium: {
+    givens: 22,
+    floor: (r) => !solved(r) || stepsAt(r, 2) > 0,
+    accepts: (r) => solved(r) && r.maxLevel === 2,
+  },
+  hard: {
+    givens: 10,
+    floor: (r) => !solved(r) || stepsAt(r, 3) > 0,
+    accepts: (r) => solved(r) && (r.maxLevel === 3 || r.maxLevel === 4) && stepsAt(r, 3) > 0,
+  },
+  expert: {
+    givens: 0,
+    floor: () => true,
+    accepts: (r) => solved(r) && r.maxLevel === 5,
+  },
+};
+
+/**
+ * Cada semilla pertenece a una sola dificultad (por su resto al dividirla por 4), para que dos
+ * puzzles del banco nunca compartan cuadrícula y jaulas: los números iniciales se agregan a un
+ * puzzle ya generado.
+ */
+export function difficultyOfSeed(seed: number): Difficulty {
+  const difficulty = DIFFICULTIES[seed % DIFFICULTIES.length];
+  if (!difficulty) throw new RangeError(`Invalid seed ${String(seed)}`);
+  return difficulty;
+}
+
+/** Números iniciales de cada dificultad, para el manifiesto. */
+export function givensByDifficulty(): Record<Difficulty, number> {
+  return {
+    easy: DIFFICULTY_RULES.easy.givens,
+    medium: DIFFICULTY_RULES.medium.givens,
+    hard: DIFFICULTY_RULES.hard.givens,
+    expert: DIFFICULTY_RULES.expert.givens,
+  };
 }

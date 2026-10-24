@@ -12,14 +12,15 @@ El generador es determinista (T-35.6): con la misma semilla, las mismas opciones
 
 **Se versiona un manifiesto, no los puzzles.**
 - Vive en `apps/server/bank/manifest.json` y lo escribe `pnpm --filter @sudoku-killer/server bank:generate`.
-- La cabecera guarda las versiones del generador, del calificador y de la equivalencia de dificultades (`docs/dificultad.md`), la cota de `unitCombination`, la primera semilla y la cantidad por dificultad.
+- La cabecera guarda las versiones del generador, del calificador y de la equivalencia de dificultades (`docs/dificultad.md`), la cota de `unitCombination`, los números iniciales de cada dificultad, la primera semilla y la cantidad por dificultad.
 - Cada entrada tiene `seed`, `difficulty`, `graderMaxLevel`, `graderSteps` y `hash`: los primeros 16 dígitos hexadecimales del SHA-256 del puzzle y su solución, en un orden de campos fijo.
-- Las entradas son las primeras 500 semillas de cada dificultad, desde la primera, sin las que exceden las técnicas. Con las mismas opciones, el script da el mismo manifiesto.
+- Cada semilla pertenece a una sola dificultad, por su resto al dividirla por 4 (desde la equivalencia versión 2). Así, dos puzzles del banco nunca comparten cuadrícula y jaulas, porque los números iniciales se agregan a un puzzle ya generado.
+- Las entradas son, para cada dificultad, sus primeras 500 semillas cuyo puzzle, con los números iniciales de esa dificultad, cumple su banda. Con las mismas opciones, el script da el mismo manifiesto.
 - Ocupa unos 200 KB, con una entrada por línea para que los cambios se lean en un diff. El banco completo pesaría unos 2–3 MB.
 
 **Carga** (`loadBank`, en `apps/server/src/puzzles/load-bank.ts`):
 1. Comprueba que las versiones del manifiesto coincidan con las del motor y la equivalencia vigentes. Si no, falla y pide un manifiesto nuevo.
-2. Regenera cada semilla y comprueba el hash, el nivel, los pasos y la dificultad. Si algo no coincide, falla con la semilla **antes de escribir nada**.
+2. Regenera cada semilla con sus números iniciales y comprueba el hash, el nivel, los pasos, la dificultad y la banda. Si algo no coincide, falla con la semilla **antes de escribir nada**.
 3. Inserta en una transacción con `ON CONFLICT (generator_version, seed) DO NOTHING`, así que cargar dos veces no duplica filas.
 
 Con el banco completo tarda unos minutos (generar y calificar unas 2000 semillas). Por eso es un paso de despliegue, no del arranque del servidor. El comando contra PostgreSQL (`bank:load` con `DATABASE_URL`) y la comprobación al arrancar de que hay puzzles de cada dificultad se conectan en F9.

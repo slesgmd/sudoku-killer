@@ -169,8 +169,8 @@ const puzzlesHtml = items
 
 const keyRows = items
   .map(
-    ({ entry, givensReason }, index) =>
-      `<tr><td>${letter(index)}</td><td>${NAMES[entry.difficulty]}</td><td>${String(entry.graderMaxLevel)}</td><td>${String(entry.graderSteps)}</td><td>${String(entry.seed)}</td><td>${givensReason}</td></tr>`,
+    ({ entry, puzzle }, index) =>
+      `<tr><td>${letter(index)}</td><td>${NAMES[entry.difficulty]}</td><td>${String(puzzle.givens.length)}</td><td>${String(entry.graderMaxLevel)}</td><td>${String(entry.graderSteps)}</td><td>${String(entry.seed)}</td></tr>`,
   )
   .join("");
 
@@ -216,16 +216,16 @@ const html = `<!doctype html>
 <body>
 <main>
   <section class="intro">
-    <h1>Muestra del banco de puzzles (F5)</h1>
-    <p>${String(items.length)} puzzles killer de 9 × 9, ${String(perDifficulty)} por dificultad, en un orden al azar. La dificultad de cada letra está en la clave del final: conviene no mirarla hasta terminar.</p>
-    <p>Reglas: cada fila, columna y caja de 3 × 3 tiene los dígitos del 1 al 9; las celdas de una jaula punteada suman el número de su esquina y no repiten dígitos.</p>
+    <h1>Muestra del banco de puzzles (F5, equivalencia ${manifest.mappingVersion})</h1>
+    <p>${String(items.length)} puzzles killer de 9 × 9, ${String(perDifficulty)} por dificultad, en un orden al azar. La dificultad de cada letra está en la clave del final; la cantidad de números iniciales la anticipa (30, 22, 10 o ninguno), pero conviene no mirar la clave hasta terminar.</p>
+    <p>Reglas: cada fila, columna y caja de 3 × 3 tiene los dígitos del 1 al 9; las celdas de una jaula punteada suman el número de su esquina y no repiten dígitos. Los números grandes ya impresos son números iniciales: son parte de la solución.</p>
     <p>Para cada puzzle, anote la hora de inicio y de fin, si lo terminó y la dificultad percibida, de 1 (muy fácil) a 5 (muy difícil). Los resultados van a la tabla de la prueba manual de <code>docs/dificultad.md</code>.</p>
     <p class="log">Generado con <code>pnpm --filter @sudoku-killer/server bank:sample --seed ${values.seed}</code> desde el manifiesto (generador ${manifest.generatorVersion}, calificador ${manifest.graderVersion}, equivalencia ${manifest.mappingVersion}).</p>
   </section>
   ${puzzlesHtml}
   <section class="key">
     <h2>Clave</h2>
-    <table><thead><tr><th>Puzzle</th><th>Dificultad</th><th>Nivel máximo</th><th>Pasos</th><th>Semilla</th><th>Números iniciales</th></tr></thead><tbody>${keyRows}</tbody></table>
+    <table><thead><tr><th>Puzzle</th><th>Dificultad</th><th>Números iniciales</th><th>Nivel máximo</th><th>Pasos</th><th>Semilla</th></tr></thead><tbody>${keyRows}</tbody></table>
     <h2>Soluciones</h2>
     <div class="solutions">${solutions}</div>
   </section>

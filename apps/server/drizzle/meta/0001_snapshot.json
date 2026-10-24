@@ -1,0 +1,174 @@
+{
+  "id": "24c514f4-d011-47cf-839d-eec850b611f6",
+  "prevId": "1cad6d26-60ff-4e41-bc13-07f1b2b28738",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.puzzles": {
+      "name": "puzzles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "size": {
+          "name": "size",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "box_rows": {
+          "name": "box_rows",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "box_cols": {
+          "name": "box_cols",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "difficulty": {
+          "name": "difficulty",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cages": {
+          "name": "cages",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "givens": {
+          "name": "givens",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "solution": {
+          "name": "solution",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grader_max_level": {
+          "name": "grader_max_level",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grader_steps": {
+          "name": "grader_steps",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grader_version": {
+          "name": "grader_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "givens_reason": {
+          "name": "givens_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "generator_version": {
+          "name": "generator_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seed": {
+          "name": "seed",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "puzzles_difficulty_idx": {
+          "name": "puzzles_difficulty_idx",
+          "columns": [
+            {
+              "expression": "difficulty",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "puzzles_generator_seed_idx": {
+          "name": "puzzles_generator_seed_idx",
+          "columns": [
+            {
+              "expression": "generator_version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "seed",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "puzzles_difficulty_check": {
+          "name": "puzzles_difficulty_check",
+          "value": "difficulty IN ('easy', 'medium', 'hard', 'expert')"
+        },
+        "puzzles_givens_reason_check": {
+          "name": "puzzles_givens_reason_check",
+          "value": "givens_reason IN ('none', 'difficulty', 'uniqueness')"
+        },
+        "puzzles_grader_max_level_check": {
+          "name": "puzzles_grader_max_level_check",
+          "value": "\"puzzles\".\"grader_max_level\" BETWEEN 1 AND 5"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

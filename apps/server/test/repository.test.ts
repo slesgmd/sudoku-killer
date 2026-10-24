@@ -3,12 +3,11 @@
 // solución ni la semilla salen en el puzzle público. T-20.2 en las filas cargadas. T-20.3: la base
 // de datos rechaza niveles fuera de 1 a 5 y dificultades desconocidas.
 import type { PGlite } from "@electric-sql/pglite";
-import { generatePuzzle } from "@sudoku-killer/engine";
 import { DIFFICULTIES, publicPuzzleSchema } from "@sudoku-killer/protocol";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Database } from "../src/db/database.ts";
 import { puzzles } from "../src/db/schema.ts";
-import type { Manifest } from "../src/puzzles/bank.ts";
+import { evaluateSeed, type Manifest } from "../src/puzzles/bank.ts";
 import { loadBank } from "../src/puzzles/load-bank.ts";
 import { createPuzzleRepository } from "../src/puzzles/repository.ts";
 import { decodeSolution, encodeSolution } from "../src/puzzles/solution.ts";
@@ -41,7 +40,7 @@ describe("T-20.4 loading the bank", () => {
     expect(counts).toEqual(Object.fromEntries(DIFFICULTIES.map((d) => [d, PER_DIFFICULTY])));
   });
 
-  it("rejects a changed entry before writing anything", async () => {
+  it("rejects a changed entry before writing anything", SLOW, async () => {
     const [entry, ...rest] = sample.entries;
     if (!entry) throw new Error("Empty sample");
     const before = await db.$count(puzzles);
@@ -50,7 +49,7 @@ describe("T-20.4 loading the bank", () => {
     expect(await db.$count(puzzles)).toBe(before);
   });
 
-  it("rows match the regenerated puzzles; ids are random UUIDs; T-20.2 holds", async () => {
+  it("rows match the regenerated puzzles; ids are random UUIDs; T-20.2 holds", SLOW, async () => {
     const repository = createPuzzleRepository(db);
     const rows = await db.select({ id: puzzles.id, seed: puzzles.seed }).from(puzzles);
     expect(rows).toHaveLength(sample.entries.length);
@@ -59,7 +58,7 @@ describe("T-20.4 loading the bank", () => {
       const record = await repository.getForServer(id);
       const entry = sample.entries.find((e) => e.seed === seed);
       if (!record || !entry) throw new Error(`Missing ${id}`);
-      const { puzzle, solution, givensReason } = generatePuzzle({ seed });
+      const { puzzle, solution, givensReason } = evaluateSeed(seed).generated;
       expect(record).toEqual({
         id,
         size: puzzle.size,
@@ -76,7 +75,7 @@ describe("T-20.4 loading the bank", () => {
         seed,
         givensReason,
       });
-      // T-20.2: números iniciales solo con `easy` o `uniqueness`, y siempre de la solución.
+      // T-20.2: números iniciales solo con `difficulty` o `uniqueness`, y siempre de la solución.
       if (record.givensReason === "none") expect(record.givens).toEqual([]);
       for (const { cell, value } of record.givens) expect(record.solution[cell]).toBe(value);
     }

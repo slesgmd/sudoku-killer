@@ -1,6 +1,6 @@
-// Genera el manifiesto del banco de puzzles (F5, ADR 0006): recorre semillas en orden, califica y
-// clasifica cada puzzle, descarta los que exceden las técnicas y se queda con los primeros N de cada
-// dificultad. Imprime las distribuciones y los tiempos para docs/dificultad.md.
+// Genera el manifiesto del banco de puzzles (F5, ADR 0006): recorre semillas en orden; cada semilla
+// es de una sola dificultad, recibe sus números iniciales y se queda si cumple la banda. Imprime las
+// distribuciones y los tiempos para docs/dificultad.md.
 //
 //   pnpm --filter @sudoku-killer/server bank:generate [--base-seed 1] [--per-difficulty 500] [--out bank/manifest.json]
 import { writeFileSync } from "node:fs";
@@ -13,6 +13,7 @@ import {
   serializeManifest,
   type BankCandidate,
 } from "../src/puzzles/bank.ts";
+import { DIFFICULTY_RULES } from "../src/puzzles/difficulty.ts";
 
 const { values } = parseArgs({
   options: {
@@ -26,7 +27,6 @@ const { values } = parseArgs({
 });
 const baseSeed = Number(values["base-seed"]);
 const perDifficulty = Number(values["per-difficulty"]);
-const out = values.out;
 
 const quantile = (sorted: readonly number[], q: number): number =>
   sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] ?? NaN;
@@ -36,8 +36,10 @@ const spread = (list: readonly number[]): string => {
 };
 const histogram = (list: readonly number[], cap: number): string => {
   const counts = new Map<number, number>();
-  for (const value of list)
-    counts.set(Math.min(value, cap), (counts.get(Math.min(value, cap)) ?? 0) + 1);
+  for (const value of list) {
+    const key = Math.min(value, cap);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
   return [...counts]
     .sort(([a], [b]) => a - b)
     .map(
@@ -45,6 +47,10 @@ const histogram = (list: readonly number[], cap: number): string => {
     )
     .join(", ");
 };
+/** Nivel máximo, con 6 para lo que excede las técnicas. */
+const levelOf = (c: BankCandidate): number =>
+  c.result.status === "solved" ? c.result.maxLevel : 6;
+const REASONS = ["none", "difficulty", "uniqueness"] as const;
 
 const all: BankCandidate[] = [];
 const { manifest, stats } = buildBank({
@@ -52,37 +58,28 @@ const { manifest, stats } = buildBank({
   perDifficulty,
   onCandidate: (candidate) => {
     all.push(candidate);
-    if (all.length % 1000 === 0) process.stderr.write(`${String(all.length)} semillas\n`);
+    if (all.length % 1000 === 0) process.stderr.write(`${String(all.length)} candidatos\n`);
   },
 });
-writeFileSync(out, serializeManifest(manifest));
-
-const inBank = new Set(manifest.entries.map(({ seed }) => seed));
-const byDifficulty = new Map<Difficulty, BankCandidate[]>(DIFFICULTIES.map((d) => [d, []]));
-for (const candidate of all) {
-  if (candidate.difficulty !== null && inBank.has(candidate.seed)) {
-    byDifficulty.get(candidate.difficulty)?.push(candidate);
-  }
-}
-const levelThree = (c: BankCandidate): number => c.result.stepsByLevel[3] ?? 0;
-const levels = (list: readonly BankCandidate[]): string =>
-  histogram(
-    list.map((c) => c.result.maxLevel),
-    6,
-  );
+writeFileSync(values.out, serializeManifest(manifest));
 
 const lines = [
-  `Manifiesto: ${out}`,
-  `Semillas ${String(baseSeed)} a ${String(baseSeed + stats.seeds - 1)}: ${String(stats.seeds)} candidatos, ${String(stats.excluded)} excluidos (${((100 * stats.excluded) / stats.seeds).toFixed(1)} %), ${String(manifest.entries.length)} en el banco`,
-  `Tiempo: ${(stats.totalMs / 60_000).toFixed(1)} min en total, ${stats.msPerSeed.toFixed(1)} ms por candidato; candidatos internos del generador: ${String(stats.generatorCandidates)}`,
-  `Todas las semillas evaluadas, nivel máximo (6 = exceden): ${levels(all)}`,
-  "Por dificultad (semillas hasta completarla / que califican en total / en el banco):",
-  ...DIFFICULTIES.map((d) => {
-    const list = byDifficulty.get(d) ?? [];
+  `Manifiesto: ${values.out}`,
+  `Semillas ${String(baseSeed)} a ${String(stats.lastSeed)}: ${String(all.length)} candidatos evaluados, ${String(manifest.entries.length)} en el banco, ${(stats.totalMs / 60_000).toFixed(1)} min en total`,
+  "Por dificultad (números iniciales / candidatos / aceptados / tasa / ms por candidato):",
+  ...DIFFICULTIES.map((d: Difficulty) => {
+    const s = stats.byDifficulty[d];
+    const own = all.filter((c) => c.difficulty === d);
+    const kept = own.filter((c) => c.accepted);
     return [
-      `  ${d}: ${String(stats.filledAfter[d])} / ${String(stats.qualifying[d])} (${((100 * stats.qualifying[d]) / stats.seeds).toFixed(1)} %) / ${String(list.length)}`,
-      `    nivel máximo ${levels(list)}; pasos ${spread(list.map((c) => c.result.steps))}; pasos de nivel 3 ${histogram(list.map(levelThree), 6)}`,
-      `    pasos por nivel 1-5 (total): ${[1, 2, 3, 4, 5].map((l) => String(list.reduce((s, c) => s + (c.result.stepsByLevel[l] ?? 0), 0))).join(" / ")}; con números iniciales de unicidad: ${String(list.filter((c) => c.generated.givensReason === "uniqueness").length)}`,
+      `  ${d}: ${String(DIFFICULTY_RULES[d].givens)} / ${String(s.candidates)} / ${String(s.accepted)} / ${((100 * s.accepted) / Math.max(1, s.candidates)).toFixed(1)} % / ${s.msPerCandidate.toFixed(1)} ms`,
+      `    todos los candidatos, nivel máximo (6 = exceden): ${histogram(own.map(levelOf), 6)}`,
+      `    en el banco: nivel máximo ${histogram(kept.map(levelOf), 6)}; pasos ${spread(kept.map((c) => c.result.steps))}; pasos de nivel 3 ${histogram(
+        kept.map((c) => c.result.stepsByLevel[3] ?? 0),
+        6,
+      )}`,
+      `    pasos por nivel 1-5 (total): ${[1, 2, 3, 4, 5].map((l) => String(kept.reduce((sum, c) => sum + (c.result.stepsByLevel[l] ?? 0), 0))).join(" / ")}`,
+      `    números iniciales ${spread(kept.map((c) => c.generated.puzzle.givens.length))}; motivo ${REASONS.map((r) => `${r}: ${String(kept.filter((c) => c.generated.givensReason === r).length)}`).join(", ")}`,
     ].join("\n");
   }),
 ];

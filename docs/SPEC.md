@@ -1,6 +1,6 @@
 # SPEC — Sudoku Killer Multijugador · v1
 
-- Versión del documento: 1.3 (F5, 2026-10-23). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2); R-20 suma el banco de puzzles (T-20.3 a T-20.5) y `PuzzleRecord` guarda `graderVersion` y `seed` (1.3).
+- Versión del documento: 1.4 (F5, 2026-10-23). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2); R-20 suma el banco de puzzles (T-20.3 a T-20.5) y `PuzzleRecord` guarda `graderVersion` y `seed` (1.3); P2 y R-20 escalonan los números iniciales por dificultad y `givensReason` cambia `easy` por `difficulty` (1.4).
 - Versión del protocolo: **1**
 - Fuente de las reglas: `docs/PLAN.md`, secciones 1 y 2, más las decisiones de producto de F2 (sección 1 de este documento).
 - Decisiones técnicas: `docs/adr/0001`–`0006`.
@@ -35,7 +35,7 @@ Resumen de `PLAN.md` §1 y §2. Las reglas detalladas están en la sección 6.
 | ID | Decisión | Regla |
 |---|---|---|
 | P1 | **Pistas compartidas por el equipo: 3 por partida.**<br>• Las usa un jugador activo sobre una celda vacía que él elige. El servidor coloca el valor correcto y bloquea la celda.<br>• No da bonus de cierre a nadie, no cuesta vidas y se avisa a todos quién la usó.<br>• **Le cuesta −H puntos a quien la usa** (H se calibra en F6). Así no sirve para quitarles celdas difíciles a otros jugadores. | R-19 |
-| P2 | Jaulas de 2 a 5 celdas; no hay jaulas de 1 celda. Hay números iniciales solo en el nivel fácil o cuando el generador los necesita para que la solución sea única. | R-20 |
+| P2 | Jaulas de 2 a 5 celdas; no hay jaulas de 1 celda. Los números iniciales se escalonan por dificultad: 30 en fácil, 22 en media, 10 en difícil y ninguno en experto, además de los que el generador necesite para que la solución sea única. Cambio aprobado en F5 (2026-10-23) tras la prueba en papel; antes solo había números iniciales en el fácil o por unicidad. | R-20 |
 | P3 | 4 niveles: fácil, media, difícil y experto. Los elige quien puede iniciar, antes de cada partida. | R-21 |
 | P4 | Al terminar, la sala vuelve al lobby y la partida siguiente empieza con todos activos (3 vidas, 0 puntos). El ranking es por partida; no hay ranking acumulado. | R-22 |
 | P5 | Los espectadores ven todo y pueden escribir notas grupales y personales. No colocan números ni usan pistas. | R-23 |
@@ -87,7 +87,7 @@ Incluye las 14 preguntas de `docs/referencia.md` y la pregunta de pistas de `PLA
 
 Parámetros que quedan pendientes con su dueño:
 - B, w, P, β y H: F6.
-- Mapeo de los niveles del calificador a las dificultades: **resuelto en F5** (`docs/dificultad.md`, versión 1). Se recalibra con la muestra impresa de F5 y con partidas reales en F13.
+- Mapeo de los niveles del calificador a las dificultades: **resuelto en F5** (`docs/dificultad.md`, versión 2, con números iniciales por dificultad). Se recalibra con la segunda muestra impresa de F5 y con partidas reales en F13.
 - Límites de velocidad y de tamaño de mensaje: valores iniciales en la sección 4.8; se calibran en F11.
 - Duración del destello de un error: F7.
 - Hosting: F12.
@@ -127,11 +127,11 @@ interface PuzzleRecord extends PublicPuzzle {
   graderVersion: string;         // versión del calificador que dio el nivel (F5)
   generatorVersion: string;
   seed: number;                  // semilla del generador (F5, ADR 0006); nunca sale del servidor
-  givensReason: 'none' | 'easy' | 'uniqueness';
+  givensReason: 'none' | 'difficulty' | 'uniqueness'; // 'difficulty' aunque también haya de unicidad
 }
 ```
 
-La dificultad de un puzzle sale de su calificación con la equivalencia de `docs/dificultad.md` (versión 1, F5). Los puzzles que exceden las técnicas no entran al banco. El `id` es opaco (un UUID aleatorio, T-20.4).
+Cada dificultad tiene sus números iniciales y una banda de niveles que el puzzle cumple calificado con ellos (`docs/dificultad.md`, versión 2). Los puzzles que exceden las técnicas no entran al banco. El `id` es opaco (un UUID aleatorio, T-20.4).
 
 A diferencia de la referencia, las sumas de las jaulas viajan en el puzzle público. Así el cliente no necesita la solución para mostrarlas.
 
@@ -585,8 +585,8 @@ Entre corchetes va la fase en que se implementa cada prueba.
 
 **R-20 Puzzles (P2).**
 - T-20.1 Propiedad sobre los puzzles generados: jaulas de 2 a 5 celdas, conectadas, que cubren todas las celdas, sin dígitos repetidos y con la suma correcta. Ambos solvers confirman que la solución es única. [U, F4]
-- T-20.2 Hay números iniciales solo si `givensReason` es `easy` o `uniqueness`; en `none` la lista de números iniciales está vacía. [U, F4/F5]
-- T-20.3 Ningún puzzle del banco excede las técnicas: `graderMaxLevel` está entre 1 y 5, y la base de datos rechaza otro valor. La dificultad es la de la equivalencia de `docs/dificultad.md`, y ningún puzzle fácil usa técnicas de nivel 4 o más. Cada dificultad tiene al menos 500 puzzles. [U, F5]
+- T-20.2 Hay números iniciales solo si `givensReason` es `difficulty` o `uniqueness`; en `none` la lista está vacía. Todos son de la solución, y con ellos A y B siguen encontrando una sola solución. Con `difficulty`, el puzzle tiene los de su dificultad (30, 22 o 10; más, solo si los de unicidad ya pasaban esa cantidad), agregados repartidos entre las cajas, en un orden que sale de la semilla. [U, F4/F5]
+- T-20.3 Ningún puzzle del banco excede las técnicas: `graderMaxLevel` está entre 1 y 5, y la base de datos rechaza otro valor. Calificado con sus números iniciales, cada puzzle cumple la banda de su dificultad, y las bandas no se solapan: fácil, nivel máximo 1; media, nivel máximo 2; difícil, nivel máximo 3 o 4 con algún paso de nivel 3; experto, nivel máximo 5. Cada semilla pertenece a una sola dificultad, así que dos puzzles del banco nunca comparten cuadrícula y jaulas. Cada dificultad tiene al menos 500 puzzles. [U, F5]
 - T-20.4 El banco cargado coincide con el manifiesto versionado (ADR 0006). Cada semilla, regenerada con las versiones vigentes del generador y del calificador, da el mismo puzzle (hash), el mismo nivel, los mismos pasos y la misma dificultad, y si no, la carga falla antes de escribir. Cargar dos veces no duplica filas. El `id` es un UUID aleatorio que no deriva de la semilla, y ni la semilla ni la solución salen en el puzzle público. El `id` es opaco para que un cliente no pueda enumerar el banco ni predecir el puzzle siguiente. Ocultar la semilla no protege la solución: cualquier solver la obtiene del puzzle público, porque es única. Lo que la protege es que el servidor nunca la envía (R-31). [U, F5]
 - T-20.5 En partidas simuladas sobre puzzles del banco, en las que las celdas vacías se llenan con la solución en un orden aleatorio, `levelToDeduce` devuelve antes de cada jugada un nivel entre 1 y el `graderMaxLevel` del puzzle, nunca `UNRATED`. F6 puntúa con eso. La CI usa una muestra por dificultad y `pnpm test:corpus`, el banco completo. [U, F5]
 
