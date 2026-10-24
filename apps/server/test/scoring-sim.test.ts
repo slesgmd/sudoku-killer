@@ -1,8 +1,12 @@
 // Simulador de la puntuación (F6, `docs/puntuacion.md`), versión chica para la CI. La simulación es
 // determinista: da lo mismo en el hilo actual, en otro orden y en 2 hilos (T-36.6). Las partidas
 // cumplen las reglas que tocan la puntuación: vidas y espectadores (R-03), una sola jugada por celda
-// (R-05), a lo sumo 3 pistas (R-19) y niveles entre 1 y 5 (T-20.5).
+// (R-05), a lo sumo 3 pistas (R-19) y niveles entre 1 y 5 (T-20.5). T-19.6, versión reducida: con
+// semillas fijas, pedir la pista da en media menos puntos que la rama placebo. La versión completa está en
+// `scoring-sim.corpus.test.ts`.
+import { PARAMS_V1 } from "@sudoku-killer/scoring";
 import { describe, expect, it } from "vitest";
+import { hints, ownScorer } from "../scripts/scoring-sim/metrics.ts";
 import { runSimulation, runTask, tasksOf } from "../scripts/scoring-sim/run.ts";
 import { readManifest } from "./helpers/bank.ts";
 
@@ -70,6 +74,13 @@ describe("scoring simulator", () => {
             expect(game.bots.every(({ livesLeft }) => livesLeft === 0)).toBe(true);
         }
       }
+
+      // T-19.6 (reducida): con la pista, el propio puntaje queda en media por debajo del placebo. Rama
+      // por rama no se puede exigir: la partida se desvía y el ruido va en los dos sentidos.
+      const branches = inline.records.filter((record) => record.hint);
+      expect(branches.length).toBeGreaterThan(0);
+      const effect = hints(branches, ownScorer(PARAMS_V1));
+      expect(effect.netSelf.mean).toBeLessThan(0);
     },
   );
 });

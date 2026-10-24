@@ -29,6 +29,7 @@ import {
 } from "./scoring-sim/metrics.ts";
 import type { GameRecord } from "./scoring-sim/experiments.ts";
 import { runSimulation } from "./scoring-sim/run.ts";
+import { checkTargets, fastLogicGap, type Check } from "./scoring-sim/targets.ts";
 import { TIME_PROFILES, worldModel, type ProfileName } from "./scoring-sim/world.ts";
 
 const { values } = parseArgs({
@@ -122,7 +123,14 @@ console.log(
 
 function report(title: string, metrics: Metrics): void {
   console.log(`\n## ${title}`);
-  const { correlation: c, duels: d, hints: h, closureShare: b, guessing: g } = metrics;
+  const { correlation: c, duels: d, hints: h, closureShare: b, guessing: g, equity: e } = metrics;
+  console.log(
+    `Equidad, cuotas (100 = parte justa) puntaje / aporte: ${Object.entries(e.general)
+      .map(([kind, x]) => `${kind} ${f(x.score, 1)} / ${f(x.aporte, 1)}`)
+      .join(
+        ", ",
+      )}; duelo, cuota del veloz en el par ${f(e.duel.score, 1)} / ${f(e.duel.aporte, 1)}, duelos que gana ${f(e.duel.winRate, 1)} % / ${f(e.duel.aporteWinRate, 1)} %. Diferencia máxima veloz y lógico: ${f(fastLogicGap(metrics), 1)}.`,
+  );
   console.log(
     `Spearman aporte–puntaje: mínimo por estrato ${f(c.minRho)}, agrupado ${f(c.pooled)}, concordancia de pares ${pct(c.concordance)} (${String(c.excludedGames)} partidas A sin victoria excluidas).`,
   );
@@ -145,6 +153,14 @@ function report(title: string, metrics: Metrics): void {
   );
   console.log(
     `Episodios de adivinanza (probar hasta acertar), modelo propio: ${delta(g.episodes)}.`,
+  );
+  for (const [skill, x] of Object.entries(g.bySkill)) {
+    console.log(
+      `  Adivinador de nivel ${skill}: frente a deducir ${delta(x.delta)}, IC 95 % superior ${f(x.delta.upper95, 1)}; episodios ${delta(x.episodes)}.`,
+    );
+  }
+  console.log(
+    `Efecto neto de la pista (con pista − placebo): propio ${delta(h.netSelf)}; robo ${delta(h.netSteal)}.`,
   );
   console.log("Puntaje típico (mediana / p95): jugador · equipo");
   for (const difficulty of DIFFICULTIES) {
@@ -197,7 +213,22 @@ for (const [kind, x] of Object.entries(drifted.byKind)) {
   );
 }
 
-const robustness: Record<string, { own: Metrics; speed: Metrics }> = {};
+const printChecks = (checks: readonly Check[]): void => {
+  for (const check of checks) {
+    const mark = check.pass ? "✓" : check.required ? "✗" : "·";
+    const note = check.required ? "" : " [limitación conocida, no bloquea]";
+    console.log(`  ${mark} ${check.name}: ${check.value} (meta ${check.target})${note}`);
+  }
+};
+console.log("\n## Metas (perfil base)");
+const checks = checkTargets(own, reliable, params);
+printChecks(checks);
+const typical = own.typical;
+console.log(
+  `  P como % del puntaje mediano de un jugador: ${DIFFICULTIES.map((d) => `${d} ${f((100 * params.mistakePenalty) / typical[d].playerMedian, 0)} %`).join(", ")}. H: ${DIFFICULTIES.map((d) => `${d} ${f((100 * params.hintPenalty) / typical[d].playerMedian, 0)} %`).join(", ")}.`,
+);
+
+const robustness: Record<string, { own: Metrics; speed: Metrics; checks: Check[] }> = {};
 if (byProfile("flat").length > 0) {
   const sampled = new Set(byProfile("flat").map((r) => r.game));
   const subsample = base.filter((r) => sampled.has(r.game));
@@ -206,10 +237,15 @@ if (byProfile("flat").length > 0) {
     const records = profile === "base" ? subsample : byProfile(profile);
     const m = evaluate(records, ownScorer(params), params);
     const s = evaluate(records, speedScorer, params);
-    robustness[profile] = { own: m, speed: s };
+    robustness[profile] = {
+      own: m,
+      speed: s,
+      checks: checkTargets(m, reliability(records), params),
+    };
     console.log(
-      `  ${profile.padEnd(5)} propio: Spearman mín. ${f(m.correlation.minRho)} / agrupado ${f(m.correlation.pooled)}, veloz gana ${pct(m.duels.fastWinRate)}, pista Δ media ${f(m.hints.self.mean, 1)} (Δ > 0 ${pct(m.hints.self.positive)}), robo Δ media ${f(m.hints.steal.mean, 1)} (Δ > 0 ${pct(m.hints.steal.positive)}) · velocidad: Spearman mín. ${f(s.correlation.minRho)}, veloz gana ${pct(s.duels.fastWinRate)}`,
+      `  ${profile.padEnd(5)} propio: Spearman agrupado ${f(m.correlation.pooled)}, veloz gana ${pct(m.duels.fastWinRate)} (aporte ${pct(m.duels.fastAporteRate)}) · velocidad: Spearman agrupado ${f(s.correlation.pooled)}, veloz gana ${pct(s.duels.fastWinRate)}`,
     );
+    printChecks(robustness[profile].checks);
   }
 }
 
@@ -225,6 +261,7 @@ writeFileSync(
       time: { wallMs: run.wallMs, cpuMs: run.cpuMs, analyses: run.analyses, simulations },
       own,
       speed,
+      checks,
       defeats: lost,
       reliability: reliable,
       drift: drifted,

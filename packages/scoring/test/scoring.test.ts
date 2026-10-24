@@ -175,8 +175,8 @@ describe("scoreLog", () => {
       { type: "hint", playerId: "beto", cell: 3, at: 40 },
     ];
     const tallies = scoreLog(events, PARAMS_V1, ["ana", "beto", "caro"]);
-    expect(tallies.get("ana")).toEqual({ score: 20 + 10 + 2, mistakes: 0, scoreReachedAt: 30 });
-    expect(tallies.get("beto")).toEqual({ score: -60 - 50, mistakes: 1, scoreReachedAt: 40 });
+    expect(tallies.get("ana")).toEqual({ score: 30 + 10 + 1, mistakes: 0, scoreReachedAt: 30 });
+    expect(tallies.get("beto")).toEqual({ score: -90 - 60, mistakes: 1, scoreReachedAt: 40 });
     expect(tallies.get("caro")).toEqual({ score: 0, mistakes: 0, scoreReachedAt: null });
   });
 
@@ -208,7 +208,7 @@ describe("scoreLog", () => {
     const before = structuredClone(events);
     const v1 = scoreLog(Object.freeze(events), PARAMS_V1).get("ana");
     const other = scoreLog(Object.freeze(events), OTHER).get("ana");
-    expect(v1?.score).toBe(40 - 60);
+    expect(v1?.score).toBe(50 - 90);
     expect(other?.score).toBe(60 - 80);
     expect(events).toEqual(before);
   });

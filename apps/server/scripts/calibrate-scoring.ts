@@ -37,7 +37,8 @@ const margin = Number(values.margin);
 
 /** P: el primer múltiplo de 5 que supera B·(w(5) + w(2)) por al menos el margen. */
 function penaltyFor(params: Omit<ScoringParams, "mistakePenalty">): number {
-  const threshold = guessThreshold({ ...params, mistakePenalty: 0 });
+  // La grilla cubrió adivinadores de nivel ≤ 2; el valor final de P cubre el nivel 3 (targets.ts).
+  const threshold = guessThreshold({ ...params, mistakePenalty: 0 }, 2);
   return Math.ceil((threshold + margin) / 5) * 5;
 }
 
