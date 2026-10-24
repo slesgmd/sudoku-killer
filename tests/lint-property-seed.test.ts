@@ -1,7 +1,9 @@
 // Regla de lint de las pruebas: las propiedades pasan por `assertProperty`, que imprime la semilla en
 // todo fallo y ejecuta las regresiones registradas (docs/motor.md).
-import { describe, expect, it } from "vitest";
-import { lintMessages } from "./lint-helpers.ts";
+import { beforeAll, describe, expect, it } from "vitest";
+import { lintMessages, LINT_WARM_UP_MS, warmUpLint } from "./lint-helpers.ts";
+
+beforeAll(warmUpLint, LINT_WARM_UP_MS);
 
 const SOURCE = [
   'import fc from "fast-check";',

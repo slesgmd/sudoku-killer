@@ -1,6 +1,8 @@
 // La aserción `!` solo se permite en los solvers (docs/motor.md, "Aserción de no nulo").
-import { describe, expect, it } from "vitest";
-import { lintMessages } from "./lint-helpers.ts";
+import { beforeAll, describe, expect, it } from "vitest";
+import { lintMessages, LINT_WARM_UP_MS, warmUpLint } from "./lint-helpers.ts";
+
+beforeAll(warmUpLint, LINT_WARM_UP_MS);
 
 const SOURCE = "const list = [1];\nexport const first = list[0]!;\n";
 

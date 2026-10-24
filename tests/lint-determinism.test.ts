@@ -1,6 +1,8 @@
 // Regla de lint de los paquetes puros (ADR 0004): sostiene la reproducción determinista de T-32.1.
-import { describe, expect, it } from "vitest";
-import { lintMessages } from "./lint-helpers.ts";
+import { beforeAll, describe, expect, it } from "vitest";
+import { lintMessages, LINT_WARM_UP_MS, warmUpLint } from "./lint-helpers.ts";
+
+beforeAll(warmUpLint, LINT_WARM_UP_MS);
 
 const SOURCE = "export const t = Date.now();\nexport const r = Math.random();\n";
 

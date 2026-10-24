@@ -1,6 +1,8 @@
 // T-35.1: los solvers A y B son independientes. B solo importa los tipos de datos y A no importa B.
-import { describe, expect, it } from "vitest";
-import { lintMessages } from "./lint-helpers.ts";
+import { beforeAll, describe, expect, it } from "vitest";
+import { lintMessages, LINT_WARM_UP_MS, warmUpLint } from "./lint-helpers.ts";
+
+beforeAll(warmUpLint, LINT_WARM_UP_MS);
 
 const SOLVER_B = "packages/engine/src/solver-b/example.ts";
 const SOLVER_A = "packages/engine/src/solver-a/example.ts";
