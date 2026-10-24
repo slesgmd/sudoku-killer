@@ -5,11 +5,11 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.11. **SPEC:** versión 1.2.
-- **Fase actual:** F5, banco de puzzles y calibración de dificultad (2–4 h). F4 (motor del puzzle, F4a–F4f) se cerró el 2026-10-23 con unas 3,4 h reales frente a 20–35 h estimadas.
+- **Plan:** versión 1.12. **SPEC:** versión 1.2.
+- **Fase actual:** F5, banco de puzzles y calibración de dificultad (2–4 h). F4 (motor del puzzle) se cerró el 2026-10-23 con unas 3,4 h reales frente a 20–35 h, y F7 (diseño) el mismo día con unas 1,5 h frente a 10 h.
 - **Recalibración de F5 a F13: aprobada** (F7 y F13 en 10 h; total de la v1, unas 45–66 h; `docs/PLAN.md`, sección 5).
-- **F7 (diseño visual propio):** el diseño está terminado fuera del repositorio. Todavía no está importado ni documentado.
-- **Próxima tarea exacta:** antes de F5, importar al repositorio el diseño de F7 y documentarlo. Después, F5 (`docs/PLAN.md`, F5).
+- **Diseño (F7):** prototipo en `design/prototipo/` (`npx serve design/prototipo`), guía en `docs/diseno.md` y entrega a F8 con siete decisiones en `design/entrega-f8.md`.
+- **Próxima tarea exacta:** F5 en modo plan (`docs/PLAN.md`, F5).
 - **Decisiones de F5, aprobadas:**
   - a) Los puzzles que exceden todas las técnicas se excluyen del banco (el script de lotes los descarta y cuenta).
   - b) El fácil se obtiene generando más candidatos y filtrando. `easyGivens` solo si la prueba manual muestra que el fácil resulta difícil. Las jaulas más chicas (`cageSizeWeights`) quedan descartadas.
@@ -60,6 +60,8 @@ docs/IDEAS_FUTURAS.md  ideas fuera de la v1
 docs/referencia.md     comportamiento de la app de referencia (F1)
 docs/adr/              decisiones técnicas (README con plantilla e índice)
 docs/motor.md          motor del puzzle: API, algoritmos y mediciones (F4)
+docs/diseno.md         guía de estilo y revisión de originalidad (F7)
+design/                prototipo (prototipo/), pantallas, entrega a F8 y fotos
 evidence/              evidencia local de REA (ignorada por git)
 packages/engine        motor del puzzle (puro)
 packages/protocol      mensajes y esquemas Zod (nunca la solución, T-31.3)

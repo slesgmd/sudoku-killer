@@ -317,3 +317,26 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 **Tiempo real:** unos 0,4 h (18:45 a 19:10 aproximadamente).
 
 **Siguiente:** F5, con las decisiones aprobadas. Empieza por el script de lotes y por la equivalencia entre niveles y dificultades, que se decide con el informe (incluida la medición real de la variante acotada si se adopta).
+
+
+## 2026-10-23 — F7: diseño visual propio (cierre)
+
+**Pedido del usuario:** cerrar F7 importando el diseño final, hecho fuera del repositorio, sin implementarlo en `apps/web` (eso es F8): descartar el worktree y la rama de direcciones anteriores, importar el prototipo con fuentes locales, documentar la guía de estilo, las pantallas, la entrega a F8 y el registro de fotos, y dejar escritas siete correcciones al prototipo para aplicar en F8.
+
+**Hecho:**
+- Limpieza: la rama `f7-diseno` nunca se subió al remoto. Se quitaron su worktree (`C:\dev\sudoku-killer-f7`) y la rama, sin merge; sus direcciones visuales estaban descartadas.
+- `design/prototipo/`: las **4 páginas** (Sistema base: 6 artboards; Partida: 4; Pantallas: 22; Estados transversales: 19), **51 artboards** en total, con sus hojas de estilo (`tokens.css`, `ui.css`, `board.css`, `game.css` y `screens.css`) y el índice del lienzo (`canvas.json`). Las fuentes son woff2 locales con su licencia OFL (Inter y Newsreader; también IBM Plex Sans, que la hoja de tipografía muestra como reserva), sin fuentes incrustadas. Un motor mínimo propio (`support.js`) monta las plantillas, y un índice (`index.html`) abre cada artboard en un marco de su tamaño (`marco.html`). Se abre con `npx serve design/prototipo`. Tamaño total: 728 708 bytes (unos 712 KiB, 70 archivos), de los que 444 272 son fuentes y licencias.
+- `docs/diseno.md`: guía de estilo y «Revisión de originalidad (T-18.1)». `design/pantallas.md`: pantallas y flujos. `design/entrega-f8.md`: decisiones, prioridades para F8, pendientes y lista de comprobación. `design/fotos.md`: las fotos son marcadores, con plantilla de fuente y licencia.
+- Decisiones registradas para F8: Ajustes solo dentro de una sala; aviso de traspaso solo si quien sale tiene el derecho de iniciar; «Volver a la sala» según el estado de la sala; avisos breves de 6 s con pausa (aceptados frente a WCAG 2.2.1); deshacer «Borrar notas» agrupando `note.undo` en el cliente; el anillo de mismo dígito se prueba en un celular; variante B descartada e IBM Plex Sans de reserva.
+- ESLint y Prettier ignoran `design/prototipo/` (se conserva como se diseñó) y lint-staged pasa `--no-warn-ignored` a ESLint para no fallar con archivos ignorados.
+
+**Verificación:** los 51 artboards se renderizaron en un navegador servidos con `npx serve`, sin errores de carga. Se probaron interacciones: selección de celdas, Ajustes, diálogo de pista con foco en «Cancelar», filtrado del código de sala, opciones de dificultad y diálogo de salida, sin excepciones. Búsqueda de menciones de herramientas sobre `design/` y `docs/diseno.md`: 0 resultados.
+
+**Problemas y soluciones:**
+- Los artboards son plantillas con lógica, no HTML estático. El analizador del navegador reordena las plantillas dentro de tablas, así que el motor lee cada archivo con `fetch` y lo analiza aparte; por eso hace falta un servidor estático.
+- `npx serve` redirige `marco.html` a `/marco` y descarta la consulta: los parámetros del marco van en el fragmento.
+- Dentro de la partida y del lobby, el foco inicial de Ajustes termina en «Cerrar» y no en el interruptor (el diálogo contenedor lo mueve). Queda como pendiente para F8; el prototipo no se cambió.
+
+**Tiempo real de F7:** unas 1,5 h, frente a las 10 h aprobadas.
+
+**Siguiente:** F5, banco de puzzles y calibración de dificultad, empezando en modo plan.

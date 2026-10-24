@@ -1,0 +1,105 @@
+/* Sudoku Killer — controles compartidos. Depende de tokens.css. */
+
+.sk-ui { font-family: var(--font-ui); color: var(--ink); font-feature-settings: "tnum" 0; }
+.sk-ui button { font-family: inherit; }
+.sk-ui h2, .sk-ui h3, .sk-ui p, .sk-ui ul, .sk-ui ol { margin: 0; }
+.sk-ui ul, .sk-ui ol { padding: 0; list-style: none; }
+
+.lbl { font-size: var(--fs-caption); line-height: var(--lh-caption); font-weight: 500; color: var(--muted); }
+.kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box;
+  border: 1px solid var(--border); border-radius: 4px;
+  font-size: 12px; line-height: 1; font-weight: 500; color: var(--muted); background: var(--paper);
+}
+
+/* Control segmentado */
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; padding: 4px; background: var(--surface); border-radius: var(--r-md); }
+.seg button {
+  min-height: 44px; padding: 0 8px; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid transparent; border-radius: var(--r-sm); background: transparent;
+  color: var(--muted); font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 500; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--paper); border-color: var(--ink); color: var(--ink); font-weight: 600; }
+.seg button[aria-disabled="true"] { cursor: not-allowed; border-style: dashed; border-color: var(--muted); }
+.seg button svg { width: 16px; height: 16px; flex: none; }
+
+/* Botones */
+.btn {
+  min-height: 44px; padding: 0 12px; box-sizing: border-box;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--paper);
+  color: var(--ink); font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 500; cursor: pointer; white-space: nowrap;
+}
+.btn.ghost { border-color: transparent; background: transparent; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.btn[aria-disabled="true"] { color: var(--muted); background: transparent; border-style: dashed; border-color: var(--muted); cursor: not-allowed; }
+.btn svg { width: 16px; height: 16px; flex: none; }
+.btn .count { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; color: var(--muted); }
+
+/* Interruptor de visibilidad de capa */
+.vis[aria-pressed="false"] { color: var(--muted); background: transparent; border-style: dashed; border-color: var(--muted); }
+
+/* Teclado */
+.keys { display: grid; gap: 8px; }
+.key {
+  position: relative; min-height: 44px; border: 0; border-radius: var(--r-sm);
+  background: var(--surface); color: var(--ink); cursor: pointer;
+  font-family: var(--font-digits, var(--font-ui)); font-weight: 500; line-height: 1;
+  font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;
+}
+.key .left { position: absolute; top: 5px; right: 6px; font-family: var(--font-ui); font-size: 12px; line-height: 1; font-weight: 500; color: var(--muted); }
+.key.done { background: var(--paper); box-shadow: inset 0 0 0 1px var(--border); color: var(--muted); }
+
+/* Jugadores */
+.mono {
+  width: 32px; height: 32px; border-radius: 50%; box-sizing: border-box; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; line-height: 1; font-weight: 600;
+}
+.mono.sm { width: 24px; height: 24px; font-size: 12px; }
+.mono.xs { width: 20px; height: 20px; font-size: 11px; }
+.tag {
+  display: inline-flex; align-items: center; height: 20px; padding: 0 6px; box-sizing: border-box;
+  border: 1px solid var(--border); border-radius: 4px;
+  font-size: 12px; line-height: 16px; font-weight: 500; color: var(--muted); white-space: nowrap;
+}
+.hearts { display: inline-flex; gap: 2px; align-items: center; }
+.hearts svg { width: 12px; height: 12px; display: block; }
+.pts { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+
+/* Avisos integrados */
+.notice {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 12px; border: 1px solid var(--ink); border-radius: var(--r-md); background: var(--paper);
+  font-size: var(--fs-small); line-height: var(--lh-small);
+}
+.notice svg { width: 16px; height: 16px; flex: none; margin-top: 1px; color: var(--info); }
+
+/* Botón apilado: icono sobre la etiqueta */
+.btn.stack { flex-direction: column; gap: 2px; min-height: 52px; padding: 4px; font-size: 13px; line-height: 16px; }
+
+/* Franja de jugadores con desplazamiento horizontal, sin barra visible */
+.strip { position: relative; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; scroll-snap-type: x proximity; }
+.strip::-webkit-scrollbar { display: none; }
+.strip li { scroll-snap-align: start; }
+
+/* Controles de prueba del prototipo: no forman parte de la interfaz */
+.testbar {
+  position: relative; z-index: 100;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;
+  padding: 8px 12px; box-sizing: border-box;
+  background: #25251F; color: #FAF8F2;
+  font-family: var(--font-ui); font-size: 12px; line-height: 16px; font-weight: 500;
+}
+.testbar .tb-title { display: flex; align-items: center; gap: 8px; margin-right: auto; }
+.testbar .tb-tag { border: 1px dashed #FAF8F2; border-radius: 4px; padding: 1px 6px; font-weight: 600; }
+.testbar .tb-group { display: flex; align-items: center; gap: 6px; }
+.testbar .tb-seg { display: flex; border: 1px solid #8C8B82; border-radius: 6px; overflow: hidden; }
+.testbar .tb-seg button { min-height: 32px; padding: 0 10px; border: 0; background: transparent; color: #FAF8F2; font-family: inherit; font-size: 12px; line-height: 16px; font-weight: 500; cursor: pointer; }
+.testbar .tb-seg button[aria-pressed="true"] { background: #FAF8F2; color: #25251F; font-weight: 600; }
+.testbar button:focus-visible { outline: 2px solid #FAF8F2; outline-offset: 2px; }
+.testbar .tb-select { min-height: 32px; max-width: 160px; padding: 0 8px; border: 1px solid #8C8B82; border-radius: 6px; background: #25251F; color: #FAF8F2; font-family: inherit; font-size: 12px; }
+.testbar .tb-select:focus-visible, .testbar .tb-link:focus-visible { outline: 2px solid #FAF8F2; outline-offset: 2px; }
+.testbar .tb-link { display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; border: 1px solid #8C8B82; border-radius: 6px; color: #FAF8F2; text-decoration: none; font-weight: 600; }

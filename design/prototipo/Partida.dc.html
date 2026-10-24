@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Partida</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./tokens.css">
+<link rel="stylesheet" href="./board.css">
+<link rel="stylesheet" href="./ui.css">
+<link rel="stylesheet" href="./screens.css">
+<link rel="stylesheet" href="./game.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="./fonts/fonts.css">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: {{w}}px; display: flex; flex-direction: column; background: #25251F">
+<div class="testbar" role="region" aria-label="Controles de prueba del prototipo">
+  <span class="tb-title" style="{{tbTitleStyle}}"><span class="tb-tag">Controles de prueba</span><span>No forman parte de la interfaz</span></span>
+  <span class="tb-group"><span>Vista</span><span class="tb-seg" role="group" aria-label="Vista"><button type="button" aria-pressed="{{tbActivo}}" onClick="{{setActivo}}">Activo</button><button type="button" aria-pressed="{{tbEspect}}" onClick="{{setEspect}}">Espectador</button></span></span>
+  <span class="tb-group"><label for="tb-est-{{layout}}">Estado</label><select id="tb-est-{{layout}}" class="tb-select" onChange="{{pickEstado}}"><sc-for list="{{estados}}" as="e" hint-placeholder-count="17"><option value="{{e.id}}" selected="{{e.sel}}">{{e.name}}</option></sc-for></select></span>
+  <a class="tb-link" href="{{hrefResultados}}">Resultados →</a>
+</div>
+
+<div class="pg pg--{{layout}} sk-ui" style="--font-digits: Inter, 'Helvetica Neue', Arial, sans-serif">
+
+  <header class="pg-head">
+    <sc-if value="{{wideHead}}" hint-placeholder-val="{{true}}">
+      <div style="display: flex; align-items: center; gap: 28px; min-width: 0">
+        <sc-if value="{{isEsc}}" hint-placeholder-val="{{true}}"><span style="font-size: 15px; line-height: 20px; font-weight: 600">Sudoku Killer</span></sc-if>
+        <dl class="pg-meta">
+          <div><dt class="lbl">Sala</dt><dd class="pts" style="font-weight: 600; letter-spacing: 0.04em">HPQ6NZ</dd></div>
+          <div><dt class="sr-only">Dificultad</dt><dd style="font-weight: 500">Media</dd></div>
+          <div><dt><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" role="img" aria-label="Tiempo" style="display: block"><circle cx="8" cy="8.5" r="5.5"></circle><path d="M8 5.5v3l2 1.5M6.5 1.5h3"></path></svg></dt><dd class="pts timer" role="timer" aria-live="off">{{timer}}</dd></div>
+          <div><dt style="display: flex; align-items: center; gap: 6px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5h4M6.5 14.5h3M8 1.5a4.5 4.5 0 0 0-2.7 8.1c.5.4.7.9.7 1.4h4c0-.5.2-1 .7-1.4A4.5 4.5 0 0 0 8 1.5z"></path></svg><span>Pistas</span></dt><dd class="pts" style="font-weight: 600">{{hintsText}}</dd></div>
+        </dl>
+      </div>
+      <nav aria-label="Opciones" style="display: flex; align-items: center; gap: 4px">
+        <a class="btn ghost" href="{{hrefAyuda}}">Ayuda</a>
+        <button class="btn ghost" type="button" aria-haspopup="dialog" onClick="{{openAjustes}}">Ajustes</button>
+        <button class="btn" type="button" aria-haspopup="dialog" onClick="{{askLeave}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 2.5h-3v11h3M10 5l3 3-3 3M13 8H6"></path></svg>Salir</button>
+      </nav>
+    </sc-if>
+    <sc-if value="{{compactHead}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; align-items: baseline; gap: 6px; min-width: 0">
+        <span class="sr-only">Sala</span><span class="pts" style="font-size: 14px; line-height: 20px; font-weight: 600; letter-spacing: 0.04em">HPQ6NZ</span>
+        <span style="font-size: 12px; line-height: 16px; color: #66655C">Media</span>
+      </div>
+      <div class="pg-compact">
+        <span style="display: flex; align-items: center; gap: 4px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" role="img" aria-label="Tiempo"><circle cx="8" cy="8.5" r="5.5"></circle><path d="M8 5.5v3l2 1.5M6.5 1.5h3"></path></svg><span class="pts" role="timer" aria-live="off" style="font-size: 16px; line-height: 20px; font-weight: 600">{{timer}}</span></span>
+        <span style="display: flex; align-items: center; gap: 4px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Pistas"><path d="M6 12.5h4M6.5 14.5h3M8 1.5a4.5 4.5 0 0 0-2.7 8.1c.5.4.7.9.7 1.4h4c0-.5.2-1 .7-1.4A4.5 4.5 0 0 0 8 1.5z"></path></svg><span class="pts" style="font-size: 14px; line-height: 20px; font-weight: 600">{{hintsText}}</span></span>
+        <sc-if value="{{isHor}}" hint-placeholder-val="{{false}}">
+          <button class="btn ghost" type="button" aria-label="Actividad" aria-expanded="{{actOpenStr}}" onClick="{{toggleAct}}" style="width: 44px; padding: 0"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h.5M2.5 8h.5M2.5 12h.5"></path></svg></button>
+        </sc-if>
+        <button class="btn ghost" type="button" aria-label="Menú: Ayuda, Ajustes, Salir" aria-haspopup="menu" aria-expanded="{{menuOpenStr}}" onClick="{{toggleMenu}}" style="width: 44px; padding: 0; margin-right: -4px"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="8" r="1.4"></circle><circle cx="8" cy="8" r="1.4"></circle><circle cx="13" cy="8" r="1.4"></circle></svg></button>
+      </div>
+    </sc-if>
+  </header>
+
+  <sc-if value="{{hasBanner}}" hint-placeholder-val="{{false}}">
+    <div class="pg-banner">
+      <div class="banner {{bannerCls}}" role="{{bannerRole}}">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"></circle><path d="{{bannerIcon}}"></path></svg>
+        <span style="flex: 1; min-width: 0"><strong style="font-weight: 600">{{bannerTitle}}</strong> {{bannerText}}</span>
+        <sc-if value="{{bannerDots}}" hint-placeholder-val="{{false}}"><span class="bdots" aria-hidden="true"><i></i><i></i><i></i></span></sc-if>
+        <sc-if value="{{bannerLink}}" hint-placeholder-val="{{false}}"><a class="btn secondary" href="{{hrefResultados}}">Ver resultados</a></sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <div class="pg-board" style="width: {{boardPx}}px; height: {{boardPx}}px">
+    <dc-import name="Tablero" size="{{boardPx}}" mode="board" selected="{{boardSel}}" show-personal="{{showP}}" show-group="{{showG}}" error-by="{{errorBy}}" vacio="{{loading}}" completo="{{ended}}" on-select="{{onSelect}}" hint-size="{{boardHint}}"></dc-import>
+    <sc-if value="{{loading}}" hint-placeholder-val="{{false}}"><div class="pg-loading" role="status" aria-live="polite"><span><span class="bdots" aria-hidden="true"><i></i><i></i><i></i></span>Cargando la partida…</span></div></sc-if>
+  </div>
+
+  <section class="pg-players" aria-label="{{playersLabel}}">
+    <sc-if value="{{isEsc}}" hint-placeholder-val="{{true}}">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px">
+        <h2 style="font-size: 14px; line-height: 20px; font-weight: 600">Jugadores</h2>
+        <span class="lbl pts">{{seatsText}}</span>
+      </div>
+      <ul style="display: flex; flex-direction: column; border-top: 1px solid #D1CCBF">
+        <sc-if value="{{loading}}" hint-placeholder-val="{{false}}"><sc-for list="{{skel}}" as="k" hint-placeholder-count="3"><li style="display: flex; align-items: center; gap: 12px; min-height: 60px; border-bottom: 1px solid #D1CCBF" aria-hidden="true"><span class="mono" style="background: #E7E1D6"></span><span class="skel" style="width: 96px"></span></li></sc-for></sc-if>
+        <sc-for list="{{players}}" as="p" hint-placeholder-count="5">
+          <li style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 0; border-bottom: 1px solid #D1CCBF">
+            <span class="mono" aria-hidden="true" style="{{p.monoStyle}}">{{p.ini}}</span>
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+              <span style="font-size: 14px; line-height: 20px; font-weight: 500">{{p.name}}<sc-if value="{{p.me}}" hint-placeholder-val="{{false}}"><span style="color: #66655C; font-weight: 400"> · tú</span></sc-if></span>
+              <sc-if value="{{p.hasTag}}" hint-placeholder-val="{{false}}"><span><span class="tag">{{p.tag}}</span></span></sc-if>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px">
+              <span class="pts" style="font-size: 14px; line-height: 16px; font-weight: 500">{{p.pts}}<span class="sr-only"> puntos</span></span>
+              <span class="hearts" aria-hidden="true"><sc-for list="{{p.hearts}}" as="h" hint-placeholder-count="3"><sc-if value="{{h.full}}" hint-placeholder-val="{{true}}"><svg viewBox="0 0 16 16"><path d="M8 14 2.6 8.8A3.3 3.3 0 0 1 8 4.4a3.3 3.3 0 0 1 5.4 4.4z" fill="#25251F"></path></svg></sc-if><sc-if value="{{h.empty}}" hint-placeholder-val="{{false}}"><svg viewBox="0 0 16 16"><path d="M8 14 2.6 8.8A3.3 3.3 0 0 1 8 4.4a3.3 3.3 0 0 1 5.4 4.4z" fill="none" stroke="#66655C" stroke-width="1.3"></path></svg></sc-if></sc-for></span>
+              <span class="sr-only">{{p.livesText}}</span>
+            </div>
+          </li>
+        </sc-for>
+        <sc-if value="{{notLoading}}" hint-placeholder-val="{{true}}"><li style="display: flex; align-items: center; gap: 12px; min-height: 52px; color: #66655C; font-size: 13px; line-height: 18px"><span class="mono" aria-hidden="true" style="border: 1.5px dashed #D1CCBF"></span>{{freeText}}</li></sc-if>
+      </ul>
+      <sc-if value="{{spect}}" hint-placeholder-val="{{false}}">
+        <div class="notice" role="status" style="margin-top: 16px"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"></circle><path d="M8 7.5v4M8 4.8v.2"></path></svg><span>Te quedaste sin vidas. Eres espectador: solo puedes escribir notas.</span></div>
+      </sc-if>
+      <sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}">
+        <div class="toast inline {{toastCls}}" role="{{toastRole}}" style="margin-top: 16px"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"></circle><path d="{{toastIcon}}"></path></svg><span>{{toastText}}</span></div>
+      </sc-if>
+    </sc-if>
+    <sc-if value="{{notEsc}}" hint-placeholder-val="{{false}}">
+      <sc-if value="{{spectCompact}}" hint-placeholder-val="{{false}}">
+        <div class="notice" role="status" style="margin: 0 12px 10px 0; padding: 10px 12px"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"></circle><path d="M8 7.5v4M8 4.8v.2"></path></svg><span>Eres espectador: solo puedes escribir notas.</span></div>
+      </sc-if>
+      <div class="strip" tabindex="0" role="group" aria-label="{{stripLabel}}" style="height: {{stripH}}px">
+        <ul style="display: flex; height: {{stripH}}px; width: max-content; padding-right: 12px">
+          <sc-if value="{{loading}}" hint-placeholder-val="{{false}}"><sc-for list="{{skel}}" as="k" hint-placeholder-count="3"><li style="display: flex; align-items: center; gap: 8px; padding: 0 12px; border-left: 1px solid #D1CCBF; height: {{stripH}}px" aria-hidden="true"><span class="mono" style="width: 28px; height: 28px; background: #E7E1D6"></span><span class="skel" style="width: 64px"></span></li></sc-for></sc-if>
+          <sc-for list="{{players}}" as="p" hint-placeholder-count="5">
+            <li style="display: flex; align-items: center; gap: 8px; padding: 0 12px; border-left: 1px solid #D1CCBF; height: {{stripH}}px">
+              <span class="mono" aria-hidden="true" style="width: 28px; height: 28px; font-size: 13px; {{p.monoStyle}}">{{p.ini}}</span>
+              <span style="display: flex; flex-direction: column; gap: 2px">
+                <span class="pl1" style="font-size: 13px; line-height: 18px; font-weight: 500; white-space: nowrap">{{p.name}}<sc-if value="{{p.me}}" hint-placeholder-val="{{false}}"><span style="color: #66655C; font-weight: 400"> · tú</span></sc-if></span>
+                <span class="pl2" style="display: flex; align-items: center; gap: 6px; font-size: 12px; line-height: 16px; color: #66655C; white-space: nowrap">
+                  <span class="hearts" aria-hidden="true"><sc-for list="{{p.hearts}}" as="h" hint-placeholder-count="3"><sc-if value="{{h.full}}" hint-placeholder-val="{{true}}"><svg viewBox="0 0 16 16" style="width: 10px; height: 10px"><path d="M8 14 2.6 8.8A3.3 3.3 0 0 1 8 4.4a3.3 3.3 0 0 1 5.4 4.4z" fill="#25251F"></path></svg></sc-if><sc-if value="{{h.empty}}" hint-placeholder-val="{{false}}"><svg viewBox="0 0 16 16" style="width: 10px; height: 10px"><path d="M8 14 2.6 8.8A3.3 3.3 0 0 1 8 4.4a3.3 3.3 0 0 1 5.4 4.4z" fill="none" stroke="#66655C" stroke-width="1.4"></path></svg></sc-if></sc-for></span>
+                  <span class="sr-only">{{p.livesText}}</span>
+                  <span class="pts" style="color: #25251F">{{p.pts}}<span class="sr-only"> puntos</span></span>
+                  <sc-if value="{{p.hasTag}}" hint-placeholder-val="{{false}}"><span>· {{p.tag}}</span></sc-if>
+                </span>
+              </span>
+            </li>
+          </sc-for>
+          <sc-if value="{{notLoading}}" hint-placeholder-val="{{true}}"><li style="display: flex; align-items: center; gap: 8px; padding: 0 12px; border-left: 1px solid #D1CCBF; height: {{stripH}}px; color: #66655C; font-size: 13px; white-space: nowrap"><span class="mono" aria-hidden="true" style="width: 28px; height: 28px; border: 1.5px dashed #D1CCBF"></span>{{freeText}}</li></sc-if>
+        </ul>
+      </div>
+    </sc-if>
+  </section>
+
+  <div class="pg-side">
+    <sc-if value="{{isEsc}}" hint-placeholder-val="{{true}}">
+      <section class="pg-status" aria-labelledby="act-t" style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #D1CCBF; padding-top: 12px">
+        <h2 id="act-t" style="font-size: 14px; line-height: 20px; font-weight: 600">Actividad</h2>
+        <ol aria-live="polite">
+          <sc-for list="{{log}}" as="e" hint-placeholder-count="5">
+            <li style="display: flex; align-items: center; gap: 8px; min-height: 28px; font-size: 13px; line-height: 18px">
+              <span class="mono xs" aria-hidden="true" style="background: {{e.color}}; color: #FAF8F2">{{e.ini}}</span>
+              <span style="flex: 1; min-width: 0">{{e.text}}</span>
+              <span class="pts" style="font-size: 12px; color: #66655C">{{e.time}}</span>
+            </li>
+          </sc-for>
+        </ol>
+      </section>
+    </sc-if>
+    <sc-if value="{{statusRow}}" hint-placeholder-val="{{false}}">
+      <div class="pg-status" style="position: relative">
+        <sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}">
+          <div class="toast inline {{toastCls}}" role="{{toastRole}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"></circle><path d="{{toastIcon}}"></path></svg><span>{{toastText}}</span></div>
+        </sc-if>
+        <sc-if value="{{loading}}" hint-placeholder-val="{{false}}"><p class="small muted" style="min-height: 44px; display: flex; align-items: center; padding: 0 12px; border: 1px solid #D1CCBF; border-radius: 6px">Cargando jugadores y actividad…</p></sc-if>
+        <sc-if value="{{statusBtn}}" hint-placeholder-val="{{true}}">
+          <button class="btn statusbtn" type="button" aria-expanded="{{actOpenStr}}" aria-controls="act-list" onClick="{{toggleAct}}">
+            <span style="font-weight: 600">Actividad</span>
+            <span class="mono xs" aria-hidden="true" style="background: {{log0.color}}; color: #FAF8F2">{{log0.ini}}</span>
+            <span class="stxt">{{log0.text}}</span>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: {{chevron}}"><path d="M4 6l4 4 4-4"></path></svg>
+          </button>
+        </sc-if>
+        <sc-if value="{{actListInline}}" hint-placeholder-val="{{false}}">
+          <ol id="act-list" class="actlist"><sc-for list="{{log}}" as="e" hint-placeholder-count="5"><li><span class="mono xs" aria-hidden="true" style="background: {{e.color}}; color: #FAF8F2">{{e.ini}}</span><span style="flex: 1">{{e.text}}</span><span class="pts" style="font-size: 12px; color: #66655C">{{e.time}}</span></li></sc-for></ol>
+        </sc-if>
+        <div class="sr-only" aria-live="polite">{{log0.text}}</div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isEsc}}" hint-placeholder-val="{{true}}">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <div class="seg" role="group" aria-label="Modo de escritura">
+          <button type="button" aria-pressed="{{numPressed}}" aria-disabled="{{numDisabled}}" onClick="{{setNumero}}">Número <span class="kbd" aria-hidden="true">N</span></button>
+          <button type="button" aria-pressed="{{notesPressed}}" aria-disabled="{{notesDisabled}}" onClick="{{setNotas}}">Notas <span class="kbd" aria-hidden="true">N</span></button>
+        </div>
+        <sc-if value="{{spect}}" hint-placeholder-val="{{false}}"><p class="lbl">Eres espectador: solo puedes escribir notas</p></sc-if>
+      </div>
+      <sc-if value="{{isNotes}}" hint-placeholder-val="{{true}}">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span class="lbl" id="capa-t">Escribir en <span class="kbd" aria-hidden="true">G</span></span>
+          <div class="seg" role="group" aria-labelledby="capa-t">
+            <button type="button" aria-pressed="{{personalPressed}}" aria-disabled="{{notesDisabled}}" onClick="{{setPersonal}}">Personal</button>
+            <button type="button" aria-pressed="{{groupPressed}}" aria-disabled="{{notesDisabled}}" onClick="{{setGrupal}}">Grupal</button>
+          </div>
+        </div>
+      </sc-if>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span class="lbl">Mostrar notas</span>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <button class="btn vis" type="button" aria-pressed="{{showPStr}}" onClick="{{toggleP}}"><sc-if value="{{showP}}" hint-placeholder-val="{{true}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"></path><circle cx="8" cy="8" r="2"></circle></svg></sc-if><sc-if value="{{hideP}}" hint-placeholder-val="{{false}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"></path><path d="M2.5 2.5l11 11"></path></svg></sc-if><span style="text-decoration: underline; text-decoration-color: #5D6347; text-underline-offset: 3px">Personales</span></button>
+          <button class="btn vis" type="button" aria-pressed="{{showGStr}}" onClick="{{toggleG}}"><sc-if value="{{showG}}" hint-placeholder-val="{{true}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"></path><circle cx="8" cy="8" r="2"></circle></svg></sc-if><sc-if value="{{hideG}}" hint-placeholder-val="{{false}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"></path><path d="M2.5 2.5l11 11"></path></svg></sc-if><span style="font-weight: 600">Grupales</span></button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{notEsc}}" hint-placeholder-val="{{false}}">
+      <div class="pg-ctl">
+        <sc-if value="{{hasLupa}}" hint-placeholder-val="{{false}}">
+          <figure class="lupa" style="width: {{lupaPx}}px">
+            <dc-import name="Tablero" size="{{lupaPx}}" mode="lupa" selected="{{boardSel}}" show-personal="{{showP}}" show-group="{{showG}}" error-by="{{errorBy}}" vacio="{{loading}}" completo="{{ended}}" hint-size="{{lupaHint}}"></dc-import>
+            <sc-if value="{{lupaCap}}" hint-placeholder-val="{{true}}"><figcaption class="pts">Lupa · {{where}}</figcaption></sc-if>
+          </figure>
+        </sc-if>
+        <div class="ctl-stack">
+          <div class="seg" role="group" aria-label="Modo de escritura">
+            <button type="button" aria-pressed="{{numPressed}}" aria-disabled="{{numDisabled}}" onClick="{{setNumero}}">Número</button>
+            <button type="button" aria-pressed="{{notesPressed}}" aria-disabled="{{notesDisabled}}" onClick="{{setNotas}}">Notas</button>
+          </div>
+          <div class="layers" role="group" aria-label="Capas de notas: escribir y mostrar">
+            <div>
+              <button class="btn" type="button" aria-pressed="{{personalPressed}}" aria-disabled="{{layerDisabled}}" onClick="{{setPersonal}}" style="flex: 1; padding: 0 4px; font-size: 13px; {{personalStyle}}">Personal</button>
+              <button class="btn vis" type="button" aria-pressed="{{showPStr}}" aria-label="Mostrar notas personales" onClick="{{toggleP}}" style="width: 44px; padding: 0"><sc-if value="{{showP}}" hint-placeholder-val="{{true}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"></path><circle cx="8" cy="8" r="2"></circle></svg></sc-if><sc-if value="{{hideP}}" hint-placeholder-val="{{false}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"></path><path d="M2.5 2.5l11 11"></path></svg></sc-if></button>
+            </div>
+            <div>
+              <button class="btn" type="button" aria-pressed="{{groupPressed}}" aria-disabled="{{layerDisabled}}" onClick="{{setGrupal}}" style="flex: 1; padding: 0 4px; font-size: 13px; {{groupStyle}}">Grupal</button>
+              <button class="btn vis" type="button" aria-pressed="{{showGStr}}" aria-label="Mostrar notas grupales" onClick="{{toggleG}}" style="width: 44px; padding: 0"><sc-if value="{{showG}}" hint-placeholder-val="{{true}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"></path><circle cx="8" cy="8" r="2"></circle></svg></sc-if><sc-if value="{{hideG}}" hint-placeholder-val="{{false}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"></path><path d="M2.5 2.5l11 11"></path></svg></sc-if></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{toolsFirst}}" hint-placeholder-val="{{false}}">
+      <div class="pg-tools">
+        <sc-if value="{{isNotes}}" hint-placeholder-val="{{true}}"><button class="btn {{toolCls}}" type="button" aria-disabled="{{clearDisabled}}" aria-label="{{clearLabel}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 13.5h8M2.8 9.8l6-6 3.4 3.4-6.3 6.3H4.5z"></path></svg><span>Borrar</span></button></sc-if>
+        <button class="btn {{toolCls}}" type="button" aria-disabled="{{undoDisabled}}" aria-label="Deshacer mis últimas notas"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3 2 6l3 3"></path><path d="M2 6h7.5a4 4 0 0 1 0 8H7"></path></svg><span>Deshacer</span></button>
+        <button class="btn {{toolCls}}" type="button" aria-disabled="{{hintDisabled}}" aria-label="{{hintLabel}}" aria-haspopup="dialog" onClick="{{askHint}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5h4M6.5 14.5h3M8 1.5a4.5 4.5 0 0 0-2.7 8.1c.5.4.7.9.7 1.4h4c0-.5.2-1 .7-1.4A4.5 4.5 0 0 0 8 1.5z"></path></svg><span>Pista <span class="count">· 2</span></span></button>
+      </div>
+    </sc-if>
+
+    <div class="keys pg-keys" role="group" aria-label="{{keysLabel}}">
+      <sc-for list="{{keys}}" as="k" hint-placeholder-count="9">
+        <button class="key {{k.cls}}" type="button" aria-label="{{k.label}}" aria-disabled="{{keysDisabled}}" style="grid-column: {{k.col}}">{{k.d}}<span class="left" aria-hidden="true">{{k.left}}</span></button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{toolsAfter}}" hint-placeholder-val="{{true}}">
+      <div class="pg-tools">
+        <sc-if value="{{isNotes}}" hint-placeholder-val="{{true}}"><button class="btn {{toolCls}}" type="button" aria-disabled="{{clearDisabled}}" aria-label="{{clearLabel}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 13.5h8M2.8 9.8l6-6 3.4 3.4-6.3 6.3H4.5z"></path></svg><span>Borrar</span></button></sc-if>
+        <button class="btn {{toolCls}}" type="button" aria-disabled="{{undoDisabled}}" aria-label="Deshacer mis últimas notas"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3 2 6l3 3"></path><path d="M2 6h7.5a4 4 0 0 1 0 8H7"></path></svg><span>Deshacer</span></button>
+        <button class="btn {{toolCls}}" type="button" aria-disabled="{{hintDisabled}}" aria-label="{{hintLabel}}" aria-haspopup="dialog" onClick="{{askHint}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5h4M6.5 14.5h3M8 1.5a4.5 4.5 0 0 0-2.7 8.1c.5.4.7.9.7 1.4h4c0-.5.2-1 .7-1.4A4.5 4.5 0 0 0 8 1.5z"></path></svg><span>Pista <span class="count">· 2</span></span></button>
+      </div>
+    </sc-if>
+    <div class="sr-only" role="alert" aria-live="assertive">{{alertText}}</div>
+  </div>
+
+  <sc-if value="{{toastOver}}" hint-placeholder-val="{{false}}">
+    <div class="pg-toastover"><div class="toast {{toastCls}}" role="{{toastRole}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"></circle><path d="{{toastIcon}}"></path></svg><span>{{toastText}}</span></div></div>
+  </sc-if>
+  <sc-if value="{{actListOver}}" hint-placeholder-val="{{false}}">
+    <ol class="actlist" aria-label="Actividad"><sc-for list="{{log}}" as="e" hint-placeholder-count="5"><li><span class="mono xs" aria-hidden="true" style="background: {{e.color}}; color: #FAF8F2">{{e.ini}}</span><span style="flex: 1">{{e.text}}</span><span class="pts" style="font-size: 12px; color: #66655C">{{e.time}}</span></li></sc-for></ol>
+  </sc-if>
+  <sc-if value="{{menuOpen}}" hint-placeholder-val="{{false}}">
+    <div class="menu" role="menu" aria-label="Opciones" style="{{menuStyle}}">
+      <a class="btn" role="menuitem" href="{{hrefAyuda}}">Ayuda</a>
+      <button class="btn" type="button" role="menuitem" onClick="{{openAjustes}}">Ajustes</button>
+      <button class="btn" type="button" role="menuitem" onClick="{{askLeave}}">Salir de la sala</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{hasDialog}}" hint-placeholder-val="{{false}}">
+    <div class="scrim" onKeyDown="{{dlgKey}}">
+      <div class="dialog" role="{{dlgRole}}" aria-modal="true" aria-labelledby="dlg-t" aria-describedby="dlg-d">
+        <h2 id="dlg-t">{{dlgTitle}}</h2>
+        <div id="dlg-d" class="dbody"><sc-for list="{{dlgBody}}" as="b" hint-placeholder-count="2"><p>{{b.t}}</p></sc-for></div>
+        <div class="dactions">
+          <sc-if value="{{dlgCancel}}" hint-placeholder-val="{{true}}"><button class="btn secondary" type="button" onClick="{{closeDialog}}">{{dlgCancelText}}</button></sc-if>
+          <sc-if value="{{dlgOkLink}}" hint-placeholder-val="{{false}}"><a class="btn {{dlgOkCls}}" href="{{dlgHref}}">{{dlgOkText}}</a></sc-if>
+          <sc-if value="{{dlgOkBtn}}" hint-placeholder-val="{{true}}"><button class="btn {{dlgOkCls}}" type="button" onClick="{{dlgOk}}">{{dlgOkText}}</button></sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ajustesOpen}}" hint-placeholder-val="{{false}}">
+    <dc-import name="Ajustes" layout="{{ajLayout}}" overlay="{{true}}" on-close="{{closeAjustes}}" hint-size="100%,100%"></dc-import>
+  </sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"layout":{"editor":"enum","options":["escritorio","tableta","movil","horizontal"],"default":"escritorio"},"estado":{"editor":"enum","options":["ninguno","carga","reconectando","pestana","version","servidor","demasiadas","no-permitida","terminada","salir","pista","ya-resuelta","error-propio","espectador","recuperadas","no-deshacer","ajustes"],"default":"ninguno"},"modo":{"editor":"enum","options":["notas","numero"],"default":"notas"},"$preview":{"width":1280,"height":848}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const e = props.estado || 'ninguno';
+    this.state = { sel: 15, mode: props.modo === 'numero' || e === 'reconectando' ? 'numero' : 'notas', layer: 'grupal', showP: true, showG: true, actOpen: false, menuOpen: false, viewer: e === 'espectador' || e === 'no-permitida' ? 'espectador' : 'activo', estado: e };
+  }
+  componentDidMount() { this._dlg(); }
+  componentDidUpdate() { this._dlg(); }
+  _dlg() {
+    const d = document.querySelector('.scrim [role="dialog"], .scrim [role="alertdialog"]');
+    if (d && !this._dlgOpen) { const b = d.querySelector('.btn.secondary') || d.querySelector('button, a[href]'); if (b) { try { b.focus({ preventScroll: true }); } catch (e) {} } }
+    this._dlgOpen = !!d;
+  }
+  renderVals() {
+    const P = this.props, st = this.state;
+    const layout = ['tableta', 'movil', 'horizontal'].indexOf(P.layout) >= 0 ? P.layout : 'escritorio';
+    const isEsc = layout === 'escritorio', isTab = layout === 'tableta', isMov = layout === 'movil', isHor = layout === 'horizontal';
+    const e = st.estado;
+    const spect = st.viewer === 'espectador';
+    const mode = spect ? 'notas' : st.mode;
+    const isNotes = mode === 'notas';
+    const t = (b) => (b ? 'true' : 'false');
+    const where = 'F' + (Math.floor(st.sel / 9) + 1) + ' C' + ((st.sel % 9) + 1);
+    const loading = e === 'carga';
+    const ended = e === 'terminada';
+    const server = e === 'servidor';
+    const reconn = e === 'reconectando';
+    const blockedAll = loading || ended || server;
+    const locked = [0,1,2,3,4,7,8,9,10,18,20,22,24,25,27,28,31,34,36,39,40,41,43,44,48,52,54,58,60,63,67,70,73,76,80];
+    const selEmpty = locked.indexOf(st.sel) < 0 && st.sel !== 56;
+
+    // Jugadores
+    const errPropio = e === 'error-propio';
+    const heart = (n) => [0, 1, 2].map((k) => ({ full: k < n, empty: k >= n }));
+    const raw = [
+      { name: 'Inés', color: '#4A6779', pts: errPropio ? 380 : 410, lives: spect ? 0 : (errPropio ? 2 : 3), me: true, tag: spect ? 'Espectador' : '', off: false },
+      { name: 'Tomás', color: '#9A5338', pts: 290, lives: 2, tag: '', off: false },
+      { name: 'Valeria', color: '#7A4E69', pts: 365, lives: 3, tag: '', off: false },
+      { name: 'Rafa', color: '#7F6420', pts: 160, lives: 2, tag: 'Desconectado', off: true },
+      { name: 'Bruno', color: '#3F6B5B', pts: 120, lives: 0, tag: 'Espectador', off: false }
+    ];
+    // Al terminar: Rafa expiró (sale del asiento y queda en el ranking como «Salió»); puntos y vidas finales
+    const rawEnd = [
+      { name: 'Inés', color: '#4A6779', pts: 865, lives: 1, me: true, tag: '', off: false },
+      { name: 'Tomás', color: '#9A5338', pts: 865, lives: 1, tag: '', off: false },
+      { name: 'Valeria', color: '#7A4E69', pts: 1020, lives: 2, tag: '', off: false },
+      { name: 'Bruno', color: '#3F6B5B', pts: 120, lives: 0, tag: 'Espectador', off: false }
+    ];
+    const seated = ended ? 4 : 5;
+    const players = loading ? [] : (ended ? rawEnd : raw).map((p) => ({
+      name: p.name, ini: p.name.charAt(0), me: !!p.me, pts: p.pts, hasTag: !!p.tag, tag: p.tag, hearts: heart(p.lives),
+      livesText: p.lives + (p.lives === 1 ? ' vida de 3' : ' vidas de 3'),
+      monoStyle: p.off ? 'background: #FAF8F2; color: ' + p.color + '; border: 1.5px dashed ' + p.color : 'background: ' + p.color + '; color: #FAF8F2'
+    }));
+
+    // Actividad
+    let log = [
+      { ini: 'T', color: '#9A5338', text: 'Tomás · error en F7 C3', time: '18:41' },
+      { ini: 'I', color: '#4A6779', text: 'Inés · 5 en F6 C8', time: '18:36' },
+      { ini: 'V', color: '#7A4E69', text: 'Valeria · pista en F5 C8', time: '18:02' },
+      { ini: 'B', color: '#3F6B5B', text: 'Bruno · error en F4 C3', time: '17:20' },
+      { ini: 'T', color: '#9A5338', text: 'Tomás · 9 en F7 C5', time: '16:58' }
+    ];
+    if (errPropio) log = [{ ini: 'I', color: '#4A6779', text: 'Inés · error en F7 C3', time: '18:41' }].concat(log.slice(1));
+    if (e === 'terminada') log = [
+      { ini: 'I', color: '#4A6779', text: 'Inés · 2 en F2 C7', time: '31:07' },
+      { ini: 'T', color: '#9A5338', text: 'Tomás · 4 en F9 C3', time: '30:49' },
+      { ini: 'V', color: '#7A4E69', text: 'Valeria · 8 en F7 C3', time: '30:21' },
+      { ini: 'T', color: '#9A5338', text: 'Tomás · 3 en F8 C2', time: '29:55' },
+      { ini: 'I', color: '#4A6779', text: 'Inés · 1 en F3 C8', time: '29:30' }
+    ];
+    if (e === 'ya-resuelta') log = [{ ini: 'V', color: '#7A4E69', text: 'Valeria · 6 en F1 C3', time: '18:42' }].concat(log.slice(0, 4));
+
+    // Teclado
+    const left = ended ? [0, 0, 0, 0, 0, 0, 0, 0, 0] : [5, 6, 6, 7, 5, 4, 5, 5, 4];
+    const cols = ['1 / span 2', '3 / span 2', '5 / span 2', '7 / span 2', '9 / span 2', '2 / span 2', '4 / span 2', '6 / span 2', '8 / span 2'];
+    const compactKeys = isMov || isHor;
+    const keysDisabled = blockedAll || (reconn && !isNotes);
+    const keys = left.map((n, i) => ({
+      d: String(i + 1), col: compactKeys ? cols[i] : 'auto', left: n === 0 ? '✓' : String(n), cls: n === 0 ? 'done' : '',
+      label: (isNotes ? 'Nota ' : 'Número ') + (i + 1) + (n === 0 ? ', completo' : ', quedan ' + n) + (keysDisabled ? ', no disponible ahora' : '')
+    }));
+
+    // Avisos, banners y diálogos
+    const I_INFO = 'M8 7.5v4M8 4.8v.2', I_ERR = 'M8 4.5v4.5M8 11.2v.3';
+    const banners = {
+      reconectando: ['', 'Reconectando…', 'Tus notas se guardan y se enviarán al volver (2 en cola). Los números se bloquean hasta entonces.', I_INFO, true, false, 'status'],
+      servidor: ['err', 'El servidor no responde.', 'Lo que hagas no se registrará hasta que vuelva. Reintentando…', I_ERR, true, false, 'alert'],
+      terminada: ['', 'La partida terminó.', 'El equipo completó el tablero en 31:07.', I_INFO, false, true, 'status']
+    };
+    const toasts = {
+      'ya-resuelta': ['', 'Valeria resolvió F1 C3 un instante antes. Tu jugada no cuenta y no pierdes vida.', I_INFO, 'status'],
+      'error-propio': ['err', 'El 3 no va en F7 C3. Te quedan 2 vidas.', I_ERR, 'alert'],
+      demasiadas: ['', 'Vas muy rápido: la última acción no se envió. Espera un momento y repítela.', I_INFO, 'status'],
+      'no-permitida': ['err', 'No se usó la pista: ya eres espectador y solo puedes escribir notas.', I_ERR, 'alert'],
+      recuperadas: ['', 'Se recuperaron 3 de 5 notas. Las otras 2 cambiaron después de que las borraras.', I_INFO, 'status'],
+      'no-deshacer': ['', 'No se pudo deshacer: otra persona cambió esa nota grupal después.', I_INFO, 'status'],
+      espectador: ['err', 'Te quedaste sin vidas. Ahora eres espectador: puedes seguir escribiendo notas.', I_ERR, 'alert']
+    };
+    const hrefInicio = isEsc || isTab ? 'Inicio.dc.html' : 'Inicio360.dc.html';
+    const dialogs = {
+      pista: { role: 'dialog', title: '¿Usar una pista en ' + where + '?', body: ['Se colocará el número correcto en esa celda. Cuesta −H puntos a quien la usa y no da bonus.', 'Quedan 2 pistas para todo el equipo.'], cancel: 'Cancelar', ok: 'Usar pista', okCls: 'primary', link: false },
+      salir: { role: 'alertdialog', title: '¿Salir de la sala?', body: ['Tu asiento queda libre al momento.', 'Si vuelves a esta partida desde este navegador, recuperas tus vidas, puntos y notas, siempre que haya un asiento libre.'], cancel: 'Quedarme', ok: 'Salir de la sala', okCls: 'danger', link: true, href: hrefInicio },
+      pestana: { role: 'alertdialog', title: 'La sala está abierta en otra pestaña', body: ['Solo una pestaña puede jugar a la vez, y esta quedó desconectada. Tus vidas, puntos y notas siguen intactos.'], cancel: '', ok: 'Jugar en esta pestaña', okCls: 'primary', link: false },
+      version: { role: 'alertdialog', title: 'Hay una versión nueva del juego', body: ['Esta pestaña usa una versión anterior y no puede comunicarse con el servidor. Recarga para seguir: conservas tu asiento durante 2 minutos.'], cancel: '', ok: 'Recargar', okCls: 'primary', link: false }
+    };
+    const b = banners[e], tt = toasts[e], d = dialogs[e];
+    const hasToast = !!tt;
+    const estadosNames = { ninguno: 'Ninguno', carga: 'Carga inicial', reconectando: 'Reconectando', pestana: 'Sesión en otra pestaña', version: 'Versión incompatible', servidor: 'Servidor no disponible', demasiadas: 'Demasiadas acciones', 'no-permitida': 'Acción no permitida', terminada: 'Partida terminada', salir: 'Confirmación de salida', pista: 'Confirmación de pista', 'ya-resuelta': 'Ya resuelta', 'error-propio': 'Error propio', espectador: 'Paso a espectador', recuperadas: 'Se recuperaron X de Y notas', 'no-deshacer': 'No se pudo deshacer', ajustes: 'Ajustes' };
+    const estados = Object.keys(estadosNames).map((id) => ({ id, name: estadosNames[id], sel: id === e }));
+
+    const boardPx = isEsc ? 640 : (isTab ? 600 : 336);
+    const lupaPx = isHor ? 94 : 88;
+    const on = 'background: #FAF8F2; border-color: #25251F; font-weight: 600';
+    const off = 'background: transparent; color: #66655C';
+    const hintDisabled = spect || blockedAll || reconn || !selEmpty;
+    const w = isEsc ? 1280 : isTab ? 768 : isMov ? 360 : 740;
+    return {
+      layout, w, isEsc, notEsc: !isEsc, isHor, ended, seatsText: seated + ' de 6', freeText: (6 - seated) + (6 - seated === 1 ? ' asiento libre' : ' asientos libres'), stripLabel: 'Jugadores, ' + seated + ' de 6. Desliza para ver todos',
+      wideHead: isEsc || isTab, compactHead: isMov || isHor,
+      tbTitleStyle: isMov ? 'width: 100%' : '',
+      timer: loading ? '––:––' : (ended ? '31:07' : '18:42'),
+      hasBanner: !!b, bannerCls: b ? b[0] : '', bannerTitle: b ? b[1] : '', bannerText: b ? b[2] : '', bannerIcon: b ? b[3] : '', bannerDots: b ? b[4] : false, bannerLink: b ? b[5] : false, bannerRole: b ? b[6] : 'status',
+      notLoading: !loading, hintsText: loading ? '–' : '2/3',
+      boardPx, boardHint: boardPx + 'px,' + boardPx + 'px', boardSel: loading || ended ? -1 : st.sel, errorBy: errPropio ? 'I' : 'T', loading,
+      hasLupa: (isMov || isHor) && !loading && !ended, lupaPx, lupaHint: lupaPx + 'px,' + lupaPx + 'px', lupaCap: isMov, where,
+      playersLabel: 'Jugadores', players, stripH: isHor ? 36 : 52,
+      spect, spectCompact: spect && (isMov || isTab),
+      hasToast: hasToast && !isHor, noToast: !hasToast || isHor, toastOver: hasToast && isHor,
+      toastCls: tt ? tt[0] : '', toastText: tt ? tt[1] : '', toastIcon: tt ? tt[2] : '', toastRole: tt ? tt[3] : 'status',
+      alertText: tt && tt[3] === 'alert' ? tt[1] : '',
+      statusRow: isMov || isTab, log: loading ? [] : log, log0: log[0], skel: [{ k: 1 }, { k: 2 }, { k: 3 }], statusBtn: (!hasToast || isHor) && !loading,
+      actListInline: st.actOpen && (isMov || isTab) && !hasToast, actListOver: st.actOpen && isHor,
+      actOpenStr: t(st.actOpen), chevron: st.actOpen ? 'rotate(180deg)' : 'none',
+      toggleAct: () => this.setState({ actOpen: !st.actOpen, menuOpen: false }),
+      menuOpen: st.menuOpen, menuOpenStr: t(st.menuOpen), menuStyle: isHor ? 'top: 56px; right: 12px' : 'top: 52px; right: 12px',
+      toggleMenu: () => this.setState({ menuOpen: !st.menuOpen, actOpen: false }),
+      isNotes,
+      numPressed: t(mode === 'numero'), notesPressed: t(isNotes),
+      numDisabled: t(spect || blockedAll), notesDisabled: t(blockedAll),
+      layerDisabled: t(!isNotes || blockedAll),
+      personalPressed: t(st.layer === 'personal'), groupPressed: t(st.layer === 'grupal'),
+      personalStyle: isNotes ? (st.layer === 'personal' ? on : off) : '', groupStyle: isNotes ? (st.layer === 'grupal' ? on : off) : '',
+      showP: st.showP, showG: st.showG, hideP: !st.showP, hideG: !st.showG, showPStr: t(st.showP), showGStr: t(st.showG),
+      keys, keysDisabled: t(keysDisabled),
+      keysLabel: (isNotes ? 'Teclado de notas, capa ' + (st.layer === 'personal' ? 'personal' : 'grupal') : 'Teclado de números') + (keysDisabled ? '. No disponible ahora' : ''),
+      toolsFirst: isMov || isHor, toolsAfter: isEsc || isTab, toolCls: isEsc ? 'stack' : '',
+      clearDisabled: t(blockedAll), undoDisabled: t(blockedAll),
+      clearLabel: 'Borrar notas ' + (st.layer === 'personal' ? 'personales' : 'grupales') + ' de ' + where,
+      hintDisabled: t(hintDisabled),
+      hintLabel: spect ? 'Pista no disponible para espectadores' : (!selEmpty ? 'Pista: elige una celda vacía' : (reconn || blockedAll ? 'Pista no disponible ahora' : 'Usar pista en ' + where + ', quedan 2. Cuesta −H puntos')),
+      askHint: () => { if (!hintDisabled) this.setState({ estado: 'pista' }); },
+      askLeave: () => this.setState({ estado: 'salir', menuOpen: false }),
+      hasDialog: !!d, dlgRole: d ? d.role : 'dialog', dlgTitle: d ? d.title : '', dlgBody: d ? d.body.map((x) => ({ t: x })) : [],
+      dlgCancel: !!(d && d.cancel), dlgCancelText: d ? d.cancel : '', dlgOkText: d ? d.ok : '', dlgOkCls: d ? d.okCls : '',
+      dlgOkLink: !!(d && d.link), dlgOkBtn: !!(d && !d.link), dlgHref: d && d.href ? d.href : '#',
+      dlgOk: () => this.setState({ estado: 'ninguno' }), closeDialog: () => this.setState({ estado: 'ninguno' }),
+      dlgKey: (ev) => { const a = document.activeElement; if (ev.key === 'Tab' && a && a.closest) { const d = a.closest('[aria-modal="true"]'); if (d) { const f = Array.from(d.querySelectorAll('button, a[href], input, select, [tabindex]:not([tabindex="-1"])')).filter((e) => !e.disabled && e.getClientRects().length); const i = f.indexOf(a); if (f.length && ev.shiftKey && i <= 0) { ev.preventDefault(); f[f.length - 1].focus(); } else if (f.length && !ev.shiftKey && i === f.length - 1) { ev.preventDefault(); f[0].focus(); } } } if (ev.key === 'Escape' && d && d.cancel) this.setState({ estado: 'ninguno' }); },
+      ajustesOpen: e === 'ajustes', ajLayout: isMov || isHor ? 'movil' : 'escritorio',
+      openAjustes: () => this.setState({ estado: 'ajustes', menuOpen: false }), closeAjustes: () => this.setState({ estado: 'ninguno' }),
+      hrefAyuda: isEsc || isTab ? 'Ayuda.dc.html' : 'Ayuda360.dc.html',
+      hrefResultados: isEsc || isTab ? 'Resultados.dc.html' : 'Resultados360.dc.html',
+      estados,
+      pickEstado: (ev) => { const v = ev.target.value; this.setState({ estado: v, viewer: v === 'espectador' || v === 'no-permitida' ? 'espectador' : 'activo', mode: v === 'reconectando' ? 'numero' : st.mode }); },
+      tbActivo: t(!spect), tbEspect: t(spect),
+      setActivo: () => this.setState({ viewer: 'activo' }), setEspect: () => this.setState({ viewer: 'espectador' }),
+      onSelect: (i) => this.setState({ sel: i }),
+      setNumero: () => { if (!spect && !blockedAll) this.setState({ mode: 'numero' }); },
+      setNotas: () => { if (!blockedAll) this.setState({ mode: 'notas' }); },
+      setPersonal: () => { if (isNotes) this.setState({ layer: 'personal' }); },
+      setGrupal: () => { if (isNotes) this.setState({ layer: 'grupal' }); },
+      toggleP: () => this.setState({ showP: !st.showP }),
+      toggleG: () => this.setState({ showG: !st.showG })
+    };
+  }
+}
+</script>
+</body>
+</html>

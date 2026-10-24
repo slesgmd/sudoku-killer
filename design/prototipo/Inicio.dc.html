@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Inicio</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./tokens.css">
+<link rel="stylesheet" href="./ui.css">
+<link rel="stylesheet" href="./screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="./fonts/fonts.css">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: {{w}}px; display: flex; flex-direction: column; background: #25251F">
+<div class="testbar" role="region" aria-label="Controles de prueba del prototipo">
+  <span class="tb-title" style="{{tbTitleStyle}}"><span class="tb-tag">Controles de prueba</span><span>No forman parte de la interfaz</span></span>
+  <span class="tb-group"><span>Ficha guardada</span><span class="tb-seg" role="group" aria-label="Ficha guardada"><button type="button" aria-pressed="{{tbNo}}" onClick="{{setNo}}">No</button><button type="button" aria-pressed="{{tbSi}}" onClick="{{setSi}}">Sí</button><button type="button" aria-pressed="{{tbBorrada}}" onClick="{{setBorrada}}">Sala borrada</button></span></span>
+</div>
+<div class="scr sk-ui L-{{layout}}" style="width: {{w}}px; min-height: {{minH}}px">
+  <header class="apphead">
+    <span class="brand">Sudoku Killer</span>
+    <nav aria-label="Ayuda y ajustes">
+      <a class="btn ghost" href="{{hrefAyuda}}">Ayuda</a>
+      <button class="btn ghost" type="button" aria-haspopup="dialog" onClick="{{openAjustes}}">Ajustes</button>
+    </nav>
+  </header>
+  <main class="wrap" style="{{mainStyle}}">
+    <div style="display: flex; flex-direction: column; gap: 28px; min-width: 0; {{textOrder}}">
+      <div style="display: flex; flex-direction: column; gap: 14px">
+        <h1 class="h-xl">Un tablero, varias cabezas.</h1>
+        <p class="body" style="color: #66655C; max-width: 460px">Sudoku killer cooperativo y en tiempo real, para hasta seis personas. Sin cuentas: basta un código de sala y un apodo.</p>
+      </div>
+
+      <sc-if value="{{borrada}}" hint-placeholder-val="{{false}}">
+        <div class="notice" role="status"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"></circle><path d="M8 7.5v4M8 4.8v.2"></path></svg><span><strong style="font-weight: 600">La sala HPQ6NZ ya no existe.</strong> Las salas se borran tras 2 minutos sin nadie conectado.</span></div>
+      </sc-if>
+
+      <div style="display: flex; flex-direction: column; gap: 10px; max-width: 400px">
+        <sc-if value="{{valida}}" hint-placeholder-val="{{false}}">
+          <a class="btn primary lg block" href="{{hrefVolver}}">Volver a la sala HPQ6NZ</a>
+          <p class="hint">Recuperas tus vidas, puntos y notas si queda un asiento libre.</p>
+          <a class="btn secondary lg block" href="{{hrefEntrar}}" style="margin-top: 6px">Entrar o crear otra sala</a>
+        </sc-if>
+        <sc-if value="{{noValida}}" hint-placeholder-val="{{true}}">
+          <a class="btn primary lg block" href="{{hrefEntrar}}">Entrar o crear sala</a>
+        </sc-if>
+        <a class="linkbtn" href="{{hrefAyuda}}" style="align-self: flex-start; margin-left: -4px">Cómo se juega</a>
+      </div>
+
+      <dl style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid #D1CCBF; padding-top: 16px; max-width: 440px">
+        <sc-for list="{{facts}}" as="f" hint-placeholder-count="3">
+          <div style="display: flex; flex-direction: column; gap: 2px; padding-left: {{f.pad}}; border-left: {{f.sep}}">
+            <dt class="lbl">{{f.k}}</dt><dd class="pts" style="margin: 0; font-size: 15px; line-height: 22px; font-weight: 600">{{f.v}}</dd>
+          </div>
+        </sc-for>
+      </dl>
+    </div>
+
+    <div class="ph" aria-hidden="true" style="{{phStyle}}">
+      <svg class="ph-x" preserveAspectRatio="none" viewBox="0 0 100 100"><path d="M0 0L100 100M100 0L0 100" stroke="#D1CCBF" stroke-width="0.4" vector-effect="non-scaling-stroke" fill="none"></path></svg>
+      <p class="ph-cap"><span>Fotografía · arquitectura, luz natural, sin personas · {{phSize}}</span></p>
+    </div>
+  </main>
+  <sc-if value="{{ajustesOpen}}" hint-placeholder-val="{{false}}">
+    <dc-import name="Ajustes" layout="{{layout}}" overlay="{{true}}" on-close="{{closeAjustes}}" hint-size="100%,100%"></dc-import>
+  </sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"layout":{"editor":"enum","options":["escritorio","movil"],"default":"escritorio"},"ficha":{"editor":"enum","options":["no","si","borrada"],"default":"no"},"$preview":{"width":1280,"height":850}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { ficha: ['si', 'borrada'].indexOf(props.ficha) >= 0 ? props.ficha : 'no', ajustes: false };
+  }
+  renderVals() {
+    const P = this.props, st = this.state;
+    const movil = P.layout === 'movil';
+    const t = (b) => (b ? 'true' : 'false');
+    const facts = [['Jugadores', 'Hasta 6'], ['Vidas', '3 cada uno'], ['Pistas', '3 por equipo']].map(([k, v], i) => ({ k, v, sep: i > 0 ? '1px solid #D1CCBF' : '0', pad: i > 0 ? '14px' : '0' }));
+    return {
+      layout: movil ? 'movil' : 'escritorio', w: movil ? 360 : 1280, minH: movil ? 780 : 800,
+      tbTitleStyle: movil ? 'width: 100%' : '',
+      mainStyle: movil ? 'display: flex; flex-direction: column; gap: 24px' : 'display: grid; grid-template-columns: minmax(0, 1fr) 520px; gap: 64px; align-items: center; min-height: 736px',
+      textOrder: movil ? 'order: 2' : '',
+      phStyle: movil ? 'order: 1; width: 100%; height: 200px' : 'width: 520px; height: 600px',
+      phSize: movil ? '336 × 200' : '520 × 600',
+      valida: st.ficha === 'si', noValida: st.ficha !== 'si', borrada: st.ficha === 'borrada',
+      facts,
+      hrefAyuda: movil ? 'Ayuda360.dc.html' : 'Ayuda.dc.html',
+      hrefEntrar: movil ? 'Entrar360.dc.html' : 'Entrar.dc.html',
+      hrefVolver: movil ? 'Partida360.dc.html' : 'Partida1280.dc.html',
+      ajustesOpen: st.ajustes, openAjustes: () => this.setState({ ajustes: true }), closeAjustes: () => this.setState({ ajustes: false }),
+      tbNo: t(st.ficha === 'no'), tbSi: t(st.ficha === 'si'), tbBorrada: t(st.ficha === 'borrada'),
+      setNo: () => this.setState({ ficha: 'no' }), setSi: () => this.setState({ ficha: 'si' }), setBorrada: () => this.setState({ ficha: 'borrada' })
+    };
+  }
+}
+</script>
+</body>
+</html>

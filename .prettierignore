@@ -4,3 +4,5 @@ coverage/
 evidence/
 # La documentación conserva su formato manual
 *.md
+# Prototipo de diseño importado (F7): se conserva tal como se diseñó
+design/prototipo/

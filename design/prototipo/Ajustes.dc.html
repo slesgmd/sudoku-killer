@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Ajustes</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./tokens.css">
+<link rel="stylesheet" href="./ui.css">
+<link rel="stylesheet" href="./screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="./fonts/fonts.css">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div class="scr L-{{layout}}" style="{{rootStyle}}">
+  <div class="{{wrapCls}}" style="{{wrapStyle}}" onKeyDown="{{onKey}}">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="aj-t" aria-describedby="aj-d">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+        <h2 id="aj-t">Ajustes</h2>
+        <button class="btn ghost" type="button" aria-label="Cerrar ajustes" onClick="{{close}}" style="width: 44px; padding: 0; margin: -10px -12px 0 0"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"></path></svg></button>
+      </div>
+      <p id="aj-d" class="small muted">Se aplican al momento y solo a ti.</p>
+      <div style="border-top: 1px solid #D1CCBF; border-bottom: 1px solid #D1CCBF">
+        <button class="switch" type="button" role="switch" aria-checked="{{autoStr}}" aria-labelledby="aj-auto-l" aria-describedby="aj-auto-d" onClick="{{toggle}}">
+          <span class="stext">
+            <span class="slabel" id="aj-auto-l">Limpiar notas personales automáticamente</span>
+            <span id="aj-auto-d" class="small muted">Cuando alguien acierta un número, ese número se quita de tus notas personales en su fila, columna, caja y jaula. Las notas grupales se limpian siempre.</span>
+          </span>
+          <span style="display: flex; flex-direction: column; align-items: center; gap: 4px">
+            <span class="track" aria-hidden="true"></span>
+            <span class="sstate" aria-hidden="true">{{autoText}}</span>
+          </span>
+        </button>
+      </div>
+      <p class="small muted">El movimiento reducido sigue la preferencia de tu sistema.</p>
+      <div class="dactions">
+        <button class="btn secondary" type="button" onClick="{{close}}">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"layout":{"editor":"enum","options":["escritorio","movil"],"default":"escritorio"},"overlay":{"editor":"boolean","default":false},"onClose":{"editor":null},"$preview":{"width":520,"height":440}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { auto: true };
+  }
+  componentDidMount() { if (this.props.overlay) { const b = document.querySelector('.scrim [aria-labelledby="aj-t"] [role="switch"]'); if (b) { try { b.focus({ preventScroll: true }); } catch (e) {} } } }
+  renderVals() {
+    const P = this.props;
+    const overlay = P.overlay ?? false;
+    const layout = P.layout === 'movil' ? 'movil' : 'escritorio';
+    return {
+      layout,
+      rootStyle: overlay ? 'position: absolute; inset: 0; z-index: 60; background: transparent' : 'width: 100%; min-height: 440px; padding: 40px; display: flex; align-items: center; justify-content: center',
+      wrapCls: overlay ? 'scrim' : '',
+      wrapStyle: overlay ? '' : 'width: 100%; max-width: 440px',
+      autoStr: this.state.auto ? 'true' : 'false',
+      autoText: this.state.auto ? 'Sí' : 'No',
+      toggle: () => this.setState({ auto: !this.state.auto }),
+      close: () => { if (P.onClose) P.onClose(); },
+      onKey: (ev) => { const a = document.activeElement; if (ev.key === 'Tab' && a && a.closest) { const d = a.closest('[aria-modal="true"]'); if (d) { const f = Array.from(d.querySelectorAll('button, a[href], input, select, [tabindex]:not([tabindex="-1"])')).filter((e) => !e.disabled && e.getClientRects().length); const i = f.indexOf(a); if (f.length && ev.shiftKey && i <= 0) { ev.preventDefault(); f[f.length - 1].focus(); } else if (f.length && !ev.shiftKey && i === f.length - 1) { ev.preventDefault(); f[0].focus(); } } } if (ev.key === 'Escape' && P.onClose) P.onClose(); }
+    };
+  }
+}
+</script>
+</body>
+</html>

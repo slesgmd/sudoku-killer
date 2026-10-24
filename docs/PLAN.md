@@ -1,7 +1,7 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.11
-Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23)
+Versión del plan: 1.12
+Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F7 hecha (2026-10-23)
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
 ---
@@ -117,7 +117,7 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 | F4 | Motor del puzzle | 20–35 | F3 | Hecha | ~3,4 (F4a ~0,3 + 0,1 de corrección · F4b ~0,6 · F4c ~1,1 · F4d ~0,4 · F4e ~0,4 · F4f ~0,5) |
 | F5 | Banco de puzzles y dificultad | 2–4 | F4 | Pendiente | |
 | F6 | Sistema de puntuación | 2–5 | F4 | Pendiente | |
-| F7 | Diseño visual propio | 10 | F2 (puede ir en paralelo con F4–F6) | Pendiente | |
+| F7 | Diseño visual propio | 10 | F2 (puede ir en paralelo con F4–F6) | Hecha | ~1,5 |
 | F8 | Cliente con servidor local simulado | 4–8 | F4, F7 | Pendiente | |
 | F9 | Servidor de salas | 3–6 | F3, F5, F6 | Pendiente | |
 | F10 | Integración en tiempo real | 4–8 | F8, F9 | Pendiente | |
@@ -352,6 +352,12 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, fre
 - Guía de estilo en `docs/diseno.md`.
 - Revisión explícita de que nada replica la interfaz de la app de referencia.
 
+**Estado: hecha (2026-10-23, ~1,5 h reales).** El diseño se hizo fuera del repositorio y se importó como prototipo en `design/prototipo/`: 4 páginas (Sistema base, Partida, Pantallas y Estados transversales) con 51 artboards, que se abren con `npx serve design/prototipo`. Criterios comprobados:
+- [x] Guía de estilo en `docs/diseno.md`: principios, tokens con los contrastes medidos, tipografía, geometría, componentes y sus estados, prioridad de estados de la celda, accesibilidad, responsive y estados transversales.
+- [x] Revisión de originalidad en `docs/diseno.md` («Revisión de originalidad (T-18.1)»): nada replica la interfaz de la referencia.
+
+Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, prioridades, pendientes y lista de comprobación) en `design/entrega-f8.md` y registro de fotos en `design/fotos.md`. Las correcciones al prototipo decididas al cerrar F7 se aplican en F8, no en el HTML.
+
 ### F8 — Cliente con servidor local simulado (4–8 h; original 15–25 h)
 **Tareas:**
 - `apps/web` implementando el diseño de F7.
@@ -477,3 +483,4 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, fre
   - Después del cierre, aprobado por el usuario (2026-10-23): la recalibración, con un cambio (F7 y F13 en 10 h cada una). F5 a F13 pasan de 96–171 h a 40–61 h y el total de la v1 queda en unas 45–66 h. Se actualizaron la tabla de la sección 5 y los encabezados de F5 a F13.
   - Decisiones de F5 aprobadas: los puzzles que exceden todas las técnicas se excluyen del banco; el fácil se obtiene generando más y filtrando (`easyGivens` solo si la prueba manual muestra que resulta difícil; las jaulas más chicas quedan descartadas); la equivalencia entre niveles y dificultades se decide en F5 con el informe del calificador (`docs/motor.md`).
   - Sección 1: la frase de jugadas simultáneas coincide con R-05 (si la primera jugada es un error, la celda sigue libre).
+- **1.12:** F7 hecha (~1,5 h reales frente a 10 h aprobadas). Prototipo importado en `design/prototipo/` (4 páginas, 51 artboards), guía de estilo con la revisión de originalidad (T-18.1) en `docs/diseno.md` y documentos de entrega en `design/`. Siete correcciones al prototipo quedan decididas para F8 (`design/entrega-f8.md`). La tabla de la sección 5 conserva la estimación aprobada; la diferencia de F7 entra en la próxima comparación, al cerrar F5.

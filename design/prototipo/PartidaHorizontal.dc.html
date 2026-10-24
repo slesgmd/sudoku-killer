@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Partida · horizontal</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./tokens.css">
+<link rel="stylesheet" href="./board.css">
+<link rel="stylesheet" href="./ui.css">
+<link rel="stylesheet" href="./screens.css">
+<link rel="stylesheet" href="./game.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="./fonts/fonts.css">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 740px; min-height: 440px">
+  <dc-import name="Partida" layout="horizontal" hint-size="740px,440px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":740,"height":440}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

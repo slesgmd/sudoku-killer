@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Entrar o crear sala</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./tokens.css">
+<link rel="stylesheet" href="./ui.css">
+<link rel="stylesheet" href="./screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="./fonts/fonts.css">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: {{w}}px; display: flex; flex-direction: column; background: #25251F">
+<sc-if value="{{full}}" hint-placeholder-val="{{true}}">
+<div class="testbar" role="region" aria-label="Controles de prueba del prototipo">
+  <span class="tb-title"><span class="tb-tag">Controles de prueba</span><span>No forman parte de la interfaz</span></span>
+  <span class="tb-group"><label for="tb-estado">Estado</label><select id="tb-estado" class="tb-select" onChange="{{pickEstado}}"><sc-for list="{{estados}}" as="e" hint-placeholder-count="8"><option value="{{e.id}}" selected="{{e.sel}}">{{e.name}}</option></sc-for></select></span>
+  <a class="tb-link" href="{{hrefLobby}}">Ir al lobby →</a>
+</div>
+</sc-if>
+<div class="scr sk-ui L-{{layout}}" style="width: {{w}}px; min-height: {{minH}}px">
+  <sc-if value="{{full}}" hint-placeholder-val="{{true}}">
+  <header class="apphead">
+    <span class="brand">Sudoku Killer</span>
+    <nav aria-label="Ayuda y ajustes">
+      <a class="btn ghost" href="{{hrefAyuda}}">Ayuda</a>
+      <button class="btn ghost" type="button" aria-haspopup="dialog" onClick="{{openAjustes}}">Ajustes</button>
+    </nav>
+  </header>
+  </sc-if>
+
+  <main class="wrap" style="{{mainStyle}}">
+    <sc-if value="{{full}}" hint-placeholder-val="{{true}}">
+      <div class="ph" aria-hidden="true" style="{{phStyle}}">
+        <svg class="ph-x" preserveAspectRatio="none" viewBox="0 0 100 100"><path d="M0 0L100 100M100 0L0 100" stroke="#D1CCBF" stroke-width="0.4" vector-effect="non-scaling-stroke" fill="none"></path></svg>
+        <p class="ph-cap"><span>Fotografía · arquitectura con luz natural, materiales naturales, sin personas · {{phSize}}</span></p>
+      </div>
+    </sc-if>
+
+    <div style="display: flex; flex-direction: column; gap: 20px; min-width: 0">
+      <sc-if value="{{full}}" hint-placeholder-val="{{true}}">
+        <a class="linkbtn" href="{{hrefInicio}}" style="align-self: flex-start; margin: -10px 0 -6px -4px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"></path></svg>Inicio</a>
+      </sc-if>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <h1 class="h-l">Entrar o crear una sala</h1>
+        <p class="lead">Elige un apodo. Después entra con el código que te pasaron o crea una sala nueva.</p>
+      </div>
+
+      <form novalidate="{{true}}" aria-busy="{{busyStr}}" onSubmit="{{submit}}" style="display: flex; flex-direction: column; gap: 20px">
+        <sc-if value="{{formErr}}" hint-placeholder-val="{{false}}">
+          <div class="toast err" role="alert" style="box-shadow: none">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"></circle><path d="M8 4.5v4.5M8 11.2v.3"></path></svg>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 8px"><span><span class="tkind">{{formErrTitle}}</span> {{formErrText}}</span><sc-if value="{{retry}}" hint-placeholder-val="{{false}}"><span><button class="btn secondary" type="button" onClick="{{doRetry}}">Reintentar</button></span></sc-if></span>
+          </div>
+        </sc-if>
+
+        <div class="field">
+          <label for="apodo">Tu apodo</label>
+          <input class="input" id="apodo" name="apodo" type="text" autocomplete="nickname" maxlength="16" value="{{apodo}}" onInput="{{onApodo}}" disabled="{{busy}}" aria-invalid="{{apodoInvalid}}" aria-describedby="apodo-h apodo-e">
+          <p id="apodo-h" class="hint">De 2 a 16 caracteres. Tiene que ser único en la sala.</p>
+          <sc-if value="{{apodoErr}}" hint-placeholder-val="{{false}}"><p id="apodo-e" class="ferr" role="alert"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"></circle><path d="M8 4.5v4.5M8 11.2v.3"></path></svg><span>{{apodoErrText}}</span></p></sc-if>
+        </div>
+
+        <fieldset style="display: flex; flex-direction: column; gap: 12px">
+          <legend class="h-sec" style="padding: 0; margin-bottom: 12px">Entrar con código</legend>
+          <div class="field">
+            <label for="codigo">Código de la sala</label>
+            <input class="input code" id="codigo" name="codigo" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" value="{{codigo}}" onInput="{{onCodigo}}" disabled="{{busy}}" aria-invalid="{{codigoInvalid}}" aria-describedby="codigo-h codigo-n codigo-e">
+            <p id="codigo-h" class="hint">6 caracteres. Se escriben en mayúsculas solos; los códigos no usan 0, O, 1, I ni L.</p>
+            <p id="codigo-n" aria-live="polite"><sc-if value="{{codigoNote}}" hint-placeholder-val="{{false}}"><span class="fnote"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"></circle><path d="M8 7.5v4M8 4.8v.2"></path></svg><span>{{codigoNoteText}}</span></span></sc-if></p>
+            <sc-if value="{{codigoErr}}" hint-placeholder-val="{{false}}"><p id="codigo-e" class="ferr" role="alert"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"></circle><path d="M8 4.5v4.5M8 11.2v.3"></path></svg><span>{{codigoErrText}}</span></p></sc-if>
+          </div>
+          <button class="btn primary lg block" type="submit" name="accion" value="entrar" aria-busy="{{busyStr}}">{{entrarLabel}}<sc-if value="{{busy}}" hint-placeholder-val="{{false}}"><span class="bdots" aria-hidden="true"><i></i><i></i><i></i></span></sc-if></button>
+        </fieldset>
+
+        <p class="divider-o">o</p>
+
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <button class="btn secondary lg block" type="button" onClick="{{crear}}" aria-disabled="{{busyStr}}">Crear sala nueva</button>
+          <p class="hint">Recibirás un código para invitar a hasta 5 personas más.</p>
+        </div>
+        <p class="sr-only" role="status">{{statusText}}</p>
+      </form>
+    </div>
+  </main>
+  <sc-if value="{{ajustesOpen}}" hint-placeholder-val="{{false}}">
+    <dc-import name="Ajustes" layout="{{layout}}" overlay="{{true}}" on-close="{{closeAjustes}}" hint-size="100%,100%"></dc-import>
+  </sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"layout":{"editor":"enum","options":["escritorio","movil"],"default":"escritorio"},"estado":{"editor":"enum","options":["normal","apodo-invalido","caracter","inexistente","llena","apodo-en-uso","conexion","carga"],"default":"normal"},"soloForm":{"editor":"boolean","default":false},"$preview":{"width":1280,"height":848}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const e = props.estado || 'normal';
+    this.state = Object.assign({ estado: e, ajustes: false }, this.datos(e));
+  }
+  datos(e) {
+    const d = { apodo: 'Inés', codigo: 'HPQ6NZ' };
+    if (e === 'apodo-invalido') d.apodo = 'I';
+    if (e === 'caracter') d.codigo = 'HPQ6';
+    if (e === 'inexistente') d.codigo = 'QW4RTP';
+    if (e === 'apodo-en-uso') d.apodo = 'Tomás';
+    return d;
+  }
+  renderVals() {
+    const P = this.props, st = this.state;
+    const movil = P.layout === 'movil';
+    const solo = P.soloForm ?? false;
+    const e = st.estado;
+    const busy = e === 'carga';
+    const labels = { normal: 'Formulario completo', 'apodo-invalido': 'Apodo no válido', caracter: 'Carácter rechazado', inexistente: 'Sala inexistente', llena: 'Sala llena', 'apodo-en-uso': 'Apodo en uso', conexion: 'Fallo de conexión', carga: 'Cargando' };
+    const estados = Object.keys(labels).map((id) => ({ id, name: labels[id], sel: id === e }));
+    const formErr = e === 'llena' || e === 'conexion';
+    const w = solo ? 360 : (movil ? 360 : 1280);
+    return {
+      layout: movil || solo ? 'movil' : 'escritorio', full: !solo, w,
+      minH: solo ? 0 : (movil ? 860 : 800),
+      mainStyle: (movil || solo)
+        ? (solo ? 'display: flex; flex-direction: column; gap: 20px; padding: 20px 12px 24px' : 'display: flex; flex-direction: column; gap: 20px')
+        : 'display: grid; grid-template-columns: 560px minmax(0, 440px); gap: 80px; align-items: start',
+      phStyle: movil ? 'width: 100%; height: 168px' : 'width: 560px; height: 640px',
+      phSize: movil ? '336 × 168' : '560 × 640',
+      estados,
+      pickEstado: (ev) => { const v = ev.target.value; this.setState(Object.assign({ estado: v }, this.datos(v))); },
+      apodo: st.apodo, codigo: st.codigo,
+      onApodo: (ev) => this.setState({ apodo: ev.target.value, estado: e === 'apodo-invalido' || e === 'apodo-en-uso' ? 'normal' : e }),
+      onCodigo: (ev) => {
+        const raw = ev.target.value.toUpperCase();
+        const bad = raw.match(/[^ABCDEFGHJKMNPQRSTUVWXYZ2-9]/);
+        const clean = raw.replace(/[^ABCDEFGHJKMNPQRSTUVWXYZ2-9]/g, '').slice(0, 6);
+        this.setState({ codigo: clean, estado: bad ? 'caracter' : (e === 'caracter' || e === 'inexistente' ? 'normal' : e), rechazado: bad ? bad[0] : '' });
+      },
+      busy, busyStr: busy ? 'true' : 'false',
+      apodoErr: e === 'apodo-invalido' || e === 'apodo-en-uso',
+      apodoInvalid: e === 'apodo-invalido' || e === 'apodo-en-uso' ? 'true' : 'false',
+      apodoErrText: e === 'apodo-en-uso' ? '«' + st.apodo + '» ya está en uso en esta sala, o reservado hasta que termine la partida en curso. Elige otro apodo.' : 'El apodo tiene que tener entre 2 y 16 caracteres.',
+      codigoNote: e === 'caracter',
+      codigoNoteText: 'La «' + (st.rechazado || 'O') + '» no se usa en los códigos y no se añadió.',
+      codigoErr: e === 'inexistente',
+      codigoInvalid: e === 'inexistente' ? 'true' : 'false',
+      codigoErrText: 'No hay ninguna sala con el código ' + st.codigo + '. Revisa el código o crea una sala nueva.',
+      formErr, retry: e === 'conexion',
+      formErrTitle: e === 'llena' ? 'Sala llena.' : 'Sin conexión.',
+      formErrText: e === 'llena' ? 'La sala ' + st.codigo + ' tiene sus 6 asientos ocupados. Prueba más tarde o crea otra sala.' : 'No se pudo conectar con el servidor. Revisa tu conexión y vuelve a intentarlo.',
+      doRetry: () => this.setState({ estado: 'carga' }),
+      entrarLabel: busy ? 'Entrando…' : 'Entrar',
+      statusText: busy ? 'Entrando en la sala ' + st.codigo + '…' : '',
+      submit: (ev) => {
+        ev.preventDefault();
+        if (busy) return;
+        const a = (st.apodo || '').trim();
+        if (a.length < 2 || a.length > 16) return this.setState({ estado: 'apodo-invalido' });
+        if ((st.codigo || '').length < 6) return this.setState({ estado: 'inexistente' });
+        this.setState({ estado: 'carga' });
+      },
+      crear: () => { const a = (st.apodo || '').trim(); this.setState({ estado: a.length < 2 || a.length > 16 ? 'apodo-invalido' : 'carga' }); },
+      hrefAyuda: movil ? 'Ayuda360.dc.html' : 'Ayuda.dc.html',
+      hrefInicio: movil ? 'Inicio360.dc.html' : 'Inicio.dc.html',
+      hrefLobby: movil ? 'Lobby360.dc.html' : 'Lobby.dc.html',
+      ajustesOpen: st.ajustes, openAjustes: () => this.setState({ ajustes: true }), closeAjustes: () => this.setState({ ajustes: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+/* Sudoku Killer — disposición de la pantalla de partida por tamaño de ventana.
+   Convención del prototipo: .pg--escritorio (≥ 1024 px), .pg--tableta (600–1023 px),
+   .pg--movil (< 600 px, vertical) y .pg--horizontal (móvil apaisado, alto < 480 px).
+   En producción, las mismas reglas van en media queries. */
+
+.pg { position: relative; display: grid; box-sizing: border-box; background: var(--canvas); color: var(--ink); align-content: start; }
+.pg *, .pg *::before, .pg *::after { box-sizing: border-box; }
+.pg-head { grid-area: head; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); }
+.pg-banner { grid-area: banner; }
+.pg-board { grid-area: board; position: relative; }
+.pg-players { grid-area: players; min-width: 0; }
+.pg-side { grid-area: side; display: flex; flex-direction: column; min-width: 0; }
+.pg-ctl, .pg-tools { display: flex; min-width: 0; }
+
+/* Cabecera: datos de la sala */
+.pg-meta { margin: 0; display: flex; align-items: center; font-size: 14px; line-height: 20px; }
+.pg-meta > div { display: flex; align-items: center; gap: 6px; padding: 0 14px; border-right: 1px solid var(--border); }
+.pg-meta > div:first-child { padding-left: 0; }
+.pg-meta > div:last-child { border-right: 0; padding-right: 0; }
+.pg-meta dd { margin: 0; }
+.pg-meta .timer { font-size: 18px; line-height: 24px; font-weight: 600; }
+.pg-compact { display: flex; align-items: center; gap: 12px; }
+
+/* Escritorio · 1280 */
+.pg--escritorio { width: 1280px; min-height: 800px; grid-template-columns: 240px 640px 272px; grid-template-areas: "head head head" "banner banner banner" "players board side"; column-gap: 32px; padding: 0 32px 32px; align-items: start; }
+.pg--escritorio .pg-head { height: 64px; margin: 0 -32px 32px; padding: 0 32px; }
+.pg--escritorio .pg-banner .banner { margin: -32px -32px 24px; }
+.pg--escritorio .pg-side { gap: 12px; }
+.pg--escritorio .pg-status { order: 9; }
+
+/* Tableta · 768 */
+.pg--tableta { width: 768px; min-height: 1024px; grid-template-columns: 720px; grid-template-areas: "head" "banner" "board" "players" "side"; padding: 0 24px 24px; }
+.pg--tableta .pg-head { height: 60px; margin: 0 -24px 16px; padding: 0 24px; }
+.pg--tableta .pg-banner .banner { margin: -16px -24px 16px; }
+.pg--tableta .pg-board { justify-self: center; }
+.pg--tableta .pg-players { margin-top: 16px; }
+.pg--tableta .pg-side { margin-top: 12px; gap: 12px; }
+
+/* Móvil vertical · 360 */
+.pg--movil { width: 360px; min-height: 852px; grid-template-columns: 336px; grid-template-areas: "head" "banner" "board" "players" "side"; padding: 0 12px 12px; }
+.pg--movil .pg-head { height: 52px; margin: 0 -12px 8px; padding: 0 4px 0 12px; }
+.pg--movil .pg-banner .banner { margin: -8px -12px 8px; padding: 10px 12px; }
+.pg--movil .pg-players { margin-top: 12px; margin-right: -12px; }
+.pg--movil .pg-side { margin-top: 8px; gap: 10px; }
+
+/* Móvil horizontal · 740 × 360 */
+.pg--horizontal { width: 740px; height: 360px; grid-template-columns: 336px 368px; grid-template-rows: 44px 36px 1fr; grid-template-areas: "board head" "board players" "board side"; column-gap: 12px; row-gap: 6px; padding: 12px; overflow: hidden; }
+.pg--horizontal .pg-head { height: 44px; border-bottom: 0; }
+.pg--horizontal .pg-board { align-self: start; }
+.pg--horizontal .pg-side { gap: 6px; }
+.pg--horizontal .pg-banner, .pg--horizontal .pg-toastover { position: absolute; left: 360px; right: 12px; top: 12px; z-index: 30; }
+.pg--horizontal .pg-banner .banner { min-height: 86px; border: 1px solid var(--ink); border-radius: var(--r-md); box-shadow: var(--shadow-float); }
+.pg--horizontal .pg-banner .banner.err { border-color: var(--danger); }
+.pg--horizontal .seg { padding: 0; gap: 2px; }
+.pg--horizontal .strip li { height: 36px !important; padding: 0 10px !important; }
+.pg--horizontal .strip ul { height: 36px !important; }
+.pg--horizontal .strip .mono { width: 24px !important; height: 24px !important; font-size: 12px !important; }
+.pg--horizontal .strip .pl1 { font-size: 12px !important; line-height: 16px !important; }
+.pg--horizontal .strip .pl2 { font-size: 11px !important; line-height: 14px !important; }
+
+/* Controles compactos (todas menos escritorio) */
+.pg-ctl { gap: 12px; align-items: flex-start; }
+.pg--tableta .pg-ctl { align-items: center; }
+.ctl-stack { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.pg--tableta .ctl-stack { flex-direction: row; align-items: center; }
+.pg--tableta .ctl-stack > .seg { width: 260px; flex: none; }
+.pg--tableta .ctl-stack > .layers { flex: 1; }
+.pg--horizontal .ctl-stack { gap: 6px; }
+.layers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+.layers > div { display: flex; gap: 2px; }
+.lupa { margin: 0; flex: none; display: flex; flex-direction: column; gap: 4px; }
+.lupa figcaption { font-size: 12px; line-height: 16px; color: var(--muted); text-align: center; }
+
+/* Herramientas y teclado */
+.pg-tools { gap: 8px; }
+.pg-tools .btn { flex: 1; min-width: 0; padding: 0 6px; }
+.pg--escritorio .pg-keys { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pg--escritorio .pg-keys .key { min-height: 48px; font-size: 22px; }
+.pg--tableta .pg-keys { grid-template-columns: repeat(9, minmax(0, 1fr)); }
+.pg--tableta .pg-keys .key { min-height: 56px; font-size: 22px; }
+.pg--movil .pg-keys, .pg--horizontal .pg-keys { grid-template-columns: repeat(10, minmax(0, 1fr)); row-gap: 8px; column-gap: 6px; }
+.pg--horizontal .pg-keys { row-gap: 6px; }
+.pg--movil .pg-keys .key, .pg--horizontal .pg-keys .key { min-height: 44px; font-size: 20px; }
+.key[aria-disabled="true"] { background: var(--paper); color: var(--muted); box-shadow: inset 0 0 0 1px var(--border); cursor: not-allowed; }
+.key[aria-disabled="true"] .left { visibility: hidden; }
+
+/* Línea de estado: actividad plegable o aviso del momento */
+.statusbtn { width: 100%; justify-content: flex-start !important; gap: 8px !important; padding: 0 8px 0 12px !important; }
+.statusbtn .stxt { flex: 1; min-width: 0; text-align: left; font-weight: 400; font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+.pg .toast.inline { box-shadow: none; min-height: 44px; align-items: center; }
+.pg--horizontal .pg-toastover .toast { min-height: 86px; align-items: center; }
+.actlist { position: absolute; left: 0; right: 0; top: 48px; z-index: 20; background: var(--paper); border-radius: var(--r-md); box-shadow: var(--shadow-float); padding: 4px 12px; }
+.actlist li { display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 13px; line-height: 18px; border-bottom: 1px solid var(--border); }
+.actlist li:last-child { border-bottom: 0; }
+.pg--horizontal .actlist { position: absolute; top: 56px; left: 360px; right: 12px; z-index: 40; }
+
+/* Menú compacto */
+.menu { position: absolute; z-index: 45; min-width: 220px; padding: 6px; background: var(--paper); border-radius: var(--r-md); box-shadow: var(--shadow-float); display: flex; flex-direction: column; }
+.menu .btn { justify-content: flex-start; border-color: transparent; background: transparent; }
+
+/* Carga inicial */
+.pg-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 9; }
+.pg-loading > span { display: inline-flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--paper); border: 1px solid var(--border); border-radius: var(--r-md); font-size: 14px; line-height: 20px; font-weight: 500; }
+.skel { display: inline-block; height: 12px; border-radius: 6px; background: var(--surface); }

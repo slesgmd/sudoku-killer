@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Tipografía</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./tokens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="./fonts/fonts.css">
+<style>
+body{margin:0}
+a{color:#5D6347}a:hover{color:#25251F}
+.sc td{padding:12px 16px 12px 0;border-bottom:1px solid #D1CCBF;vertical-align:baseline;font-size:12px;line-height:16px;color:#66655C}
+.sc th{padding:0 16px 8px 0;text-align:left;font-size:12px;font-weight:500;color:#66655C;border-bottom:1px solid #D1CCBF}
+.sc td.s{color:#25251F}
+.dg{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;letter-spacing:0}
+</style>
+</helmet>
+<div style="width: 1120px; height: 1320px; box-sizing: border-box; padding: 64px; background: #F3F0E8; color: #25251F; font-family: Inter, 'Helvetica Neue', Arial, sans-serif; display: flex; flex-direction: column; gap: 40px">
+
+  <header style="display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid #D1CCBF; padding-bottom: 24px">
+    <p style="margin: 0; font-size: 12px; line-height: 16px; font-weight: 500; color: #66655C">Etapa 1 · Tipografía · familias con licencia SIL Open Font License</p>
+    <h1 style="margin: 0; font-family: Newsreader, Georgia, serif; font-weight: 400; font-size: 40px; line-height: 44px">Nueve por nueve, entre todos.</h1>
+    <p style="margin: 0; font-size: 15px; line-height: 22px; color: #66655C; max-width: 720px">Newsreader solo en titulares editoriales de 24 px o más. Inter en toda la interfaz, en los datos y en el tablero, siempre con cifras tabulares.</p>
+  </header>
+
+  <table class="sc" style="border-collapse: collapse; width: 100%">
+    <thead><tr><th scope="col" style="width: 128px">Token</th><th scope="col">Muestra</th><th scope="col" style="width: 120px">Tamaño / línea</th><th scope="col" style="width: 96px">Peso</th><th scope="col" style="width: 220px">Uso</th></tr></thead>
+    <tbody>
+      <tr><td>display-l</td><td class="s" style="font-family: Newsreader, Georgia, serif; font-size: 40px; line-height: 44px">Partida terminada</td><td class="dg">40 / 44</td><td>400</td><td>Inicio y Resultados</td></tr>
+      <tr><td>display-m</td><td class="s" style="font-family: Newsreader, Georgia, serif; font-size: 32px; line-height: 38px">Cómo se juega</td><td class="dg">32 / 38</td><td>400</td><td>Ayuda, Entrar o crear</td></tr>
+      <tr><td>display-s</td><td class="s" style="font-family: Newsreader, Georgia, serif; font-size: 24px; line-height: 30px; font-weight: 500">Sala de espera</td><td class="dg">24 / 30</td><td>500</td><td>Encabezados de sección editoriales</td></tr>
+      <tr><td>title</td><td class="s" style="font-size: 18px; line-height: 24px; font-weight: 600">Jugadores</td><td class="dg">18 / 24</td><td>600</td><td>Paneles y diálogos</td></tr>
+      <tr><td>body</td><td class="s" style="font-size: 15px; line-height: 22px">Cada jaula suma lo que indica su número y no repite dígitos.</td><td class="dg">15 / 22</td><td>400</td><td>Texto corrido, Ayuda</td></tr>
+      <tr><td>label</td><td class="s" style="font-size: 14px; line-height: 20px; font-weight: 500">Iniciar partida</td><td class="dg">14 / 20</td><td>500</td><td>Botones, controles, apodos</td></tr>
+      <tr><td>small</td><td class="s" style="font-size: 13px; line-height: 18px">Valeria · pista en F5 C8</td><td class="dg">13 / 18</td><td>400</td><td>Registro de actividad, avisos</td></tr>
+      <tr><td>caption</td><td class="s" style="font-size: 12px; line-height: 16px; font-weight: 500">Espectador</td><td class="dg">12 / 16</td><td>500</td><td>Etiquetas. Mínimo de interfaz</td></tr>
+      <tr><td>data-l</td><td class="s dg" style="font-size: 18px; line-height: 24px; font-weight: 600">18:42 · HPQ6NZ</td><td class="dg">18 / 24</td><td>600 tnum</td><td>Cronómetro y código</td></tr>
+      <tr><td>data</td><td class="s dg" style="font-size: 14px; line-height: 20px; font-weight: 500">410 · 385 · 290</td><td class="dg">14 / 20</td><td>500 tnum</td><td>Puntos, contadores</td></tr>
+    </tbody>
+  </table>
+
+  <section style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <h2 style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 600">Tablero</h2>
+      <table class="sc" style="border-collapse: collapse; width: 100%">
+        <thead><tr><th scope="col">Elemento</th><th scope="col">1280</th><th scope="col">360</th><th scope="col">Peso</th></tr></thead>
+        <tbody>
+          <tr><td class="s">Número inicial</td><td class="dg">37 / 1</td><td class="dg">19 / 1</td><td>600</td></tr>
+          <tr><td class="s">Resuelto y pista</td><td class="dg">37 / 1</td><td class="dg">19 / 1</td><td>400</td></tr>
+          <tr><td class="s">Suma de jaula</td><td class="dg">12 / 1</td><td class="dg">10 / 1</td><td>600</td></tr>
+          <tr><td class="s">Notas</td><td class="dg">14 / 1</td><td class="dg">8 / 1</td><td>400 · 600</td></tr>
+                    <tr><td class="s">Notas en la lupa</td><td class="dg">—</td><td class="dg">17</td><td>400 · 600</td></tr>
+          <tr><td class="s">Tecla del teclado</td><td class="dg">22 / 1</td><td class="dg">20 / 1</td><td>500</td></tr>
+          <tr><td class="s">Contador de la tecla</td><td class="dg">12 / 1</td><td class="dg">12 / 1</td><td>500</td></tr>
+        </tbody>
+      </table>
+      <p style="margin: 0; font-size: 12px; line-height: 16px; color: #66655C">Notas grupales en peso 600 y notas personales en 400 con subrayado: así las capas se distinguen también sin color. Las notas de 8 px de la variante A a 360 no se leen con comodidad; para eso está la lupa.</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <h2 style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 600">Prueba del 1 y el 7</h2>
+      <div style="display: flex; flex-direction: column; gap: 0; background: #FAF8F2; border-radius: 10px; padding: 8px 16px">
+        <sc-for list="{{tests}}" as="t" hint-placeholder-count="5">
+          <div style="display: grid; grid-template-columns: 96px 1fr 1fr; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid #D1CCBF">
+            <span style="font-size: 12px; line-height: 16px; color: #66655C">{{t.label}}</span>
+            <span class="dg" style="font-family: Inter, sans-serif; font-size: {{t.px}}px; font-weight: {{t.w}}; line-height: 1; white-space: nowrap; overflow: hidden">{{t.s}}</span>
+            <span class="dg" style="white-space: nowrap; overflow: hidden; font-family: 'IBM Plex Sans', sans-serif; font-size: {{t.px}}px; font-weight: {{t.w}}; line-height: 1">{{t.s}}</span>
+          </div>
+        </sc-for>
+        <div style="display: grid; grid-template-columns: 96px 1fr 1fr; gap: 12px; padding: 10px 0 4px">
+          <span></span><span style="font-size: 12px; font-weight: 600">Inter</span><span style="font-size: 12px; font-weight: 600">IBM Plex Sans (reserva)</span>
+        </div>
+      </div>
+      <p style="margin: 0; font-size: 12px; line-height: 16px; color: #66655C">En Inter, el 1 tiene un remate corto inclinado y fuste vertical; el 7 tiene una barra horizontal de ancho completo y fuste diagonal. Se distinguen por dos rasgos, no por uno, y se mantiene a 10 px. Decisión tras la prueba en celular: Inter. IBM Plex Sans, también OFL y con el 1 con base, queda anotada como reserva y no se usa en la interfaz.</p>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1120,"height":1320}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const tests = [
+      { label: 'Suma 360 · 10', px: 10, w: 600 },
+      { label: 'Suma 1280 · 12', px: 12, w: 600 },
+      { label: 'Dígito 360 · 19', px: 19, w: 400 },
+      { label: 'Inicial 360 · 19', px: 19, w: 600 },
+      { label: 'Dígito 1280 · 37', px: 37, w: 400 }
+    ];
+    tests.forEach((t) => { t.s = t.px > 30 ? '1 7 17' : '1 7 17 71 11 77'; });
+    return { tests };
+  }
+}
+</script>
+</body>
+</html>

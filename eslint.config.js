@@ -39,7 +39,7 @@ const TEST_RESTRICTIONS = [
 ];
 
 export default defineConfig(
-  globalIgnores(["**/dist/", "**/coverage/", "evidence/"]),
+  globalIgnores(["**/dist/", "**/coverage/", "evidence/", "design/prototipo/"]),
   js.configs.recommended,
   tseslint.configs.strictTypeChecked,
   tseslint.configs.stylisticTypeChecked,

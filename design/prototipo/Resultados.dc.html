@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Resultados</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./tokens.css">
+<link rel="stylesheet" href="./ui.css">
+<link rel="stylesheet" href="./screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="./fonts/fonts.css">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: {{w}}px; display: flex; flex-direction: column; background: #25251F">
+<div class="testbar" role="region" aria-label="Controles de prueba del prototipo">
+  <span class="tb-title" style="{{tbTitleStyle}}"><span class="tb-tag">Controles de prueba</span><span>No forman parte de la interfaz</span></span>
+  <span class="tb-group"><span>Resultado</span><span class="tb-seg" role="group" aria-label="Resultado"><button type="button" aria-pressed="{{tbVic}}" onClick="{{setVic}}">Victoria</button><button type="button" aria-pressed="{{tbDer}}" onClick="{{setDer}}">Derrota</button></span></span>
+  <span class="tb-group"><span>Vista</span><span class="tb-seg" role="group" aria-label="Vista"><button type="button" aria-pressed="{{tbInicia}}" onClick="{{setInicia}}">Inicias</button><button type="button" aria-pressed="{{tbEspera}}" onClick="{{setEspera}}">Esperas</button></span></span>
+</div>
+<div class="scr sk-ui L-{{layout}}" style="width: {{w}}px; min-height: {{minH}}px; display: flex; flex-direction: column">
+  <header class="apphead" style="background: #F3F0E8; position: relative; z-index: 2">
+    <span class="brand">Sudoku Killer</span>
+    <nav aria-label="Ayuda y ajustes">
+      <a class="btn ghost" href="{{hrefAyuda}}">Ayuda</a>
+      <button class="btn ghost" type="button" aria-haspopup="dialog" onClick="{{openAjustes}}">Ajustes</button>
+    </nav>
+  </header>
+  <main style="position: relative; flex: 1; display: flex; justify-content: center; align-items: flex-start; padding: {{mainPad}}">
+    <div class="ph" aria-hidden="true" style="position: absolute; inset: 0; border-radius: 0">
+      <svg class="ph-x" preserveAspectRatio="none" viewBox="0 0 100 100"><path d="M0 0L100 100M100 0L0 100" stroke="#D1CCBF" stroke-width="0.4" vector-effect="non-scaling-stroke" fill="none"></path></svg>
+      <p class="ph-cap" style="{{capStyle}}"><span>Fotografía de fondo · arquitectura, luz natural, sin personas · {{phSize}}</span></p>
+    </div>
+
+    <section aria-labelledby="res-t" style="position: relative; width: 100%; max-width: 720px; background: #FAF8F2; border-radius: 10px; padding: {{panelPad}}; display: flex; flex-direction: column; gap: 24px">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <p class="lbl">Partida terminada · Media</p>
+        <h1 id="res-t" class="h-xl">{{title}}</h1>
+        <p class="lead">{{lead}}</p>
+      </div>
+      <dl class="stats">
+        <div><dt>Tiempo total</dt><dd>{{tiempo}}</dd></div>
+        <div><dt>Pistas usadas por el equipo</dt><dd>{{pistas}}</dd></div>
+      </dl>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <table class="rank">
+          <caption style="text-align: left; caption-side: top; padding-bottom: 12px; font-size: 18px; line-height: 24px; font-weight: 600">Ranking de la partida</caption>
+          <thead><tr><th scope="col">Puesto</th><th scope="col">Jugador</th><th scope="col" class="num">Puntos</th><th scope="col" class="num">Errores</th></tr></thead>
+          <tbody>
+            <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+              <tr>
+                <td class="pos"><span aria-hidden="true">{{r.pos}}</span><span class="sr-only">{{r.posSr}}</span></td>
+                <td>
+                  <span style="display: flex; align-items: center; gap: 10px">
+                    <span class="mono sm" aria-hidden="true" style="{{r.monoStyle}}">{{r.ini}}</span>
+                    <span style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px">
+                      <span style="font-weight: 500">{{r.name}}<sc-if value="{{r.me}}" hint-placeholder-val="{{false}}"><span class="muted" style="font-weight: 400"> · tú</span></sc-if></span>
+                      <sc-if value="{{r.tie}}" hint-placeholder-val="{{false}}"><span class="tag strong">Empate</span></sc-if>
+                      <sc-if value="{{r.left}}" hint-placeholder-val="{{false}}"><span class="tag">Salió</span></sc-if>
+                    </span>
+                  </span>
+                </td>
+                <td class="num">{{r.pts}}</td>
+                <td class="num">{{r.err}}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+        <p class="hint">{{tieNote}}</p>
+      </div>
+
+      <div style="{{actStyle}}">
+        <sc-if value="{{inicia}}" hint-placeholder-val="{{true}}">
+          <a class="btn primary lg" href="{{hrefLobby}}" style="{{primaryStyle}}">Volver al lobby</a>
+        </sc-if>
+        <sc-if value="{{espera}}" hint-placeholder-val="{{false}}">
+          <div class="waiting" role="status" aria-live="polite" style="flex: 1"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Esperando a que Inés vuelva al lobby.</span></div>
+        </sc-if>
+        <button class="btn secondary lg" type="button" aria-haspopup="dialog" onClick="{{askLeave}}">Salir de la sala</button>
+      </div>
+    </section>
+  </main>
+
+  <sc-if value="{{leaveOpen}}" hint-placeholder-val="{{false}}">
+    <div class="scrim" onKeyDown="{{leaveKey}}">
+      <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="rs-t" aria-describedby="rs-d">
+        <h2 id="rs-t">¿Salir de la sala?</h2>
+        <div id="rs-d" class="dbody"><p>Dejarás tu asiento libre y no estarás en la próxima partida.</p><sc-if value="{{inicia}}" hint-placeholder-val="{{true}}"><p>El derecho de iniciar pasará a Tomás y no vuelve a ti aunque regreses.</p></sc-if></div>
+        <div class="dactions">
+          <button class="btn secondary" type="button" onClick="{{stay}}">Quedarme</button>
+          <a class="btn danger" href="{{hrefInicio}}">Salir de la sala</a>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ajustesOpen}}" hint-placeholder-val="{{false}}">
+    <dc-import name="Ajustes" layout="{{layout}}" overlay="{{true}}" on-close="{{closeAjustes}}" hint-size="100%,100%"></dc-import>
+  </sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"layout":{"editor":"enum","options":["escritorio","movil"],"default":"escritorio"},"resultado":{"editor":"enum","options":["victoria","derrota"],"default":"victoria"},"vista":{"editor":"enum","options":["inicia","espera"],"default":"inicia"},"$preview":{"width":1280,"height":890}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { res: props.resultado === 'derrota' ? 'derrota' : 'victoria', vista: props.vista === 'espera' ? 'espera' : 'inicia', leave: false, ajustes: false };
+  }
+  componentDidMount() { this._dlg(); }
+  componentDidUpdate() { this._dlg(); }
+  _dlg() {
+    const d = document.querySelector('.scrim [role="dialog"], .scrim [role="alertdialog"]');
+    if (d && !this._dlgOpen) { const b = d.querySelector('.btn.secondary') || d.querySelector('button, a[href]'); if (b) { try { b.focus({ preventScroll: true }); } catch (e) {} } }
+    this._dlgOpen = !!d;
+  }
+  renderVals() {
+    const P = this.props, st = this.state;
+    const movil = P.layout === 'movil';
+    const vic = st.res === 'victoria';
+    const inicia = st.vista === 'inicia';
+    const meName = inicia ? 'Inés' : 'Tomás';
+    const C = { 'Inés': '#4A6779', 'Tomás': '#9A5338', 'Valeria': '#7A4E69', 'Rafa': '#7F6420', 'Bruno': '#3F6B5B' };
+    const data = vic
+      ? [[1, 'Valeria', '1020', 1, false, false], [2, 'Inés', '865', 2, true, false], [2, 'Tomás', '865', 2, true, false], [4, 'Rafa', '160', 1, false, true], [5, 'Bruno', '120', 3, false, false]]
+      : [[1, 'Valeria', '540', 3, false, false], [2, 'Inés', '410', 3, true, false], [2, 'Tomás', '410', 3, true, false], [4, 'Rafa', '160', 1, false, true], [5, 'Bruno', '120', 3, false, false]];
+    const rows = data.map(([pos, name, pts, err, tie, left]) => ({
+      pos: String(pos), posSr: 'Puesto ' + pos + (tie ? ', empate' : ''), name, ini: name.charAt(0), pts, err: String(err), tie, left, me: name === meName,
+      monoStyle: 'background: ' + C[name] + '; color: #FAF8F2'
+    }));
+    const t = (b) => (b ? 'true' : 'false');
+    return {
+      layout: movil ? 'movil' : 'escritorio', w: movil ? 360 : 1280, minH: movil ? 900 : 800,
+      tbTitleStyle: movil ? 'width: 100%' : '',
+      mainPad: movil ? '16px 12px 24px' : '48px 32px 56px',
+      panelPad: movil ? '24px 16px' : '40px 48px',
+      capStyle: movil ? 'bottom: 6px' : '',
+      phSize: movil ? '360 × alto de pantalla' : '1280 × alto de pantalla',
+      title: vic ? 'Tablero resuelto.' : 'Partida sin terminar.',
+      lead: vic ? 'El equipo completó las 81 celdas.' : 'Ningún jugador activo seguía en la partida, así que terminó en derrota.',
+      tiempo: vic ? '31:07' : '27:45', pistas: vic ? '2 de 3' : '3 de 3',
+      rows, tieNote: 'Inés y Tomás comparten el 2.º puesto: mismos puntos, mismos errores y alcanzaron esa puntuación a la vez.',
+      inicia, espera: !inicia,
+      actStyle: movil ? 'display: flex; flex-direction: column; gap: 10px' : 'display: flex; gap: 12px; align-items: center',
+      primaryStyle: movil ? 'width: 100%' : 'min-width: 200px',
+      hrefAyuda: movil ? 'Ayuda360.dc.html' : 'Ayuda.dc.html',
+      hrefLobby: movil ? 'Lobby360.dc.html' : 'Lobby.dc.html',
+      hrefInicio: movil ? 'Inicio360.dc.html' : 'Inicio.dc.html',
+      leaveKey: (ev) => { const a = document.activeElement; if (ev.key === 'Tab' && a && a.closest) { const d = a.closest('[aria-modal="true"]'); if (d) { const f = Array.from(d.querySelectorAll('button, a[href], input, select, [tabindex]:not([tabindex="-1"])')).filter((e) => !e.disabled && e.getClientRects().length); const i = f.indexOf(a); if (f.length && ev.shiftKey && i <= 0) { ev.preventDefault(); f[f.length - 1].focus(); } else if (f.length && !ev.shiftKey && i === f.length - 1) { ev.preventDefault(); f[0].focus(); } } } if (ev.key === 'Escape') this.setState({ leave: false }); },
+      leaveOpen: st.leave, askLeave: () => this.setState({ leave: true }), stay: () => this.setState({ leave: false }),
+      ajustesOpen: st.ajustes, openAjustes: () => this.setState({ ajustes: true }), closeAjustes: () => this.setState({ ajustes: false }),
+      tbVic: t(vic), tbDer: t(!vic), tbInicia: t(inicia), tbEspera: t(!inicia),
+      setVic: () => this.setState({ res: 'victoria' }), setDer: () => this.setState({ res: 'derrota' }),
+      setInicia: () => this.setState({ vista: 'inicia' }), setEspera: () => this.setState({ vista: 'espera' })
+    };
+  }
+}
+</script>
+</body>
+</html>

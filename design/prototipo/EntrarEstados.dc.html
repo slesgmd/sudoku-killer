@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Entrar o crear · estados</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./tokens.css">
+<link rel="stylesheet" href="./ui.css">
+<link rel="stylesheet" href="./screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="./fonts/fonts.css">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div class="scr" style="width: 1720px; padding: 48px; display: flex; flex-direction: column; gap: 32px; background: #F3F0E8">
+  <header style="display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid #D1CCBF; padding-bottom: 20px">
+    <h1 class="h-l">Entrar o crear · validación, errores y carga</h1>
+    <p class="lead">Formulario a 360 px. Cada estado indica cómo se presenta y qué anuncia el lector de pantalla.</p>
+  </header>
+  <div style="display: grid; grid-template-columns: repeat(4, 362px); gap: 48px 40px; align-items: start">
+    <sc-for list="{{items}}" as="it" hint-placeholder-count="8">
+      <figure style="margin: 0; display: flex; flex-direction: column; gap: 10px">
+        <figcaption style="display: flex; flex-direction: column; gap: 2px; min-height: 56px">
+          <strong style="font-size: 15px; line-height: 20px; font-weight: 600">{{it.title}}</strong>
+          <span style="font-size: 13px; line-height: 18px; color: #66655C">{{it.note}}</span>
+        </figcaption>
+        <div style="width: 362px; border: 1px solid #D1CCBF; border-radius: 10px; overflow: hidden; background: #F3F0E8">
+          <dc-import name="Entrar" solo-form="{{true}}" estado="{{it.id}}" hint-size="360px,700px"></dc-import>
+        </div>
+      </figure>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1720,"height":1700}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const items = [
+      ['normal', 'Listo para enviar', 'Estado integrado. Apodo válido y código completo.'],
+      ['apodo-invalido', 'Apodo no válido', 'Error de campo, se comprueba antes de enviar. Foco al campo; lo anuncia como alerta.'],
+      ['caracter', 'Carácter rechazado', 'Nota en línea, cortés. El carácter no se escribe y se explica por qué.'],
+      ['inexistente', 'Sala inexistente', 'Error de campo devuelto por el servidor (room.not_found).'],
+      ['llena', 'Sala llena', 'Aviso en el formulario, asertivo (room.full). Los datos se conservan.'],
+      ['apodo-en-uso', 'Apodo en uso', 'Error de campo (nickname.taken). Incluye apodos reservados durante la partida.'],
+      ['conexion', 'Fallo de conexión', 'Aviso en el formulario con «Reintentar». Nada se pierde.'],
+      ['carga', 'Cargando', 'Estado integrado: campos y botones inactivos, «Entrando…», aria-busy.']
+    ].map(([id, title, note]) => ({ id, title, note }));
+    return { items };
+  }
+}
+</script>
+</body>
+</html>

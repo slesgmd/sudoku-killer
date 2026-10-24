@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Lobby</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./tokens.css">
+<link rel="stylesheet" href="./ui.css">
+<link rel="stylesheet" href="./screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="./fonts/fonts.css">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: {{w}}px; display: flex; flex-direction: column; background: #25251F">
+<div class="testbar" role="region" aria-label="Controles de prueba del prototipo">
+  <span class="tb-title"><span class="tb-tag">Controles de prueba</span><span>No forman parte de la interfaz</span></span>
+  <span class="tb-group"><span>Vista</span><span class="tb-seg" role="group" aria-label="Vista"><button type="button" aria-pressed="{{tbInicia}}" onClick="{{setInicia}}">Inicias</button><button type="button" aria-pressed="{{tbEspera}}" onClick="{{setEspera}}">Esperas</button></span></span>
+  <span class="tb-group"><span>Sala</span><span class="tb-seg" role="group" aria-label="Ocupación"><button type="button" aria-pressed="{{tbLibre}}" onClick="{{setLibre}}">Con sitio</button><button type="button" aria-pressed="{{tbLlena}}" onClick="{{setLlena}}">Llena</button></span></span>
+  <span class="tb-group"><span>Traspaso</span><span class="tb-seg" role="group" aria-label="Aviso de traspaso"><button type="button" aria-pressed="{{tbSinT}}" onClick="{{setSinT}}">No</button><button type="button" aria-pressed="{{tbConT}}" onClick="{{setConT}}">Sí</button></span></span>
+</div>
+<div class="scr sk-ui L-{{layout}}" style="width: {{w}}px; min-height: {{minH}}px">
+  <header class="apphead">
+    <span class="brand">Sudoku Killer</span>
+    <nav aria-label="Ayuda y ajustes">
+      <a class="btn ghost" href="{{hrefAyuda}}">Ayuda</a>
+      <button class="btn ghost" type="button" onClick="{{openAjustes}}" aria-haspopup="dialog">Ajustes</button>
+    </nav>
+  </header>
+
+  <main class="wrap" style="display: flex; flex-direction: column; gap: {{gapMain}}px">
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap">
+      <h1 class="h-l">Sala de espera</h1>
+      <button class="linkbtn" type="button" onClick="{{askLeave}}" aria-haspopup="dialog">Salir de la sala</button>
+    </div>
+
+    <sc-if value="{{traspaso}}" hint-placeholder-val="{{false}}">
+      <div class="notice" role="status">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"></circle><path d="M8 7.5v4M8 4.8v.2"></path></svg>
+        <span>{{traspasoText}}</span>
+      </div>
+    </sc-if>
+
+    <div style="{{gridStyle}}">
+      <div style="display: flex; flex-direction: column; gap: {{gapCol}}px; min-width: 0">
+        <section aria-labelledby="code-t" style="display: flex; flex-direction: column; gap: 10px">
+          <h2 id="code-t" class="lbl">Código de la sala</h2>
+          <p class="code-big" aria-label="H P Q 6 N Z">HPQ6NZ</p>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap">
+            <button class="btn" type="button" onClick="{{copy}}">
+              <sc-if value="{{notCopied}}" hint-placeholder-val="{{true}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"></rect><path d="M10.5 5.5v-2a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2"></path></svg></sc-if>
+              <sc-if value="{{copied}}" hint-placeholder-val="{{false}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5"></path></svg></sc-if>
+              {{copyLabel}}
+            </button>
+            <button class="btn" type="button"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10V2M5 5l3-3 3 3M3 9v4.5h10V9"></path></svg>Compartir</button>
+          </div>
+          <p class="hint">Quien tenga el código puede entrar mientras queden asientos, también con la partida en curso.</p>
+          <p class="sr-only" aria-live="polite">{{copyLive}}</p>
+        </section>
+
+        <section aria-labelledby="jug-t" style="display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+            <h2 id="jug-t" class="h-sec">Jugadores</h2>
+            <span class="pts small muted">{{seatText}}</span>
+          </div>
+          <ul style="border-top: 1px solid #D1CCBF">
+            <sc-for list="{{players}}" as="p" hint-placeholder-count="4">
+              <li class="prow">
+                <span class="mono" aria-hidden="true" style="{{p.monoStyle}}">{{p.ini}}</span>
+                <span style="flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px">
+                  <span class="pname">{{p.name}}<sc-if value="{{p.me}}" hint-placeholder-val="{{false}}"><span class="pme"> · tú</span></sc-if></span>
+                  <sc-if value="{{p.starter}}" hint-placeholder-val="{{false}}"><span class="tag strong">Inicia la partida</span></sc-if>
+                  <sc-if value="{{p.off}}" hint-placeholder-val="{{false}}"><span class="tag">Desconectado</span></sc-if>
+                </span>
+              </li>
+            </sc-for>
+            <sc-for list="{{free}}" as="f" hint-placeholder-count="2">
+              <li class="prow free"><span class="mono" aria-hidden="true"></span>Asiento libre</li>
+            </sc-for>
+          </ul>
+          <sc-if value="{{llena}}" hint-placeholder-val="{{false}}">
+            <p class="fnote"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"></circle><path d="M8 7.5v4M8 4.8v.2"></path></svg><span>Sala llena: nadie más puede entrar hasta que se libere un asiento.</span></p>
+          </sc-if>
+        </section>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: {{gapCol}}px; min-width: 0">
+        <sc-if value="{{inicia}}" hint-placeholder-val="{{true}}">
+          <fieldset style="display: flex; flex-direction: column; gap: 10px">
+            <legend class="h-sec" style="padding: 0; margin-bottom: 10px">Dificultad</legend>
+            <div class="radios">
+              <sc-for list="{{diffs}}" as="d" hint-placeholder-count="4">
+                <label class="radio"><input type="radio" name="dif" value="{{d.id}}" checked="{{d.checked}}" onChange="{{d.pick}}"><span><span class="rname">{{d.name}}</span><sc-if value="{{d.hasNote}}" hint-placeholder-val="{{false}}"><span class="rnote">{{d.note}}</span></sc-if></span></label>
+              </sc-for>
+            </div>
+            <p class="hint">Solo tú puedes cambiarla. Los demás la ven al momento.</p>
+          </fieldset>
+        </sc-if>
+        <sc-if value="{{espera}}" hint-placeholder-val="{{false}}">
+          <section aria-labelledby="dif-t" style="display: flex; flex-direction: column; gap: 10px">
+            <h2 id="dif-t" class="h-sec">Dificultad</h2>
+            <p style="font-size: 22px; line-height: 28px; font-weight: 600; padding: 12px 0; border-top: 1px solid #D1CCBF; border-bottom: 1px solid #D1CCBF">{{diffName}}</p>
+            <p class="hint">La elige {{starterName}}, que inicia la partida.</p>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{inicia}}" hint-placeholder-val="{{true}}">
+          <div class="lobby-act" style="display: flex; flex-direction: column; gap: 10px">
+            <a class="btn primary lg block" href="{{hrefPartida}}">Iniciar partida</a>
+            <p class="hint">Puedes iniciar aunque estés solo. Quien entre después se suma a la partida en curso con 3 vidas.</p>
+          </div>
+        </sc-if>
+        <sc-if value="{{espera}}" hint-placeholder-val="{{false}}">
+          <div class="lobby-act"><div class="waiting" role="status" aria-live="polite"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Esperando a que {{starterName}} inicie la partida.</span></div></div>
+        </sc-if>
+      </div>
+    </div>
+  </main>
+
+  <sc-if value="{{leaveOpen}}" hint-placeholder-val="{{false}}">
+    <div class="scrim" onKeyDown="{{leaveKey}}">
+      <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="sal-t" aria-describedby="sal-d">
+        <h2 id="sal-t">¿Salir de la sala?</h2>
+        <div id="sal-d" class="dbody"><p>Tu asiento queda libre al momento.</p><sc-if value="{{inicia}}" hint-placeholder-val="{{true}}"><p>{{leaveStarterText}}</p></sc-if></div>
+        <div class="dactions">
+          <button class="btn secondary" type="button" onClick="{{stay}}">Quedarme</button>
+          <a class="btn danger" href="{{hrefInicio}}">Salir de la sala</a>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ajustesOpen}}" hint-placeholder-val="{{false}}">
+    <dc-import name="Ajustes" layout="{{layout}}" overlay="{{true}}" on-close="{{closeAjustes}}" hint-size="100%,100%"></dc-import>
+  </sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"layout":{"editor":"enum","options":["escritorio","movil"],"default":"escritorio"},"vista":{"editor":"enum","options":["inicia","espera"],"default":"inicia"},"llena":{"editor":"boolean","default":false},"traspaso":{"editor":"boolean","default":false},"ajustes":{"editor":"boolean","default":false},"$preview":{"width":1280,"height":848}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      vista: props.vista === 'espera' ? 'espera' : 'inicia',
+      llena: !!props.llena,
+      traspaso: !!props.traspaso,
+      ajustes: !!props.ajustes,
+      leave: false,
+      dif: 'media',
+      copied: false
+    };
+  }
+  componentDidMount() { this._dlg(); }
+  componentDidUpdate() { this._dlg(); }
+  _dlg() {
+    const d = document.querySelector('.scrim [role="dialog"], .scrim [role="alertdialog"]');
+    if (d && !this._dlgOpen) { const b = d.querySelector('.btn.secondary') || d.querySelector('button, a[href]'); if (b) { try { b.focus({ preventScroll: true }); } catch (e) {} } }
+    this._dlgOpen = !!d;
+  }
+  renderVals() {
+    const P = this.props, st = this.state;
+    const movil = P.layout === 'movil';
+    const layout = movil ? 'movil' : 'escritorio';
+    const inicia = st.vista === 'inicia';
+    const starterId = st.traspaso ? 'T' : 'I';
+    const meId = inicia ? starterId : 'V';
+    const C = { I: '#4A6779', T: '#9A5338', V: '#7A4E69', R: '#7F6420', B: '#3F6B5B', C: '#585A85', J: '#4A6779' };
+    const N = { I: 'Inés', T: 'Tomás', V: 'Valeria', R: 'Rafa', B: 'Bruno', C: 'Clara', J: 'Joaquín' };
+    let ids = st.traspaso ? ['T', 'V', 'R'] : ['I', 'T', 'V', 'R'];
+    if (st.llena) ids = ids.concat(st.traspaso ? ['B', 'C', 'J'] : ['B', 'C']);
+    const players = ids.map((id) => {
+      const off = id === 'R';
+      return {
+        name: N[id], ini: N[id].charAt(0), me: id === meId, starter: id === starterId, off,
+        monoStyle: off ? 'background: #FAF8F2; color: ' + C[id] + '; border: 1.5px dashed ' + C[id] : 'background: ' + C[id] + '; color: #FAF8F2'
+      };
+    });
+    const free = [];
+    for (let k = ids.length; k < 6; k++) free.push({ k });
+    const names = { facil: 'Fácil', media: 'Media', dificil: 'Difícil', experto: 'Experto' };
+    const diffs = ['facil', 'media', 'dificil', 'experto'].map((id) => ({
+      id, name: names[id], checked: st.dif === id, hasNote: id === 'facil', note: 'Incluye algunos números iniciales',
+      pick: () => this.setState({ dif: id })
+    }));
+    const t = (on) => (on ? 'true' : 'false');
+    return {
+      layout, w: movil ? 360 : 1280, minH: movil ? 780 : 800,
+      gapMain: movil ? 20 : 28, gapCol: movil ? 28 : 36,
+      gridStyle: movil ? 'display: flex; flex-direction: column; gap: 28px' : 'display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 64px; align-items: start',
+      inicia, espera: !inicia, llena: st.llena, traspaso: st.traspaso,
+      traspasoText: inicia ? 'Inés salió de la sala. Ahora inicias tú la partida.' : 'Inés salió de la sala. Ahora inicia la partida Tomás.',
+      starterName: N[starterId],
+      leaveStarterText: 'El derecho de iniciar pasará a ' + (st.traspaso ? 'Valeria' : 'Tomás') + ' y no vuelve a ti aunque regreses.',
+      players, free, diffs, diffName: names[st.dif],
+      seatText: ids.length + ' de 6',
+      copied: st.copied, notCopied: !st.copied, copyLabel: st.copied ? 'Código copiado' : 'Copiar código', copyLive: st.copied ? 'Código HPQ6NZ copiado' : '',
+      copy: () => this.setState({ copied: true }),
+      hrefAyuda: movil ? 'Ayuda360.dc.html' : 'Ayuda.dc.html',
+      hrefPartida: movil ? 'Partida360.dc.html' : 'Partida1280.dc.html',
+      hrefInicio: movil ? 'Inicio360.dc.html' : 'Inicio.dc.html',
+      leaveKey: (ev) => { const a = document.activeElement; if (ev.key === 'Tab' && a && a.closest) { const d = a.closest('[aria-modal="true"]'); if (d) { const f = Array.from(d.querySelectorAll('button, a[href], input, select, [tabindex]:not([tabindex="-1"])')).filter((e) => !e.disabled && e.getClientRects().length); const i = f.indexOf(a); if (f.length && ev.shiftKey && i <= 0) { ev.preventDefault(); f[f.length - 1].focus(); } else if (f.length && !ev.shiftKey && i === f.length - 1) { ev.preventDefault(); f[0].focus(); } } } if (ev.key === 'Escape') this.setState({ leave: false }); },
+      leaveOpen: st.leave, askLeave: () => this.setState({ leave: true }), stay: () => this.setState({ leave: false }),
+      ajustesOpen: st.ajustes, openAjustes: () => this.setState({ ajustes: true }), closeAjustes: () => this.setState({ ajustes: false }),
+      tbInicia: t(inicia), tbEspera: t(!inicia), tbLibre: t(!st.llena), tbLlena: t(st.llena), tbSinT: t(!st.traspaso), tbConT: t(st.traspaso),
+      setInicia: () => this.setState({ vista: 'inicia' }), setEspera: () => this.setState({ vista: 'espera' }),
+      setLibre: () => this.setState({ llena: false }), setLlena: () => this.setState({ llena: true }),
+      setSinT: () => this.setState({ traspaso: false }), setConT: () => this.setState({ traspaso: true })
+    };
+  }
+}
+</script>
+</body>
+</html>

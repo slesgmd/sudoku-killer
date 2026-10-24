@@ -1,0 +1,648 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "at": "2026-10-23T18:55:00Z",
+  "v": 1
+ },
+ "title": "Sudoku Killer",
+ "launch": {
+  "view": "canvas",
+  "page": "pantallas"
+ },
+ "pages": [
+  {
+   "id": "sistema",
+   "name": "Sistema base"
+  },
+  {
+   "id": "partida",
+   "name": "Partida"
+  },
+  {
+   "id": "pantallas",
+   "name": "Pantallas"
+  },
+  {
+   "id": "estados",
+   "name": "Estados transversales"
+  }
+ ],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 260,
+   "w": 1440,
+   "h": 1400,
+   "title": "Tokens y contrastes",
+   "page": "sistema"
+  },
+  "Tipografia.dc.html": {
+   "x": 1520,
+   "y": 260,
+   "w": 1120,
+   "h": 1320,
+   "title": "Tipografía",
+   "page": "sistema"
+  },
+  "Celdas.dc.html": {
+   "x": 2720,
+   "y": 260,
+   "w": 1440,
+   "h": 1720,
+   "title": "Celdas: variante A, estados y prioridad",
+   "page": "sistema"
+  },
+  "Tablero.dc.html": {
+   "x": 0,
+   "y": 2360,
+   "w": 640,
+   "h": 640,
+   "title": "Tablero",
+   "page": "sistema",
+   "is_interactive": true
+  },
+  "Ajustes.dc.html": {
+   "x": 720,
+   "y": 2360,
+   "w": 520,
+   "h": 440,
+   "title": "Diálogo de ajustes",
+   "page": "sistema",
+   "is_interactive": true
+  },
+  "Partida.dc.html": {
+   "x": 1320,
+   "y": 2360,
+   "w": 1280,
+   "h": 850,
+   "title": "Componente Partida (las cuatro disposiciones)",
+   "page": "sistema",
+   "is_interactive": true
+  },
+  "Partida1280.dc.html": {
+   "x": 0,
+   "y": 260,
+   "w": 1280,
+   "h": 850,
+   "title": "Partida · 1280",
+   "page": "partida",
+   "is_interactive": true
+  },
+  "Partida768.dc.html": {
+   "x": 1360,
+   "y": 260,
+   "w": 768,
+   "h": 1116,
+   "title": "Partida · 768",
+   "page": "partida",
+   "is_interactive": true
+  },
+  "Partida360.dc.html": {
+   "x": 2208,
+   "y": 260,
+   "w": 360,
+   "h": 972,
+   "title": "Partida · 360",
+   "page": "partida",
+   "is_interactive": true
+  },
+  "PartidaHorizontal.dc.html": {
+   "x": 2648,
+   "y": 260,
+   "w": 740,
+   "h": 452,
+   "title": "Partida · móvil horizontal 740 × 360",
+   "page": "partida",
+   "is_interactive": true
+  },
+  "Inicio.dc.html": {
+   "x": 0,
+   "y": 260,
+   "w": 1280,
+   "h": 850,
+   "title": "Inicio · 1280 · sin ficha",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "InicioVolver.dc.html": {
+   "x": 1360,
+   "y": 260,
+   "w": 1280,
+   "h": 850,
+   "title": "Inicio · 1280 · «Volver a la sala»",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "Inicio360.dc.html": {
+   "x": 2720,
+   "y": 260,
+   "w": 360,
+   "h": 858,
+   "title": "Inicio · 360",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "Inicio360Volver.dc.html": {
+   "x": 3160,
+   "y": 260,
+   "w": 360,
+   "h": 883,
+   "title": "Inicio · 360 · «Volver a la sala»",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "Inicio360Borrada.dc.html": {
+   "x": 3600,
+   "y": 260,
+   "w": 360,
+   "h": 863,
+   "title": "Inicio · 360 · la sala ya no existe",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "Entrar.dc.html": {
+   "x": 0,
+   "y": 1523,
+   "w": 1280,
+   "h": 860,
+   "title": "Entrar · 1280",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "EntrarError.dc.html": {
+   "x": 1360,
+   "y": 1523,
+   "w": 1280,
+   "h": 926,
+   "title": "Entrar · 1280 · sala llena",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "Entrar360.dc.html": {
+   "x": 2720,
+   "y": 1523,
+   "w": 360,
+   "h": 1024,
+   "title": "Entrar · 360 · carácter rechazado",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "Entrar360Carga.dc.html": {
+   "x": 3160,
+   "y": 1523,
+   "w": 360,
+   "h": 1006,
+   "title": "Entrar · 360 · cargando",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "EntrarEstados.dc.html": {
+   "x": 3600,
+   "y": 1523,
+   "w": 1720,
+   "h": 1870,
+   "title": "Entrar · validación, errores y carga",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "Lobby.dc.html": {
+   "x": 0,
+   "y": 3773,
+   "w": 1280,
+   "h": 872,
+   "title": "Lobby · 1280 · quien inicia",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "LobbyEspera.dc.html": {
+   "x": 1360,
+   "y": 3773,
+   "w": 1280,
+   "h": 972,
+   "title": "Lobby · 1280 · los demás, sala llena, traspaso",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "Lobby360.dc.html": {
+   "x": 2720,
+   "y": 3773,
+   "w": 360,
+   "h": 1290,
+   "title": "Lobby · 360 · quien inicia",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "Lobby360Espera.dc.html": {
+   "x": 3160,
+   "y": 3773,
+   "w": 360,
+   "h": 1220,
+   "title": "Lobby · 360 · los demás",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "Resultados.dc.html": {
+   "x": 0,
+   "y": 5443,
+   "w": 1280,
+   "h": 890,
+   "title": "Resultados · 1280 · victoria, quien inicia",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "ResultadosDerrota.dc.html": {
+   "x": 1360,
+   "y": 5443,
+   "w": 1280,
+   "h": 890,
+   "title": "Resultados · 1280 · derrota, los demás",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "Resultados360.dc.html": {
+   "x": 2720,
+   "y": 5443,
+   "w": 360,
+   "h": 1020,
+   "title": "Resultados · 360 · victoria",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "Resultados360Derrota.dc.html": {
+   "x": 3160,
+   "y": 5443,
+   "w": 360,
+   "h": 1020,
+   "title": "Resultados · 360 · derrota",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "Ayuda.dc.html": {
+   "x": 0,
+   "y": 6843,
+   "w": 1280,
+   "h": 2542,
+   "title": "Ayuda · 1280",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "Ayuda360.dc.html": {
+   "x": 1360,
+   "y": 6843,
+   "w": 360,
+   "h": 3598,
+   "title": "Ayuda · 360",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "AjustesLobby.dc.html": {
+   "x": 0,
+   "y": 10821,
+   "w": 1280,
+   "h": 872,
+   "title": "Ajustes · 1280 · sobre el lobby",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "AjustesPartida360.dc.html": {
+   "x": 1360,
+   "y": 10821,
+   "w": 360,
+   "h": 972,
+   "title": "Ajustes · 360 · sobre la partida",
+   "page": "pantallas",
+   "is_interactive": true
+  },
+  "EstadosResumen.dc.html": {
+   "x": 0,
+   "y": 260,
+   "w": 1440,
+   "h": 1424,
+   "title": "Estados · tipo, texto y comportamiento",
+   "page": "estados"
+  },
+  "EstCarga.dc.html": {
+   "x": 0,
+   "y": 2064,
+   "w": 360,
+   "h": 972,
+   "title": "Estado · carga inicial",
+   "page": "estados",
+   "is_interactive": true
+  },
+  "EstReconectando.dc.html": {
+   "x": 440,
+   "y": 2064,
+   "w": 360,
+   "h": 1004,
+   "title": "Estado · reconectando",
+   "page": "estados",
+   "is_interactive": true
+  },
+  "EstVersion.dc.html": {
+   "x": 880,
+   "y": 2064,
+   "w": 360,
+   "h": 972,
+   "title": "Estado · versión incompatible",
+   "page": "estados",
+   "is_interactive": true
+  },
+  "EstDemasiadas.dc.html": {
+   "x": 1320,
+   "y": 2064,
+   "w": 360,
+   "h": 972,
+   "title": "Estado · demasiadas acciones",
+   "page": "estados",
+   "is_interactive": true
+  },
+  "EstNoPermitida.dc.html": {
+   "x": 1760,
+   "y": 2064,
+   "w": 360,
+   "h": 988,
+   "title": "Estado · acción no permitida",
+   "page": "estados",
+   "is_interactive": true
+  },
+  "EstYaResuelta.dc.html": {
+   "x": 2200,
+   "y": 2064,
+   "w": 360,
+   "h": 972,
+   "title": "Estado · ya resuelta",
+   "page": "estados",
+   "is_interactive": true
+  },
+  "EstErrorPropio.dc.html": {
+   "x": 2640,
+   "y": 2064,
+   "w": 360,
+   "h": 972,
+   "title": "Estado · error propio",
+   "page": "estados",
+   "is_interactive": true
+  },
+  "EstEspectador.dc.html": {
+   "x": 3080,
+   "y": 2064,
+   "w": 360,
+   "h": 988,
+   "title": "Estado · paso a espectador",
+   "page": "estados",
+   "is_interactive": true
+  },
+  "EstSalir360.dc.html": {
+   "x": 3520,
+   "y": 2064,
+   "w": 360,
+   "h": 972,
+   "title": "Estado · confirmación de salida · 360",
+   "page": "estados",
+   "is_interactive": true
+  },
+  "EstPista360.dc.html": {
+   "x": 3960,
+   "y": 2064,
+   "w": 360,
+   "h": 972,
+   "title": "Estado · confirmación de pista · 360",
+   "page": "estados",
+   "is_interactive": true
+  },
+  "EstPestana.dc.html": {
+   "x": 0,
+   "y": 3448,
+   "w": 1280,
+   "h": 850,
+   "title": "Estado · sesión en otra pestaña",
+   "page": "estados",
+   "is_interactive": true
+  },
+  "EstServidor.dc.html": {
+   "x": 1360,
+   "y": 3448,
+   "w": 1280,
+   "h": 858,
+   "title": "Estado · servidor no disponible",
+   "page": "estados",
+   "is_interactive": true
+  },
+  "EstTerminada.dc.html": {
+   "x": 2720,
+   "y": 3448,
+   "w": 1280,
+   "h": 882,
+   "title": "Estado · partida terminada",
+   "page": "estados",
+   "is_interactive": true
+  },
+  "EstSalir.dc.html": {
+   "x": 4080,
+   "y": 3448,
+   "w": 1280,
+   "h": 850,
+   "title": "Estado · confirmación de salida",
+   "page": "estados",
+   "is_interactive": true
+  },
+  "EstPista.dc.html": {
+   "x": 5440,
+   "y": 3448,
+   "w": 1280,
+   "h": 850,
+   "title": "Estado · confirmación de pista",
+   "page": "estados",
+   "is_interactive": true
+  },
+  "EstRecuperadas.dc.html": {
+   "x": 6800,
+   "y": 3448,
+   "w": 1280,
+   "h": 850,
+   "title": "Estado · se recuperaron X de Y notas",
+   "page": "estados",
+   "is_interactive": true
+  },
+  "EstNoDeshacer.dc.html": {
+   "x": 0,
+   "y": 4710,
+   "w": 768,
+   "h": 1116,
+   "title": "Estado · no se pudo deshacer",
+   "page": "estados",
+   "is_interactive": true
+  },
+  "EstReconectandoH.dc.html": {
+   "x": 848,
+   "y": 4710,
+   "w": 740,
+   "h": 452,
+   "title": "Estado · reconectando · horizontal",
+   "page": "estados",
+   "is_interactive": true
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Tipografia.dc.html",
+  "Celdas.dc.html",
+  "Tablero.dc.html",
+  "Ajustes.dc.html",
+  "Partida.dc.html",
+  "Partida1280.dc.html",
+  "Partida768.dc.html",
+  "Partida360.dc.html",
+  "PartidaHorizontal.dc.html",
+  "Inicio.dc.html",
+  "InicioVolver.dc.html",
+  "Inicio360.dc.html",
+  "Inicio360Volver.dc.html",
+  "Inicio360Borrada.dc.html",
+  "Entrar.dc.html",
+  "EntrarError.dc.html",
+  "Entrar360.dc.html",
+  "Entrar360Carga.dc.html",
+  "EntrarEstados.dc.html",
+  "Lobby.dc.html",
+  "LobbyEspera.dc.html",
+  "Lobby360.dc.html",
+  "Lobby360Espera.dc.html",
+  "Resultados.dc.html",
+  "ResultadosDerrota.dc.html",
+  "Resultados360.dc.html",
+  "Resultados360Derrota.dc.html",
+  "Ayuda.dc.html",
+  "Ayuda360.dc.html",
+  "AjustesLobby.dc.html",
+  "AjustesPartida360.dc.html",
+  "EstadosResumen.dc.html",
+  "EstCarga.dc.html",
+  "EstReconectando.dc.html",
+  "EstVersion.dc.html",
+  "EstDemasiadas.dc.html",
+  "EstNoPermitida.dc.html",
+  "EstYaResuelta.dc.html",
+  "EstErrorPropio.dc.html",
+  "EstEspectador.dc.html",
+  "EstSalir360.dc.html",
+  "EstPista360.dc.html",
+  "EstPestana.dc.html",
+  "EstServidor.dc.html",
+  "EstTerminada.dc.html",
+  "EstSalir.dc.html",
+  "EstPista.dc.html",
+  "EstRecuperadas.dc.html",
+  "EstNoDeshacer.dc.html",
+  "EstReconectandoH.dc.html"
+ ],
+ "notes": {
+  "t-sistema-0": {
+   "x": 0,
+   "y": 0,
+   "text": "Sistema base",
+   "kind": "title1",
+   "maxW": 4160,
+   "page": "sistema"
+  },
+  "t-sistema-1": {
+   "x": 0,
+   "y": 2100,
+   "text": "Componentes",
+   "kind": "title1",
+   "maxW": 2600,
+   "page": "sistema"
+  },
+  "t-partida-0": {
+   "x": 0,
+   "y": 0,
+   "text": "Partida · Media, sin números iniciales",
+   "kind": "title1",
+   "maxW": 3388,
+   "page": "partida"
+  },
+  "t-pantallas-0": {
+   "x": 0,
+   "y": 0,
+   "text": "Inicio",
+   "kind": "title1",
+   "maxW": 3960,
+   "page": "pantallas"
+  },
+  "t-pantallas-1": {
+   "x": 0,
+   "y": 1263,
+   "text": "Entrar o crear sala",
+   "kind": "title1",
+   "maxW": 5320,
+   "page": "pantallas"
+  },
+  "t-pantallas-2": {
+   "x": 0,
+   "y": 3513,
+   "text": "Lobby",
+   "kind": "title1",
+   "maxW": 3520,
+   "page": "pantallas"
+  },
+  "t-pantallas-3": {
+   "x": 0,
+   "y": 5183,
+   "text": "Resultados",
+   "kind": "title1",
+   "maxW": 3520,
+   "page": "pantallas"
+  },
+  "t-pantallas-4": {
+   "x": 0,
+   "y": 6583,
+   "text": "Ayuda",
+   "kind": "title1",
+   "maxW": 1720,
+   "page": "pantallas"
+  },
+  "t-pantallas-5": {
+   "x": 0,
+   "y": 10561,
+   "text": "Ajustes (diálogo)",
+   "kind": "title1",
+   "maxW": 1720,
+   "page": "pantallas"
+  },
+  "t-estados-0": {
+   "x": 0,
+   "y": 0,
+   "text": "Resumen de estados",
+   "kind": "title1",
+   "maxW": 1440,
+   "page": "estados"
+  },
+  "t-estados-1": {
+   "x": 0,
+   "y": 1804,
+   "text": "Estados en la partida · 360",
+   "kind": "title1",
+   "maxW": 4320,
+   "page": "estados"
+  },
+  "t-estados-2": {
+   "x": 0,
+   "y": 3188,
+   "text": "Estados en la partida · 1280",
+   "kind": "title1",
+   "maxW": 8080,
+   "page": "estados"
+  },
+  "t-estados-3": {
+   "x": 0,
+   "y": 4450,
+   "text": "Estados en la partida · 768 y horizontal",
+   "kind": "title1",
+   "maxW": 1588,
+   "page": "estados"
+  }
+ },
+ "designSystems": [],
+ "attachments": {}
+}

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Celdas, variantes y prioridad</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./tokens.css">
+<link rel="stylesheet" href="./board.css">
+<link rel="stylesheet" href="./ui.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="./fonts/fonts.css">
+<style>
+body{margin:0}
+.pt td,.pt th{padding:10px 16px 10px 0;border-bottom:1px solid #D1CCBF;vertical-align:top;text-align:left;font-size:13px;line-height:18px}
+.pt th{font-size:12px;line-height:16px;font-weight:500;color:#66655C;padding-top:0}
+.pt td:first-child{font-variant-numeric:tabular-nums;color:#66655C;width:24px}
+</style>
+</helmet>
+<div class="sk-ui" style="width: 1440px; height: 1720px; box-sizing: border-box; padding: 64px; background: #F3F0E8; display: flex; flex-direction: column; gap: 48px">
+
+  <header style="display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; border-bottom: 1px solid #D1CCBF; padding-bottom: 24px">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <p class="lbl">Etapa 1 · Tablero</p>
+      <h1 style="margin: 0; font-family: Newsreader, Georgia, serif; font-weight: 400; font-size: 40px; line-height: 44px">Celdas, variantes y prioridad</h1>
+    </div>
+    <p style="max-width: 520px; font-size: 14px; line-height: 20px; color: #66655C">Todas las muestras salen del mismo componente que el tablero. Celda de ejemplo: jaula de 10, notas grupales 1 y 2, notas personales 2 y 4; el 2 está en las dos capas.</p>
+  </header>
+
+  <section style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px">
+    <sc-for list="{{variants}}" as="v" hint-placeholder-count="2">
+      <div style="display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <h2 style="font-size: 18px; line-height: 24px; font-weight: 600">{{v.title}}</h2>
+          <p style="font-size: 13px; line-height: 18px; color: #66655C">{{v.rule}}</p>
+        </div>
+        <sc-for list="{{v.rows}}" as="row" hint-placeholder-count="2">
+          <div style="display: flex; align-items: flex-end; gap: 24px">
+            <sc-for list="{{row}}" as="s" hint-placeholder-count="4">
+              <figure style="margin: 0; display: flex; flex-direction: column; gap: 6px; align-items: flex-start">
+                <dc-import name="Tablero" mode="cell" variant="{{v.id}}" size="{{s.size}}" spec="{{s.spec}}" hint-size="{{s.hint}}"></dc-import>
+                <figcaption class="pts" style="font-size: 12px; line-height: 16px; color: #66655C">{{s.cap}}</figcaption>
+              </figure>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </sc-for>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; justify-content: space-between; align-items: baseline">
+      <h2 style="font-size: 18px; line-height: 24px; font-weight: 600">Estados de celda · variante A · 96 px</h2>
+      <p class="lbl">Grupal: ink 600 · Personal: accent 400 subrayado · Ambas: ink 600 subrayado en accent</p>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 24px 16px">
+      <sc-for list="{{states}}" as="s" hint-placeholder-count="16">
+        <figure style="margin: 0; display: flex; flex-direction: column; gap: 8px">
+          <dc-import name="Tablero" mode="cell" variant="A" size="96" spec="{{s.spec}}" hint-size="96px,96px"></dc-import>
+          <figcaption style="font-size: 12px; line-height: 16px"><strong style="font-weight: 600; display: block">{{s.title}}</strong><span style="color: #66655C">{{s.note}}</span></figcaption>
+        </figure>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 48px">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <h2 style="font-size: 18px; line-height: 24px; font-weight: 600">Prioridad cuando se combinan estados</h2>
+      <table class="pt" style="border-collapse: collapse; width: 100%">
+        <thead><tr><th scope="col">#</th><th scope="col" style="width: 180px">Capa</th><th scope="col">Regla</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Foco de teclado</td><td>Contorno ink de 2 px por fuera de la celda. Se ve sobre cualquier estado.</td></tr>
+          <tr><td>2</td><td>Selección propia</td><td>Borde accent de 2 px. Nada la tapa: la presencia ajena se dibuja 2 px más adentro.</td></tr>
+          <tr><td>3</td><td>Error en destello</td><td>1500 ms. Fondo danger-tint por encima de selección y relación. Oculta las notas. Dígito tachado con la inicial del autor a su lado, sin taparlo. Lo ven todos.</td></tr>
+          <tr><td>4</td><td>Pendiente</td><td>Dígito muted y tres puntos de espera. Oculta notas. No acepta entradas hasta el veredicto.</td></tr>
+          <tr><td>5</td><td>Dígito bloqueado</td><td>Inicial 600, resuelto 400, pista 400 con esquina doblada. Oculta notas.</td></tr>
+          <tr><td>6</td><td>Mismo dígito</td><td>Anillo ink de 1,5 px alrededor de los dígitos bloqueados iguales al de la celda seleccionada. Sin color ni fondo; compatible con relación y presencia.</td></tr>
+          <tr><td>7</td><td>Presencia</td><td>Contorno de 1,5 px y la inicial arriba a la derecha; «+N» si hay varios. En A ocupa la franja libre; en B puede tapar la nota 3. Nunca tapa un dígito: el dígito se centra bajo la suma.</td></tr>
+          <tr><td>8</td><td>Suma de jaula</td><td>Siempre visible, con el fondo de la celda para cortar la línea.</td></tr>
+          <tr><td>9</td><td>Notas</td><td>Debajo de todo lo anterior. La capa oculta no se dibuja.</td></tr>
+          <tr><td>10</td><td>Línea de jaula</td><td>2 px en la jaula seleccionada, 1 px en el resto.</td></tr>
+          <tr><td>11</td><td>Fondo</td><td>danger-tint, luego selection-tint, luego related-tint, luego paper.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <h2 style="font-size: 18px; line-height: 24px; font-weight: 600">Atajos · propuesta</h2>
+      <table class="pt" style="border-collapse: collapse; width: 100%">
+        <tbody>
+          <tr><td style="width: 96px; color: #25251F"><span class="kbd">←</span> <span class="kbd">→</span> <span class="kbd">↑</span> <span class="kbd">↓</span></td><td>Mover la selección</td></tr>
+          <tr><td style="color: #25251F"><span class="kbd">1</span>–<span class="kbd">9</span></td><td>Número o nota, según el modo</td></tr>
+          <tr><td style="color: #25251F"><span class="kbd">N</span></td><td>Alternar Número y Notas</td></tr>
+          <tr><td style="color: #25251F"><span class="kbd">G</span></td><td>Alternar capa Personal y Grupal</td></tr>
+          <tr><td style="color: #25251F"><span class="kbd">Supr</span></td><td>Borrar notas de la capa activa</td></tr>
+          <tr><td style="color: #25251F"><span class="kbd">Ctrl</span> <span class="kbd">Z</span></td><td>Deshacer mis últimas notas (agrupadas)</td></tr>
+          <tr><td style="color: #25251F"><span class="kbd">H</span></td><td>Pedir pista (abre la confirmación)</td></tr>
+          <tr><td style="color: #25251F"><span class="kbd">Esc</span></td><td>Cerrar diálogo o menú</td></tr>
+        </tbody>
+      </table>
+      <p class="lbl">El tablero usa foco itinerante: solo la celda seleccionada entra en el orden de tabulación.</p>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const ex = { sum: 10, sides: 'tl', g: [1, 2], p: [2, 4], label: 'Jaula de 10, notas grupales 1 y 2, personales 2 y 4' };
+    const full = { sum: 23, sides: 'tl', g: [1, 2, 3, 5, 6, 7, 8, 9], p: [4], label: 'Jaula de 23, nueve notas' };
+    const mk = (spec, size, cap) => ({ spec, size, cap, hint: size + 'px,' + size + 'px' });
+    const rows = [
+      [mk(ex, 37, '37 px · 360'), mk(ex, 71, '71 px · 1280'), mk(ex, 88, '88 px · lupa'), mk(ex, 160, '160 px')],
+      [mk(full, 37, '37 px'), mk(full, 71, '71 px'), mk(full, 88, '88 px'), mk(full, 160, '160 px')]
+    ];
+    const variants = [
+      { id: 'A', title: 'Variante A · elegida · franja superior reservada', rule: 'Todas las celdas reservan arriba la altura de la suma. Las notas ocupan el resto; la posición de cada dígito es la misma en todo el tablero.', rows },
+      { id: 'B', title: 'Variante B · descartada', rule: 'Descartada tras la prueba en celular: a 37 px la suma ocupa la casilla del 1 y, para no chocar, la fila 1 · 2 · 3 tiene que moverse, así que las notas pierden su posición fija. Se conserva solo como referencia.', rows }
+    ];
+    const T = { ini: 'T', color: '#9A5338' }, V = { ini: 'V', color: '#7A4E69' };
+    const st = (title, note, spec) => ({ title, note, spec });
+    const states = [
+      st('Vacía', 'Con suma de jaula', { sides: 'tl', sum: 12 }),
+      st('Número inicial', 'ink 600', { kind: 'given', digit: 4, sides: 't' }),
+      st('Resuelto', 'ink 400', { kind: 'solved', digit: 7, sides: 'l' }),
+      st('Pista', 'ink 400 y esquina doblada', { kind: 'hint', digit: 6, sides: 'tr' }),
+      st('Pendiente', 'muted y espera', { kind: 'pend', digit: 1, sides: 'b' }),
+      st('Error', '1500 ms, autor', { kind: 'err', digit: 3, who: T, sides: 'tl', sum: 23 }),
+      st('Notas grupales', 'ink 600', { g: [3, 4, 5], sides: 'r' }),
+      st('Notas personales', 'accent subrayado', { p: [3, 4], sides: 'b' }),
+      st('Ambas capas', 'el 2 lleva las dos señales', { g: [1, 2], p: [2, 4], sides: 'tl', sum: 10 }),
+      st('Selección propia', 'accent 2 px', { sel: true, g: [2, 4], sides: 't' }),
+      st('Relacionada', 'fila, columna, caja, jaula', { rel: true, kind: 'solved', digit: 8 }),
+      st('Jaula seleccionada', 'línea de 2 px', { rel: true, hot: true, sides: 'tl', sum: 19, g: [1, 6] }),
+      st('Presencia', 'contorno e inicial', { pres: [V], g: [2, 4] }),
+      st('Presencia +N', 'dos compañeros', { pres: [T, V], kind: 'solved', digit: 9 }),
+      st('Presencia en tu selección', 'por dentro del borde', { sel: true, pres: [V], g: [2, 4], sides: 't' }),
+      st('Mismo dígito', 'anillo ink, siempre activo', { kind: 'solved', digit: 8, same: true })
+    ];
+    return { variants, states };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Estados transversales · resumen</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./tokens.css">
+<link rel="stylesheet" href="./ui.css">
+<link rel="stylesheet" href="./screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="./fonts/fonts.css">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div class="scr" style="width: 1440px; padding: 56px 64px; display: flex; flex-direction: column; gap: 28px; background: #F3F0E8">
+  <header style="display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; border-bottom: 1px solid #D1CCBF; padding-bottom: 20px">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <p class="lbl">Etapa 2 · Estados transversales</p>
+      <h1 class="h-l">Cómo se presenta cada estado</h1>
+    </div>
+    <dl style="display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; line-height: 18px; max-width: 620px">
+      <dt style="font-weight: 600">Banner</dt><dd style="margin: 0">Franja bajo la cabecera. Persiste mientras dura la situación.</dd>
+      <dt style="font-weight: 600">Aviso</dt><dd style="margin: 0">Mensaje breve que no bloquea: en la línea de estado (móvil y 768), bajo los jugadores (1280) o sobre la cabecera (horizontal). Se cierra solo a los 6 s y lo importante queda en el registro.</dd>
+      <dt style="font-weight: 600">Diálogo</dt><dd style="margin: 0">Modal con fondo atenuado. Bloqueante si no tiene botón de cancelar.</dd>
+      <dt style="font-weight: 600">Integrado</dt><dd style="margin: 0">Cambia la propia pantalla: controles inactivos, esqueletos, avisos fijos.</dd>
+    </dl>
+  </header>
+  <table class="rank" style="font-size: 13px; line-height: 18px">
+    <thead><tr><th scope="col" style="width: 170px">Estado</th><th scope="col" style="width: 170px">Tipo</th><th scope="col" style="width: 300px">Texto</th><th scope="col">Comportamiento y accesibilidad</th><th scope="col" style="width: 190px">Artboard</th></tr></thead>
+    <tbody>
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="17">
+        <tr>
+          <td style="font-weight: 600; vertical-align: top">{{r.name}}</td>
+          <td style="vertical-align: top"><span class="tag strong" style="height: auto; white-space: normal; padding: 1px 6px">{{r.type}}</span></td>
+          <td style="vertical-align: top">{{r.text}}</td>
+          <td style="vertical-align: top; color: #25251F">{{r.how}}</td>
+          <td style="vertical-align: top; color: #66655C">{{r.where}}</td>
+        </tr>
+      </sc-for>
+    </tbody>
+  </table>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1700}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const rows = [
+      ['Carga inicial', 'Integrado', '«Cargando la partida…»', 'Tablero sin jaulas ni dígitos, jugadores en esqueleto, controles inactivos y cronómetro sin valor. aria-busy en la región; el texto se anuncia como estado.', 'Estado · carga inicial (360)'],
+      ['Reconectando', 'Banner + integrado', '«Reconectando… Tus notas se guardan y se enviarán al volver (2 en cola). Los números se bloquean hasta entonces.»', 'Persiste hasta reconectar. Teclas de número y Pista inactivas; las notas siguen funcionando y se acumulan en cola. role=status.', 'Estado · reconectando (360 y horizontal)'],
+      ['Sesión en otra pestaña', 'Diálogo bloqueante', '«La sala está abierta en otra pestaña»', 'alertdialog sin cierre. «Jugar en esta pestaña» vuelve a conectar y desplaza a la otra pestaña.', 'Estado · sesión en otra pestaña (1280)'],
+      ['Versión incompatible', 'Diálogo bloqueante', '«Hay una versión nueva del juego»', 'alertdialog con una sola acción: «Recargar». Recuerda que el asiento se conserva 2 minutos.', 'Estado · versión incompatible (360)'],
+      ['Servidor no disponible', 'Banner de error + integrado', '«El servidor no responde. Lo que hagas no se registrará hasta que vuelva. Reintentando…»', 'Persiste. Bloquea todo lo que se envía (números, notas, pista, deshacer). role=alert al aparecer.', 'Estado · servidor no disponible (1280)'],
+      ['Demasiadas acciones', 'Aviso', '«Vas muy rápido: la última acción no se envió. Espera un momento y repítela.»', 'Polite. No cambia vidas ni puntos.', 'Estado · demasiadas acciones (360)'],
+      ['Sala borrada', 'Aviso integrado', '«La sala HPQ6NZ ya no existe. Las salas se borran tras 2 minutos sin nadie conectado.»', 'En Inicio, al volver con una ficha caducada: la ficha se descarta y queda «Entrar o crear sala». En Entrar, el código muestra el error «sala inexistente».', 'Inicio · 360 · la sala ya no existe; Entrar · estados'],
+      ['Acción no permitida', 'Aviso de error', '«No se usó la pista: ya eres espectador y solo puedes escribir notas.»', 'Assertive. Ocurre cuando la acción salió antes de que llegara el cambio de rol. Sin efecto en vidas ni puntos.', 'Estado · acción no permitida (360)'],
+      ['Partida terminada', 'Banner + integrado', '«La partida terminó. El equipo completó el tablero en 31:07.» con «Ver resultados»', 'Tablero completo y sin selección (sin lupa en móvil); controles inactivos; cronómetro detenido. Rafa expiró: deja su asiento y figura como «Salió» en Resultados. Una jugada tardía no tiene efecto.', 'Estado · partida terminada (1280)'],
+      ['Confirmación de salida', 'Diálogo', '«¿Salir de la sala?»', 'alertdialog. Foco inicial en «Quedarme»; Esc cancela. En el lobby y en Resultados añade que el derecho de iniciar pasa a otra persona.', 'Estado · confirmación de salida (1280 y 360)'],
+      ['Confirmación de pista', 'Diálogo', '«¿Usar una pista en F2 C7?» «Cuesta −H puntos a quien la usa y no da bonus.»', 'Siempre se pide. Requiere celda vacía seleccionada; inactiva para espectadores y sin pistas. Foco inicial en «Cancelar».', 'Estado · confirmación de pista (1280 y 360)'],
+      ['«Ya resuelta»', 'Aviso, solo al autor', '«Valeria resolvió F1 C3 un instante antes. Tu jugada no cuenta y no pierdes vida.»', 'Polite. No hay destello en la celda.', 'Estado · ya resuelta (360)'],
+      ['Error propio', 'Aviso de error + destello', '«El 3 no va en F7 C3. Te quedan 2 vidas.»', 'Assertive. Destello de 1500 ms con tu inicial, que ven todos; sin animación si hay movimiento reducido.', 'Estado · error propio (360)'],
+      ['Paso a espectador', 'Aviso de error + aviso fijo', '«Te quedaste sin vidas. Ahora eres espectador: puedes seguir escribiendo notas.»', 'El aviso fijo «Eres espectador: solo puedes escribir notas» no bloquea y se queda. Número y Pista inactivos.', 'Estado · paso a espectador (360)'],
+      ['Se recuperaron X de Y notas', 'Aviso', '«Se recuperaron 3 de 5 notas. Las otras 2 cambiaron después de que las borraras.»', 'Tras deshacer un «Borrar notas»: se envía un deshacer por cada nota y se resume el resultado. Polite.', 'Estado · se recuperaron X de Y (1280)'],
+      ['No se pudo deshacer', 'Aviso', '«No se pudo deshacer: otra persona cambió esa nota grupal después.»', 'Motivos: otra persona la cambió; la celda se resolvió y la nota se limpió («…: la celda ya está resuelta»). Polite.', 'Estado · no se pudo deshacer (768)'],
+      ['Traspaso del derecho de iniciar', 'Aviso integrado', '«Inés salió de la sala. Ahora inicia la partida Tomás.»', 'En el lobby. role=status.', 'Lobby · los demás'],
+      ['Errores al entrar', 'Error de campo o aviso', 'Sala inexistente, sala llena, apodo en uso, apodo no válido, fallo de conexión, carga', 'Ver la hoja de estados de Entrar o crear.', 'Entrar · validación, errores y carga']
+    ].map(([name, type, text, how, where]) => ({ name, type, text, how, where }));
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

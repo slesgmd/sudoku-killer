@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Tablero</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./tokens.css">
+<link rel="stylesheet" href="./board.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="./fonts/fonts.css">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div class="sk-board v{{variant}} {{oneCls}}" role="{{gridRole}}" aria-label="{{gridLabel}}" style="box-sizing: border-box; {{rootStyle}}">
+  <sc-for list="{{rows}}" as="row" hint-placeholder-count="9">
+    <div class="sk-row" role="{{rowRole}}">
+      <sc-for list="{{row.cells}}" as="c" hint-placeholder-count="9">
+        <div class="sk-gc {{c.cls}}" role="{{c.role}}" aria-selected="{{c.ariaSel}}">
+          <sc-for list="{{c.segs}}" as="s" hint-placeholder-count="0"><i class="cg {{s}}" aria-hidden="true"></i></sc-for>
+          <sc-if value="{{c.hasSum}}" hint-placeholder-val="{{false}}"><span class="sum" aria-hidden="true">{{c.sum}}</span></sc-if>
+          <sc-if value="{{c.hasNotes}}" hint-placeholder-val="{{false}}"><span class="notes" aria-hidden="true"><sc-for list="{{c.slots}}" as="n" hint-placeholder-count="9"><span class="n {{n.cls}}">{{n.d}}</span></sc-for><sc-if value="{{c.hasR1}}" hint-placeholder-val="{{false}}"><span class="r1" style="left: {{c.r1Left}}px; font-size: {{c.r1Fs}}px"><sc-for list="{{c.r1}}" as="n" hint-placeholder-count="3"><span class="n {{n.cls}}">{{n.d}}</span></sc-for></span></sc-if></span></sc-if>
+          <sc-if value="{{c.hasDigit}}" hint-placeholder-val="{{false}}"><span class="dg" aria-hidden="true"><span class="dgt">{{c.d}}</span><sc-if value="{{c.isErr}}" hint-placeholder-val="{{false}}"><span class="who" style="background: {{c.errColor}}">{{c.errIni}}</span></sc-if></span></sc-if>
+          <sc-if value="{{c.isPend}}" hint-placeholder-val="{{false}}"><span class="wait" aria-hidden="true"><i></i><i></i><i></i></span></sc-if>
+          <sc-if value="{{c.isHint}}" hint-placeholder-val="{{false}}"><span class="ear" aria-hidden="true"></span></sc-if>
+          <sc-if value="{{c.hasPres}}" hint-placeholder-val="{{false}}"><span class="pres" aria-hidden="true" style="border-color: {{c.presColor}}"></span><span class="ptag" aria-hidden="true" style="background: {{c.presColor}}">{{c.presTag}}</span></sc-if>
+          <sc-if value="{{c.isSel}}" hint-placeholder-val="{{false}}"><span class="sk-selring" aria-hidden="true"></span></sc-if>
+          <sc-if value="{{c.interactive}}" hint-placeholder-val="{{false}}"><button class="sk-btn" type="button" tabindex="{{c.tab}}" aria-label="{{c.label}}" onClick="{{c.pick}}"></button></sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"variant":{"editor":"enum","options":["A","B"],"default":"A","section":"Tablero"},"size":{"editor":"int","default":640,"min":96,"max":800,"unit":"px","section":"Tablero"},"mode":{"editor":"enum","options":["board","lupa","cell"],"default":"board","section":"Tablero"},"selected":{"editor":"int","default":15,"min":0,"max":80,"section":"Tablero"},"showPersonal":{"editor":"boolean","default":true,"section":"Notas"},"showGroup":{"editor":"boolean","default":true,"section":"Notas"},"errorBy":{"editor":"enum","options":["T","I"],"default":"T","section":"Escena"},"vacio":{"editor":"boolean","default":false,"section":"Escena"},"completo":{"editor":"boolean","default":false,"section":"Escena"},"onSelect":{"editor":null},"spec":{"editor":null},"$preview":{"width":640,"height":640}}'>
+class Component extends DCLogic {
+  scene() {
+    return {
+      players: {
+        I: { name: 'Inés', color: '#4A6779', me: true },
+        T: { name: 'Tomás', color: '#9A5338' },
+        V: { name: 'Valeria', color: '#7A4E69' },
+        R: { name: 'Rafa', color: '#7F6420' },
+        B: { name: 'Bruno', color: '#3F6B5B' }
+      },
+      cages: [[22,41,50,51,59,60],[32,23,24,31,32,33],[23,12,19,20,21],[9,39,48],[23,47,55,56,65],[15,69,70,78],[10,15,16,25,34],[18,71,79,80],[29,57,66,75,76,77],[11,7,8],[22,17,26,35,44],[19,4,13,14,22],[9,40,49],[15,58,67,68],[10,10,11],[15,27,28,36,45],[13,0,9,18],[6,29,30],[19,37,38,46],[19,42,43,52,53],[18,54,63,72],[6,61,62],[13,64,73,74],[17,1,2,3],[12,5,6]],
+      locked: [[0,1,'solved','I'],[1,9,'solved','T'],[2,6,'solved','V'],[3,2,'solved','I'],[4,4,'solved','V'],[7,8,'solved','R'],[8,3,'solved','V'],[9,8,'solved','T'],[10,7,'solved','I'],[18,4,'solved','B'],[20,5,'solved','T'],[22,8,'solved','V'],[24,9,'solved','I'],[27,6,'solved','R'],[28,1,'solved','T'],[31,5,'solved','I'],[34,3,'solved','I'],[36,5,'solved','V'],[39,8,'solved','B'],[40,3,'solved','R'],[41,9,'solved','T'],[43,6,'hint','V'],[44,2,'solved','I'],[48,1,'solved','V'],[52,5,'solved','I'],[54,7,'solved','R'],[58,9,'solved','T'],[60,6,'solved','I'],[63,9,'solved','B'],[67,2,'solved','V'],[70,7,'solved','I'],[73,6,'solved','V'],[76,7,'solved','B'],[80,1,'solved','T']],
+      group: { 15: [1,2], 16: [2,4], 5: [5,7], 6: [5,7], 64: [3,4,5], 74: [3,4] },
+      personal: { 15: [2,4], 6: [7], 13: [1,6], 14: [1,6], 64: [3,4] },
+      pending: { cell: 25, digit: 1, by: 'I' },
+      error: { cell: 56, digit: 3, by: 'T' },
+      presence: [{ cell: 39, by: 'T' }, { cell: 16, by: 'V' }]
+    };
+  }
+
+  joinEs(arr) {
+    if (arr.length <= 1) return arr.join('');
+    return arr.slice(0, -1).join(', ') + ' y ' + arr[arr.length - 1];
+  }
+
+  renderVals() {
+    const P = this.props;
+    const variant = P.variant === 'B' ? 'B' : 'A';
+    const mode = P.mode === 'lupa' || P.mode === 'cell' ? P.mode : 'board';
+    const size = Number(P.size) || (mode === 'board' ? 640 : 96);
+    const sel = P.selected === -1 ? null : (P.selected === null || P.selected === undefined ? 15 : P.selected);
+    const vacio = P.vacio ?? false;
+    const showP = P.showPersonal ?? true;
+    const showG = P.showGroup ?? true;
+    const font = "Inter, 'Helvetica Neue', Arial, sans-serif";
+
+    const cellPx = mode === 'board' ? size / 9 : size;
+    const sumFs = Math.max(10, Math.round(cellPx * 0.17));
+    const sumH = sumFs + 1;
+    const dgFs = Math.round(cellPx * 0.52);
+    // A: franja superior reservada en todas las celdas. B: las notas empiezan bajo la línea de jaula.
+    const band = variant === 'A' ? sumH : 3;
+    const dgTop = variant === 'A' ? sumH : Math.round(sumH * 0.7);
+    const notesW = cellPx - 1 - 10;
+    const rowH = (cellPx - 1 - (band + 1) - 5) / 3;
+    const nFs = Math.max(8, Math.round(Math.min(rowH * 0.95, rowH * 0.62 + 3)));
+    const badge = Math.max(12, Math.round(cellPx * 0.22));
+    const badgeFs = Math.max(9, Math.round(badge * 0.68));
+    const ear = Math.max(7, Math.round(cellPx * 0.18));
+    const rootStyle = 'width: ' + size + 'px; height: ' + size + 'px; --cell: ' + cellPx + 'px; --sum-fs: ' + sumFs + 'px; --sum-h: ' + sumH + 'px; --dg-fs: ' + dgFs + 'px; --dg-top: ' + dgTop + 'px; --n-fs: ' + nFs + 'px; --band: ' + band + 'px; --badge: ' + badge + 'px; --badge-fs: ' + badgeFs + 'px; --ear: ' + ear + 'px; --font-digits: ' + font;
+
+    const notesSlots = (g, p, sum) => {
+      const slots = [];
+      for (let d = 1; d <= 9; d++) {
+        const inG = g.indexOf(d) >= 0, inP = p.indexOf(d) >= 0;
+        slots.push({ d: inG || inP ? String(d) : '', cls: inG && inP ? 'gp' : inG ? 'g' : inP ? 'p' : '' });
+      }
+      // Variante B: en celdas con suma, la fila 1·2·3 se corre a la derecha de la etiqueta
+      let hasR1 = false, r1 = [], r1Left = 0, r1Fs = nFs;
+      if (variant === 'B' && sum && (slots[0].d || slots[1].d || slots[2].d)) {
+        hasR1 = true;
+        r1 = slots.slice(0, 3).filter((x) => x.d);
+        slots[0] = { d: '', cls: '' }; slots[1] = { d: '', cls: '' }; slots[2] = { d: '', cls: '' };
+        const labelW = String(sum).length * sumFs * 0.62 + 5;
+        r1Left = Math.ceil(labelW - 5 + Math.max(2, cellPx * 0.06));
+        r1Fs = Math.max(8, Math.min(nFs, Math.floor(((notesW - r1Left) / 3) / 0.75)));
+      }
+      return { slots, hasR1, r1, r1Left, r1Fs, any: g.length + p.length > 0 };
+    };
+
+    // Muestra aislada para la hoja de celdas
+    if (mode === 'cell') {
+      const s = P.spec || {};
+      const sides = s.sides || '';
+      const segs = [];
+      const has = (k) => sides.indexOf(k) >= 0;
+      const hot = s.hot ? ' hot' : '';
+      if (has('t')) segs.push('t' + (has('l') ? '' : ' xl') + (has('r') ? '' : ' xr') + hot);
+      if (has('b')) segs.push('b' + (has('l') ? '' : ' xl') + (has('r') ? '' : ' xr') + hot);
+      if (has('l')) segs.push('l' + (has('t') ? '' : ' xt') + (has('b') ? '' : ' xb') + hot);
+      if (has('r')) segs.push('r' + (has('t') ? '' : ' xt') + (has('b') ? '' : ' xb') + hot);
+      (s.corners || []).forEach((k) => { segs.push('k' + k + '-h' + hot); segs.push('k' + k + '-v' + hot); });
+      const kind = s.kind || 'empty';
+      const showNotes = kind === 'empty';
+      const ns = notesSlots(showNotes ? (s.g || []) : [], showNotes ? (s.p || []) : [], s.sum || 0);
+      const cls = [kind === 'empty' ? '' : kind, s.sel ? 'sel' : '', s.rel ? 'rel' : '', s.same ? 'same' : ''].join(' ');
+      const pres = s.pres || [];
+      const c = {
+        cls, role: 'presentation', ariaSel: 'false', segs,
+        hasSum: !!s.sum, sum: s.sum || '',
+        hasNotes: showNotes && ns.any, slots: ns.slots, hasR1: ns.hasR1, r1: ns.r1, r1Left: ns.r1Left, r1Fs: ns.r1Fs,
+        hasDigit: !!s.digit && kind !== 'empty', d: s.digit || '',
+        isPend: kind === 'pend', isHint: kind === 'hint',
+        isErr: kind === 'err', errColor: s.who ? s.who.color : '#9A5338', errIni: s.who ? s.who.ini : '',
+        hasPres: pres.length > 0, presColor: pres.length ? pres[0].color : '', presTag: pres.length ? pres[0].ini + (pres.length > 1 ? '+' + (pres.length - 1) : '') : '',
+        isSel: !!s.sel, interactive: false, tab: -1, label: '', pick: null
+      };
+      return { variant, oneCls: 'one', gridRole: 'img', gridLabel: s.label || 'Muestra de celda', rowRole: 'presentation', rootStyle, rows: [{ cells: [c] }] };
+    }
+
+    const S = this.scene();
+    if (P.errorBy === 'I') S.error.by = 'I';
+    if (vacio) { S.locked = []; S.group = {}; S.personal = {}; S.pending = { cell: -1 }; S.error = { cell: -1, by: 'T', digit: 0 }; S.presence = []; }
+    if (P.completo && !vacio) {
+      // Partida ganada: todas las celdas resueltas; sin notas, pendientes, errores ni presencia
+      const SOL = [1,9,6,2,4,5,7,8,3,8,7,3,9,1,6,2,4,5,4,2,5,7,8,3,9,1,6,6,1,2,4,5,7,8,3,9,5,4,7,8,3,9,1,6,2,3,8,9,1,6,2,4,5,7,7,5,8,3,9,1,6,2,4,9,3,1,6,2,4,5,7,8,2,6,4,5,7,8,3,9,1];
+      const have = {}; S.locked.forEach((l) => { have[l[0]] = true; });
+      const fix = { 15: 'I', 25: 'I', 56: 'V', 64: 'T', 74: 'T' }, rot = ['I', 'T', 'V'];
+      let k = 0;
+      for (let i = 0; i < 81; i++) if (!have[i]) S.locked.push([i, SOL[i], 'solved', fix[i] || rot[(k++) % 3]]);
+      S.group = {}; S.personal = {}; S.pending = { cell: -1 }; S.error = { cell: -1, by: 'T', digit: 0 }; S.presence = [];
+    }
+    const cageOf = {}, cageSum = {}, cageAnchor = {};
+    S.cages.forEach((cg, k) => {
+      const cells = cg.slice(1);
+      cells.forEach((i) => { cageOf[i] = k; });
+      cageSum[k] = cg[0];
+      cageAnchor[k] = Math.min.apply(null, cells);
+    });
+    const locked = {};
+    S.locked.forEach(([i, v, src, by]) => { locked[i] = { v, src, by }; });
+    const selLocked = sel !== null && locked[sel] ? locked[sel].v : null;
+    const presAt = {};
+    S.presence.forEach((p) => { (presAt[p.cell] = presAt[p.cell] || []).push(p.by); });
+    const box = (i) => Math.floor(Math.floor(i / 9) / 3) * 3 + Math.floor((i % 9) / 3);
+    const same = (i, dr, dc) => {
+      const r = Math.floor(i / 9) + dr, c = (i % 9) + dc;
+      if (r < 0 || r > 8 || c < 0 || c > 8) return false;
+      return cageOf[r * 9 + c] === cageOf[i];
+    };
+
+    const buildCell = (i, single) => {
+      const r = Math.floor(i / 9), col = i % 9;
+      const k = cageOf[i];
+      const isSel = !single && i === sel;
+      const related = !single && sel !== null && !isSel && (Math.floor(sel / 9) === r || sel % 9 === col || box(sel) === box(i) || cageOf[sel] === k);
+      const hot = !single && sel !== null && cageOf[sel] === k ? ' hot' : '';
+      const segs = [];
+      const U = same(i, -1, 0), D = same(i, 1, 0), L = same(i, 0, -1), R = same(i, 0, 1);
+      if (!U) segs.push('t' + (L ? ' xl' : '') + (R ? ' xr' : '') + hot);
+      if (!D) segs.push('b' + (L ? ' xl' : '') + (R ? ' xr' : '') + hot);
+      if (!L) segs.push('l' + (U ? ' xt' : '') + (D ? ' xb' : '') + hot);
+      if (!R) segs.push('r' + (U ? ' xt' : '') + (D ? ' xb' : '') + hot);
+      if (U && R && !same(i, -1, 1)) { segs.push('ktr-h' + hot); segs.push('ktr-v' + hot); }
+      if (U && L && !same(i, -1, -1)) { segs.push('ktl-h' + hot); segs.push('ktl-v' + hot); }
+      if (D && R && !same(i, 1, 1)) { segs.push('kbr-h' + hot); segs.push('kbr-v' + hot); }
+      if (D && L && !same(i, 1, -1)) { segs.push('kbl-h' + hot); segs.push('kbl-v' + hot); }
+
+      const lk = locked[i];
+      const isPend = !lk && S.pending.cell === i;
+      const isErr = !lk && !isPend && S.error.cell === i;
+      const kind = lk ? lk.src : isPend ? 'pend' : isErr ? 'err' : 'empty';
+      if (vacio) segs.length = 0;
+      const hasSum = !vacio && cageAnchor[k] === i;
+      const empty = kind === 'empty';
+      const g = empty && showG ? (S.group[i] || []) : [];
+      const p = empty && showP ? (S.personal[i] || []) : [];
+      const ns = notesSlots(g, p, hasSum ? cageSum[k] : 0);
+      const pres = single ? [] : (presAt[i] || []);
+      const isSame = !single && !isSel && selLocked !== null && lk && lk.v === selLocked;
+
+      const cls = [];
+      if (!single) {
+        if (col === 0) cls.push('c0');
+        if (r === 0) cls.push('r0');
+        if (col === 2 || col === 5 || col === 8) cls.push('bxr');
+        if (r === 2 || r === 5 || r === 8) cls.push('bxb');
+      }
+      if (!empty) cls.push(kind);
+      if (related) cls.push('rel');
+      if (isSel) cls.push('sel');
+      if (isSame) cls.push('same');
+
+      const pl = (id) => S.players[id] || { name: '', color: '#66655C' };
+      const d = lk ? lk.v : isPend ? S.pending.digit : isErr ? S.error.digit : '';
+      let label = 'Fila ' + (r + 1) + ', columna ' + (col + 1) + ', jaula de ' + cageSum[k];
+      if (kind === 'given') label += ', ' + d + ', número inicial';
+      else if (kind === 'solved') label += ', ' + d + ', resuelta por ' + (pl(lk.by).me ? 'ti' : pl(lk.by).name);
+      else if (kind === 'hint') label += ', ' + d + ', pista usada por ' + pl(lk.by).name;
+      else if (kind === 'pend') label += ', ' + d + ', pendiente de confirmación';
+      else if (kind === 'err') label += ', vacía; ' + pl(S.error.by).name + ' acaba de fallar con un ' + d;
+      else {
+        label += ', vacía';
+        if (g.length) label += ', notas grupales ' + this.joinEs(g);
+        if (p.length) label += ', notas personales ' + this.joinEs(p);
+      }
+      if (isSame) label += ', mismo número que la celda seleccionada';
+      if (pres.length) label += ', ' + this.joinEs(pres.map((id) => pl(id).name)) + (pres.length > 1 ? ' están aquí' : ' está aquí');
+
+      return {
+        cls: cls.join(' '),
+        role: single ? 'presentation' : 'gridcell',
+        ariaSel: isSel ? 'true' : 'false',
+        segs,
+        hasSum, sum: cageSum[k],
+        hasNotes: ns.any, slots: ns.slots, hasR1: ns.hasR1, r1: ns.r1, r1Left: ns.r1Left, r1Fs: ns.r1Fs,
+        hasDigit: !empty, d: String(d),
+        isPend, isHint: kind === 'hint',
+        isErr, errColor: pl(S.error.by).color, errIni: pl(S.error.by).name.charAt(0),
+        hasPres: pres.length > 0,
+        presColor: pres.length ? pl(pres[0]).color : '',
+        presTag: pres.length ? pl(pres[0]).name.charAt(0) + (pres.length > 1 ? '+' + (pres.length - 1) : '') : '',
+        isSel,
+        interactive: !single,
+        tab: i === (sel === null ? 0 : sel) ? 0 : -1,
+        label,
+        pick: () => { if (P.onSelect) P.onSelect(i); }
+      };
+    };
+
+    if (mode === 'lupa') {
+      const c = buildCell(sel === null ? 0 : sel, true);
+      return { variant, oneCls: 'one', gridRole: 'img', gridLabel: 'Lupa: ' + c.label, rowRole: 'presentation', rootStyle, rows: [{ cells: [c] }] };
+    }
+
+    const rows = [];
+    for (let r = 0; r < 9; r++) {
+      const cells = [];
+      for (let col = 0; col < 9; col++) cells.push(buildCell(r * 9 + col, false));
+      rows.push({ cells });
+    }
+    return { variant, oneCls: '', gridRole: 'grid', gridLabel: 'Tablero de 9 por 9', rowRole: 'row', rootStyle, rows };
+  }
+}
+</script>
+</body>
+</html>

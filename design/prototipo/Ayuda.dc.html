@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Ayuda</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./tokens.css">
+<link rel="stylesheet" href="./board.css">
+<link rel="stylesheet" href="./ui.css">
+<link rel="stylesheet" href="./screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="./fonts/fonts.css">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div class="scr sk-ui L-{{layout}}" style="width: {{w}}px; min-height: {{minH}}px">
+  <header class="apphead">
+    <span class="brand">Sudoku Killer</span>
+    <nav aria-label="Ayuda y ajustes">
+      <a class="btn ghost" href="{{hrefSelf}}" aria-current="page">Ayuda</a>
+      <button class="btn ghost" type="button" aria-haspopup="dialog" onClick="{{openAjustes}}">Ajustes</button>
+    </nav>
+  </header>
+  <main class="wrap" style="{{mainStyle}}">
+    <sc-if value="{{wide}}" hint-placeholder-val="{{true}}">
+      <nav aria-label="En esta página" style="position: sticky; top: 24px; align-self: start">
+        <p class="lbl" style="margin-bottom: 8px">En esta página</p>
+        <div class="toc" style="display: flex; flex-direction: column; border-left: 1px solid #D1CCBF">
+          <sc-for list="{{toc}}" as="s" hint-placeholder-count="8"><a href="#{{s.id}}">{{s.name}}</a></sc-for>
+        </div>
+      </nav>
+    </sc-if>
+
+    <article style="display: flex; flex-direction: column; gap: 28px; min-width: 0">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <button class="linkbtn" type="button" onClick="{{back}}" style="align-self: flex-start; margin-left: -4px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"></path></svg>Volver</button>
+        <h1 class="h-xl">Cómo se juega</h1>
+        <p class="lead" style="max-width: 640px">Todo lo necesario para jugar en equipo: reglas, vidas, notas, pistas y qué pasa si se corta la conexión.</p>
+      </div>
+
+      <sc-if value="{{narrow}}" hint-placeholder-val="{{false}}">
+        <details class="help-toc-m">
+          <summary>En esta página<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l4 4 4-4"></path></svg></summary>
+          <nav class="toc" aria-label="En esta página"><sc-for list="{{toc}}" as="s" hint-placeholder-count="8"><a href="#{{s.id}}">{{s.name}}</a></sc-for></nav>
+        </details>
+      </sc-if>
+
+      <section id="reglas" class="help-sec" aria-labelledby="h-reglas">
+        <h2 id="h-reglas">Reglas del killer</h2>
+        <p>Hay que llenar el tablero de 9 × 9 con los dígitos del 1 al 9 sin repetir ninguno en una fila, una columna ni una caja de 3 × 3.</p>
+        <p>Además, las celdas están agrupadas en jaulas, marcadas con una línea discontinua. El número pequeño de la esquina es la suma de las celdas de la jaula, y dentro de una jaula tampoco se repiten dígitos. Cada jaula tiene de 2 a 5 celdas.</p>
+      </section>
+
+      <section id="equipo" class="help-sec" aria-labelledby="h-equipo">
+        <h2 id="h-equipo">Juego cooperativo</h2>
+        <p>Todo el equipo, hasta seis personas, resuelve el mismo tablero a la vez. Cada acierto bloquea la celda para siempre y todos lo ven al momento. El equipo gana cuando completa el tablero.</p>
+        <p>Además, cada persona suma puntos para el ranking de la partida: los aciertos y cerrar filas, columnas, cajas o jaulas suman; los errores y las pistas restan. A igual puntuación va antes quien tiene menos errores y, después, quien llegó antes a esos puntos.</p>
+        <p>Puedes entrar en una sala con la partida empezada si queda un asiento libre: empiezas con 3 vidas.</p>
+      </section>
+
+      <section id="vidas" class="help-sec" aria-labelledby="h-vidas">
+        <h2 id="h-vidas">Vidas y espectadores</h2>
+        <p>Cada persona tiene 3 vidas. Un número incorrecto resta una vida y algunos puntos; todo el equipo lo ve tachado un instante, con tu inicial, y después la celda vuelve a quedar vacía.</p>
+        <p>Con 0 vidas pasas a espectador: sigues viendo la partida y puedes escribir notas, pero ya no colocas números ni usas pistas. Conservas tus puntos. Si no queda nadie activo (con vidas y conectado, o dentro de los 2 minutos de margen), el equipo pierde.</p>
+      </section>
+
+      <section id="notas" class="help-sec" aria-labelledby="h-notas">
+        <h2 id="h-notas">Capas de notas</h2>
+        <p>Hay dos capas de notas. Las personales solo las ves tú; las grupales las ve todo el equipo. En modo Notas eliges en qué capa escribes y, con el ojo, qué capas se muestran.</p>
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; padding: 4px 0">
+          <sc-for list="{{samples}}" as="s" hint-placeholder-count="3">
+            <figure style="margin: 0; display: flex; flex-direction: column; gap: 6px">
+              <dc-import name="Tablero" mode="cell" size="88" spec="{{s.spec}}" hint-size="88px,88px"></dc-import>
+              <figcaption style="font-size: 13px; line-height: 18px; max-width: 96px">{{s.cap}}</figcaption>
+            </figure>
+          </sc-for>
+        </div>
+        <ul class="dots">
+          <li>Deshacer solo afecta a tus propias notas. Si otra persona cambió esa nota después, no se deshace y te lo decimos.</li>
+          <li>Cuando alguien acierta un número, se quita de las notas grupales de su fila, columna, caja y jaula. En tus notas personales también, salvo que lo desactives en Ajustes.</li>
+        </ul>
+      </section>
+
+      <section id="pistas" class="help-sec" aria-labelledby="h-pistas">
+        <h2 id="h-pistas">Pistas</h2>
+        <p>El equipo comparte 3 pistas por partida. Elige una celda vacía y pide una pista: se coloca el número correcto. La pista resta puntos a quien la usa y no da bonus, así que siempre se pide confirmación. Los espectadores no pueden usarlas.</p>
+      </section>
+
+      <section id="simultaneas" class="help-sec" aria-labelledby="h-simultaneas">
+        <h2 id="h-simultaneas">Jugadas simultáneas</h2>
+        <p>Si dos personas escriben en la misma celda a la vez, cuenta la jugada que llega primero al servidor. Si era un acierto, la otra no cuenta y no quita vida.</p>
+        <p>Mientras el servidor responde, el número se ve en gris con tres puntos y la celda no admite otra jugada. Las notas, en cambio, se aplican al momento.</p>
+      </section>
+
+      <section id="desconexion" class="help-sec" aria-labelledby="h-desconexion">
+        <h2 id="h-desconexion">Desconexión</h2>
+        <p>Si se corta la conexión, tienes 2 minutos para volver a la misma sala con tu asiento, tus vidas, tus puntos y tus notas. Mientras tanto, tus notas se guardan y se envían al volver.</p>
+        <p>Pasados los 2 minutos, tu asiento queda libre. Si vuelves desde el mismo navegador y hay sitio, recuperas tus datos. Si sales a propósito, el asiento se libera al momento. Una sala sin nadie conectado durante 2 minutos se borra.</p>
+      </section>
+
+      <section id="atajos" class="help-sec" aria-labelledby="h-atajos">
+        <h2 id="h-atajos">Atajos de teclado</h2>
+        <table class="kt" style="border-collapse: collapse; max-width: 640px">
+          <tbody>
+            <sc-for list="{{keys}}" as="k" hint-placeholder-count="8">
+              <tr><td style="width: 132px; white-space: nowrap"><sc-for list="{{k.keys}}" as="c" hint-placeholder-count="1"><span class="kbd" style="margin-right: 4px">{{c.k}}</span></sc-for></td><td>{{k.what}}</td></tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </section>
+    </article>
+  </main>
+  <sc-if value="{{ajustesOpen}}" hint-placeholder-val="{{false}}">
+    <dc-import name="Ajustes" layout="{{layout}}" overlay="{{true}}" on-close="{{closeAjustes}}" hint-size="100%,100%"></dc-import>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"layout":{"editor":"enum","options":["escritorio","movil"],"default":"escritorio"},"$preview":{"width":1280,"height":2542}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { ajustes: false }; }
+  renderVals() {
+    const movil = this.props.layout === 'movil';
+    const toc = [['reglas', 'Reglas del killer'], ['equipo', 'Juego cooperativo'], ['vidas', 'Vidas y espectadores'], ['notas', 'Capas de notas'], ['pistas', 'Pistas'], ['simultaneas', 'Jugadas simultáneas'], ['desconexion', 'Desconexión'], ['atajos', 'Atajos de teclado']].map(([id, name]) => ({ id, name }));
+    const samples = [
+      { cap: 'Grupales: en negrita.', spec: { g: [2, 5, 7], label: 'Notas grupales 2, 5 y 7' } },
+      { cap: 'Personales: subrayadas, en verde oliva.', spec: { p: [2, 5, 7], label: 'Notas personales 2, 5 y 7' } },
+      { cap: 'En las dos capas: negrita y subrayado.', spec: { g: [2, 7], p: [2, 5], label: 'Grupales 2 y 7, personales 2 y 5' } }
+    ];
+    const keys = [
+      [['←', '→', '↑', '↓'], 'Mover la selección por el tablero'], [['1–9'], 'Escribir un número o una nota, según el modo'], [['N'], 'Cambiar entre Número y Notas'], [['G'], 'Cambiar la capa de escritura: personal o grupal'],
+      [['Supr'], 'Borrar las notas de la capa activa en la celda'], [['Ctrl', 'Z'], 'Deshacer tus últimas notas'], [['H'], 'Pedir una pista (abre la confirmación)'], [['Esc'], 'Cerrar un diálogo o un menú']
+    ].map(([k, what]) => ({ keys: k.map((c) => ({ k: c })), what }));
+    return {
+      layout: movil ? 'movil' : 'escritorio', w: movil ? 360 : 1280, minH: movil ? 2400 : 1900,
+      wide: !movil, narrow: movil,
+      mainStyle: movil ? 'display: flex; flex-direction: column' : 'display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 72px',
+      toc, samples, keys,
+      hrefSelf: movil ? 'Ayuda360.dc.html' : 'Ayuda.dc.html',
+      back: () => { try { window.history.back(); } catch (e) {} },
+      ajustesOpen: this.state.ajustes, openAjustes: () => this.setState({ ajustes: true }), closeAjustes: () => this.setState({ ajustes: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

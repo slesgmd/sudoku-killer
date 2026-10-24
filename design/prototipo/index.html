@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sudoku Killer · prototipo F7</title>
+<link rel="stylesheet" href="./tokens.css">
+<link rel="stylesheet" href="./fonts/fonts.css">
+<style>
+body { margin: 0; background: var(--canvas); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 22px; }
+main { max-width: 960px; margin: 0 auto; padding: 48px 16px 64px; display: flex; flex-direction: column; gap: 40px; }
+h1 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 44px; }
+h2 { margin: 0 0 4px; font-size: 18px; line-height: 24px; font-weight: 600; border-bottom: 1px solid var(--ink); padding-bottom: 8px; }
+h3 { margin: 16px 0 4px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--muted); }
+p { margin: 0; max-width: 680px; }
+ul { margin: 0; padding: 0; list-style: none; }
+li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 44px; border-bottom: 1px solid var(--border); }
+li > a:first-child { color: var(--ink); font-weight: 500; text-underline-offset: 3px; }
+.meta { font-size: 13px; color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+.solo { margin-left: auto; font-size: 13px; color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <header style="display: flex; flex-direction: column; gap: 12px">
+    <h1>Prototipo de diseño (F7)</h1>
+    <p>4 páginas y 51 artboards. Cada artboard se abre en un marco de su tamaño; los enlaces y los controles de prueba funcionan dentro del marco. Se sirve con <code>npx serve design/prototipo</code>. Documentación: <code>docs/diseno.md</code> y <code>design/pantallas.md</code>.</p>
+  </header>
+    <section aria-labelledby="p-sistema">
+      <h2 id="p-sistema">Sistema base <span class="meta">6 artboards</span></h2>
+      <h3>Sistema base</h3>
+      <ul>
+        <li><a href="marco.html#a=Main.dc.html&amp;w=1440&amp;h=1400">Tokens y contrastes</a><span class="meta">1440 × 1400</span><a class="solo" href="Main.dc.html" aria-label="Abrir Tokens y contrastes sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=Tipografia.dc.html&amp;w=1120&amp;h=1320">Tipografía</a><span class="meta">1120 × 1320</span><a class="solo" href="Tipografia.dc.html" aria-label="Abrir Tipografía sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=Celdas.dc.html&amp;w=1440&amp;h=1720">Celdas: variante A, estados y prioridad</a><span class="meta">1440 × 1720</span><a class="solo" href="Celdas.dc.html" aria-label="Abrir Celdas: variante A, estados y prioridad sin marco">sin marco</a></li>
+      </ul>
+      <h3>Componentes</h3>
+      <ul>
+        <li><a href="marco.html#a=Tablero.dc.html&amp;w=640&amp;h=640">Tablero</a><span class="meta">640 × 640 · interactivo</span><a class="solo" href="Tablero.dc.html" aria-label="Abrir Tablero sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=Ajustes.dc.html&amp;w=520&amp;h=440">Diálogo de ajustes</a><span class="meta">520 × 440 · interactivo</span><a class="solo" href="Ajustes.dc.html" aria-label="Abrir Diálogo de ajustes sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=Partida.dc.html&amp;w=1280&amp;h=850">Componente Partida (las cuatro disposiciones)</a><span class="meta">1280 × 850 · interactivo</span><a class="solo" href="Partida.dc.html" aria-label="Abrir Componente Partida (las cuatro disposiciones) sin marco">sin marco</a></li>
+      </ul>
+    </section>
+    <section aria-labelledby="p-partida">
+      <h2 id="p-partida">Partida <span class="meta">4 artboards</span></h2>
+      <h3>Partida · Media, sin números iniciales</h3>
+      <ul>
+        <li><a href="marco.html#a=Partida1280.dc.html&amp;w=1280&amp;h=850">Partida · 1280</a><span class="meta">1280 × 850 · interactivo</span><a class="solo" href="Partida1280.dc.html" aria-label="Abrir Partida · 1280 sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=Partida768.dc.html&amp;w=768&amp;h=1116">Partida · 768</a><span class="meta">768 × 1116 · interactivo</span><a class="solo" href="Partida768.dc.html" aria-label="Abrir Partida · 768 sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=Partida360.dc.html&amp;w=360&amp;h=972">Partida · 360</a><span class="meta">360 × 972 · interactivo</span><a class="solo" href="Partida360.dc.html" aria-label="Abrir Partida · 360 sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=PartidaHorizontal.dc.html&amp;w=740&amp;h=452">Partida · móvil horizontal 740 × 360</a><span class="meta">740 × 452 · interactivo</span><a class="solo" href="PartidaHorizontal.dc.html" aria-label="Abrir Partida · móvil horizontal 740 × 360 sin marco">sin marco</a></li>
+      </ul>
+    </section>
+    <section aria-labelledby="p-pantallas">
+      <h2 id="p-pantallas">Pantallas <span class="meta">22 artboards</span></h2>
+      <h3>Inicio</h3>
+      <ul>
+        <li><a href="marco.html#a=Inicio.dc.html&amp;w=1280&amp;h=850">Inicio · 1280 · sin ficha</a><span class="meta">1280 × 850 · interactivo</span><a class="solo" href="Inicio.dc.html" aria-label="Abrir Inicio · 1280 · sin ficha sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=InicioVolver.dc.html&amp;w=1280&amp;h=850">Inicio · 1280 · «Volver a la sala»</a><span class="meta">1280 × 850 · interactivo</span><a class="solo" href="InicioVolver.dc.html" aria-label="Abrir Inicio · 1280 · «Volver a la sala» sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=Inicio360.dc.html&amp;w=360&amp;h=858">Inicio · 360</a><span class="meta">360 × 858 · interactivo</span><a class="solo" href="Inicio360.dc.html" aria-label="Abrir Inicio · 360 sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=Inicio360Volver.dc.html&amp;w=360&amp;h=883">Inicio · 360 · «Volver a la sala»</a><span class="meta">360 × 883 · interactivo</span><a class="solo" href="Inicio360Volver.dc.html" aria-label="Abrir Inicio · 360 · «Volver a la sala» sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=Inicio360Borrada.dc.html&amp;w=360&amp;h=863">Inicio · 360 · la sala ya no existe</a><span class="meta">360 × 863 · interactivo</span><a class="solo" href="Inicio360Borrada.dc.html" aria-label="Abrir Inicio · 360 · la sala ya no existe sin marco">sin marco</a></li>
+      </ul>
+      <h3>Entrar o crear sala</h3>
+      <ul>
+        <li><a href="marco.html#a=Entrar.dc.html&amp;w=1280&amp;h=860">Entrar · 1280</a><span class="meta">1280 × 860 · interactivo</span><a class="solo" href="Entrar.dc.html" aria-label="Abrir Entrar · 1280 sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=EntrarError.dc.html&amp;w=1280&amp;h=926">Entrar · 1280 · sala llena</a><span class="meta">1280 × 926 · interactivo</span><a class="solo" href="EntrarError.dc.html" aria-label="Abrir Entrar · 1280 · sala llena sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=Entrar360.dc.html&amp;w=360&amp;h=1024">Entrar · 360 · carácter rechazado</a><span class="meta">360 × 1024 · interactivo</span><a class="solo" href="Entrar360.dc.html" aria-label="Abrir Entrar · 360 · carácter rechazado sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=Entrar360Carga.dc.html&amp;w=360&amp;h=1006">Entrar · 360 · cargando</a><span class="meta">360 × 1006 · interactivo</span><a class="solo" href="Entrar360Carga.dc.html" aria-label="Abrir Entrar · 360 · cargando sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=EntrarEstados.dc.html&amp;w=1720&amp;h=1870">Entrar · validación, errores y carga</a><span class="meta">1720 × 1870 · interactivo</span><a class="solo" href="EntrarEstados.dc.html" aria-label="Abrir Entrar · validación, errores y carga sin marco">sin marco</a></li>
+      </ul>
+      <h3>Lobby</h3>
+      <ul>
+        <li><a href="marco.html#a=Lobby.dc.html&amp;w=1280&amp;h=872">Lobby · 1280 · quien inicia</a><span class="meta">1280 × 872 · interactivo</span><a class="solo" href="Lobby.dc.html" aria-label="Abrir Lobby · 1280 · quien inicia sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=LobbyEspera.dc.html&amp;w=1280&amp;h=972">Lobby · 1280 · los demás, sala llena, traspaso</a><span class="meta">1280 × 972 · interactivo</span><a class="solo" href="LobbyEspera.dc.html" aria-label="Abrir Lobby · 1280 · los demás, sala llena, traspaso sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=Lobby360.dc.html&amp;w=360&amp;h=1290">Lobby · 360 · quien inicia</a><span class="meta">360 × 1290 · interactivo</span><a class="solo" href="Lobby360.dc.html" aria-label="Abrir Lobby · 360 · quien inicia sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=Lobby360Espera.dc.html&amp;w=360&amp;h=1220">Lobby · 360 · los demás</a><span class="meta">360 × 1220 · interactivo</span><a class="solo" href="Lobby360Espera.dc.html" aria-label="Abrir Lobby · 360 · los demás sin marco">sin marco</a></li>
+      </ul>
+      <h3>Resultados</h3>
+      <ul>
+        <li><a href="marco.html#a=Resultados.dc.html&amp;w=1280&amp;h=890">Resultados · 1280 · victoria, quien inicia</a><span class="meta">1280 × 890 · interactivo</span><a class="solo" href="Resultados.dc.html" aria-label="Abrir Resultados · 1280 · victoria, quien inicia sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=ResultadosDerrota.dc.html&amp;w=1280&amp;h=890">Resultados · 1280 · derrota, los demás</a><span class="meta">1280 × 890 · interactivo</span><a class="solo" href="ResultadosDerrota.dc.html" aria-label="Abrir Resultados · 1280 · derrota, los demás sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=Resultados360.dc.html&amp;w=360&amp;h=1020">Resultados · 360 · victoria</a><span class="meta">360 × 1020 · interactivo</span><a class="solo" href="Resultados360.dc.html" aria-label="Abrir Resultados · 360 · victoria sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=Resultados360Derrota.dc.html&amp;w=360&amp;h=1020">Resultados · 360 · derrota</a><span class="meta">360 × 1020 · interactivo</span><a class="solo" href="Resultados360Derrota.dc.html" aria-label="Abrir Resultados · 360 · derrota sin marco">sin marco</a></li>
+      </ul>
+      <h3>Ayuda</h3>
+      <ul>
+        <li><a href="marco.html#a=Ayuda.dc.html&amp;w=1280&amp;h=2542">Ayuda · 1280</a><span class="meta">1280 × 2542 · interactivo</span><a class="solo" href="Ayuda.dc.html" aria-label="Abrir Ayuda · 1280 sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=Ayuda360.dc.html&amp;w=360&amp;h=3598">Ayuda · 360</a><span class="meta">360 × 3598 · interactivo</span><a class="solo" href="Ayuda360.dc.html" aria-label="Abrir Ayuda · 360 sin marco">sin marco</a></li>
+      </ul>
+      <h3>Ajustes (diálogo)</h3>
+      <ul>
+        <li><a href="marco.html#a=AjustesLobby.dc.html&amp;w=1280&amp;h=872">Ajustes · 1280 · sobre el lobby</a><span class="meta">1280 × 872 · interactivo</span><a class="solo" href="AjustesLobby.dc.html" aria-label="Abrir Ajustes · 1280 · sobre el lobby sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=AjustesPartida360.dc.html&amp;w=360&amp;h=972">Ajustes · 360 · sobre la partida</a><span class="meta">360 × 972 · interactivo</span><a class="solo" href="AjustesPartida360.dc.html" aria-label="Abrir Ajustes · 360 · sobre la partida sin marco">sin marco</a></li>
+      </ul>
+    </section>
+    <section aria-labelledby="p-estados">
+      <h2 id="p-estados">Estados transversales <span class="meta">19 artboards</span></h2>
+      <h3>Resumen de estados</h3>
+      <ul>
+        <li><a href="marco.html#a=EstadosResumen.dc.html&amp;w=1440&amp;h=1424">Estados · tipo, texto y comportamiento</a><span class="meta">1440 × 1424</span><a class="solo" href="EstadosResumen.dc.html" aria-label="Abrir Estados · tipo, texto y comportamiento sin marco">sin marco</a></li>
+      </ul>
+      <h3>Estados en la partida · 360</h3>
+      <ul>
+        <li><a href="marco.html#a=EstCarga.dc.html&amp;w=360&amp;h=972">Estado · carga inicial</a><span class="meta">360 × 972 · interactivo</span><a class="solo" href="EstCarga.dc.html" aria-label="Abrir Estado · carga inicial sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=EstReconectando.dc.html&amp;w=360&amp;h=1004">Estado · reconectando</a><span class="meta">360 × 1004 · interactivo</span><a class="solo" href="EstReconectando.dc.html" aria-label="Abrir Estado · reconectando sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=EstVersion.dc.html&amp;w=360&amp;h=972">Estado · versión incompatible</a><span class="meta">360 × 972 · interactivo</span><a class="solo" href="EstVersion.dc.html" aria-label="Abrir Estado · versión incompatible sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=EstDemasiadas.dc.html&amp;w=360&amp;h=972">Estado · demasiadas acciones</a><span class="meta">360 × 972 · interactivo</span><a class="solo" href="EstDemasiadas.dc.html" aria-label="Abrir Estado · demasiadas acciones sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=EstNoPermitida.dc.html&amp;w=360&amp;h=988">Estado · acción no permitida</a><span class="meta">360 × 988 · interactivo</span><a class="solo" href="EstNoPermitida.dc.html" aria-label="Abrir Estado · acción no permitida sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=EstYaResuelta.dc.html&amp;w=360&amp;h=972">Estado · ya resuelta</a><span class="meta">360 × 972 · interactivo</span><a class="solo" href="EstYaResuelta.dc.html" aria-label="Abrir Estado · ya resuelta sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=EstErrorPropio.dc.html&amp;w=360&amp;h=972">Estado · error propio</a><span class="meta">360 × 972 · interactivo</span><a class="solo" href="EstErrorPropio.dc.html" aria-label="Abrir Estado · error propio sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=EstEspectador.dc.html&amp;w=360&amp;h=988">Estado · paso a espectador</a><span class="meta">360 × 988 · interactivo</span><a class="solo" href="EstEspectador.dc.html" aria-label="Abrir Estado · paso a espectador sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=EstSalir360.dc.html&amp;w=360&amp;h=972">Estado · confirmación de salida · 360</a><span class="meta">360 × 972 · interactivo</span><a class="solo" href="EstSalir360.dc.html" aria-label="Abrir Estado · confirmación de salida · 360 sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=EstPista360.dc.html&amp;w=360&amp;h=972">Estado · confirmación de pista · 360</a><span class="meta">360 × 972 · interactivo</span><a class="solo" href="EstPista360.dc.html" aria-label="Abrir Estado · confirmación de pista · 360 sin marco">sin marco</a></li>
+      </ul>
+      <h3>Estados en la partida · 1280</h3>
+      <ul>
+        <li><a href="marco.html#a=EstPestana.dc.html&amp;w=1280&amp;h=850">Estado · sesión en otra pestaña</a><span class="meta">1280 × 850 · interactivo</span><a class="solo" href="EstPestana.dc.html" aria-label="Abrir Estado · sesión en otra pestaña sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=EstServidor.dc.html&amp;w=1280&amp;h=858">Estado · servidor no disponible</a><span class="meta">1280 × 858 · interactivo</span><a class="solo" href="EstServidor.dc.html" aria-label="Abrir Estado · servidor no disponible sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=EstTerminada.dc.html&amp;w=1280&amp;h=882">Estado · partida terminada</a><span class="meta">1280 × 882 · interactivo</span><a class="solo" href="EstTerminada.dc.html" aria-label="Abrir Estado · partida terminada sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=EstSalir.dc.html&amp;w=1280&amp;h=850">Estado · confirmación de salida</a><span class="meta">1280 × 850 · interactivo</span><a class="solo" href="EstSalir.dc.html" aria-label="Abrir Estado · confirmación de salida sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=EstPista.dc.html&amp;w=1280&amp;h=850">Estado · confirmación de pista</a><span class="meta">1280 × 850 · interactivo</span><a class="solo" href="EstPista.dc.html" aria-label="Abrir Estado · confirmación de pista sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=EstRecuperadas.dc.html&amp;w=1280&amp;h=850">Estado · se recuperaron X de Y notas</a><span class="meta">1280 × 850 · interactivo</span><a class="solo" href="EstRecuperadas.dc.html" aria-label="Abrir Estado · se recuperaron X de Y notas sin marco">sin marco</a></li>
+      </ul>
+      <h3>Estados en la partida · 768 y horizontal</h3>
+      <ul>
+        <li><a href="marco.html#a=EstNoDeshacer.dc.html&amp;w=768&amp;h=1116">Estado · no se pudo deshacer</a><span class="meta">768 × 1116 · interactivo</span><a class="solo" href="EstNoDeshacer.dc.html" aria-label="Abrir Estado · no se pudo deshacer sin marco">sin marco</a></li>
+        <li><a href="marco.html#a=EstReconectandoH.dc.html&amp;w=740&amp;h=452">Estado · reconectando · horizontal</a><span class="meta">740 × 452 · interactivo</span><a class="solo" href="EstReconectandoH.dc.html" aria-label="Abrir Estado · reconectando · horizontal sin marco">sin marco</a></li>
+      </ul>
+    </section>
+</main>
+</body>
+</html>

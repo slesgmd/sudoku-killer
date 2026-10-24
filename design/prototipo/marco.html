@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Artboard · prototipo F7</title>
+<link rel="stylesheet" href="./tokens.css">
+<link rel="stylesheet" href="./fonts/fonts.css">
+<style>
+body { margin: 0; background: #DAD5CA; color: var(--ink); font-family: var(--font-ui); font-size: 14px; line-height: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-height: 52px; padding: 0 16px; background: var(--paper); border-bottom: 1px solid var(--border); }
+header a { color: var(--ink); font-weight: 500; text-underline-offset: 3px; }
+header a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.meta { color: var(--muted); font-variant-numeric: tabular-nums; }
+.stage { overflow: auto; padding: 24px 16px 48px; }
+iframe { display: block; margin: 0 auto; border: 0; background: var(--canvas); box-shadow: var(--shadow-float); }
+</style>
+</head>
+<body>
+<header>
+  <a href="./index.html">← Índice</a>
+  <strong id="t">Artboard</strong>
+  <span class="meta" id="m"></span>
+  <a id="solo" href="./index.html">Abrir sin marco</a>
+</header>
+<div class="stage"><iframe id="f" title="Artboard"></iframe></div>
+<script>
+  // El marco tiene el tamaño del artboard en el lienzo (canvas.json), como en la vista de reproducción.
+  (function () {
+    // Parámetros en el fragmento: npx serve redirige marco.html a /marco y descarta la consulta.
+    var q = new URLSearchParams(location.hash.slice(1));
+    var a = q.get("a") || "Main.dc.html";
+    if (!/^[A-Za-z0-9_-]+\.dc\.html$/.test(a)) a = "Main.dc.html";
+    var w = Math.max(40, Math.min(8000, Number(q.get("w")) || 1280));
+    var h = Math.max(40, Math.min(12000, Number(q.get("h")) || 850));
+    var f = document.getElementById("f");
+    f.src = "./" + a;
+    f.style.width = w + "px";
+    f.style.height = h + "px";
+    document.getElementById("solo").href = "./" + a;
+    document.getElementById("m").textContent = w + " × " + h;
+    fetch("./canvas.json").then(function (r) { return r.json(); }).then(function (c) {
+      var b = c.boards[a];
+      if (!b) return;
+      var t = b.title || a;
+      document.getElementById("t").textContent = t;
+      document.title = t + " · prototipo F7";
+      f.title = t;
+    }).catch(function () {});
+  })();
+</script>
+</body>
+</html>
