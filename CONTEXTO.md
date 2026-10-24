@@ -6,11 +6,14 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 ## Estado
 
 - **Plan:** versión 1.11. **SPEC:** versión 1.2.
-- **Fase actual:** F5, banco de puzzles y calibración de dificultad (2–4 h). F4 (motor del puzzle, F4a–F4f) se cerró el 2026-10-23 con unas 3,4 h reales frente a 20–35 h estimadas. Recalibración de F5 a F13 aprobada (F7 y F13 en 10 h; total de la v1, unas 45–66 h).
-- **Próxima tarea exacta: F5** (`docs/PLAN.md`, F5), con las decisiones ya aprobadas:
-  - Los puzzles que exceden todas las técnicas se excluyen del banco (el script de lotes los descarta y cuenta).
-  - El fácil se obtiene generando más candidatos y filtrando. `easyGivens` solo si la prueba manual muestra que el fácil resulta difícil. Las jaulas más chicas (`cageSizeWeights`) quedan descartadas.
-  - La equivalencia entre niveles del calificador y dificultades del juego se decide en F5 con el informe para F5 (`docs/motor.md`): uso por técnica y peso de `unitCombination` en el nivel 5, con una variante acotada propuesta y sin implementar.
+- **Fase actual:** F5, banco de puzzles y calibración de dificultad (2–4 h). F4 (motor del puzzle, F4a–F4f) se cerró el 2026-10-23 con unas 3,4 h reales frente a 20–35 h estimadas.
+- **Recalibración de F5 a F13: aprobada** (F7 y F13 en 10 h; total de la v1, unas 45–66 h; `docs/PLAN.md`, sección 5).
+- **F7 (diseño visual propio):** el diseño está terminado fuera del repositorio. Todavía no está importado ni documentado.
+- **Próxima tarea exacta:** antes de F5, importar al repositorio el diseño de F7 y documentarlo. Después, F5 (`docs/PLAN.md`, F5).
+- **Decisiones de F5, aprobadas:**
+  - a) Los puzzles que exceden todas las técnicas se excluyen del banco (el script de lotes los descarta y cuenta).
+  - b) El fácil se obtiene generando más candidatos y filtrando. `easyGivens` solo si la prueba manual muestra que el fácil resulta difícil. Las jaulas más chicas (`cageSizeWeights`) quedan descartadas.
+- **Lo único abierto en F5:** la equivalencia entre niveles del calificador y dificultades del juego. Se decide con el informe para F5 (`docs/motor.md`): uso por técnica y peso de `unitCombination` en el nivel 5 (sin ella, los 85 puzzles de nivel 5 exceden las técnicas), con una variante acotada propuesta y sin implementar.
   - Calificador: niveles 1 a 5 en `packages/engine/src/grader/` (`MAX_TECHNIQUE_LEVEL = 5`, `UNRATED = 6`); `grade` da `maxLevel` y `stepsByLevel` para los histogramas.
   - Corpus de F4f (1000 puzzles 9×9): nivel máximo 0 / 100 / 668 / 77 / 85 en los niveles 1 a 5 y 70 que exceden. `levelToDeduce`: p95 9,2 ms (límite acordado: 50 ms).
 
