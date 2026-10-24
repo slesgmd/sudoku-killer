@@ -340,3 +340,55 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 **Tiempo real de F7:** unas 1,5 h, frente a las 10 h aprobadas.
 
 **Siguiente:** F5, banco de puzzles y calibración de dificultad, empezando en modo plan.
+
+## 2026-10-23 — F5: banco de puzzles y calibración de dificultad
+
+**Pedido del usuario:**
+- Plan con cuatro subtareas: acotar `unitCombination` y medir las cotas 4/8, 5/16 y 5/32; equivalencia entre niveles y dificultades con histogramas; script de lotes; esquema `puzzles` y manifiesto de semillas; `docs/dificultad.md`; y cómo tratar la prueba manual sin cliente.
+- Al aprobar el plan agregó la prueba T-20.5, la justificación correcta del `id` opaco, español neutro en los documentos y un punto de control después de medir las cotas.
+- En el punto de control aprobó la cota 4/8 y la equivalencia, como versión 1 sujeta a recalibración.
+
+**Hecho:**
+- **F5a:**
+  - `unitCombinationWithin({ maxOpenCages, maxCombinations })`: la técnica solo mira unidades dentro de la cota, cuenta las combinaciones en la pasada hacia adelante y no hace la pasada hacia atrás si se pasa.
+  - `TECHNIQUES` usa 4/8 y `GRADER_VERSION` pasa a "2". `grade` acepta `techniques` para medir.
+  - Pruebas: un oráculo con cota (6 cotas, en 4×4 y 6×6), en el que el oráculo de permutaciones cuenta las jaulas abiertas y las combinaciones por su cuenta, y `grader-bounds.corpus.test.ts`.
+- **F5b:**
+  - `difficultyOf` (equivalencia versión 1), y `Difficulty` y `PublicPuzzle` en el protocolo.
+  - `buildBank` y `bank:generate`, que recorren semillas en orden, descartan las que exceden y se quedan con las primeras 500 de cada dificultad.
+  - Manifiesto en `apps/server/bank/manifest.json` y `docs/dificultad.md`.
+- **F5c:**
+  - Drizzle (tabla `puzzles` con su migración y restricciones), `PuzzleRepository` (`getForServer` y `getPublic`) y `loadBank`, que verifica cada semilla antes de escribir y es idempotente.
+  - Pruebas con PGlite. SPEC 1.3 (T-20.3 a T-20.5) y ADR 0006; nota en el ADR 0003.
+- **F5d:** `bank:sample` genera `design/muestra-f5/muestra.html`, con 12 puzzles en SVG, en orden al azar y con letras, más la clave y las soluciones.
+
+**Resultados:**
+- **Cotas** (corpus 1 a 1000, de 85 puzzles de nivel 5):
+
+  | Cota | Conserva | Pasan a exceder | Minutos para 500 de nivel 5 |
+  |---|---|---|---|
+  | 4/8 | 39 | 46 | 9,9 |
+  | 5/16 | 75 | 10 | 5,2 |
+  | 5/32 | 77 | 8 | 5,1 |
+
+  La cota inferior del informe de F4f era 1 para 4/8: la técnica acotada encuentra otros caminos. Los niveles 2 a 4 conservan nivel y pasos con cualquier cota.
+- **Corpus con 4/8:**
+  - 391 229 deducciones, 0 contra la solución, y monotonía en 9000 comparaciones sin ninguna subida.
+  - `grade`: media de 15,6 ms. `levelToDeduce`: media de 0,91 ms y p95 de 5,5 ms.
+- **Banco:**
+  - 15 254 semillas en 9,2 minutos (36,2 ms por candidato); 1589 excluidas (10,4 %).
+  - Semillas hasta completar 500: fácil 4661, media 1048, difícil 1793 y experto 15 254.
+  - El experto sale en el 3,3 % de las semillas.
+- **T-20.5:** en partidas simuladas sobre el banco, `levelToDeduce` nunca devuelve `UNRATED`: en la muestra de la CI y en los 2000 puzzles del corpus.
+
+**Problemas y soluciones:**
+- La prueba de la CI falló por tiempo en algunas pruebas lentas mientras corría el corpus a la vez: era la carga de la máquina. Corridas por separado, todo en verde. Las mediciones de las cotas se repitieron sin otra carga.
+- pnpm 12 rechaza la instalación cuando una dependencia trae un script de instalación no aprobado (esbuild, que usa drizzle-kit). Su binario llega como dependencia opcional, así que en `pnpm-workspace.yaml` se marcó `allowBuilds: esbuild: false`.
+- drizzle-kit carga el esquema sin las fuentes del monorepo: el esquema solo importa tipos, y una prueba comprueba que su lista de dificultades coincide con la del protocolo.
+- Las versiones de las dependencias nuevas se fijaron entre las publicadas hace al menos dos semanas: drizzle-orm 0.45.4, drizzle-kit 0.31.11 y PGlite 0.5.8.
+
+**Desviación registrada:** la prueba manual con jugadores se hace en papel con la muestra imprimible, y sus resultados van a `docs/dificultad.md`, sección 6. La prueba con varios jugadores en tiempo real queda para F8 y F13.
+
+**Tiempo real de F5:** unas 1,2 h, frente a las 2–4 h aprobadas. La comparación está en el PLAN, sección 5: la recalibración se mantiene.
+
+**Siguiente:** F6, sistema de puntuación, empezando en modo plan.

@@ -5,17 +5,20 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.12. **SPEC:** versión 1.2.
-- **Fase actual:** F5, banco de puzzles y calibración de dificultad (2–4 h). F4 (motor del puzzle) se cerró el 2026-10-23 con unas 3,4 h reales frente a 20–35 h, y F7 (diseño) el mismo día con unas 1,5 h frente a 10 h.
-- **Recalibración de F5 a F13: aprobada** (F7 y F13 en 10 h; total de la v1, unas 45–66 h; `docs/PLAN.md`, sección 5).
+- **Plan:** versión 1.13. **SPEC:** versión 1.3.
+- **Fase actual:** F6, sistema de puntuación (2–5 h). F5 (banco y dificultad) se cerró el 2026-10-23 con unas 1,2 h frente a 2–4 h; F4 y F7, el mismo día.
+- **Próxima tarea exacta:** F6 en modo plan (`docs/PLAN.md`, F6).
+- **Resultados de F5 que usa F6:**
+  - Calificador con `unitCombination` acotada a 4 jaulas abiertas y 8 combinaciones (`GRADER_VERSION` "2", `docs/motor.md`).
+  - Todo puzzle del banco tiene `graderMaxLevel` de 1 a 5, y en partidas simuladas `levelToDeduce` nunca devuelve `UNRATED` (T-20.5): F6 puede contar con eso.
+  - En 100 partidas simuladas del corpus, `levelToDeduce` dio 6190 de nivel 1, 1574 de nivel 2, 291 de nivel 3, 24 de nivel 4 y 3 de nivel 5, y tardó 0,91 ms de media (p95 5,5 ms).
+- **Banco (F5):**
+  - Equivalencia versión 1 en `docs/dificultad.md`: fácil, nivel ≤ 2; media, nivel 3 con 1 paso de nivel 3; difícil, nivel 3 con más pasos o nivel 4; experto, nivel 5.
+  - 2000 puzzles como manifiesto de semillas en `apps/server/bank/manifest.json` (ADR 0006).
+  - Tabla `puzzles` con Drizzle, `PuzzleRepository` y `loadBank` en `apps/server/src/`.
+  - F9 hereda el driver de PostgreSQL, `bank:load`, la comprobación al arrancar y la elección sin repetir.
+- **Pendiente del usuario:** la prueba en papel con `design/muestra-f5/muestra.html`; los resultados se anotan en `docs/dificultad.md`, sección 6. Si el fácil resulta difícil, se activa `easyGivens` y se regenera el manifiesto antes de F9.
 - **Diseño (F7):** prototipo en `design/prototipo/` (`npx serve design/prototipo`), guía en `docs/diseno.md` y entrega a F8 con siete decisiones en `design/entrega-f8.md`.
-- **Próxima tarea exacta:** F5 en modo plan (`docs/PLAN.md`, F5).
-- **Decisiones de F5, aprobadas:**
-  - a) Los puzzles que exceden todas las técnicas se excluyen del banco (el script de lotes los descarta y cuenta).
-  - b) El fácil se obtiene generando más candidatos y filtrando. `easyGivens` solo si la prueba manual muestra que el fácil resulta difícil. Las jaulas más chicas (`cageSizeWeights`) quedan descartadas.
-- **Lo único abierto en F5:** la equivalencia entre niveles del calificador y dificultades del juego. Se decide con el informe para F5 (`docs/motor.md`): uso por técnica y peso de `unitCombination` en el nivel 5 (sin ella, los 85 puzzles de nivel 5 exceden las técnicas), con una variante acotada propuesta y sin implementar.
-  - Calificador: niveles 1 a 5 en `packages/engine/src/grader/` (`MAX_TECHNIQUE_LEVEL = 5`, `UNRATED = 6`); `grade` da `maxLevel` y `stepsByLevel` para los histogramas.
-  - Corpus de F4f (1000 puzzles 9×9): nivel máximo 0 / 100 / 668 / 77 / 85 en los niveles 1 a 5 y 70 que exceden. `levelToDeduce`: p95 9,2 ms (límite acordado: 50 ms).
 
 ## Reglas clave
 
@@ -42,7 +45,8 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 - `pnpm install`: instala las dependencias y activa el hook de pre-commit (Husky y lint-staged).
 - `pnpm dev`: servidor (Node desde las fuentes, con `--watch`) y web (Vite) en paralelo.
 - `pnpm check`: typecheck, ESLint (con tipos) y Prettier. `pnpm test`: Vitest en todo el monorepo. `pnpm build`: `tsc` a `dist/` y Vite.
-- `pnpm test:corpus`: corpus de 1000 puzzles generados, verificados por A y B (unos 60 s; también en el workflow programado `corpus.yml`).
+- `pnpm test:corpus`: corpus de 1000 puzzles (A y B, calificador y cotas) y el banco completo (unos 4 min; también en el workflow programado `corpus.yml`).
+- Servidor: `pnpm --filter @sudoku-killer/server bank:generate` (manifiesto, unos 9 min), `bank:sample` (muestra imprimible) y `db:generate` (migraciones de Drizzle en `apps/server/drizzle/`).
 - Pruebas de propiedades: `assertProperty` (`packages/engine/test/helpers/property.ts`), no `fc.assert` (lint). Cada semilla que falle se agrega a `regressions` (`docs/motor.md`).
 - Los paquetes exportan sus fuentes con la condición `@sudoku-killer/source`. Los imports relativos llevan la extensión `.ts`.
 - TypeScript fijado en 6.0.x: `typescript-eslint` no admite la 7 (ADR 0001, nota de F3).
@@ -61,13 +65,14 @@ docs/referencia.md     comportamiento de la app de referencia (F1)
 docs/adr/              decisiones técnicas (README con plantilla e índice)
 docs/motor.md          motor del puzzle: API, algoritmos y mediciones (F4)
 docs/diseno.md         guía de estilo y revisión de originalidad (F7)
-design/                prototipo (prototipo/), pantallas, entrega a F8 y fotos
+docs/dificultad.md     equivalencia de dificultades, banco y prueba manual (F5)
+design/                prototipo (prototipo/), pantallas, entrega a F8, fotos y muestra de F5 (muestra-f5/)
 evidence/              evidencia local de REA (ignorada por git)
 packages/engine        motor del puzzle (puro)
 packages/protocol      mensajes y esquemas Zod (nunca la solución, T-31.3)
 packages/scoring       puntuación (pura)
 packages/game          reductor de la partida y GameMode (puro)
-apps/server            servidor de salas
+apps/server            servidor de salas; banco (bank/manifest.json), esquema y migraciones (drizzle/)
 apps/web               cliente React y Vite
 tests/                 pruebas del repositorio (reglas de lint)
 ```
@@ -87,3 +92,4 @@ tests/                 pruebas del repositorio (reglas de lint)
 - 0003 Persistencia: salas en memoria y PostgreSQL. Las partidas en curso se reconstruyen tras un reinicio.
 - 0004 Registro de eventos: solo hechos, con `seq` por partida. Los eventos se confirman en la base de datos antes de difundirse. Reductor puro en `packages/game`.
 - 0005 Notas grupales: operaciones `add` y `remove` ordenadas por el servidor, cliente optimista y deshacer con comprobación.
+- 0006 Banco de puzzles como manifiesto de semillas, verificado al cargar; `id` opaco (UUID).

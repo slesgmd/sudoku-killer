@@ -1,7 +1,7 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.12
-Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F7 hecha (2026-10-23)
+Versión del plan: 1.13
+Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F5 hecha (2026-10-23) · F7 hecha (2026-10-23)
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
 ---
@@ -115,7 +115,7 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 | F2 | Especificación y arquitectura | 6–10 | F1 | Hecha | ~0,4 |
 | F3 | Monorepo y calidad | 3–5 | F2 | Hecha | ~0,3 |
 | F4 | Motor del puzzle | 20–35 | F3 | Hecha | ~3,4 (F4a ~0,3 + 0,1 de corrección · F4b ~0,6 · F4c ~1,1 · F4d ~0,4 · F4e ~0,4 · F4f ~0,5) |
-| F5 | Banco de puzzles y dificultad | 2–4 | F4 | Pendiente | |
+| F5 | Banco de puzzles y dificultad | 2–4 | F4 | Hecha | ~1,2 |
 | F6 | Sistema de puntuación | 2–5 | F4 | Pendiente | |
 | F7 | Diseño visual propio | 10 | F2 (puede ir en paralelo con F4–F6) | Hecha | ~1,5 |
 | F8 | Cliente con servidor local simulado | 4–8 | F4, F7 | Pendiente | |
@@ -148,6 +148,13 @@ Equivale a unas **2,5–4,5 semanas** dedicando 15–20 horas por semana, más l
 | **F5–F13** | **96–171** | **40–61** | |
 
 Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, frente a 130–230 h. La columna «Horas estimadas» de la tabla de arriba ya usa estos valores. Se vuelve a comparar al cerrar F5 y F10.
+
+**Comparación al cerrar F5 (2026-10-23):**
+- F5 llevó unas 1,2 h frente a 2–4 h (entre el 30 % y el 60 %) y F7, unas 1,5 h frente a 10 h (15 %).
+- De F0 a F7 van unas 7,5 h reales.
+- La recalibración se mantiene sin cambios. F5 y F7 quedaron por debajo, pero las fases que vienen (F8 a F13) tienen la interfaz, la integración en tiempo real, el despliegue y la beta con personas, que se aceleran menos.
+- La prueba manual de F5 queda pendiente: se hará en papel con la muestra impresa y no entra en estas horas.
+- Próxima comparación: al cerrar F10.
 
 ---
 
@@ -305,6 +312,60 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, fre
 - **b) Nivel fácil: se obtiene generando más puzzles y filtrando.** Solo el 10 % de los puzzles generados se resuelve con técnicas de nivel 2 o menos (ninguno con nivel 1): para 500 fáciles hacen falta unos 5000 candidatos, unos 6 minutos a unos 70 ms cada uno (generación y calificación). Los números iniciales del nivel fácil (`easyGivens`, que permite la decisión P2 de la SPEC) se usan solo si la prueba manual muestra que el fácil resulta difícil. Ajustar `cageSizeWeights` hacia jaulas más chicas queda descartado.
 - **c) La equivalencia entre los niveles del calificador y las dificultades del juego se decide en F5**, con el informe para F5 del calificador (`docs/motor.md`, «Informe para F5»): uso de cada técnica y peso de `unitCombination` en el nivel 5.
 
+**Pedido del usuario al planificar (2026-10-23):**
+- acotar `unitCombination` y medir las cotas 4/8, 5/16 y 5/32, con las mismas pruebas de F4e y F4f;
+- proponer la equivalencia con histogramas;
+- script de lotes con descartes y tiempos;
+- esquema `puzzles` con Drizzle y evaluar un manifiesto de semillas;
+- escribir `docs/dificultad.md`;
+- proponer cómo tratar la prueba manual sin cliente.
+
+Al aprobar el plan, el usuario pidió además:
+- una prueba de que `levelToDeduce` nunca devuelve `UNRATED` en partidas sobre puzzles del banco (T-20.5);
+- justificar el `id` opaco por la enumeración del banco y no por la solución;
+- documentos en español neutro;
+- un punto de control después de medir las cotas.
+
+**Subtareas:**
+
+| Subtarea | Contenido | Estado |
+|---|---|---|
+| F5a | `unitCombination` acotada (`unitCombinationWithin`, `GRADER_VERSION` "2"), oráculo con cota y medición de las cotas en el corpus. Punto de control: cota y equivalencia aprobadas por el usuario. | Hecha |
+| F5b | `difficultyOf` (equivalencia versión 1), `Difficulty` y `PublicPuzzle` en el protocolo, `buildBank` y el script `bank:generate`, manifiesto versionado y `docs/dificultad.md`. | Hecha |
+| F5c | Drizzle: tabla `puzzles` con su migración, `PuzzleRepository`, `loadBank` idempotente y pruebas con PGlite. SPEC 1.3 (T-20.3 a T-20.5) y ADR 0006. | Hecha |
+| F5d | Muestra imprimible (`bank:sample`, `design/muestra-f5/muestra.html`) y cierre. | Hecha |
+
+**Estado:** hecha el 2026-10-23, en unas 1,2 h.
+- **Cota de `unitCombination`: 4 jaulas abiertas y 8 combinaciones**, aprobada.
+  - Conserva 39 de los 85 puzzles de nivel 5 del corpus (5/16 conserva 75 y 5/32, 77).
+  - 500 de nivel 5 salen en unos 10 minutos.
+  - Las pruebas siguen en verde: 0 deducciones contra la solución, monotonía en 9000 comparaciones y oráculo con cota.
+- **Equivalencia, versión 1, aprobada:**
+  - fácil: nivel máximo 2 o menos;
+  - media: nivel 3 con un solo paso de nivel 3;
+  - difícil: nivel 3 con 2 o más pasos de nivel 3, o nivel 4;
+  - experto: nivel 5;
+  - se excluyen los que exceden.
+  - Se recalibra con la muestra impresa y en F13.
+- **Banco:**
+  - 2000 puzzles (500 por dificultad) de las semillas 1 a 15 254, en 9,2 minutos;
+  - 1589 excluidos (10,4 %);
+  - ningún fácil usa técnicas de nivel 3 o más;
+  - manifiesto de semillas en `apps/server/bank/manifest.json` (ADR 0006).
+- **Base de datos:**
+  - tabla `puzzles` con Drizzle y su migración, y `PuzzleRepository` con `getForServer` y `getPublic`;
+  - el `id` es un UUID opaco, y ni la solución ni la semilla salen en el puzzle público;
+  - `loadBank` verifica cada semilla y es idempotente;
+  - pruebas con PGlite.
+- **T-20.5:**
+  - en partidas simuladas sobre los 2000 puzzles del banco, `levelToDeduce` nunca devuelve `UNRATED`;
+  - la CI usa una muestra y `pnpm test:corpus`, el banco completo.
+- **Desviación registrada:**
+  - la prueba manual con jugadores se hace en papel con la muestra imprimible, de 12 puzzles sin la dificultad a la vista (`docs/dificultad.md`, sección 6);
+  - la prueba con varios jugadores en tiempo real queda para F8 y F13;
+  - si el fácil resulta difícil, se activa `easyGivens` y se regenera el manifiesto antes de F9.
+- **Pasa a F9:** el driver de PostgreSQL, el comando `bank:load`, la comprobación al arrancar y la elección al azar sin repetir.
+
 ### F6 — Sistema de puntuación (2–5 h; original 10–18 h)
 **Modelo inicial** (los parámetros viven en `scoring/params.v1.json` y se versionan):
 - **Acierto en la celda c:** `V(c) = B × w(nivelParaDeducir(c, estado actual))`. Recompensa resolver celdas difíciles, no correr por las fáciles. Valores iniciales: B = 10 y pesos w = 1; 1,5; 2; 3 para los niveles 1 a 4 o más.
@@ -382,6 +443,10 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - Pistas compartidas, deshacer de notas con comprobación, presencia, y vuelta con ficha tras salir o expirar (SPEC R-19, R-24 a R-27).
 - Heartbeat, `maxPayload` y control de saturación (ADR 0002).
 - Confirmación en la base de datos antes de difundir y reconstrucción de las partidas en curso tras un reinicio (ADR 0003 y 0004).
+- Banco de puzzles (heredado de F5, ADR 0006):
+  - driver de PostgreSQL y comando `bank:load` con `DATABASE_URL`, que aplica las migraciones y llama a `loadBank`;
+  - comprobación al arrancar de que hay puzzles de cada dificultad;
+  - elección al azar sin repetir (R-21, T-21.1 y T-21.2) en `PuzzleRepository`.
 
 **Criterios de aceptación:**
 - Pruebas de cada transición de estado y de cada caso límite de la SPEC.
@@ -484,3 +549,11 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
   - Decisiones de F5 aprobadas: los puzzles que exceden todas las técnicas se excluyen del banco; el fácil se obtiene generando más y filtrando (`easyGivens` solo si la prueba manual muestra que resulta difícil; las jaulas más chicas quedan descartadas); la equivalencia entre niveles y dificultades se decide en F5 con el informe del calificador (`docs/motor.md`).
   - Sección 1: la frase de jugadas simultáneas coincide con R-05 (si la primera jugada es un error, la celda sigue libre).
 - **1.12:** F7 hecha (~1,5 h reales frente a 10 h aprobadas). Prototipo importado en `design/prototipo/` (4 páginas, 51 artboards), guía de estilo con la revisión de originalidad (T-18.1) en `docs/diseno.md` y documentos de entrega en `design/`. Siete correcciones al prototipo quedan decididas para F8 (`design/entrega-f8.md`). La tabla de la sección 5 conserva la estimación aprobada; la diferencia de F7 entra en la próxima comparación, al cerrar F5.
+- **1.13:** F5 hecha (~1,2 h reales frente a 2–4 h).
+  - `unitCombination` acotada a 4/8 (`GRADER_VERSION` "2") y equivalencia de dificultades versión 1, las dos aprobadas por el usuario en el punto de control de F5a.
+  - Banco de 2000 puzzles versionado como manifiesto de semillas (ADR 0006).
+  - Tabla `puzzles` con Drizzle, `PuzzleRepository` y `loadBank`, con pruebas con PGlite.
+  - SPEC 1.3: T-20.3 a T-20.5 y `PuzzleRecord` con `graderVersion` y `seed`.
+  - La prueba manual se hace en papel con una muestra imprimible; la prueba con varios jugadores en tiempo real queda para F8 y F13 (desviación registrada).
+  - F9 hereda la carga contra PostgreSQL y la elección de puzzles.
+  - Comparación de horas en la sección 5: la recalibración se mantiene.
