@@ -5,7 +5,7 @@
 
 ## Contexto
 `PLAN.md` §3 propone un stack por defecto que hay que confirmar en F2. Las restricciones son estas:
-- Una sola persona desarrolla, .
+- Una sola persona desarrolla.
 - TypeScript estricto de punta a punta, con esquemas compartidos entre el cliente y el servidor.
 - Lógica pura y testeable con pruebas de propiedades.
 - Tiempo real con un servidor autoritativo.

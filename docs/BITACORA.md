@@ -486,3 +486,21 @@ Al aprobar, agregó el nivel con los descartes públicos de los errores, las vid
 **Tiempo real:** unas 2,2 h, frente a 2–5 h. Las simulaciones largas (de 7 a 14 minutos cada una) corrieron en paralelo con el resto del trabajo.
 
 **Siguiente:** F8, cliente con servidor local simulado, en modo plan. Sigue pendiente del usuario la segunda prueba en papel de F5.
+
+## 2026-10-24 — Limpieza de atribuciones (antes de F8)
+
+**Hecho:**
+- Inventario de los archivos versionados: 27 coincidencias en 7 archivos, más un nombre de archivo. No había ninguna en el prototipo, el lockfile, los workflows ni los `package.json`.
+- La memoria del proyecto pasa a `CONTEXTO.md` y se actualizan sus referencias (también en las entradas anteriores de esta bitácora). El archivo de carga local, no versionado, solo importa `CONTEXTO.md`; se excluye con `.git/info/exclude` y no con `.gitignore`.
+- Redacción neutra: PLAN §4 pasa a «Protocolo de trabajo»; la línea de entorno verificado, las horas de §5, la tarea de verificación de F0, ADR 0001 y la entrada de F0 de esta bitácora ya no nombran herramientas. «Antes de cada /clear» pasa a «Antes de cerrar cada sesión o reiniciar el contexto». PLAN 1.16.
+- `scripts/attribution-patterns.mjs`: los términos, codificados en base64, y las expresiones del hook. `strip-attribution.mjs` los toma de ahí.
+- `scripts/attribution-guard.mjs` y el job `attribution-guard` de la CI: revisan el contenido y el nombre de los archivos versionados y los mensajes de los commits del push (`before..after`; si `before` es todo ceros o no existe, los commits que no están en otra rama remota) o del PR (`base..head`). El job empieza con un caso de control que tiene que fallar.
+- `tests/attribution.test.ts`: el hook y el guardia, con fixtures codificados. El caso de control tiene dos commits y solo el primero contiene el término; el guardia falla con el rango del PR, con el del push y con `before` en ceros.
+
+**Problemas y soluciones:**
+- El job podía fallar con el propio push de la limpieza si un mensaje nombraba el archivo anterior. Los mensajes de estos commits lo evitan.
+- Un push forzado deja un `before` que la CI no tiene. En ese caso, el guardia trata el push como una rama nueva.
+
+**Tiempo real:** menos de 1 h.
+
+**Siguiente:** auditoría del historial (paso 8) y decisión del usuario. Después, F8 en modo plan.

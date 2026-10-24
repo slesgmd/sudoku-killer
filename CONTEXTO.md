@@ -5,7 +5,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.15. **SPEC:** versión 1.5.
+- **Plan:** versión 1.16. **SPEC:** versión 1.5.
 - **Fase actual:** F8, cliente con servidor local simulado (4–8 h). F6 (puntuación) se cerró el 2026-10-24 con unas 2,2 h frente a 2–5 h; F4, F5 y F7, el 2026-10-23.
 - **Próxima tarea exacta:** F8 en modo plan (`docs/PLAN.md`, F8), con la entrega de F7 (`design/entrega-f8.md`).
 - **Puntuación (F6, `docs/puntuacion.md`):**
@@ -21,6 +21,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
   - Tabla `puzzles` con Drizzle, `PuzzleRepository` y `loadBank` en `apps/server/src/`.
   - F9 hereda el driver de PostgreSQL, `bank:load`, la comprobación al arrancar y la elección sin repetir.
 - **Pendiente del usuario:** la segunda prueba en papel con `design/muestra-f5/muestra.html` (equivalencia versión 2); los resultados se anotan en `docs/dificultad.md`, sección 6. Si las dificultades no se distinguen, se ajusta la equivalencia y se regenera el manifiesto antes de F9.
+- **Pendiente del usuario (historial):** decidir si se reescribe el historial de git, se recrea el repositorio o se pasa a privado, según la auditoría de la limpieza de atribuciones (`docs/BITACORA.md`, 2026-10-24). No bloquea F8.
 - **Diseño (F7):** prototipo en `design/prototipo/` (`npx serve design/prototipo`), guía en `docs/diseno.md` y entrega a F8 con siete decisiones en `design/entrega-f8.md`.
 
 ## Reglas clave
@@ -40,7 +41,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 - TypeScript estricto. Textos de la interfaz preparados para i18n.
 - Aserción `!` prohibida salvo en `packages/engine/src/solver-{a,b}/` (`docs/motor.md`); fuera, `for...of`, comprobaciones o `at()` de `src/model/at.ts`.
 - Commits con formato Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `test:`, `refactor:`).
-- Nunca agregues atribuciones de IA en commits ni PR. El hook `.husky/commit-msg` (`scripts/strip-attribution.mjs`) las quita igual.
+- Nunca agregues atribuciones de IA en commits ni PR. El hook `.husky/commit-msg` (`scripts/strip-attribution.mjs`) las quita igual, y el job `attribution-guard` de la CI (`scripts/attribution-guard.mjs`) falla si quedan en archivos versionados o en mensajes de commit. Los términos están codificados en `scripts/attribution-patterns.mjs`.
 - Rama principal: `main`.
 
 ## Comandos
@@ -54,13 +55,13 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 - Pruebas de propiedades: `assertProperty` (`packages/engine/test/helpers/property.ts`), no `fc.assert` (lint). Cada semilla que falle se agrega a `regressions` (`docs/motor.md`).
 - Los paquetes exportan sus fuentes con la condición `@sudoku-killer/source`. Los imports relativos llevan la extensión `.ts`.
 - TypeScript fijado en 6.0.x: `typescript-eslint` no admite la 7 (ADR 0001, nota de F3).
-- Remoto público: https://github.com/slesgmd/sudoku-killer. La CI (GitHub Actions) corre `check`, `test` y `build` en cada push a `main`.
+- Remoto público: https://github.com/slesgmd/sudoku-killer. La CI (GitHub Actions) corre `check`, `test`, `build` y `attribution-guard` en cada push a `main` y en cada PR.
 - Entorno verificado en F0: Node 24.21, pnpm 12.12, Git 2.54 y REA 6.7.0.
 
 ## Mapa de carpetas
 
 ```
-CONTEXTO.md              este archivo (máximo unas 120 líneas)
+CONTEXTO.md            este archivo (máximo unas 120 líneas)
 docs/PLAN.md           plan por fases y su estado
 docs/SPEC.md           especificación: datos, estados, protocolo v1, GameMode, reglas y pruebas
 docs/BITACORA.md       historial detallado y horas reales
@@ -82,7 +83,7 @@ apps/web               cliente React y Vite
 tests/                 pruebas del repositorio (reglas de lint)
 ```
 
-## Antes de cada /clear
+## Antes de cerrar cada sesión o reiniciar el contexto
 
 1. Actualizar este archivo (estado y próxima tarea exacta).
 2. Agregar una entrada en `docs/BITACORA.md`.

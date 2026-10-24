@@ -32,7 +32,6 @@ rea-evidence/
 evidence/
 *.har
 
-
 # Editores y sistema operativo
 .vscode/*
 !.vscode/extensions.json

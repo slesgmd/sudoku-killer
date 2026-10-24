@@ -1,6 +1,6 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.15
+Versión del plan: 1.16
 Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F5 hecha (2026-10-23) · F6 hecha (2026-10-24) · F7 hecha (2026-10-23)
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
@@ -91,7 +91,7 @@ El modo competitivo entre amigos y cualquier idea nueva se registran en `docs/ID
 1. Al iniciar una sesión, leer `CONTEXTO.md` y la sección de la fase actual de este plan.
 2. Al iniciar una fase, usar el modo plan: proponer las subtareas y esperar aprobación.
 3. Trabajar en tareas pequeñas. Cada tarea termina con sus pruebas en verde.
-4. **Antes de cada `/clear`:**
+4. **Antes de cerrar cada sesión o reiniciar el contexto:**
    - Actualizar `CONTEXTO.md` (estado y próxima tarea exacta).
    - Agregar una entrada en `BITACORA.md`.
    - Marcar el avance en este plan.
@@ -634,3 +634,4 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
   - Las metas de F6 se cambiaron en el punto de control, por decisión del usuario. La de equidad (cuota de puntaje frente a cuota de aporte, entre veloz y lógico) reemplaza a la del 55 %, y el Spearman se mide contra el techo de confiabilidad.
   - Las brechas que quedan son limitaciones conocidas, que se recalibran en F11 y F13 con partidas reales.
   - SPEC 1.5 (§2.3, §5, T-19.6, T-35.7, T-35.8 y R-36) y `docs/puntuacion.md`.
+- **1.16:** la memoria del proyecto pasa a `CONTEXTO.md` y se actualizan sus referencias. La sección 4 pasa a llamarse «Protocolo de trabajo» y su redacción, como la de la sección 5 y la de F0, queda neutra respecto de las herramientas. La CI suma el job `attribution-guard`.
