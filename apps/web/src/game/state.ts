@@ -14,6 +14,7 @@ import type {
   RoomState,
   Settings,
 } from "@sudoku-killer/protocol";
+import type { TransportStatus } from "../transport/types.ts";
 
 export type Phase = "home" | "entering" | "loading" | "playing" | "ended";
 export type InputMode = "number" | "notes";
@@ -66,8 +67,18 @@ export interface MatchView {
   readonly ranking: readonly RankingEntry[] | null;
 }
 
+/** Por qué se volvió al inicio desde una sala: ya no existe o no tiene asientos libres. */
+export interface RoomNotice {
+  readonly kind: "gone" | "full";
+  readonly code: string;
+}
+
 export interface ClientState {
   readonly phase: Phase;
+  /** Estado de la conexión con el servidor. */
+  readonly connection: TransportStatus;
+  /** Aviso del inicio tras intentar volver a una sala. */
+  readonly roomNotice: RoomNotice | null;
   readonly playerId: string | null;
   readonly room: {
     readonly code: string;
@@ -109,6 +120,8 @@ export interface ClientState {
 
 export const INITIAL_STATE: ClientState = {
   phase: "home",
+  connection: "idle",
+  roomNotice: null,
   playerId: null,
   room: null,
   players: [],

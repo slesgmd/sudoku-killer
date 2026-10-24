@@ -1,30 +1,17 @@
 // Adaptador `ws` de producción (ADR 0002) con conexiones reales en 127.0.0.1: orígenes permitidos,
 // ruta, `maxPayload` (1009), mensajes binarios, heartbeat, E-19 (4000) y E-08 (4001). El inspector
 // de filtración revisa también todo lo que reciben estos clientes (T-31.1).
-import { createRng } from "@sudoku-killer/engine";
 import { CLOSE_REPLACED, CLOSE_UNSUPPORTED, type ServerEnvelope } from "@sudoku-killer/protocol";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import WebSocket from "ws";
-import { seededIds } from "../src/infra/random.ts";
-import { WS_PATH, WsTransport } from "../src/infra/ws-transport.ts";
-import { silentLogger } from "../src/log/logger.ts";
-import { createMatchRepository } from "../src/match/repository.ts";
-import { EventWriter } from "../src/match/sink.ts";
-import { RoomServer } from "../src/rooms/server.ts";
-import { FakeClock } from "./helpers/clock.ts";
-import { LeakInspector } from "./helpers/inspector.ts";
-import { mode, testBank } from "./helpers/server.ts";
+import { WS_PATH } from "../src/infra/ws-transport.ts";
+import { testBank } from "./helpers/server.ts";
+import { TEST_ORIGIN, startWsServer, type RunningWsServer } from "./helpers/ws-server.ts";
 
-const ORIGIN = "http://localhost:5173";
+const ORIGIN = TEST_ORIGIN;
 const WAIT_MS = 5_000;
 
-interface Running {
-  readonly port: number;
-  readonly clock: FakeClock;
-  readonly server: RoomServer;
-  readonly inspector: LeakInspector;
-  stop(): Promise<void>;
-}
+type Running = RunningWsServer;
 
 let running: Running | null = null;
 let clientIds = 0;
@@ -42,54 +29,7 @@ afterEach(async () => {
 });
 
 async function start(): Promise<Running> {
-  const { db, client, catalog, solutions } = await testBank();
-  await client.query("TRUNCATE match_events, matches");
-  const clock = new FakeClock();
-  const repository = createMatchRepository(db);
-  const transport = new WsTransport({
-    host: "127.0.0.1",
-    port: 0,
-    allowedOrigins: [ORIGIN],
-    clock,
-    logger: silentLogger,
-  });
-  const server = new RoomServer({
-    transport,
-    clock,
-    random: createRng(7),
-    ids: seededIds(createRng(8)),
-    catalog,
-    sink: new EventWriter({
-      repository,
-      clock,
-      logger: silentLogger,
-      schedule: (flush) => {
-        setImmediate(flush);
-      },
-    }),
-    repository,
-    logger: silentLogger,
-    mode,
-  });
-  await server.start();
-  const inspector = new LeakInspector({
-    solutions: () => solutions,
-    lockedValue: (matchId, cell) => {
-      for (const room of server.rooms.values()) {
-        const state = room.match?.state;
-        const locked = state?.id === matchId ? state.cells[cell] : undefined;
-        if (locked?.status === "locked") return locked.value;
-      }
-      return undefined;
-    },
-  });
-  running = {
-    port: transport.port,
-    clock,
-    server,
-    inspector,
-    stop: () => transport.stop(1001, "test over"),
-  };
+  running = await startWsServer();
   return running;
 }
 

@@ -10,11 +10,14 @@ import type {
 import { useSyncExternalStore } from "react";
 import { GameClient } from "../../src/game/client.ts";
 import { memoryPrefs, type Prefs } from "../../src/game/prefs.ts";
+import { memorySession } from "../../src/game/session.ts";
 import { GameScreen } from "../../src/screens/GameScreen.tsx";
 import { Listeners, type Transport, type TransportStatus } from "../../src/transport/types.ts";
 
 export interface FakeTransport extends Transport {
   readonly sent: ClientEnvelope[];
+  /** Cambia el estado de la conexión y avisa al cliente. */
+  setStatus(status: TransportStatus): void;
   /** Entrega un mensaje del servidor al cliente. */
   emit(message: Omit<ServerEnvelope, "v">): void;
   /** El último mensaje enviado de un tipo. */
@@ -25,14 +28,32 @@ export function fakeTransport(): FakeTransport {
   const messages = new Listeners<ServerEnvelope>();
   const statuses = new Listeners<TransportStatus>();
   const sent: ClientEnvelope[] = [];
+  let status: TransportStatus = "open";
   return {
     sent,
-    status: "open",
+    get status() {
+      return status;
+    },
+    setStatus(next) {
+      status = next;
+      act(() => {
+        statuses.emit(next);
+      });
+    },
     send(message) {
       sent.push(message);
     },
     subscribe: (listener) => messages.add(listener),
     onStatus: (listener) => statuses.add(listener),
+    connect() {
+      // Siempre abierto, salvo que la prueba diga otra cosa.
+    },
+    reconnect() {
+      // La prueba decide con `setStatus`.
+    },
+    disconnect() {
+      // Nada que cerrar.
+    },
     close() {
       // Nada que cerrar.
     },
@@ -114,7 +135,12 @@ export function mountGame({
   prefs = memoryPrefs(),
 }: { now?: () => number; startedAt?: number; serverNow?: number; prefs?: Prefs } = {}): Mounted {
   const transport = fakeTransport();
-  const client = new GameClient({ transport, prefs, ...(now ? { now } : {}) });
+  const client = new GameClient({
+    transport,
+    prefs,
+    session: memorySession(),
+    ...(now ? { now } : {}),
+  });
   client.start("Inés", "easy");
   const create = transport.last("room.create");
   render(<Screen client={client} />);

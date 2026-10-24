@@ -3,8 +3,7 @@ import { GameClient } from "./game/client.ts";
 import { INITIAL_STATE } from "./game/state.ts";
 import { GameScreen } from "./screens/GameScreen.tsx";
 import { Home } from "./screens/Home.tsx";
-import { createTransport } from "./transport/index.ts";
-import { createUnavailableTransport } from "./transport/unavailable.ts";
+import { createServerTransport, createTransport } from "./transport/index.ts";
 
 /** Solo en desarrollo: el tiempo de carga del puzzle en pantalla. No llega al build (T-31.2). */
 const LoadBadge = import.meta.env.DEV ? lazy(() => import("./dev/LoadBadge.tsx")) : null;
@@ -35,10 +34,10 @@ export function App() {
     let created: GameClient | null = null;
     let cancelled = false;
     void createTransport()
-      // Si no se pudo crear el transporte, el inicio dice que no hay servidor.
+      // Si el simulador no cargó, se usa el servidor real.
       .catch((error: unknown) => {
         console.error(error);
-        return createUnavailableTransport();
+        return createServerTransport();
       })
       .then((transport) => {
         if (cancelled) {

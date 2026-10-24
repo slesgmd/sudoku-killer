@@ -95,6 +95,9 @@ export class Bot {
   private active = true;
   private timer: unknown = null;
   private nextId = 1;
+  /** La ficha de la sala, para volver si la conexión cae (solo en memoria). */
+  private token: string | null = null;
+  private readonly unsubscribeStatus: () => void;
 
   constructor(options: BotOptions) {
     this.options = options;
@@ -103,13 +106,27 @@ export class Bot {
     this.unsubscribe = options.transport.subscribe((message) => {
       this.receive(message);
     });
-    this.send("room.join", { code: options.code, nickname: options.nickname });
+    // Entra (o vuelve con su ficha) cada vez que la conexión abre.
+    this.unsubscribeStatus = options.transport.onStatus((status) => {
+      if (status === "open") this.join();
+    });
+    if (options.transport.status === "open") this.join();
+    else options.transport.connect();
+  }
+
+  private join(): void {
+    this.send("room.join", {
+      code: this.options.code,
+      nickname: this.options.nickname,
+      ...(this.token === null ? {} : { token: this.token }),
+    });
   }
 
   stop(): void {
     this.active = false;
     if (this.timer !== null) this.scheduler.clearTimeout(this.timer);
     this.unsubscribe();
+    this.unsubscribeStatus();
     this.options.transport.close();
   }
 
@@ -158,6 +175,7 @@ export class Bot {
     switch (message.type) {
       case "room.welcome": {
         this.playerId = message.payload.playerId;
+        this.token = message.payload.token ?? this.token;
         const match = message.payload.snapshot.match;
         if (match?.endedAt === null) {
           const size = match.puzzle.size;

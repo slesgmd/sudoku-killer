@@ -1,16 +1,33 @@
-// Elección del transporte. En desarrollo, el servidor simulado en memoria (`src/dev/sim/`), que es el
-// único lugar del navegador donde existe la solución. En producción no se incluye (T-31.2): la rama
-// de `import.meta.env.DEV` desaparece del build, y con ella el `import()` del simulador.
+// Elección del transporte. Por defecto, el servidor real por WebSocket en el mismo origen (`/ws`; en
+// desarrollo, Vite lo reenvía al servidor local). Solo en desarrollo, con `?sim=1`, el servidor
+// simulado en memoria (`src/dev/sim/`), que es el único lugar del navegador donde existe la
+// solución. En producción no se incluye (T-31.2): la rama de `import.meta.env.DEV` desaparece del
+// build, y con ella el `import()` del simulador.
 import type { Transport } from "./types.ts";
-import { createUnavailableTransport } from "./unavailable.ts";
+import { createWsTransport, sameOriginUrl } from "./ws.ts";
 
 export type { Transport, TransportStatus } from "./types.ts";
 
+export function createServerTransport(): Transport {
+  return createWsTransport({
+    url: sameOriginUrl(window.location),
+    ...(import.meta.env.DEV
+      ? {
+          debug: (message: string) => {
+            console.debug(message);
+          },
+        }
+      : {}),
+  });
+}
+
 export async function createTransport(): Promise<Transport> {
   if (import.meta.env.DEV) {
-    const { createDevTransport } = await import("../dev/sim/index.ts");
-    return createDevTransport(new URLSearchParams(window.location.search));
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("sim") === "1") {
+      const { createDevTransport } = await import("../dev/sim/index.ts");
+      return createDevTransport(params);
+    }
   }
-  // El servidor real llega en F10.
-  return createUnavailableTransport();
+  return createServerTransport();
 }

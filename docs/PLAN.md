@@ -624,7 +624,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | Subtarea | Contenido | Estado |
 |---|---|---|
 | F10a | Registros previos: segunda prueba en papel, plan aprobado y nota de F12. | Hecha |
-| F10b | Transporte WebSocket con reconexión (inmediata en móvil), ficha en `sk:token:<code>`, bandeja de pendientes con el mismo `id` (E-07), reconciliación por `seq` y vigilancia del pong; pruebas en vivo en Node contra el servidor real. | Pendiente |
+| F10b | Transporte WebSocket con reconexión (inmediata en móvil), ficha en `sk:token:<code>`, bandeja de pendientes con el mismo `id` (E-07), reconciliación por `seq` y vigilancia del pong; pruebas en vivo en Node contra el servidor real. | Hecha |
 | F10c | Notas optimistas como módulo puro y T-16.2. | Pendiente |
 | F10d | Desarrollo: proxy de `/ws`, orígenes de `dev:lan`, simulador solo con `?sim=1` y bots como clientes Node. | Pendiente |
 | F10e | Inicio, Entrar o crear, Lobby, Resultados y Ayuda, con rutas por hash y Compartir. | Pendiente |

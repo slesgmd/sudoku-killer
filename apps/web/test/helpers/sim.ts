@@ -6,6 +6,7 @@ import { regenerateEntry, loadManifest } from "../../src/dev/sim/puzzles.ts";
 import { SimServer } from "../../src/dev/sim/server.ts";
 import { createSimTransport } from "../../src/dev/sim/transport.ts";
 import { GameClient } from "../../src/game/client.ts";
+import { memorySession } from "../../src/game/session.ts";
 
 export interface SimHarness {
   readonly server: SimServer;
@@ -51,6 +52,7 @@ export function createHarness({
   });
   const client = new GameClient({
     transport: createSimTransport(server, latencyMs),
+    session: memorySession(),
     ...(clientNow ? { now: clientNow } : {}),
   });
   const settle = async () => {

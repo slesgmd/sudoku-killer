@@ -1,0 +1,286 @@
+// Transporte hacia el servidor real por WebSocket (ADR 0002, SPEC §4.1).
+// - La conexión se abre a pedido (`connect`) y se cierra al salir de la sala (`disconnect`), así un
+//   cliente en el inicio no ocupa el servidor ni recibe el cierre 4002.
+// - Si la conexión cae, se reintenta con espera exponencial y jitter, de 0,5 s a 5 s. Si no abre en
+//   10 s, el estado pasa a `unavailable` y se sigue reintentando.
+// - En el celular, al volver a primer plano, al restaurar la página desde la caché o al recuperar
+//   la red, se reintenta al instante, sin esperar la espera exponencial.
+// - 4001 (otra pestaña) y 4000 (versión) no se reintentan solos; 4002 (sin sala) deja `idle`.
+// - Cada mensaje entrante se valida con el esquema del protocolo; uno inválido se ignora.
+// La implementación de WebSocket se inyecta: el navegador usa la suya y los bots Node, la de `ws`.
+import {
+  CLOSE_NO_ROOM,
+  CLOSE_REPLACED,
+  CLOSE_UNSUPPORTED,
+  parseServerEnvelope,
+  type ServerEnvelope,
+} from "@sudoku-killer/protocol";
+import { Listeners, type Transport, type TransportStatus } from "./types.ts";
+
+/** Lo que el transporte usa de un WebSocket (el del navegador y el de `ws` lo cumplen). */
+export interface SocketLike {
+  readonly readyState: number;
+  onopen: ((event: unknown) => void) | null;
+  onclose: ((event: { readonly code: number }) => void) | null;
+  onmessage: ((event: { readonly data: unknown }) => void) | null;
+  onerror: ((event: unknown) => void) | null;
+  send(data: string): void;
+  close(code?: number, reason?: string): void;
+}
+
+export interface Scheduler {
+  setTimeout(fn: () => void, ms: number): unknown;
+  clearTimeout(handle: unknown): void;
+}
+
+/** Dónde escuchar los eventos de la página que piden reconectar ya. */
+export interface LifecycleTarget {
+  addEventListener(type: string, listener: (event: Event) => void): void;
+  removeEventListener(type: string, listener: (event: Event) => void): void;
+}
+
+export interface WsTransportOptions {
+  readonly url: string;
+  /** Crea el socket (por defecto, el WebSocket del entorno). */
+  readonly open?: (url: string) => SocketLike;
+  readonly scheduler?: Scheduler;
+  /** Azar del jitter, en [0, 1). */
+  readonly random?: () => number;
+  /** `window` para `pageshow` y `online`; `null` para no escuchar. */
+  readonly window?: LifecycleTarget | null;
+  /** `document` para `visibilitychange`; `null` para no escuchar. */
+  readonly document?: (LifecycleTarget & { readonly visibilityState?: string }) | null;
+  /** Log de depuración: nunca recibe el contenido de los mensajes, solo su tipo. */
+  readonly debug?: (message: string) => void;
+}
+
+export const RETRY_MIN_MS = 500;
+export const RETRY_MAX_MS = 5000;
+export const UNAVAILABLE_AFTER_MS = 10_000;
+
+const OPEN = 1;
+
+const realScheduler: Scheduler = {
+  setTimeout: (fn, ms) => globalThis.setTimeout(fn, ms),
+  clearTimeout: (handle) => {
+    globalThis.clearTimeout(handle as ReturnType<typeof setTimeout>);
+  },
+};
+
+/** `ws(s)://<host>/ws` del mismo origen que la página. */
+export function sameOriginUrl(location: {
+  readonly protocol: string;
+  readonly host: string;
+}): string {
+  return `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/ws`;
+}
+
+/** Espera antes del reintento `attempt` (desde 0): exponencial, con jitter entre la mitad y el total. */
+export function retryDelay(attempt: number, random: () => number): number {
+  const full = Math.min(RETRY_MAX_MS, RETRY_MIN_MS * 2 ** attempt);
+  return Math.round(full / 2 + (full / 2) * random());
+}
+
+export function createWsTransport(options: WsTransportOptions): Transport {
+  const {
+    url,
+    open = (target: string) => new WebSocket(target) as unknown as SocketLike,
+    scheduler = realScheduler,
+    random = Math.random,
+    debug = () => undefined,
+  } = options;
+  const win = options.window === undefined ? globalThis.window : options.window;
+  const doc = options.document === undefined ? globalThis.document : options.document;
+  const messages = new Listeners<ServerEnvelope>();
+  const statuses = new Listeners<TransportStatus>();
+  let status: TransportStatus = "idle";
+  let socket: SocketLike | null = null;
+  /** Si se quiere estar conectado (entre `connect` y `disconnect`). */
+  let wanted = false;
+  let disposed = false;
+  let attempt = 0;
+  let retryTimer: unknown = null;
+  let unavailableTimer: unknown = null;
+
+  const setStatus = (next: TransportStatus) => {
+    if (status === next) return;
+    status = next;
+    statuses.emit(next);
+  };
+
+  const clearTimers = () => {
+    if (retryTimer !== null) scheduler.clearTimeout(retryTimer);
+    if (unavailableTimer !== null) scheduler.clearTimeout(unavailableTimer);
+    retryTimer = null;
+    unavailableTimer = null;
+  };
+
+  /** Suelta el socket actual sin que su cierre dispare nada. */
+  const drop = (code = 1000) => {
+    const current = socket;
+    socket = null;
+    if (!current) return;
+    current.onopen = null;
+    current.onclose = null;
+    current.onmessage = null;
+    current.onerror = null;
+    try {
+      current.close(code);
+    } catch {
+      // Ya estaba cerrado.
+    }
+  };
+
+  const startUnavailableTimer = () => {
+    if (unavailableTimer !== null) return;
+    unavailableTimer = scheduler.setTimeout(() => {
+      unavailableTimer = null;
+      if (wanted && status !== "open") setStatus("unavailable");
+    }, UNAVAILABLE_AFTER_MS);
+  };
+
+  const scheduleRetry = () => {
+    if (retryTimer !== null) return;
+    retryTimer = scheduler.setTimeout(
+      () => {
+        retryTimer = null;
+        openNow();
+      },
+      retryDelay(attempt, random),
+    );
+    attempt++;
+  };
+
+  const onClose = (code: number) => {
+    socket = null;
+    if (!wanted) {
+      setStatus("idle");
+      return;
+    }
+    if (code === CLOSE_REPLACED || code === CLOSE_UNSUPPORTED || code === CLOSE_NO_ROOM) {
+      wanted = false;
+      clearTimers();
+      setStatus(
+        code === CLOSE_REPLACED ? "replaced" : code === CLOSE_UNSUPPORTED ? "incompatible" : "idle",
+      );
+      return;
+    }
+    if (status === "open") setStatus("reconnecting");
+    startUnavailableTimer();
+    scheduleRetry();
+  };
+
+  function openNow(): void {
+    if (disposed || !wanted) return;
+    if (retryTimer !== null) scheduler.clearTimeout(retryTimer);
+    retryTimer = null;
+    drop();
+    if (status !== "reconnecting" && status !== "unavailable") setStatus("connecting");
+    startUnavailableTimer();
+    let created: SocketLike;
+    try {
+      created = open(url);
+    } catch {
+      debug("[ws] could not create the socket");
+      onClose(1006);
+      return;
+    }
+    socket = created;
+    created.onopen = () => {
+      if (socket !== created) return;
+      attempt = 0;
+      clearTimers();
+      setStatus("open");
+    };
+    created.onclose = (event) => {
+      if (socket !== created) return;
+      onClose(event.code);
+    };
+    created.onerror = () => {
+      // El cierre llega después, con su código.
+    };
+    created.onmessage = (event) => {
+      if (socket !== created || typeof event.data !== "string") return;
+      let data: unknown;
+      try {
+        data = JSON.parse(event.data);
+      } catch {
+        debug("[ws] ignored a message that is not JSON");
+        return;
+      }
+      const parsed = parseServerEnvelope(data);
+      if (parsed.ok) messages.emit(parsed.message);
+      else debug(`[ws] ignored server message: ${parsed.reason} ${parsed.type ?? "?"}`);
+    };
+  }
+
+  /** Vuelta a primer plano, página restaurada o red recuperada: si no hay socket abierto, ya. */
+  const wake = () => {
+    if (disposed || !wanted || status === "open") return;
+    // Un intento que quedó colgado mientras la página dormía también se descarta.
+    attempt = 0;
+    openNow();
+  };
+  const onVisibility = () => {
+    if (doc?.visibilityState === undefined || doc.visibilityState === "visible") wake();
+  };
+  const onPageShow = (event: Event) => {
+    if ((event as Event & { persisted?: boolean }).persisted === true) wake();
+  };
+  doc?.addEventListener("visibilitychange", onVisibility);
+  win?.addEventListener("pageshow", onPageShow);
+  win?.addEventListener("online", wake);
+
+  return {
+    get status() {
+      return status;
+    },
+    send(message) {
+      if (socket?.readyState !== OPEN || status !== "open") {
+        debug(`[ws] not connected, dropped ${message.type}`);
+        return;
+      }
+      socket.send(JSON.stringify(message));
+    },
+    subscribe: (listener) => messages.add(listener),
+    onStatus: (listener) => statuses.add(listener),
+    connect() {
+      if (disposed) return;
+      wanted = true;
+      if (status === "open" || status === "connecting") return;
+      if (status === "reconnecting" || status === "unavailable") {
+        wake();
+        return;
+      }
+      attempt = 0;
+      openNow();
+    },
+    reconnect() {
+      if (disposed) return;
+      wanted = true;
+      attempt = 0;
+      clearTimers();
+      if (status === "open") setStatus("reconnecting");
+      else if (status === "replaced" || status === "incompatible" || status === "idle")
+        setStatus("connecting");
+      openNow();
+    },
+    disconnect() {
+      wanted = false;
+      clearTimers();
+      drop();
+      setStatus("idle");
+    },
+    close() {
+      if (disposed) return;
+      wanted = false;
+      clearTimers();
+      drop(1001);
+      setStatus("idle");
+      disposed = true;
+      doc?.removeEventListener("visibilitychange", onVisibility);
+      win?.removeEventListener("pageshow", onPageShow);
+      win?.removeEventListener("online", wake);
+    },
+  };
+}

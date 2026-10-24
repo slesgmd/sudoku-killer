@@ -136,6 +136,11 @@ export const es = {
   },
   "state.nothingToUndo": "No hay notas tuyas para deshacer.",
   "state.error": "No se pudo completar la acción ({code}).",
+  "state.reconnected": "Conexión recuperada.",
+  "state.reconnectedQueued": {
+    one: "Conexión recuperada. Se envió {count} nota en cola.",
+    other: "Conexión recuperada. Se enviaron {count} notas en cola.",
+  },
   "ended.victory": "La partida terminó. El equipo completó el tablero en {time}.",
   "ended.defeat": "La partida terminó. Ningún jugador activo seguía en la partida.",
   "ended.home": "Volver al inicio",
