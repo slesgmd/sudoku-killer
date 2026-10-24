@@ -2,9 +2,11 @@ name: Corpus
 
 # Corpus del generador (F4d): 1000 puzzles con unicidad confirmada por los solvers A y B. Corpus del
 # calificador (F4e): los mismos puzzles calificados, con cada deducción comprobada contra la
-# solución. Es largo para la CI de cada push. Cada ejecución programada usa semillas nuevas (desde
-# run_number × 1000) y la manual permite elegirlas. Una discrepancia o una deducción errónea
-# bloquea F4: la semilla queda en el log.
+# solución. Cotas de `unitCombination` (F5). Banco de puzzles (F5): el manifiesto completo
+# regenerado y verificado, con una partida simulada por puzzle (T-20.4 y T-20.5); este usa siempre
+# las semillas del manifiesto. Es largo para la CI de cada push. Cada ejecución programada usa
+# semillas nuevas en los corpus (desde run_number × 1000) y la manual permite elegirlas. Una
+# discrepancia o una deducción errónea bloquea: la semilla queda en el log.
 
 on:
   schedule:
@@ -25,7 +27,7 @@ permissions:
 jobs:
   corpus:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6

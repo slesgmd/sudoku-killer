@@ -1,9 +1,9 @@
 # SPEC — Sudoku Killer Multijugador · v1
 
-- Versión del documento: 1.2 (F4, 2026-10-22). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2).
+- Versión del documento: 1.3 (F5, 2026-10-23). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2); R-20 suma el banco de puzzles (T-20.3 a T-20.5) y `PuzzleRecord` guarda `graderVersion` y `seed` (1.3).
 - Versión del protocolo: **1**
 - Fuente de las reglas: `docs/PLAN.md`, secciones 1 y 2, más las decisiones de producto de F2 (sección 1 de este documento).
-- Decisiones técnicas: `docs/adr/0001`–`0005`.
+- Decisiones técnicas: `docs/adr/0001`–`0006`.
 
 ## 0. Cómo leer este documento
 
@@ -87,7 +87,7 @@ Incluye las 14 preguntas de `docs/referencia.md` y la pregunta de pistas de `PLA
 
 Parámetros que quedan pendientes con su dueño:
 - B, w, P, β y H: F6.
-- Mapeo de los niveles del calificador a las dificultades: F5.
+- Mapeo de los niveles del calificador a las dificultades: **resuelto en F5** (`docs/dificultad.md`, versión 1). Se recalibra con la muestra impresa de F5 y con partidas reales en F13.
 - Límites de velocidad y de tamaño de mensaje: valores iniciales en la sección 4.8; se calibran en F11.
 - Duración del destello de un error: F7.
 - Hosting: F12.
@@ -122,12 +122,16 @@ interface PublicPuzzle {
 // Solo servidor (packages/engine y apps/server). NUNCA se importa en packages/protocol.
 interface PuzzleRecord extends PublicPuzzle {
   solution: number[];            // size² dígitos
-  graderMaxLevel: number;        // técnica máxima requerida (F4/F5)
+  graderMaxLevel: number;        // técnica máxima requerida (F4/F5), de 1 a 5 en el banco
   graderSteps: number;
+  graderVersion: string;         // versión del calificador que dio el nivel (F5)
   generatorVersion: string;
+  seed: number;                  // semilla del generador (F5, ADR 0006); nunca sale del servidor
   givensReason: 'none' | 'easy' | 'uniqueness';
 }
 ```
+
+La dificultad de un puzzle sale de su calificación con la equivalencia de `docs/dificultad.md` (versión 1, F5). Los puzzles que exceden las técnicas no entran al banco. El `id` es opaco (un UUID aleatorio, T-20.4).
 
 A diferencia de la referencia, las sumas de las jaulas viajan en el puzzle público. Así el cliente no necesita la solución para mostrarlas.
 
@@ -582,6 +586,9 @@ Entre corchetes va la fase en que se implementa cada prueba.
 **R-20 Puzzles (P2).**
 - T-20.1 Propiedad sobre los puzzles generados: jaulas de 2 a 5 celdas, conectadas, que cubren todas las celdas, sin dígitos repetidos y con la suma correcta. Ambos solvers confirman que la solución es única. [U, F4]
 - T-20.2 Hay números iniciales solo si `givensReason` es `easy` o `uniqueness`; en `none` la lista de números iniciales está vacía. [U, F4/F5]
+- T-20.3 Ningún puzzle del banco excede las técnicas: `graderMaxLevel` está entre 1 y 5, y la base de datos rechaza otro valor. La dificultad es la de la equivalencia de `docs/dificultad.md`, y ningún puzzle fácil usa técnicas de nivel 4 o más. Cada dificultad tiene al menos 500 puzzles. [U, F5]
+- T-20.4 El banco cargado coincide con el manifiesto versionado (ADR 0006). Cada semilla, regenerada con las versiones vigentes del generador y del calificador, da el mismo puzzle (hash), el mismo nivel, los mismos pasos y la misma dificultad, y si no, la carga falla antes de escribir. Cargar dos veces no duplica filas. El `id` es un UUID aleatorio que no deriva de la semilla, y ni la semilla ni la solución salen en el puzzle público. El `id` es opaco para que un cliente no pueda enumerar el banco ni predecir el puzzle siguiente. Ocultar la semilla no protege la solución: cualquier solver la obtiene del puzzle público, porque es única. Lo que la protege es que el servidor nunca la envía (R-31). [U, F5]
+- T-20.5 En partidas simuladas sobre puzzles del banco, en las que las celdas vacías se llenan con la solución en un orden aleatorio, `levelToDeduce` devuelve antes de cada jugada un nivel entre 1 y el `graderMaxLevel` del puzzle, nunca `UNRATED`. F6 puntúa con eso. La CI usa una muestra por dificultad y `pnpm test:corpus`, el banco completo. [U, F5]
 
 **R-21 Dificultad y elección del puzzle (P3, D9).**
 - T-21.1 `room.set_difficulty` del starter llega a todos, y `match.start` elige un puzzle de esa dificultad que no esté en `playedPuzzleIds`. [I, F9]

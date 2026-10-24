@@ -6,3 +6,9 @@ evidence/
 *.md
 # Prototipo de diseño importado (F7): se conserva tal como se diseñó
 design/prototipo/
+# Manifiesto del banco (F5): lo escribe el script, con una entrada por línea
+apps/server/bank/manifest.json
+# Migraciones generadas por drizzle-kit
+apps/server/drizzle/
+# Muestra imprimible del banco (F5): la escribe bank:sample
+design/muestra-f5/

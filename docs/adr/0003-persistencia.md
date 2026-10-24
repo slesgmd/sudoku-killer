@@ -24,6 +24,11 @@ La v1 corre en una sola instancia (`PLAN.md` §3), con las interfaces `RoomStore
 
 **Esquema inicial** (Drizzle, con migraciones versionadas)
 - `puzzles`: `id`, `size`, `box_rows`, `box_cols`, `difficulty`, `cages` (jsonb), `givens` (jsonb), `solution` (text), `grader_max_level`, `grader_steps`, `givens_reason`, `generator_version` y `created_at`. Hay un índice por `difficulty`.
+  - **Nota de F5 (2026-10-23):** se agregan `grader_version` y `seed` (bigint, porque la semilla es un entero de 32 bits sin signo), con un índice único `(generator_version, seed)`.
+  - El `id` es un UUID aleatorio (`gen_random_uuid()`), opaco, para que un cliente no pueda enumerar el banco ni predecir el puzzle siguiente.
+  - `solution` guarda un carácter en base 36 por celda.
+  - La base de datos comprueba que `grader_max_level` esté entre 1 y 5 y que `difficulty` y `givens_reason` tengan valores válidos.
+  - Cómo se carga el banco: ADR 0006.
 - `matches`: `id`, `room_code`, `puzzle_id`, `mode_id`, `scoring_params_version`, `protocol_version`, `started_at`, `ended_at` (null si sigue en curso) y `result`.
 - `match_events`: `match_id`, `seq`, `type`, `payload` (jsonb) y `server_ts`, con la clave primaria `(match_id, seq)`. Solo se agregan filas; no hay `UPDATE` ni `DELETE` desde la aplicación.
 

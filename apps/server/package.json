@@ -7,10 +7,20 @@
     "dev": "node --conditions=@sudoku-killer/source --watch src/index.ts",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "bank:generate": "node --conditions=@sudoku-killer/source scripts/generate-bank.ts",
+    "bank:sample": "node --conditions=@sudoku-killer/source scripts/print-sample.ts",
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "@sudoku-killer/engine": "workspace:*",
     "@sudoku-killer/game": "workspace:*",
-    "@sudoku-killer/protocol": "workspace:*"
+    "@sudoku-killer/protocol": "workspace:*",
+    "drizzle-orm": "0.45.4",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "drizzle-kit": "0.31.11"
   }
 }
