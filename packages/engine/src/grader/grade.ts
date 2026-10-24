@@ -85,21 +85,31 @@ export interface GradeOptions {
 }
 
 /**
- * Busca la primera técnica, de menor a mayor nivel, que encuentra deducciones, y las aplica todas.
+ * Busca la primera técnica, de menor a mayor nivel, que encuentra deducciones, sin aplicarlas.
  * Devuelve el paso, o `null` si ninguna técnica encuentra nada.
  */
-function nextStep(
+function findStep(
   context: GraderContext,
   state: GraderState,
   techniques: readonly Technique[],
 ): GradeStep | null {
   for (const technique of techniques) {
     const deductions = technique.find(context, state);
-    if (deductions.length === 0) continue;
-    for (const deduction of deductions) applyDeduction(context, state, deduction);
-    return { technique: technique.id, level: technique.level, deductions };
+    if (deductions.length > 0)
+      return { technique: technique.id, level: technique.level, deductions };
   }
   return null;
+}
+
+/** `findStep` y aplica todas sus deducciones. */
+function nextStep(
+  context: GraderContext,
+  state: GraderState,
+  techniques: readonly Technique[],
+): GradeStep | null {
+  const step = findStep(context, state, techniques);
+  if (step) for (const deduction of step.deductions) applyDeduction(context, state, deduction);
+  return step;
 }
 
 function cageSumsHold(context: GraderContext, state: GraderState): boolean {
@@ -149,19 +159,51 @@ export function grade(
   };
 }
 
-/** Lo que ve `levelToDeduce`: el puzzle y los dígitos colocados (nunca las notas). */
+/** Un dígito descartado en una celda (F6): el de un error, que es público (`cell.mistake`). */
+export interface Exclusion {
+  readonly cell: number;
+  readonly digit: number;
+}
+
+/** Lo que ve `levelToDeduce`: el puzzle, los dígitos colocados y los descartes (nunca las notas). */
 export interface BoardState {
   readonly puzzle: KillerPuzzle;
   /** `size²` dígitos de 0 a `size`, 0 si la celda está vacía. Los números iniciales se aplican igual. */
   readonly values: readonly number[];
+  /**
+   * Dígitos descartados por errores públicos (F6). Un error nunca es el dígito de la solución, así
+   * que descartarlo no la contradice, y con más descartes el nivel no sube.
+   */
+  readonly excluded?: readonly Exclusion[];
+}
+
+/** Estado del calificador para `board`, con sus descartes. Lanza `RangeError` si no es válido. */
+function boardGraderState(
+  context: GraderContext,
+  { values, excluded = [] }: BoardState,
+): GraderState {
+  if (values.length !== context.cellCount) {
+    throw new RangeError(`Expected ${String(context.cellCount)} values`);
+  }
+  const state = createGraderState(context, values);
+  for (const { cell, digit } of excluded) {
+    if (!Number.isInteger(cell) || cell < 0 || cell >= context.cellCount) {
+      throw new RangeError(`Invalid excluded cell ${String(cell)}`);
+    }
+    if (!Number.isInteger(digit) || digit < 1 || digit > context.size) {
+      throw new RangeError(`Invalid excluded digit ${String(digit)}`);
+    }
+    applyDeduction(context, state, { kind: "eliminate", cell, digit });
+  }
+  return state;
 }
 
 /**
  * Nivel mínimo de técnica con el que `cell` queda determinada (un solo candidato) desde los dígitos
- * colocados, entre 1 y `UNRATED`. Las técnicas se aplican de menor a mayor nivel como en `grade`:
- * se usa un nivel solo cuando los inferiores no deducen nada más, así que el nivel más alto usado
- * hasta determinar la celda es el mínimo. Si el estado es contradictorio, devuelve `UNRATED`.
- * Lanza `RangeError` si la celda no existe o ya tiene un dígito.
+ * colocados y los descartes, entre 1 y `UNRATED`. Las técnicas se aplican de menor a mayor nivel
+ * como en `grade`: se usa un nivel solo cuando los inferiores no deducen nada más, así que el nivel
+ * más alto usado hasta determinar la celda es el mínimo. Si el estado es contradictorio, devuelve
+ * `UNRATED`. Lanza `RangeError` si la celda no existe o ya tiene un dígito.
  */
 export function levelToDeduce(cell: number, board: BoardState): number {
   return levelToDeduceWith(TECHNIQUES, cell, board);
@@ -171,16 +213,13 @@ export function levelToDeduce(cell: number, board: BoardState): number {
 export function levelToDeduceWith(
   techniques: readonly Technique[],
   cell: number,
-  { puzzle, values }: BoardState,
+  board: BoardState,
 ): number {
-  const context = graderContextOf(puzzle);
+  const context = graderContextOf(board.puzzle);
   if (!Number.isInteger(cell) || cell < 0 || cell >= context.cellCount) {
     throw new RangeError(`Invalid cell ${String(cell)}`);
   }
-  if (values.length !== context.cellCount) {
-    throw new RangeError(`Expected ${String(context.cellCount)} values`);
-  }
-  const state = createGraderState(context, values);
+  const state = boardGraderState(context, board);
   if (at(state.values, cell) !== 0) throw new RangeError(`Cell ${String(cell)} is already placed`);
 
   let level = 1;
@@ -191,4 +230,55 @@ export function levelToDeduceWith(
     level = Math.max(level, step.level);
   }
   return UNRATED;
+}
+
+/** Lo que da `levelsToDeduce`: los niveles de todas las celdas y los puntos fijos por nivel. */
+export interface BoardLevels {
+  /** `levelToDeduce` de cada celda vacía; 0 en las que ya tienen un dígito. */
+  readonly levels: readonly number[];
+  /**
+   * `fixpoints[L]`: los candidatos en el punto fijo de las técnicas de nivel ≤ L desde el estado,
+   * para L de 1 a `MAX_TECHNIQUE_LEVEL`; `fixpoints[0]` son los del estado, sin técnicas. Una celda
+   * vacía tiene un solo candidato en `fixpoints[L]` si y solo si su nivel es ≤ L.
+   */
+  readonly fixpoints: readonly Uint16Array[];
+}
+
+/**
+ * `levelToDeduce` de todas las celdas en una sola pasada (F6, para el simulador). La secuencia de
+ * pasos no depende de la celda pedida (`levelToDeduce` solo corta antes), así que el nivel de cada
+ * celda es el más alto usado hasta que queda con un solo candidato. Antes del primer paso de nivel
+ * mayor que L, el estado es el punto fijo de los niveles ≤ L.
+ */
+export function levelsToDeduce(board: BoardState): BoardLevels {
+  const context = graderContextOf(board.puzzle);
+  const state = boardGraderState(context, board);
+  const levels = new Array<number>(context.cellCount).fill(0);
+  const fixpoints: Uint16Array[] = [state.candidates.slice()];
+  let pending: number[] = [];
+  for (let cell = 0; cell < context.cellCount; cell++) {
+    if (at(state.values, cell) === 0) pending.push(cell);
+  }
+
+  let level = 1;
+  // Como `levelToDeduce`: se mira cada celda antes de cada paso, y un paso que deja el estado
+  // contradictorio no determina ninguna.
+  while (!state.contradiction) {
+    pending = pending.filter((cell) => {
+      if (popcount(at(state.candidates, cell)) !== 1) return true;
+      levels[cell] = level;
+      return false;
+    });
+    if (pending.length === 0) break;
+    const step = findStep(context, state, TECHNIQUES);
+    if (!step) break;
+    while (fixpoints.length < step.level) fixpoints.push(state.candidates.slice());
+    for (const deduction of step.deductions) applyDeduction(context, state, deduction);
+    level = Math.max(level, step.level);
+  }
+  for (const cell of pending) levels[cell] = UNRATED;
+  // Los niveles sin un paso mayor tienen como punto fijo el estado final. Si la pasada cortó porque
+  // todas las celdas tienen un solo candidato, sus máscaras ya no cambian sin contradicción.
+  while (fixpoints.length <= MAX_TECHNIQUE_LEVEL) fixpoints.push(state.candidates.slice());
+  return { levels, fixpoints };
 }

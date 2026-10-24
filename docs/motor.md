@@ -266,6 +266,12 @@ Los presupuestos chicos casi no cambian la media: la mayoría de los candidatos 
 - `values`: los `size²` dígitos colocados (0 si la celda está vacía). **Solo los dígitos colocados, nunca las notas:** el tipo no tiene notas. Los números iniciales se aplican igual.
 - Es el nivel mínimo con el que la celda queda con un solo candidato desde ese estado. Si el estado es contradictorio, devuelve `UNRATED`. Lanza `RangeError` si la celda no existe, ya tiene un dígito o `values` no tiene esa forma.
 - El servidor lo llama antes de aplicar cada jugada correcta (`PlacementContext`, SPEC); F6 lo usa para puntuar.
+- **Descartes públicos (F6):** `excluded`, opcional, son los dígitos de los errores (`cell.mistake`), que todos ven. Se quitan de los candidatos de su celda. Un error nunca es el dígito de la solución, así que el descarte no la contradice, y con más descartes ningún nivel sube (T-35.8). Así, después de un error entre 2 candidatos, la celda queda en el nivel con el que se veían esos 2, y adivinar «hasta acertar» no cobra el nivel alto (`docs/puntuacion.md`). Sin descartes, nada cambia: `GRADER_VERSION` sigue en "2".
+
+`levelsToDeduce({ puzzle, values, excluded })` → `{ levels, fixpoints }` (F6, para el simulador de la puntuación).
+- `levels`: el `levelToDeduce` de cada celda vacía (0 en las que tienen un dígito), en una sola pasada. La secuencia de pasos del bucle no depende de la celda pedida: `levelToDeduce` solo corta antes. Por eso, el nivel de cada celda es el más alto usado hasta que queda con un solo candidato.
+- `fixpoints[L]`: los candidatos en el punto fijo de las técnicas de nivel ≤ L, para L de 1 a 5; `fixpoints[0]` son los del estado, sin técnicas. Es el estado justo antes del primer paso de nivel mayor que L. Una celda vacía tiene un solo candidato en `fixpoints[L]` si y solo si su nivel es ≤ L.
+- T-35.7 (`test/levels.test.ts`) compara `levels` con `levelToDeduce` celda por celda en estados al azar con descartes, en 4×4, 6×6 y 9×9, y comprueba los puntos fijos contra los niveles y la solución.
 
 Constantes: `MAX_TECHNIQUE_LEVEL = 5` (el nivel más alto implementado; era 3 en F4e) y `UNRATED = 6`. `UNRATED` es fijo, no `MAX_TECHNIQUE_LEVEL + 1`, para que un nivel guardado no cambie de sentido al agregar técnicas. `GRADER_VERSION` cambia cuando un cambio del calificador altera el nivel o los pasos de algún puzzle: "1" en F4f y "2" desde F5, con `unitCombination` acotada (`UNIT_COMBINATION_BOUND`, 4 jaulas abiertas y 8 combinaciones).
 
