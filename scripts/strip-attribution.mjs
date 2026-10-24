@@ -3,17 +3,12 @@
 // historial). Uso: `node scripts/strip-attribution.mjs <archivo>` reescribe el archivo; sin
 // argumentos, filtra de la entrada estándar a la salida estándar.
 import { readFileSync, writeFileSync } from "node:fs";
-
-/** Líneas que se eliminan del mensaje. */
-const PATTERNS = [
-  /^\s*Co-Authored-By:.*(ai-vendor\.com|AI-Assistant)/i,
-  /^\s*AI-Session:/i,
-  /Generated with/i,
-  /ai-vendor\.com/i,
-];
+import { STRIP_PATTERNS } from "./attribution-patterns.mjs";
 
 export function stripAttribution(message) {
-  const lines = message.split(/\r?\n/).filter((line) => !PATTERNS.some((re) => re.test(line)));
+  const lines = message
+    .split(/\r?\n/)
+    .filter((line) => !STRIP_PATTERNS.some((re) => re.test(line)));
   while (lines.length > 0 && lines.at(-1)?.trim() === "") lines.pop();
   return lines.length === 0 ? "" : `${lines.join("\n")}\n`;
 }
