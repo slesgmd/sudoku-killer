@@ -7,7 +7,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 - **Plan:** versión 1.20. **SPEC:** versión 1.7.
 - **Fase actual:** F10, integración en tiempo real (5–10 h), con el plan aprobado (F10a a F10i). F9 (servidor de salas) se cerró el 2026-10-24 con unas 1,9 h frente a 3–6 h; F6 y F8, el mismo día; F4, F5 y F7, el 2026-10-23.
-- **Próxima tarea exacta:** F10c, notas optimistas como módulo puro y T-16.2 (`docs/PLAN.md`, F10). F10b dejó el transporte WebSocket (`apps/web/src/transport/ws.ts`), la sesión (`game/session.ts`) y la reconexión en `GameClient`, con pruebas en vivo en `apps/web/test/live/`.
+- **Próxima tarea exacta:** F10d, desarrollo: proxy de `/ws` en Vite, orígenes de `dev:lan`, simulador solo con `?sim=1` (ya aplicado en `transport/index.ts`) y bots como clientes Node (`docs/PLAN.md`, F10). F10b y F10c dejaron el transporte WebSocket, la sesión, la reconexión y T-16.2.
 - **Servidor (F9):**
   - `apps/server/src/`: `rooms/` (actor por sala con cola y bandeja de salida ordenada), `match/` (repositorio y group commit), `infra/` (`Transport` en memoria y `ws`, reloj, azar y fichas), `config/` y `app.ts`.
   - Esquema en SPEC §2.5. El registro se confirma antes de difundir, las partidas se reconstruyen al arrancar y E-16 cierra con 1012.

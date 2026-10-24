@@ -1,13 +1,11 @@
 // Estado del cliente (ADR 0001: store propio, alimentado por el `Transport`). Es una vista de lo que
 // el servidor confirmó, más lo pendiente: las jugadas de números no son optimistas (quedan
 // pendientes hasta el veredicto) y las notas sí (confirmado + pendientes en orden, ADR 0005).
-import { digitBit } from "@sudoku-killer/engine/model";
 import type {
   Difficulty,
   LockedCell,
   MatchResult,
   NoteLayer,
-  NoteOp,
   PublicPlayer,
   PublicPuzzle,
   RankingEntry,
@@ -15,17 +13,12 @@ import type {
   Settings,
 } from "@sudoku-killer/protocol";
 import type { TransportStatus } from "../transport/types.ts";
+import { visibleNotes, type PendingNote } from "./notes.ts";
+
+export type { PendingNote } from "./notes.ts";
 
 export type Phase = "home" | "entering" | "loading" | "playing" | "ended";
 export type InputMode = "number" | "notes";
-
-export interface PendingNote {
-  readonly id: string;
-  readonly layer: NoteLayer;
-  readonly op: NoteOp;
-  readonly cell: number;
-  readonly digit: number;
-}
 
 export interface Flash {
   readonly digit: number;
@@ -150,13 +143,8 @@ export const INITIAL_STATE: ClientState = {
 
 /** Notas de una capa tal como se ven: lo confirmado más las pendientes, en orden (ADR 0005). */
 export function viewNotes(state: ClientState, layer: NoteLayer): Uint16Array {
-  const notes = (layer === "group" ? state.groupNotes : state.personalNotes).slice();
-  for (const op of state.pendingNotes) {
-    if (op.layer !== layer) continue;
-    const bit = digitBit(op.digit);
-    notes[op.cell] = op.op === "add" ? (notes[op.cell] ?? 0) | bit : (notes[op.cell] ?? 0) & ~bit;
-  }
-  return notes;
+  const confirmed = layer === "group" ? state.groupNotes : state.personalNotes;
+  return visibleNotes(confirmed, state.pendingNotes, layer);
 }
 
 export function me(state: ClientState): PublicPlayer | undefined {

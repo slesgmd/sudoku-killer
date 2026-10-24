@@ -16,6 +16,7 @@ import { t } from "../i18n/index.ts";
 import type { Transport, TransportStatus } from "../transport/types.ts";
 import { USE_NOTES_KEY, browserPrefs, type Prefs } from "./prefs.ts";
 import { randomId } from "./random-id.ts";
+import { applyNoteOp, withoutPending } from "./notes.ts";
 import { browserSession, type SessionStore } from "./session.ts";
 import {
   INITIAL_STATE,
@@ -608,6 +609,9 @@ export class GameClient {
     this.lastAlive = this.now();
     const mine = message.replyTo !== undefined;
     if (message.replyTo !== undefined) this.outbox.delete(message.replyTo);
+    // Antes del `room.welcome` de esta conexión no llegan eventos (el servidor solo difunde a quien
+    // ya lo recibió); si llegara uno, el snapshot que viene ya lo incluye.
+    if (!this.welcomed && message.seq !== undefined) return;
     if (this.isStale(message)) {
       this.resolveStale(message);
       return;
@@ -792,7 +796,7 @@ export class GameClient {
     }
     if (message.type === "note.applied") {
       const { opSeq, layer, cell, undoOf } = message.payload;
-      this.set({ pendingNotes: this.state.pendingNotes.filter((op) => op.id !== id) });
+      this.set({ pendingNotes: withoutPending(this.state.pendingNotes, id) });
       this.noteResolved(id, opSeq, layer, cell, undoOf);
     }
   }
@@ -913,20 +917,13 @@ export class GameClient {
 
   private onNoteApplied(message: ServerMessage<"note.applied">): void {
     const { layer, op, cell, digit, opSeq, undoOf } = message.payload;
-    const bit = digitBit(digit);
-    const apply = (notes: Uint16Array) => {
-      const next = notes.slice();
-      next[cell] = op === "add" ? (notes[cell] ?? 0) | bit : (notes[cell] ?? 0) & ~bit;
-      return next;
-    };
     const patch: { -readonly [K in keyof ClientState]?: ClientState[K] } =
       layer === "group"
-        ? { groupNotes: apply(this.state.groupNotes) }
-        : { personalNotes: apply(this.state.personalNotes) };
+        ? { groupNotes: applyNoteOp(this.state.groupNotes, op, cell, digit) }
+        : { personalNotes: applyNoteOp(this.state.personalNotes, op, cell, digit) };
     const replyTo = message.replyTo;
-    if (replyTo !== undefined) {
-      patch.pendingNotes = this.state.pendingNotes.filter((pending) => pending.id !== replyTo);
-    }
+    if (replyTo !== undefined)
+      patch.pendingNotes = withoutPending(this.state.pendingNotes, replyTo);
     this.set(patch);
     if (replyTo !== undefined) this.noteResolved(replyTo, opSeq, layer, cell, undoOf);
   }
@@ -955,7 +952,7 @@ export class GameClient {
     if (replyTo === undefined) return;
     // Una nota sin efecto: se quita de las pendientes y de su grupo de deshacer.
     if (this.state.pendingNotes.some((op) => op.id === replyTo)) {
-      this.set({ pendingNotes: this.state.pendingNotes.filter((op) => op.id !== replyTo) });
+      this.set({ pendingNotes: withoutPending(this.state.pendingNotes, replyTo) });
       this.forgetUndo(replyTo);
     }
   }
@@ -1034,7 +1031,7 @@ export class GameClient {
       return;
     }
     if (this.state.pendingNotes.some((op) => op.id === replyTo)) {
-      this.set({ pendingNotes: this.state.pendingNotes.filter((op) => op.id !== replyTo) });
+      this.set({ pendingNotes: withoutPending(this.state.pendingNotes, replyTo) });
       this.forgetUndo(replyTo);
       if (code === "rate_limited") this.toast("status", t("state.rateLimited"));
       return;
