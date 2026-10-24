@@ -57,6 +57,8 @@ export interface SimServerOptions {
   readonly randomId: () => string;
   /** Un entero en `0..bound − 1`, para el código de sala. */
   readonly randomInt: (bound: number) => number;
+  /** Se llama al crear la sala (después de la bienvenida): ahí entran los bots de F8f. */
+  readonly onRoomCreated?: (code: string) => void;
 }
 
 interface Member {
@@ -454,6 +456,7 @@ export class SimServer {
       type: "room.welcome",
       payload: { playerId: member.id, token, snapshot: this.snapshot(room, member) },
     });
+    if (message.type === "room.create") this.options.onRoomCreated?.(room.code);
   }
 
   private async start(room: Room): Promise<void> {
