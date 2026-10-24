@@ -1,7 +1,8 @@
 // Calificador humano (F4e). T-35.4: ninguna deducción contradice la solución, y en cada paso de
 // `grade` el dígito de la solución de cada celda sigue entre sus candidatos. T-35.5: `levelToDeduce`
-// da un nivel entre 1 y UNRATED, vale 1 en un single y no sube al agregar celdas correctas. Versión
-// rápida para la CI; el corpus de 1000 puzzles está en `grader.corpus.test.ts`.
+// da un nivel entre 1 y UNRATED, vale 1 en un single y no sube al agregar celdas correctas, también
+// en puzzles de nivel 4 y 5. Versión rápida para la CI; el corpus de 1000 puzzles y las 9000
+// comparaciones de monotonía están en `grader.corpus.test.ts`.
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
@@ -19,13 +20,21 @@ import { at } from "../src/model/at.ts";
 import { graderContextOf } from "../src/grader/context.ts";
 import { createGraderState } from "../src/grader/state.ts";
 import { bruteForce4 } from "./helpers/brute-force.ts";
-import { agrees, boardWith, expectCandidatesKeep, expectSoundGrade } from "./helpers/grader.ts";
+import {
+  agrees,
+  boardWith,
+  expectCandidatesKeep,
+  expectMonotoneLevels,
+  expectSoundGrade,
+} from "./helpers/grader.ts";
 import { GEOMETRY_4, GEOMETRY_6, GEOMETRY_9, killerArb } from "./helpers/grids.ts";
 import { assertProperty } from "./helpers/property.ts";
 import { boxCagesPuzzle, shiftFirstSum } from "./helpers/puzzles.ts";
 
 const seedArb = fc.nat({ max: 0xffff_ffff });
 const SLOW = { timeout: 60_000 };
+/** Como en el corpus (3 celdas y 15 tandas de 4 por puzzle), con menos puzzles. */
+const MONOTONY_CI = { targets: 3, batches: 15, batchSize: 4 } as const;
 
 describe.each<[Geometry, number]>([
   [GEOMETRY_4, 60],
@@ -107,6 +116,31 @@ describe.each<[Geometry, number]>([
       ),
       { numRuns },
     );
+  });
+});
+
+describe("levelToDeduce along a game with levels 4 and 5 (9x9)", () => {
+  // Versión reducida de las 9000 comparaciones del corpus (`grader.corpus.test.ts`): puzzles de
+  // nivel máximo 4 y 5, para que la monotonía cubra también esas técnicas.
+  const PUZZLES: readonly (readonly [seed: number, maxLevel: number])[] = [
+    [10, 4],
+    [22, 4],
+    [3, 5],
+    [34, 5],
+  ];
+
+  it("T-35.5: the level never rises as correct cells are added", SLOW, () => {
+    let comparisons = 0;
+    const levels: number[] = [];
+    for (const [seed, maxLevel] of PUZZLES) {
+      const generated = generatePuzzle({ seed });
+      expect(grade(generated.puzzle).maxLevel, `seed ${String(seed)}`).toBe(maxLevel);
+      const result = expectMonotoneLevels(generated, seed, MONOTONY_CI);
+      comparisons += result.comparisons;
+      levels.push(...result.levels);
+    }
+    expect(comparisons).toBe(PUZZLES.length * MONOTONY_CI.targets * MONOTONY_CI.batches);
+    expect(Math.max(...levels)).toBeGreaterThanOrEqual(4);
   });
 });
 

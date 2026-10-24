@@ -310,11 +310,12 @@ Regiones de la regla del 45: cada fila, columna y caja, y cada unión de 2 a `si
   - `levelToDeduce`: entre 1 y `UNRATED`; vale 1 si la celda tiene un solo candidato o la coloca una técnica de nivel 1; no sube al agregar celdas correctas; no pasa del `maxLevel` de `grade`; desde el tablero vacío sin números iniciales es al menos 2. Casos fijos de naked single, hidden single y última celda de jaula.
   - Oráculos independientes en el tablero vacío: `cageCombination` deja exactamente los dígitos de las combinaciones de cada jaula, y `cageForcedDigit` quita exactamente sus dígitos obligatorios de las celdas que ven toda la jaula (combinaciones por enumeración directa de subconjuntos). Las sumas de los grupos del 45 coinciden con la solución.
   - Determinismo, con y sin memoria, y entradas inválidas.
+  - Monotonía de `levelToDeduce` con los niveles 4 y 5 (T-35.5), versión reducida de la del corpus: 4 puzzles 9×9 de nivel máximo 4 y 5 (semillas 10, 22, 3 y 34, con el nivel comprobado), 3 celdas por puzzle y 15 tandas de 4 celdas correctas agregadas. Son 180 comparaciones sin ninguna subida y ningún nivel por encima del `maxLevel` de `grade`. Se exige que algún nivel medido sea 4 o más, para que la prueba no quede vacía.
 - `test/grader-advanced.test.ts` (F4f, T-35.4), en la CI, con estados que todavía admiten la solución: dígitos correctos colocados y candidatos equivocados quitados al azar (como las notas de un jugador), que es lo que hace aparecer los patrones de los niveles 4 y 5.
   - Desde esos estados, en 4×4, 6×6 y 9×9, ninguna deducción de ninguna técnica contradice la solución.
   - Cada técnica de los niveles 4 y 5 deduce exactamente lo mismo que un oráculo por fuerza bruta escrito aparte (subconjuntos por máscara; permutaciones completas de la unidad para `unitCombination`), en 4×4 y 6×6, y en 9×9 salvo `unitCombination`.
   - Cada una de esas técnicas deduce algo en alguno de 400 estados 6×6, para que la comparación con su oráculo no sea vacía.
-- `test/grader.corpus.test.ts`: los 1000 puzzles del corpus (semillas 1 a 1000) con la misma reproducción de la traza. Mide `grade` y simula 100 partidas para medir `levelToDeduce`. Corre con `pnpm test:corpus` y en el workflow `corpus.yml`.
+- `test/grader.corpus.test.ts`: los 1000 puzzles del corpus (semillas 1 a 1000) con la misma reproducción de la traza. Mide `grade`, simula 100 partidas para medir `levelToDeduce` e imprime el informe para F5 (abajo). Además, comprueba la monotonía de `levelToDeduce` (T-35.5) en los 200 primeros puzzles: 3 celdas por puzzle y 15 tandas de 4 celdas correctas, **9000 comparaciones**, con las mismas comprobaciones que la versión de la CI (`expectMonotoneLevels`, en `test/helpers/grader.ts`). Corre con `pnpm test:corpus` y en el workflow `corpus.yml`.
 
 ### Mediciones
 Semillas 1 a 1000 (9×9, opciones por defecto del generador), Node 24.21, AMD Ryzen 9 9955HX, un hilo. **Niveles 1 a 5 (F4f): 401 109 deducciones, 0 contra la solución.**
@@ -331,7 +332,7 @@ Semillas 1 a 1000 (9×9, opciones por defecto del generador), Node 24.21, AMD Ry
 - Ningún puzzle es de nivel 1: sin números iniciales no hay ningún single al empezar, y hace falta al menos una combinación de jaula. Con `easyGivens` puede haberlos (F5).
 - Los niveles 4 y 5 resuelven 162 de los 232 puzzles que excedían los niveles 1 a 3. Los niveles 2 y 3 no cambian: las técnicas nuevas solo se usan cuando las anteriores no deducen nada.
 - Pasos por puzzle: mediana 51, máximo 98. Pasos por nivel en todo el corpus: 35 831 de nivel 1, 11 458 de nivel 2, 2030 de nivel 3, 634 de nivel 4 y 245 de nivel 5.
-- Pasos por técnica de los niveles 4 y 5: `lockedCandidates` 412, `cageUnitLock` 134, `nakedPair` 49, `hiddenPair` 20, `nakedTriple` 17, `hiddenTriple` 2, `xWing` 1, `yWing` 0, `swordfish` 0 y `unitCombination` 244. En killer, las técnicas de jaula y de unidad hacen casi todo el trabajo: Y-Wing y Swordfish no se usaron nunca en el corpus, porque antes deduce algo otra técnica. Se quedan porque son correctas (tienen su oráculo y deducen en estados al azar) y baratas, y otros puzzles pueden necesitarlas.
+- Uso por técnica: ver el informe para F5. En killer, las técnicas de jaula y de unidad hacen casi todo el trabajo: Y-Wing y Swordfish no se usaron nunca en el corpus, porque antes deduce algo otra técnica. Se quedan porque son correctas (tienen su oráculo y deducen en estados al azar) y baratas, y otros puzzles pueden necesitarlas.
 
 **Tiempo de `grade`** (primera llamada por puzzle, sin memoria previa): media 25 ms, mediana 20 ms, p95 59 ms, p99 84 ms y máximo 130 ms (con los niveles 1 a 3, media 11 ms). Lo que más cuesta es `unitCombination`.
 
@@ -344,5 +345,69 @@ Semillas 1 a 1000 (9×9, opciones por defecto del generador), Node 24.21, AMD Ry
 
 - El p95 queda muy por debajo del límite de 50 ms pedido para F4f. El coste depende de cuánto falta deducir: casi todas las jugadas de media partida son singles, y lo más caro son las primeras jugadas, que recorren casi toda la resolución.
 - Resultados de esas llamadas: 6190 de nivel 1, 1574 de nivel 2, 291 de nivel 3, 24 de nivel 4, 7 de nivel 5 y 13 `UNRATED` (con los niveles 1 a 3 eran 44 `UNRATED`).
-- Monotonía (T-35.5), comprobada además con un script aparte: en 200 puzzles (semillas 5000 a 5199), 3 celdas por puzzle y 15 tandas de 4 celdas correctas agregadas, 9000 comparaciones sin ninguna subida y ningún nivel por encima del `maxLevel` de `grade`.
+- Monotonía (T-35.5), versionada en el corpus: en los puzzles de las semillas 1 a 200, 9000 comparaciones sin ninguna subida y ningún nivel por encima del `maxLevel` de `grade`. Niveles medidos: 6557 de nivel 1, 2332 de nivel 2, 566 de nivel 3, 67 de nivel 4, 31 de nivel 5 y 47 `UNRATED` (en puzzles que exceden las técnicas). Antes de versionarla se había comprobado con un script aparte en las semillas 5000 a 5199, con el mismo resultado.
+- Una segunda corrida del corpus (2026-10-23, después de F4f) dio para `grade` una media de 21,7 ms y un p95 de 52,5 ms, y para `levelToDeduce` una media de 1,11 ms, un p95 de 6,5 ms y un máximo de 95 ms. La diferencia es de la máquina; las tablas de arriba son las de F4f.
 - Cómo se llegó a los tiempos de F4e (`grade`, 100 puzzles). Enumerando todas las asignaciones de cada jaula y grupo en cada pasada, 37 ms de media. Con la memoria por jaula y grupo, 14 ms: el 70 % del tiempo era volver a filtrar jaulas sin cambios. Con búsquedas dirigidas por (celda, dígito) en vez de la enumeración completa, 11 ms: un grupo de 5 celdas que pueden repetir dígito llegaba a 9⁵ asignaciones. Con la poda por dígitos libres, unos 9 ms.
+
+### Informe para F5
+Mediciones del corpus (semillas 1 a 1000) para decidir en F5 la equivalencia entre niveles y dificultades. **Solo miden: el calificador no cambió.** Las imprime `test/grader.corpus.test.ts`, con las ayudas de `test/helpers/grader-report.ts`.
+
+**Uso por técnica.** Puzzles en los que la técnica se usa al menos una vez (de 1000), pasos y deducciones en total:
+
+| Nivel | Técnica | Puzzles | Pasos | Deducciones |
+|---|---|---|---|---|
+| 1 | `nakedSingle` | 951 | 23 420 | 50 266 |
+| 1 | `hiddenSingle` | 946 | 8904 | 16 674 |
+| 1 | `cageLastCell` | 937 | 3507 | 6173 |
+| 2 | `cageCombination` | 1000 | 8131 | 200 893 |
+| 2 | `cageForcedDigit` | 987 | 3327 | 59 471 |
+| 3 | `innieOutie` | 900 | 2030 | 58 770 |
+| 4 | `lockedCandidates` | 204 | 412 | 2661 |
+| 4 | `nakedPair` | 44 | 49 | 445 |
+| 4 | `hiddenPair` | 20 | 20 | 80 |
+| 4 | `cageUnitLock` | 102 | 134 | 810 |
+| 4 | `nakedTriple` | 17 | 17 | 134 |
+| 4 | `hiddenTriple` | 2 | 2 | 6 |
+| 5 | `xWing` | 1 | 1 | 2 |
+| 5 | `yWing` | 0 | 0 | 0 |
+| 5 | `swordfish` | 0 | 0 | 0 |
+| 5 | `unitCombination` | 152 | 244 | 4724 |
+
+Un paso es una pasada de una técnica con todas sus deducciones a la vez; por eso `cageCombination` tiene muchas más deducciones que pasos. Los 152 puzzles con `unitCombination` son los 85 de nivel 5 y 67 de los 70 que exceden las técnicas.
+
+**`unitCombination` decide el nivel 5.** Se usa en los 85 puzzles de nivel 5, y **sin ella los 85 pasan a exceder las técnicas** (`gradeWithout` repite el bucle de `grade` sin esa técnica). El único X-Wing del corpus está en uno de esos puzzles, que igual necesita `unitCombination`. Hoy, nivel 5 significa «hace falta `unitCombination`».
+
+**Tamaño de cada deducción de `unitCombination`.** Para cada una de las 4724 deducciones (todas quitan un candidato) se toma, entre la fila, la columna y la caja de la celda que la justifican, la de menos combinaciones. Una combinación es una forma de repartir los dígitos de la unidad entre las jaulas que la tocan (un conjunto de dígitos por jaula, sin repetir entre jaulas) en la que cada jaula cuadra con los candidatos: es lo que una persona tendría que listar. Una jaula está abierta si tiene alguna celda vacía dentro de la unidad.
+
+| Medida por deducción | Mediana | p95 | Máximo |
+|---|---|---|---|
+| Jaulas que tocan la unidad | 5 | 6 | 8 |
+| Jaulas abiertas | 5 | 6 | 8 |
+| Jaulas que sobresalen de la unidad | 3 | 6 | 8 |
+| Combinaciones de la unidad | 7 | 52 | 825 |
+
+Porcentaje de las deducciones dentro de cada cota (filas: jaulas abiertas; columnas: combinaciones). Con 2 jaulas abiertas o menos no hay ninguna.
+
+| Jaulas abiertas | ≤ 1 | ≤ 2 | ≤ 4 | ≤ 8 | ≤ 16 | ≤ 32 | Sin cota |
+|---|---|---|---|---|---|---|---|
+| ≤ 3 | 0,7 % | 2,5 % | 6,6 % | 8,7 % | 9,6 % | 9,9 % | 9,9 % |
+| ≤ 4 | 1,4 % | 8,8 % | 23,6 % | 36,9 % | 43,8 % | 46,4 % | 47,0 % |
+| ≤ 5 | 2,2 % | 12,7 % | 34,9 % | 56,4 % | 71,2 % | 79,4 % | 82,1 % |
+| ≤ 6 | 2,2 % | 12,7 % | 36,0 % | 60,1 % | 77,0 % | 89,9 % | 96,7 % |
+| ≤ 8 | 2,2 % | 12,7 % | 36,0 % | 60,6 % | 77,6 % | 91,2 % | 100 % |
+
+Puzzles de nivel 5 (de 85) en los que **todas** las deducciones de `unitCombination` quedan dentro de la cota. Es una cota inferior de los que conservaría una variante acotada: si todas caben, la variante repite la misma traza; si no, puede encontrar otro camino, y eso solo se sabe implementándola.
+
+| Jaulas abiertas | ≤ 4 | ≤ 8 | ≤ 16 | ≤ 32 | Sin cota |
+|---|---|---|---|---|---|
+| ≤ 4 | 1 | 1 | 3 | 3 | 3 |
+| ≤ 5 | 1 | 1 | 7 | 16 | 20 |
+| ≤ 6 | 2 | 2 | 11 | 31 | 57 |
+| ≤ 8 | 2 | 3 | 12 | 34 | 85 |
+
+**Lectura.** La deducción típica mira una unidad entera con 5 jaulas abiertas, 3 de ellas sobresaliendo, y 7 combinaciones. El 5 % más difícil pasa de 52 combinaciones y la peor llega a 825: eso es una búsqueda exhaustiva más que un razonamiento que una persona haga con notas. Además, casi todos los puzzles de nivel 5 necesitan al menos una deducción grande.
+
+**Propuesta de variante acotada (sin implementar).** `unitCombination` se aplicaría solo a una unidad con **como mucho 4 jaulas abiertas y como mucho 8 combinaciones**. Una persona puede hacerlo con notas: escribe las combinaciones de cada jaula (lo que ya hace con `cageCombination`), las cruza en la unidad y descarta los dígitos que no aparecen en ninguna. Cubre el 36,9 % de las deducciones actuales. Lo que quede fuera de la cota pasaría a exceder las técnicas y, por la decisión a) de F5, saldría del banco. Antes de adoptarla, en F5 habría que:
+1. Implementarla como técnica aparte y medir cuántos de los 85 puzzles conserva. La cota inferior es 1, pero lo real puede ser bastante más, porque la variante puede encontrar otro camino.
+2. Si conserva muy pocos, probar la cota amplia (5 jaulas abiertas y 32 combinaciones: el 79,4 % de las deducciones y al menos 16 puzzles), o dejar la técnica completa como un nivel aparte, más difícil que el nivel 5 acotado.
+3. Contar el costo en candidatos: con la cota, el nivel 5 se vuelve más escaso que el 8,5 % actual, y para 500 puzzles por nivel harían falta más candidatos (a unos 70 ms cada uno).

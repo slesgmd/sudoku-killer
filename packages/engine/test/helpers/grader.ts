@@ -1,11 +1,14 @@
-// Comprobaciones del calificador compartidas por la prueba rápida y el corpus (T-35.4).
+// Comprobaciones del calificador compartidas por la prueba rápida y el corpus (T-35.4 y T-35.5).
 import { expect } from "vitest";
 import {
   MAX_TECHNIQUE_LEVEL,
   TECHNIQUES,
   UNRATED,
+  createRng,
   grade,
+  levelToDeduce,
   type Deduction,
+  type GeneratedPuzzle,
   type GradeResult,
   type Grid,
   type KillerPuzzle,
@@ -94,4 +97,59 @@ export function expectSoundGrade(puzzle: KillerPuzzle, solution: Grid): GradeRes
     for (const technique of TECHNIQUES) expect(technique.find(context, state)).toEqual([]);
   }
   return result;
+}
+
+export interface MonotonyOptions {
+  /** Celdas vacías que se siguen en cada puzzle. */
+  readonly targets: number;
+  /** Tandas de celdas correctas agregadas después del estado inicial. */
+  readonly batches: number;
+  readonly batchSize: number;
+}
+
+/**
+ * Monotonía de `levelToDeduce` a lo largo de una partida (T-35.5): para `targets` celdas vacías
+ * elegidas con la semilla, se mide el nivel desde los números iniciales y después de cada tanda de
+ * celdas correctas agregadas (nunca la celda seguida, en un orden aleatorio con la misma semilla).
+ * El nivel nunca sube y, si el puzzle se resuelve, nunca pasa del `maxLevel` de `grade`. Devuelve
+ * las comparaciones hechas y los niveles medidos.
+ */
+export function expectMonotoneLevels(
+  { puzzle, solution }: GeneratedPuzzle,
+  seed: number,
+  { targets, batches, batchSize }: MonotonyOptions,
+): { comparisons: number; levels: number[] } {
+  const graded = grade(puzzle);
+  const ceiling = graded.status === "solved" ? graded.maxLevel : UNRATED;
+  const givens = new Set(puzzle.givens.map(({ cell }) => cell));
+  const empty = solution.flatMap((_, cell) => (givens.has(cell) ? [] : [cell]));
+  const rng = createRng(seed);
+  const shuffle = (cells: number[]): number[] => {
+    for (let i = cells.length - 1; i > 0; i--) {
+      const j = rng.int(i + 1);
+      [cells[i], cells[j]] = [at(cells, j), at(cells, i)];
+    }
+    return cells;
+  };
+
+  let comparisons = 0;
+  const levels: number[] = [];
+  for (const target of shuffle([...empty]).slice(0, targets)) {
+    const others = shuffle(empty.filter((cell) => cell !== target));
+    let previous = UNRATED;
+    for (let batch = 0; batch <= batches && batch * batchSize <= others.length; batch++) {
+      const values = boardWith(solution, others.slice(0, batch * batchSize));
+      const level = levelToDeduce(target, { puzzle, values });
+      const where = `seed ${String(seed)}, cell ${String(target)}, batch ${String(batch)}`;
+      expect(level, where).toBeGreaterThanOrEqual(1);
+      expect(level, where).toBeLessThanOrEqual(ceiling);
+      if (batch > 0) {
+        expect(level, where).toBeLessThanOrEqual(previous);
+        comparisons++;
+      }
+      levels.push(level);
+      previous = level;
+    }
+  }
+  return { comparisons, levels };
 }
