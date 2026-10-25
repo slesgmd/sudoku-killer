@@ -13,17 +13,24 @@
 //   cualquier otra respuesta, o ninguna, sigue con la espera exponencial (T-39.10).
 // - Cada intento ofrece los subprotocolos de `protocols` (`sk.v1` y la clave del grupo, F12), que se
 //   leen en el momento: una clave recién escrita vale en el intento siguiente.
+// - Con `access`, antes de abrir cada WebSocket se comprueba la clave guardada por HTTP
+//   (`POST /access`, T-39.13): 204 abre el WebSocket, y también 404 (un servidor sin esa ruta); 401
+//   deja `denied`, 429 `locked` y 403 `refused`, sin abrir ninguno; sin respuesta, o con otra, se
+//   sigue con la espera exponencial. El proxy de Render pierde el cierre 4003 (T-39.16), así que no
+//   se puede depender de él; queda como respaldo.
 // - Cada mensaje entrante se valida con el esquema del protocolo; uno inválido se ignora.
 // La implementación de WebSocket se inyecta: el navegador usa la suya y los bots Node, la de `ws`.
 import {
+  ACCESS_KEY_HEADER,
   CLOSE_ACCESS_DENIED,
   CLOSE_NO_ROOM,
   CLOSE_REPLACED,
   CLOSE_UNSUPPORTED,
+  encodeAccessKey,
   parseServerEnvelope,
   type ServerEnvelope,
 } from "@sudoku-killer/protocol";
-import { probeUrl } from "./server-url.ts";
+import { accessUrl, probeUrl } from "./server-url.ts";
 import { Listeners, type Transport, type TransportStatus } from "./types.ts";
 
 /** Lo que el transporte usa de un WebSocket (el del navegador y el de `ws` lo cumplen). */
@@ -68,6 +75,13 @@ export interface WsTransportOptions {
    * se pregunta). Nunca rechaza.
    */
   readonly probe?: () => Promise<number | null>;
+  /**
+   * Comprueba una clave por HTTP: el estado de `POST /access`, o `null` si no hubo respuesta (por
+   * defecto, no se comprueba). Nunca rechaza.
+   */
+  readonly access?: (key: string | null) => Promise<number | null>;
+  /** La clave guardada, que `access` comprueba antes de cada intento (por defecto, ninguna). */
+  readonly accessKey?: () => string | null;
 }
 
 export const RETRY_MIN_MS = 500;
@@ -75,6 +89,8 @@ export const RETRY_MAX_MS = 5000;
 export const UNAVAILABLE_AFTER_MS = 10_000;
 /** Plazo de la pregunta por HTTP: un servidor dormido no contesta, y se sigue reintentando. */
 export const PROBE_TIMEOUT_MS = 3000;
+/** Plazo de `POST /access`: más largo, porque el navegador puede hacer antes la consulta de CORS. */
+export const ACCESS_TIMEOUT_MS = 10_000;
 
 /** `probe` sobre `GET /ws` del mismo servidor que `wsUrl` (`ws` → `http`, `wss` → `https`). */
 export function httpProbe(
@@ -87,6 +103,32 @@ export function httpProbe(
       const response = await fetcher(url, {
         cache: "no-store",
         signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+      });
+      return response.status;
+    } catch {
+      return null;
+    }
+  };
+}
+
+/**
+ * `access` sobre `POST /access` del mismo servidor que `wsUrl`: la clave va normalizada y en
+ * base64url en `X-Sk-Access-Key`, nunca en la URL (T-39.12).
+ */
+export function httpAccess(
+  wsUrl: string,
+  fetcher: typeof fetch = (input, init) => globalThis.fetch(input, init),
+): (key: string | null) => Promise<number | null> {
+  const url = accessUrl(wsUrl);
+  return async (key) => {
+    const encoded = key === null ? null : encodeAccessKey(key);
+    try {
+      const response = await fetcher(url, {
+        method: "POST",
+        cache: "no-store",
+        credentials: "omit",
+        headers: encoded === null ? {} : { [ACCESS_KEY_HEADER]: encoded },
+        signal: AbortSignal.timeout(ACCESS_TIMEOUT_MS),
       });
       return response.status;
     } catch {
@@ -122,6 +164,8 @@ export function createWsTransport(options: WsTransportOptions): Transport {
     random = Math.random,
     debug = () => undefined,
     probe,
+    access,
+    accessKey = () => null,
   } = options;
   const win = options.window === undefined ? globalThis.window : options.window;
   const doc = options.document === undefined ? globalThis.document : options.document;
@@ -137,6 +181,8 @@ export function createWsTransport(options: WsTransportOptions): Transport {
   let unavailableTimer: unknown = null;
   /** Cuenta las preguntas por HTTP: solo vale la respuesta de la última. */
   let probes = 0;
+  /** Cuenta las comprobaciones de la clave antes de abrir: solo vale la de la última. */
+  let checks = 0;
 
   const setStatus = (next: TransportStatus) => {
     if (status === next) return;
@@ -236,6 +282,23 @@ export function createWsTransport(options: WsTransportOptions): Transport {
     drop();
     if (status !== "reconnecting" && status !== "unavailable") setStatus("connecting");
     startUnavailableTimer();
+    if (!access) {
+      openSocket();
+      return;
+    }
+    const asked = ++checks;
+    void access(accessKey()).then((answer) => {
+      // Mientras tanto se salió, se pidió otro intento o ya hay un socket: esta ya no vale.
+      if (asked !== checks || disposed || !wanted || socket !== null) return;
+      if (answer === 204 || answer === 404) openSocket();
+      else if (answer === 401) stop("denied");
+      else if (answer === 429) stop("locked");
+      else if (answer === 403) stop("refused");
+      else scheduleRetry();
+    });
+  }
+
+  function openSocket(): void {
     let created: SocketLike;
     try {
       created = open(url, protocols());
@@ -305,6 +368,7 @@ export function createWsTransport(options: WsTransportOptions): Transport {
     },
     subscribe: (listener) => messages.add(listener),
     onStatus: (listener) => statuses.add(listener),
+    ...(access ? { checkAccess: (key: string) => access(key) } : {}),
     connect() {
       if (disposed) return;
       wanted = true;
@@ -335,6 +399,7 @@ export function createWsTransport(options: WsTransportOptions): Transport {
     },
     disconnect() {
       wanted = false;
+      checks++;
       clearTimers();
       drop();
       setStatus("idle");
@@ -342,6 +407,7 @@ export function createWsTransport(options: WsTransportOptions): Transport {
     close() {
       if (disposed) return;
       wanted = false;
+      checks++;
       clearTimers();
       drop(1001);
       setStatus("idle");

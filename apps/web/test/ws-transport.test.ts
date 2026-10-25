@@ -2,7 +2,7 @@
 // exponencial con jitter, `unavailable` a los 10 s, códigos de cierre 4000, 4001 y 4002, validación
 // de los mensajes entrantes y reconexión inmediata al volver a primer plano, al restaurar la página
 // desde la caché o al recuperar la red (pedido del usuario al aprobar F10).
-import type { ServerEnvelope } from "@sudoku-killer/protocol";
+import { ACCESS_KEY_HEADER, encodeAccessKey, type ServerEnvelope } from "@sudoku-killer/protocol";
 import { describe, expect, it } from "vitest";
 import type { TransportStatus } from "../src/transport/types.ts";
 import {
@@ -10,6 +10,7 @@ import {
   RETRY_MIN_MS,
   UNAVAILABLE_AFTER_MS,
   createWsTransport,
+  httpAccess,
   httpProbe,
   retryDelay,
   sameOriginUrl,
@@ -319,6 +320,134 @@ describe("WebSocket transport (ADR 0002)", () => {
       expect(urls).toEqual(["https://sk.example/ws"]);
       const down = httpProbe("ws://127.0.0.1:5173/ws", () => Promise.reject(new TypeError("down")));
       expect(await down()).toBeNull();
+    });
+  });
+
+  describe("T-39.13 the key is checked over HTTP before any WebSocket", () => {
+    const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    function gated(answer: (key: string | null) => Promise<number | null>) {
+      const sockets: FakeSocket[] = [];
+      const scheduler = new FakeScheduler();
+      const asked: (string | null)[] = [];
+      let key: string | null = null;
+      const transport = createWsTransport({
+        url: "wss://example.test/ws",
+        open: () => {
+          const socket = new FakeSocket();
+          sockets.push(socket);
+          return socket;
+        },
+        scheduler,
+        random: () => 0,
+        window: null,
+        document: null,
+        access: (offered) => {
+          asked.push(offered);
+          return answer(offered);
+        },
+        accessKey: () => key,
+      });
+      const setKey = (next: string | null) => {
+        key = next;
+      };
+      return { transport, sockets, scheduler, asked, setKey };
+    }
+
+    it("204 opens the WebSocket, and 404 (a server without POST /access) too; each attempt checks the saved key of that moment", async () => {
+      for (const answer of [204, 404]) {
+        const { transport, sockets, asked, setKey } = gated(() => Promise.resolve(answer));
+        setKey("ABCDEFGHJKMNPQRS");
+        transport.connect();
+        expect(sockets).toHaveLength(0);
+        await flush();
+        expect(sockets, String(answer)).toHaveLength(1);
+        expect(asked).toEqual(["ABCDEFGHJKMNPQRS"]);
+        setKey(null);
+        transport.reconnect();
+        await flush();
+        expect(asked).toEqual(["ABCDEFGHJKMNPQRS", null]);
+        expect(sockets).toHaveLength(2);
+      }
+    });
+
+    it("401 leaves it denied, 429 locked and 403 refused, without opening any WebSocket or retrying", async () => {
+      for (const [answer, status] of [
+        [401, "denied"],
+        [429, "locked"],
+        [403, "refused"],
+      ] as const) {
+        const { transport, sockets, scheduler } = gated(() => Promise.resolve(answer));
+        transport.connect();
+        await flush();
+        expect(transport.status).toBe(status);
+        scheduler.advance(60_000);
+        await flush();
+        expect(sockets, String(answer)).toHaveLength(0);
+      }
+    });
+
+    it("no answer (a sleeping server) or another one keeps the backoff without opening, and opens once it answers 204", async () => {
+      let answer: number | null = null;
+      const { transport, sockets, scheduler, asked } = gated(() => Promise.resolve(answer));
+      transport.connect();
+      await flush();
+      expect(sockets).toHaveLength(0);
+      expect(transport.status).toBe("connecting");
+      answer = 503;
+      scheduler.advance(RETRY_MIN_MS / 2);
+      await flush();
+      expect(sockets).toHaveLength(0);
+      answer = 204;
+      scheduler.advance(RETRY_MIN_MS);
+      await flush();
+      expect(asked).toHaveLength(3);
+      expect(sockets).toHaveLength(1);
+      scheduler.advance(UNAVAILABLE_AFTER_MS);
+      expect(transport.status).toBe("unavailable");
+    });
+
+    it("an answer that arrives after disconnect() or a newer attempt is ignored", async () => {
+      const answers: ((status: number) => void)[] = [];
+      const { transport, sockets } = gated(() => new Promise((resolve) => answers.push(resolve)));
+      transport.connect();
+      transport.disconnect();
+      answers[0]?.(204);
+      await flush();
+      expect(sockets).toHaveLength(0);
+      expect(transport.status).toBe("idle");
+      transport.connect();
+      transport.reconnect();
+      answers[1]?.(401);
+      await flush();
+      expect(transport.status).toBe("connecting");
+      answers[2]?.(204);
+      await flush();
+      expect(sockets).toHaveLength(1);
+    });
+
+    it("httpAccess posts to /access on the same host with the key in a header, never in the URL", async () => {
+      const calls: { url: string; init: RequestInit | undefined }[] = [];
+      const check = httpAccess("wss://sk.example/ws", (input, init) => {
+        calls.push({ url: input instanceof Request ? input.url : input.toString(), init });
+        return Promise.resolve(new Response(null, { status: 401 }));
+      });
+      expect(await check("abcd-efgh-jkmn-pqrs")).toBe(401);
+      expect(await check(null)).toBe(401);
+      expect(calls.map((c) => c.url)).toEqual([
+        "https://sk.example/access",
+        "https://sk.example/access",
+      ]);
+      expect(calls[0]?.init?.method).toBe("POST");
+      expect(calls[0]?.init?.headers).toEqual({
+        [ACCESS_KEY_HEADER]: encodeAccessKey("ABCDEFGHJKMNPQRS"),
+      });
+      expect(calls[1]?.init?.headers).toEqual({});
+      for (const { url } of calls) expect(url).not.toMatch(/ABCD|QUJD/);
+      const down = httpAccess("ws://127.0.0.1:5173/ws", () =>
+        Promise.reject(new TypeError("down")),
+      );
+      expect(await down("ABCDEFGHJKMNPQRS")).toBeNull();
     });
   });
 

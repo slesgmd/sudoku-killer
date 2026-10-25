@@ -143,11 +143,17 @@ export interface ClientState {
   /** Con la partida terminada, si se pasó a Resultados con «Ver resultados». */
   readonly showResults: boolean;
   /**
-   * El servidor pidió la clave de acceso del grupo (4003, R-39): `missing` si no había una guardada,
-   * `invalid` si la guardada no valió (se olvida); `locked` si el handshake recibió 429 por
-   * demasiadas claves que no valen desde esta red (T-39.10; la guardada se conserva).
+   * El servidor pidió la clave de acceso del grupo (401 en `POST /access` o 4003, R-39): `missing`
+   * si no había una guardada, `invalid` si la guardada no valió (se olvida); `locked` si llegó un
+   * 429 por demasiadas claves que no valen desde esta red (T-39.10; la guardada se conserva).
    */
   readonly accessDenied: "missing" | "invalid" | "locked" | null;
+  /**
+   * La comprobación de una clave escrita o de una invitación (T-39.14): `checking` mientras se
+   * espera `POST /access`, `wrong` si recibió 401 (no se guardó) y `unreachable` si el servidor no
+   * respondió.
+   */
+  readonly accessCheck: "checking" | "wrong" | "unreachable" | null;
   /** «Despertando el servidor…»: la entrada lleva 3 s sin conexión (F12g). */
   readonly waking: boolean;
 }
@@ -185,6 +191,7 @@ export const INITIAL_STATE: ClientState = {
   starting: false,
   showResults: false,
   accessDenied: null,
+  accessCheck: null,
   waking: false,
 };
 

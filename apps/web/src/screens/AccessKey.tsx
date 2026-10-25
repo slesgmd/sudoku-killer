@@ -1,7 +1,9 @@
-// «Clave del grupo» (F12, R-39): aparece cuando el servidor cierra con 4003 porque falta la clave o
-// la guardada no vale. La clave se escribe una sola vez y queda en el dispositivo; al continuar se
-// repite lo que se estaba haciendo. El enlace de invitación (`#k=`) evita escribirla. Con la red
-// bloqueada por demasiadas claves que no valen (429, T-39.10), pide esperar y ofrece «Reintentar».
+// «Clave del grupo» (F12, R-39): aparece antes de abrir ningún WebSocket cuando `POST /access` dice
+// que falta la clave o que la guardada no vale (o, de respaldo, con el cierre 4003). La clave se
+// escribe una sola vez; al continuar se comprueba y, solo si vale, queda en el dispositivo y se
+// repite lo que se estaba haciendo (T-39.14). El enlace de invitación (`#k=`) evita escribirla y
+// pasa por la misma comprobación. Con la red bloqueada por demasiadas claves que no valen (429,
+// T-39.10), pide esperar y ofrece «Reintentar».
 import { useRef, useState } from "react";
 import { AppHeader } from "../components/AppHeader.tsx";
 import { Icon } from "../components/Icon.tsx";
@@ -9,6 +11,8 @@ import { t } from "../i18n/index.ts";
 
 export interface AccessKeyProps {
   readonly reason: "missing" | "invalid" | "locked";
+  /** La comprobación de la clave escrita o de la invitación (`ClientState.accessCheck`). */
+  readonly check: "checking" | "wrong" | "unreachable" | null;
   /** Devuelve `false` si la clave no tiene el largo de una clave. */
   readonly onSubmit: (key: string) => boolean;
   /** «Reintentar» tras la espera del bloqueo, con la clave guardada. */
@@ -16,10 +20,18 @@ export interface AccessKeyProps {
   readonly onBack: () => void;
 }
 
-export function AccessKey({ reason, onSubmit, onRetry, onBack }: AccessKeyProps) {
+export function AccessKey({ reason, check, onSubmit, onRetry, onBack }: AccessKeyProps) {
   const [key, setKey] = useState("");
   const [invalid, setInvalid] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const checking = check === "checking";
+  const error = invalid
+    ? t("access.invalid")
+    : check === "wrong"
+      ? t("access.wrong")
+      : check === "unreachable"
+        ? t("access.unreachable")
+        : null;
   return (
     <div className="scr">
       <AppHeader />
@@ -58,6 +70,7 @@ export function AccessKey({ reason, onSubmit, onRetry, onBack }: AccessKeyProps)
               noValidate
               onSubmit={(event) => {
                 event.preventDefault();
+                if (checking) return;
                 if (!onSubmit(key)) {
                   setInvalid(true);
                   input.current?.focus();
@@ -75,7 +88,7 @@ export function AccessKey({ reason, onSubmit, onRetry, onBack }: AccessKeyProps)
                   spellCheck={false}
                   maxLength={80}
                   value={key}
-                  aria-invalid={invalid}
+                  aria-invalid={error !== null}
                   aria-describedby="access-hint access-error"
                   onChange={(event) => {
                     setKey(event.target.value);
@@ -85,15 +98,19 @@ export function AccessKey({ reason, onSubmit, onRetry, onBack }: AccessKeyProps)
                 <p id="access-hint" className="hint">
                   {t("access.hint")}
                 </p>
-                {invalid ? (
+                {error !== null ? (
                   <p id="access-error" className="ferr" role="alert">
                     <Icon name="alert" />
-                    <span>{t("access.invalid")}</span>
+                    <span>{error}</span>
                   </p>
                 ) : null}
               </div>
-              <button className="btn primary lg block" type="submit">
-                {t("access.submit")}
+              <button
+                className="btn primary lg block"
+                type="submit"
+                aria-disabled={checking ? "true" : undefined}
+              >
+                {checking ? t("access.checking") : t("access.submit")}
               </button>
             </form>
           )}

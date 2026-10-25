@@ -10,8 +10,10 @@ import type { ClientEnvelope, ServerEnvelope } from "@sudoku-killer/protocol";
  * - `unavailable`: no hubo conexión en un tiempo; se sigue reintentando.
  * - `replaced`: otra pestaña tomó la sesión (4001, E-08); no se reconecta solo.
  * - `incompatible`: el servidor usa otra versión del protocolo (4000, E-19); no se reconecta.
- * - `denied`: falta la clave de acceso del grupo o no vale (4003, R-39); no se reconecta solo.
- * - `locked`: el handshake recibió 429 (demasiadas claves que no valen desde esta red, T-39.10);
+ * - `denied`: falta la clave de acceso del grupo o no vale (401 en `POST /access` o 4003, R-39); no
+ *   se reconecta solo.
+ * - `locked`: `POST /access` o el handshake recibieron 429 (demasiadas claves que no valen desde esta
+ *   red, T-39.10);
  *   no se reconecta solo.
  * - `refused`: el handshake recibió 403 (la página no es de un origen permitido); no se reconecta.
  */
@@ -34,6 +36,12 @@ export interface Transport {
   subscribe(listener: (message: ServerEnvelope) => void): () => void;
   onStatus(listener: (status: TransportStatus) => void): () => void;
   readonly status: TransportStatus;
+  /**
+   * Comprueba una clave del grupo por HTTP sin abrir ningún WebSocket (`POST /access`, T-39.12): el
+   * estado (204, 401 o 429), o `null` si no hubo respuesta. Sin ella (el servidor simulado), no se
+   * pide clave.
+   */
+  checkAccess?(key: string): Promise<number | null>;
   /** Abre la conexión si no está abierta ni intentándose. */
   connect(): void;
   /** Descarta la conexión actual y abre otra ya, sin espera («Jugar en esta pestaña», pong vencido). */

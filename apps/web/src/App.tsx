@@ -3,7 +3,6 @@ import { SettingsDialog } from "./components/Dialogs.tsx";
 import { SessionDialogs } from "./components/Network.tsx";
 import { browserShareApi, type ShareApi } from "./components/share.ts";
 import { GameClient } from "./game/client.ts";
-import { browserSession } from "./game/session.ts";
 import { INITIAL_STATE, type Phase } from "./game/state.ts";
 import { navigate, parseRoute, roomLink, takeInvitation, useHash } from "./routes.ts";
 import { AccessKey } from "./screens/AccessKey.tsx";
@@ -120,6 +119,7 @@ export function Screens({
     return (
       <AccessKey
         reason={state.accessDenied}
+        check={state.accessCheck}
         onSubmit={(key) => client.submitAccessKey(key)}
         onRetry={() => {
           client.retryAccess();
@@ -212,9 +212,11 @@ export function Screens({
 export function App() {
   const [client, setClient] = useState<GameClient | null>(null);
   useEffect(() => {
-    // Enlace de invitación del grupo (`#k=…`, R-39): la clave se guarda y sale de la URL.
+    // Enlace de invitación del grupo (`#k=…`, R-39): la clave sale de la URL y, cuando el cliente
+    // existe, se comprueba; solo se guarda si vale (T-39.14).
+    let invitation: string | null = null;
     takeInvitation(window.location, window.history, (key) => {
-      browserSession.saveAccessKey(key);
+      invitation = key;
     });
     // El servidor dormido empieza a despertar apenas abre la página (F12g); la respuesta no importa.
     const warm = prewarmUrl(import.meta.env.VITE_SERVER_URL);
@@ -234,6 +236,7 @@ export function App() {
           return;
         }
         created = new GameClient({ transport });
+        if (invitation !== null) created.acceptInvitation(invitation);
         setClient(created);
       });
     return () => {

@@ -53,6 +53,8 @@ export const START_TIMEOUT_MS = 15_000;
  */
 export const WAKE_NOTICE_MS = 3_000;
 export const WAKE_TIMEOUT_MS = 120_000;
+/** Sin respuesta de `POST /access`, se vuelve a preguntar tras esta espera, hasta `WAKE_TIMEOUT_MS`. */
+export const ACCESS_RETRY_MS = 2_000;
 /** Grupos de deshacer guardados (ADR 0005). */
 const UNDO_LIMIT = 50;
 /**
@@ -170,6 +172,8 @@ export class GameClient {
   private lastAlive = 0;
   /** Si la conexión cayó estando en la sala y todavía no se volvió. */
   private reconnecting = false;
+  /** Cuenta las comprobaciones de claves escritas: solo vale la respuesta de la última. */
+  private accessChecks = 0;
 
   constructor({
     transport,
@@ -322,17 +326,23 @@ export class GameClient {
       this.stopPing();
     }
     if (status === "denied") {
-      // Falta la clave del grupo o no valió (4003, R-39): se olvida la guardada y se pide otra.
+      // Falta la clave del grupo o no valió (401 o 4003, R-39): se olvida la guardada y se pide otra
+      // (T-39.15).
       this.stopStartTimer();
       const hadKey = this.session.accessKey() !== null;
       this.session.saveAccessKey(null);
-      this.set({ connection: status, accessDenied: hadKey ? "invalid" : "missing", waking: false });
+      this.set({
+        connection: status,
+        accessDenied: hadKey ? "invalid" : "missing",
+        accessCheck: null,
+        waking: false,
+      });
       return;
     }
     if (status === "locked") {
-      // 429 en el handshake (T-39.10): no es el servidor dormido; hay que esperar.
+      // 429 (T-39.10): no es el servidor dormido; hay que esperar.
       this.stopStartTimer();
-      this.set({ connection: status, accessDenied: "locked", waking: false });
+      this.set({ connection: status, accessDenied: "locked", accessCheck: null, waking: false });
       return;
     }
     this.set({ connection: status });
@@ -466,21 +476,61 @@ export class GameClient {
   }
 
   /**
-   * La clave escrita en «Clave del grupo» (R-39): se guarda en este dispositivo y se repite lo que
-   * se estaba haciendo (volver a la sala o la última entrada). Devuelve `false` si no tiene el largo
-   * de una clave.
+   * La clave escrita en «Clave del grupo» (R-39, T-39.14): se comprueba con `POST /access` y, solo
+   * si vale (204), se guarda en este dispositivo y se repite lo que se estaba haciendo (volver a la
+   * sala o la última entrada). Devuelve `false` si no tiene el largo de una clave.
    */
   submitAccessKey(raw: string): boolean {
     const key = normalizeAccessKey(raw);
     if (!isValidAccessKey(key)) return false;
-    this.session.saveAccessKey(key);
-    this.retryAccess();
+    void this.verifyKey(key);
     return true;
+  }
+
+  /**
+   * La clave de un enlace de invitación (`#k=`, T-39.14): pasa por la misma comprobación, en
+   * «Clave del grupo», y solo se guarda si vale.
+   */
+  acceptInvitation(key: string): void {
+    this.set({ accessDenied: "missing" });
+    void this.verifyKey(key);
+  }
+
+  /**
+   * Pregunta `POST /access` por la clave. Sin respuesta (el servidor puede estar despertando), se
+   * vuelve a preguntar hasta `WAKE_TIMEOUT_MS`. Sin `checkAccess` (el servidor simulado), vale.
+   */
+  private async verifyKey(key: string): Promise<void> {
+    const asked = ++this.accessChecks;
+    const current = () => asked === this.accessChecks && this.state.accessDenied !== null;
+    this.set({ accessCheck: "checking" });
+    const check = this.transport.checkAccess?.bind(this.transport);
+    const deadline = this.now() + WAKE_TIMEOUT_MS;
+    let answer = check ? await check(key) : 204;
+    while (answer === null && current() && this.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, ACCESS_RETRY_MS));
+      if (!current()) return;
+      answer = check ? await check(key) : 204;
+    }
+    if (!current()) return;
+    // 404: un servidor sin `POST /access`; el handshake decide (4003, el respaldo).
+    if (answer === 204 || answer === 404) {
+      this.session.saveAccessKey(key);
+      this.set({ accessCheck: null });
+      this.retryAccess();
+    } else if (answer === 401) {
+      this.set({ accessCheck: "wrong" });
+    } else if (answer === 429) {
+      this.set({ accessDenied: "locked", accessCheck: null });
+    } else {
+      this.set({ accessCheck: "unreachable" });
+    }
   }
 
   /** «Reintentar» tras la espera del bloqueo (429): con la clave guardada, sin escribirla otra vez. */
   retryAccess(): void {
-    this.set({ accessDenied: null });
+    this.accessChecks++;
+    this.set({ accessDenied: null, accessCheck: null });
     if (this.inRoom()) this.transport.reconnect();
     else if (this.state.lastEntry) this.retryEntry();
     else this.backHome();
@@ -488,6 +538,7 @@ export class GameClient {
 
   /** «Volver al inicio» desde «Clave del grupo». */
   cancelAccess(): void {
+    this.accessChecks++;
     this.backHome();
   }
 

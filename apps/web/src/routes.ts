@@ -1,7 +1,8 @@
 // Rutas por hash (F10, design/pantallas.md): Inicio, Entrar o crear, la sala y Ayuda. La sala tiene
 // una sola ruta, `#/sala/CODIGO`: el lobby, la partida o Resultados salen del estado de la sala
 // (decisión 3). La ficha nunca va en la URL (SPEC §2.4): el enlace solo lleva el código. El enlace de
-// invitación del grupo (`#k=CLAVE`, R-39) es aparte: la clave se guarda y sale de la URL al abrirlo.
+// invitación del grupo (`#k=CLAVE`, R-39) es aparte: la clave sale de la URL al abrirlo y se guarda
+// solo si `POST /access` dice que vale (T-39.14).
 import { isRoomCodeShape, isValidAccessKey, normalizeAccessKey } from "@sudoku-killer/protocol";
 import { useSyncExternalStore } from "react";
 
@@ -52,17 +53,18 @@ export function invitationKey(hash: string): string | null {
 }
 
 /**
- * Al abrir un enlace de invitación (R-39): guarda la clave y la saca de la URL y del historial
- * (reemplaza la entrada por `#/`), aunque no sea una clave válida. Devuelve si había invitación.
+ * Al abrir un enlace de invitación (R-39): entrega la clave a `take` (que la comprueba antes de
+ * guardarla, T-39.14) y la saca de la URL y del historial (reemplaza la entrada por `#/`), aunque no
+ * sea una clave válida. Devuelve si había invitación.
  */
 export function takeInvitation(
   location: Pick<Location, "hash" | "pathname" | "search">,
   history: Pick<History, "replaceState">,
-  save: (key: string) => void,
+  take: (key: string) => void,
 ): boolean {
   if (!location.hash.startsWith("#k=")) return false;
   const key = invitationKey(location.hash);
-  if (key !== null) save(key);
+  if (key !== null) take(key);
   history.replaceState(null, "", `${location.pathname}${location.search}#/`);
   return true;
 }
