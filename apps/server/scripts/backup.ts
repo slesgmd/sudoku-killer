@@ -12,6 +12,7 @@ import {
   RESTORE_DATABASE,
   StepError,
   freshDatabase,
+  libpqUrl,
   pgTool,
   restoreDump,
   run,
@@ -37,7 +38,7 @@ async function main(): Promise<void> {
       "--no-owner",
       "--no-privileges",
       `--file=${dump}`,
-      `--dbname=${source}`,
+      `--dbname=${libpqUrl(source)}`,
     ]);
     const origin = connect(source);
     const sourceCounts = await tableCounts(origin.db).finally(() => origin.close());
