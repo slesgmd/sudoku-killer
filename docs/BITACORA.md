@@ -1091,4 +1091,4 @@ Al aprobar, agregó:
 
 **Tiempo real:** de 17:50 a 18:35 (UTC−5), unas 0,75 h.
 
-**Siguiente:** el usuario lleva `fix-access-http` a `main` por PR (incluye `fix-f12-cierre`), cambia `sslmode=require` por `sslmode=verify-full` en `DATABASE_URL` (Render y el secreto de GitHub) y corre `smoke` y `backup`. Después, comprobar en producción con un navegador sin clave que aparece «Clave del grupo», y planificar F13 en plan mode.
+**Siguiente:** el usuario lleva `fix-access-http` a `main` por PR (rebasada sobre `main`, que ya tiene `fix-f12-cierre`), cambia `sslmode=require` por `sslmode=verify-full` en `DATABASE_URL` (Render y el secreto de GitHub) y corre `smoke` y `backup`. Después, comprobar en producción con un navegador sin clave que aparece «Clave del grupo», y planificar F13 en plan mode.
