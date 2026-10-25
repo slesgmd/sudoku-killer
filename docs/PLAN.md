@@ -1,6 +1,6 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.24
+Versión del plan: 1.25
 Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F5 hecha (2026-10-23) · F6 hecha (2026-10-24) · F7 hecha (2026-10-23) · F8 hecha (2026-10-24) · F9 hecha (2026-10-24) · F10 hecha (2026-10-25) · F11 hecha (2026-10-25)
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
@@ -758,10 +758,10 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | F12g | Despertar: precalentamiento, aviso y reintento · E2E con el servidor apagado al abrir | Hecha |
 | F12h | Logs y métricas cada 60 s, sin datos de las personas · prueba I | Hecha |
 | F12i | Respaldos cifrados (`backup.yml`), simulacro de restauración (`restore-drill.yml`) y `db-admin.yml` · pruebas de los scripts y de la guarda | Hecha |
-| F12j | Primer despliegue (usuario, `docs/despliegue.md`) y `db-admin` · el servidor arranca con el banco; `smoke`, `backup` y `restore-drill` en verde; nombres y `TRUST_PROXY_HOPS` confirmados | Pendiente |
-| F12k | Carga en el hosting (1, 3 y 5 salas) · p95 < 150 ms desde Actions | Pendiente |
-| F12l | Partida real entre iPad, iPhone y PC | Pendiente |
-| F12m | Cierre y comparación de horas | Pendiente |
+| F12j | Primer despliegue (usuario, `docs/despliegue.md`) y `db-admin` · el servidor arranca con el banco; `smoke`, `backup` y `restore-drill` en verde; nombres y `TRUST_PROXY_HOPS` confirmados | Hecha (2026-10-25): servicios con 0958857, 2000 puzzles, respaldo y simulacro en verde; el humo falló solo en la HSTS (corregido en `fix-f12-cierre`, que también corrige el 4003 perdido tras el proxy) |
+| F12k | Carga en el hosting (1, 3 y 5 salas) · p95 < 150 ms desde Actions | Pendiente de la decisión del usuario (cómo medir sin la clave a la vista y sin mezclar partidas, BITÁCORA 2026-10-25) |
+| F12l | Partida real entre iPad, iPhone y PC | Hecha (2026-10-25): por internet, con el enlace de invitación, todo sincronizado |
+| F12m | Cierre y comparación de horas | Pendiente (después de F12k y de la decisión sobre Brave) |
 
 ### F13 — Beta cerrada y cierre de la v1 (10 h, más 1–2 semanas de calendario; original 10–20 h)
 **Tareas:**
@@ -859,3 +859,4 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - **1.22:** recalibración del cierre de F10 aprobada por el usuario (2026-10-25): F11 de 3–6 h a 2–4 h; F12 y F13 sin cambios; total de la v1 en unas 33–37 h. Plan de F11 aprobado, con las subtareas F11a a F11i y sus decisiones (cortes reales en el caos, dos escenarios de carga con PostgreSQL 18, política de los hallazgos de seguridad, `scoring:report` sin cambiar parámetros y T(L) fuera de la v1).
 - **1.23:** F11 hecha (~2,1 h reales frente a 2–4 h). E2E de casos límite y caos con semilla, equivalencia de la reconstrucción, prueba de carga (p95 de 15,3 ms realista y de 49–74 ms en estrés con 50 salas), memoria acotada (caché del catálogo), revisión de seguridad (topes de conexiones y de salas; SPEC 1.9) y `scoring:report`. Comparación de horas al cerrar F11 en la sección 5, sin cambios para F12 y F13. F12 suma lo que F11 le asignó.
 - **1.24:** plan de F12 aprobado por el usuario (2026-10-25), con las subtareas F12a a F12m y sus decisiones (Render y Neon, ADR 0007; clave de acceso con enlace de invitación; aviso al despertar; respaldos cifrados que cuentan como uso de Neon; logs de Actions sin datos). F12 sube de 2–4 h a 3–5 h; total de la v1 en unas 34–36 h.
+- **1.25:** F12j y F12l hechas (2026-10-25). Correcciones del cierre en `fix-f12-cierre`: el 4003 se envía al primer mensaje del cliente (detrás del proxy de Render el que salía con el 101 se perdía; SPEC 1.12, T-39.11), la prueba de humo acepta la HSTS más estricta de Render, `pg_dump` recibe `sslrootcert=system` con `sslmode=verify-full`, y `upload-artifact` pasa a v7 (Node 24). F12k y F12m quedan pendientes de dos decisiones del usuario: Brave (la regla `||onrender.com/health` de EasyPrivacy) y cómo medir la carga en el hosting.

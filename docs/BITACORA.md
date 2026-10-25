@@ -990,3 +990,57 @@ Al aprobar, agregó:
 **Tiempo real:** de 14:55 a 15:35 (UTC−5), unas 0,65 h.
 
 **Siguiente:** el usuario despliega `fix-access-lock` (PR a `main`), cambia `sslmode` y sigue con F12j: `smoke`, `backup`, `restore-drill` y confirmar `TRUST_PROXY_HOPS` con `addresses` y `addressUnknown`.
+
+## 2026-10-25 — F12j y F12l: despliegue, partida real y correcciones del cierre
+
+**Evidencia del usuario:**
+- F12j: despliegue en Render con dos correcciones (`corepack pnpm` sin `enable`; el bloqueo de la clave sin rechazos). Los dos servicios quedaron Live con 0958857. `db-admin bank-load`: 2000 puzzles activos.
+- F12l: partida real por internet entre PC, iPhone e iPad con el enlace de invitación, todo sincronizado.
+- Workflows: `backup` en verde (un artefacto cifrado) y `restore-drill` en verde. `smoke`: todo `ok` salvo `smoke.web_security_headers: fail`.
+- Fallos reportados: sin clave guardada, la app mostraba «Sin conexión» en vez de «Clave del grupo» (PC e iPhone), y en el log cada intento sin clave dejaba `websocket access denied` y sumaba `accessDenied`; avisos de Node 20 en las acciones; el aviso de `pg` sobre `sslmode`; Brave con Shields bloquea `/healthz` (`net::ERR_BLOCKED_BY_CLIENT`).
+
+**1. «Sin conexión» en vez de «Clave del grupo».**
+- Reproducción contra producción (handshake sin clave, con el origen de la web): el 101 llega, pero el 4003 no llega nunca; el cliente ve 1006 a los 20 s. A nivel de bytes, detrás del 101 no llega ningún marco, y un ping o un cierre del cliente los responde un intermediario (el servidor, con su cierre ya enviado, no responde pings). En local, el mismo servidor envía el 101 y el 4003 en el acto.
+- Causa: el servidor cerraba con 4003 justo después del 101, y el proxy de Render (detrás de Cloudflare) pierde lo que el servidor envía tras el 101 antes de que el cliente hable. El navegador veía un 1006, como un servidor dormido, reintentaba y terminaba en «Sin conexión». Con la clave todo funciona porque el servidor solo habla para responder.
+- Además, el servidor contaba la conexión sin clave como clave rechazada en `accessDenied` y en el log (sin bloquear: eso ya lo corrigió T-39.7).
+- Corrección: `deny` (`ws-transport.ts`) cierra con 4003 al llegar el primer mensaje del cliente (el navegador envía la entrada y un ping en cuanto abre), o a los 5 s (`DENY_GRACE_MS`) si no envía nada; el mensaje se descarta sin leerlo. `AccessGate.admit` devuelve `admitted`, `missing` o `denied`: sin clave suma `accessMissing` y deja `websocket access key missing` (info); solo una clave que no vale suma `accessDenied` y deja `websocket access denied` (warn).
+- Prueba T-39.11 (`apps/server/test/ws.test.ts`): un proxy TCP de prueba que pierde lo que sigue al 101 hasta que el cliente habla; sin clave y con una que no vale llega el 4003, con la clave se juega; un cliente callado se cierra a los 5 s. La prueba de humo suma `smoke.ws_keyless_4003`, que lo comprueba en producción.
+- Verificación negativa: con el cierre junto con el 101, las dos pruebas T-39.11 fallan («expected 'open' to be 'close 4003'»), igual que en Render.
+- SPEC 1.12: R-39, §4.8 y T-39.11. `docs/carga.md` §7: `accessMissing`.
+
+**2. `smoke.web_security_headers`.**
+- Comparación con curl: las siete cabeceras llegan como las define `render.yaml`, salvo `Strict-Transport-Security`, que Render reemplaza en `onrender.com` por la suya, más estricta: `max-age=315360000; includeSubdomains; preload` (diez años; el dominio está en la lista de precarga). La prueba exigía `max-age=31536000` exacto.
+- Corrección en la prueba: `checkSecurityHeaders` acepta una HSTS con un `max-age` igual o mayor; las demás cabeceras siguen exactas. El humo imprime además una línea por cabecera (`smoke.web_header_<nombre>: ok|fail`). Nota en `render.yaml` y en `docs/seguridad.md` (S-05).
+- Prueba en `apps/server/test/smoke.test.ts` con lo que respondió Render. Verificación negativa: con la comparación exacta, la prueba de Render falla; una HSTS más débil o ausente, otra CSP o una cabecera que falta fallan siempre.
+
+**3. `sslmode`.**
+- `pg` 8.23 trata `require` como `verify-full` y avisa que la versión 9 adoptará la semántica de libpq (sin verificar el certificado). `sslmode=verify-full` vale igual para node-postgres y para libpq, pero libpq, sin `sslrootcert`, busca `~/.postgresql/root.crt`, que el runner no tiene, y `pg_dump` fallaría. `sslrootcert=system` no puede ir en `DATABASE_URL`: node-postgres lo leería como la ruta de un archivo (ENOENT).
+- Corrección: `libpqUrl` (`scripts/db/pg-tools.ts`) agrega `sslrootcert=system` (libpq 16 o posterior; el runner usa el cliente 18) solo en la cadena que recibe `pg_dump`, y solo con `verify-full` sin `sslrootcert`. Ningún secreto cambió en esta sesión.
+- Prueba `apps/server/test/pg-tools.test.ts`: la cadena de libpq conserva usuario, clave, base y `channel_binding`; las demás quedan igual; node-postgres no avisa con `verify-full`. Verificación negativa: con `require` llega el aviso, y con `sslrootcert=system` en la cadena node-postgres falla.
+- Lo que hace el usuario: en `DATABASE_URL` de Render (servicio `sudoku-killer-lima-ws`) y en el secreto `DATABASE_URL` de GitHub, cambiar `sslmode=require` por `sslmode=verify-full`, sin tocar lo demás. Después, correr «Respaldo de la base». El simulacro de restauración no se conecta a Neon.
+
+**4. Acciones con Node 20.** Solo `actions/upload-artifact@v5` (en `backup.yml` y `load.yml`) usaba Node 20; pasa a v7 (Node 24; sigue subiendo un zip, `archive` es opcional). `checkout@v7`, `setup-node@v7` y `pnpm/action-setup@v6` ya usan Node 24. Prueba `tests/workflow-actions.test.ts` con la primera versión mayor con Node 24 de cada acción (leída del `action.yml` de cada etiqueta). Verificación negativa: con los workflows anteriores falla («backup.yml: expected [ 'actions/upload-artifact@v5' ] to deeply equal []»).
+
+**5. Brave (investigado, sin implementar; decide el usuario).**
+- Causa: la regla `||onrender.com/health` de EasyPrivacy (lista activa por defecto en Brave) bloquea cualquier `…onrender.com/health…`. Con un motor de filtros y las listas de hoy (EasyList, EasyPrivacy, uBlock filters y privacy, listas de Brave), solo coincide `/healthz`; ni el WebSocket (`/ws`) ni `GET /ws` coinciden. Brave, en modo estándar, no aplica las listas a peticiones del mismo sitio, pero `onrender.com` está en la Public Suffix List, así que la web y el servidor son sitios distintos y la petición es de terceros. Fuentes: https://brave.com/privacy-updates/9-web-compat-blocking/, https://publicsuffix.org/list/public_suffix_list.dat (entrada `onrender.com`) y https://easylist.to/easylist/easyprivacy.txt.
+- `/healthz` solo es el precalentamiento de la página: si se bloquea, el servidor empieza a despertar más tarde, con el primer intento del WebSocket.
+- Opciones:
+  - A. Precalentar con `GET /ws` (ya existe, responde 204) en vez de `/healthz`, que queda para el chequeo de Render. Unas 0,3 h. El aviso «Despertando» no cambia. Riesgo: una regla futura sobre `onrender.com` de terceros volvería a bloquear.
+  - B. Un solo origen: el servidor Node sirve también la web, con las cabeceras de seguridad. Unas 2–3 h (servir `dist`, cabeceras en Node, CSP con `connect-src 'self'`, quitar el sitio estático, actualizar `render.yaml` y las pruebas). En modo estándar Brave no bloquea nada propio. El aviso «Despertando» deja de servir en el primer acceso: la página la sirve el servidor dormido, y hasta que despierta se ve la espera de Render, no la de la app; se pierde la CDN del sitio estático. En modo agresivo, `/health` seguiría bloqueado: conviene combinarla con A.
+  - C. Dominio propio (web y servidor como subdominios del mismo dominio, mismo sitio para Brave). Unas 1–1,5 h más el costo del dominio (unos 10–15 USD al año, rompe el 0 USD del ADR 0007). El aviso «Despertando» no cambia.
+  - Recomendación: A ahora; B o C solo si aparece otro bloqueo.
+
+**6. Carga en el hosting, F12k (propuesta; decide el usuario).**
+- El script de carga levanta hoy su propio servidor; necesita un modo `--target wss://…` que use la clave desde una variable de entorno, sin imprimirla.
+- Workflow `load-hosting.yml` a mano (`workflow_dispatch`, salas 1, 3 y 5), con un secreto `LOAD_ACCESS_KEY` que el usuario crea en GitHub (lo escribe en el panel o con `gh secret set`, que lo pide sin mostrarlo) y con `quiet.ts`: solo `load.*` con recuentos y latencias. 30 conexiones desde el runner caben en el tope de 40 por IP.
+- Partidas de la carga, tres opciones:
+  - A. Marcarlas: los bots usan un prefijo de apodo reservado y `scoring:report` excluye las partidas donde todos los jugadores lo llevan. Sin cambios de esquema; unas 1–1,5 h en total. Mide la instancia real.
+  - B. Otra base: una rama de Neon (copia sin costo) y un segundo servicio gratuito de Render apuntando a ella, con el mismo plan y la misma región; se suspende al terminar. Cero mezcla; unas 1,5 h más los pasos del usuario en los paneles. No es la misma instancia, pero sí la misma configuración.
+  - C. Borrarlas después: choca con el registro de solo agregar (ADR 0004, el trigger rechaza `DELETE`). No se recomienda.
+  - Recomendación: A.
+
+**Verificación:** `check` en verde; `test` del servidor (177; `migration-guard.test.ts` falló por plazo con la suite en paralelo y pasa sola, 4 de 4), pruebas del repositorio afectadas, y E2E `access` y `wake` (2 de 2) contra el build. El resto lo corre la CI.
+
+**Tiempo real:** de 16:50 a 17:40 (UTC−5), unas 0,85 h. El tiempo del usuario en el despliegue y la partida real no se registró. **F12 suma unas 2,85 h** frente a 3–5 h.
+
+**Siguiente:** el usuario lleva `fix-f12-cierre` a `main`, cambia `sslmode` en Render y en GitHub, y corre `smoke` (con `smoke.ws_keyless_4003` y las líneas por cabecera) y `backup`. Después decide las opciones de Brave y de F12k; con eso, F12k y F12m.
