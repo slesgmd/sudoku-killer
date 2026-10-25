@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { SettingsDialog } from "./components/Dialogs.tsx";
+import { SessionDialogs } from "./components/Network.tsx";
 import { browserShareApi, type ShareApi } from "./components/share.ts";
 import { GameClient } from "./game/client.ts";
 import { INITIAL_STATE, type Phase } from "./game/state.ts";
@@ -30,9 +31,14 @@ const IN_ROOM = new Set<Phase>(["lobby", "loading", "playing", "ended"]);
 export function Screens({
   client,
   share = browserShareApi(),
+  reload = () => {
+    window.location.reload();
+  },
 }: {
   readonly client: GameClient | null;
   readonly share?: ShareApi;
+  /** «Recargar» con la versión incompatible (E-19). */
+  readonly reload?: () => void;
 }) {
   const state = useSyncExternalStore(client?.subscribe ?? noop, client?.getState ?? initial);
   const hash = useHash();
@@ -128,19 +134,30 @@ export function Screens({
     );
   }
   if (inRoom) {
-    if (state.phase === "lobby")
-      return (
-        <Lobby
-          client={client}
+    return (
+      <>
+        {state.phase === "lobby" ? (
+          <Lobby
+            client={client}
+            state={state}
+            share={share}
+            link={roomLink(state.room.code, window.location)}
+            onLeave={leave}
+          />
+        ) : state.phase === "ended" && state.showResults ? (
+          <Results client={client} state={state} onLeave={leave} />
+        ) : (
+          <GameScreen client={client} state={state} onLeave={leave} />
+        )}
+        <SessionDialogs
           state={state}
-          share={share}
-          link={roomLink(state.room.code, window.location)}
-          onLeave={leave}
+          onPlayHere={() => {
+            client.playHere();
+          }}
+          onReload={reload}
         />
-      );
-    if (state.phase === "ended" && state.showResults)
-      return <Results client={client} state={state} onLeave={leave} />;
-    return <GameScreen client={client} state={state} onLeave={leave} />;
+      </>
+    );
   }
   if (route.name === "home" && state.phase !== "entering") {
     return <Home savedRoom={client.savedRoom()} notice={state.roomNotice} />;

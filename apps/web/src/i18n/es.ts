@@ -306,6 +306,23 @@ export const es = {
     one: "Conexión recuperada. Se envió {count} nota en cola.",
     other: "Conexión recuperada. Se enviaron {count} notas en cola.",
   },
+  "net.reconnecting": "Reconectando…",
+  "net.reconnectingText": "Los números se bloquean hasta entonces.",
+  "net.reconnectingNotes": "Tus notas se guardan y se enviarán al volver.",
+  "net.reconnectingQueued": "Tus notas se guardan y se enviarán al volver ({count} en cola).",
+  "net.reconnectingRoom": "Lo que pase en la sala se verá al volver.",
+  "net.unavailable": "El servidor no responde.",
+  "net.unavailableText": "Lo que hagas no se registrará hasta que vuelva. Reintentando…",
+  "net.replacedTitle": "La sala está abierta en otra pestaña",
+  "net.replacedText":
+    "Solo una pestaña puede jugar a la vez, y esta quedó desconectada. Tus vidas, puntos y notas siguen intactos.",
+  "net.replacedAction": "Jugar en esta pestaña",
+  "net.versionTitle": "Hay una versión nueva del juego",
+  "net.versionText":
+    "Esta pestaña usa una versión anterior y no puede comunicarse con el servidor. Recarga para seguir: conservas tu asiento durante 2 minutos.",
+  "net.versionAction": "Recargar",
+  "state.joinedRunning":
+    "Entraste en una partida en curso: empiezas con 3 vidas y 0 puntos. Las notas grupales ya están a la vista.",
   "ended.victory": "La partida terminó. El equipo completó el tablero en {time}.",
   "ended.defeat": "La partida terminó. Ningún jugador activo seguía en la partida.",
   "ended.results": "Ver resultados",

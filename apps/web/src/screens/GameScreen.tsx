@@ -15,6 +15,7 @@ import {
 import { HintDialog, LeaveDialog, SettingsDialog, nextStarter } from "../components/Dialogs.tsx";
 import { Icon } from "../components/Icon.tsx";
 import { Players } from "../components/Players.tsx";
+import { NetworkBanner } from "../components/Network.tsx";
 import { Toasts } from "../components/Toasts.tsx";
 import { useLayout } from "../components/useLayout.ts";
 import { cellName, type GameClient } from "../game/client.ts";
@@ -73,7 +74,11 @@ export function GameScreen({
   const size = match?.puzzle.size ?? 9;
   const loading = state.phase === "entering" || state.phase === "loading" || !match;
   const ended = state.phase === "ended";
-  const disabled = loading || ended;
+  // Sin servidor se bloquea todo lo que se envía (docs/diseno.md §9).
+  const offline = state.connection === "unavailable";
+  const disabled = loading || ended || offline;
+  const networkIssue =
+    offline || state.connection === "reconnecting" || state.connection === "connecting";
   const self = me(state);
   const canPlace = client.canPlace();
   const spectator = self?.role === "spectator";
@@ -309,24 +314,31 @@ export function GameScreen({
         )}
       </header>
 
-      {ended && match ? (
+      {(ended && match) || networkIssue ? (
         <div className="pg-banner">
-          <div className="banner" role="status">
-            <Icon name="info" />
-            <span style={{ flex: 1, minWidth: 0 }}>
-              {match.result === "victory"
-                ? t("ended.victory", { time: formatClock(elapsedMs(state, client.clientNow())) })
-                : t("ended.defeat")}
-            </span>
-            <button
-              className="btn secondary"
-              type="button"
-              onClick={() => {
-                client.viewResults();
-              }}
-            >
-              {t("ended.results")}
-            </button>
+          <div className="banners">
+            <NetworkBanner state={state} game />
+            {ended && match ? (
+              <div className="banner" role="status">
+                <Icon name="info" />
+                <span className="banner-text">
+                  {match.result === "victory"
+                    ? t("ended.victory", {
+                        time: formatClock(elapsedMs(state, client.clientNow())),
+                      })
+                    : t("ended.defeat")}
+                </span>
+                <button
+                  className="btn secondary"
+                  type="button"
+                  onClick={() => {
+                    client.viewResults();
+                  }}
+                >
+                  {t("ended.results")}
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
