@@ -1,0 +1,73 @@
+name: Carga
+
+# Prueba de carga (F11e, SPEC §8.1): `pnpm --filter @sudoku-killer/server load` con los dos escenarios
+# de `apps/server/scripts/load/params.json` (realista y estrés), contra PostgreSQL real (servicio del
+# job) y el banco completo. No corre en cada push: cada semana y a mano. Los clientes corren en la
+# misma máquina que el servidor y el runner es compartido: la cifra sirve para comparar corridas,
+# no es la de producción (se mide en F12, en el hosting). El informe queda como artefacto.
+
+on:
+  schedule:
+    - cron: "23 7 * * 3"
+  workflow_dispatch:
+    inputs:
+      rooms:
+        description: "Salas (vacío: las de params.json)"
+        required: false
+      duration:
+        description: "Segundos de medición (vacío: los de params.json)"
+        required: false
+      seed:
+        description: "Semilla (vacío: la de params.json)"
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: sudoku_load
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+          POSTGRES_DB: sudoku_load
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sudoku_load" --health-interval 5s --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://sudoku_load:ci-only-not-a-secret@127.0.0.1:5432/sudoku_load
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @sudoku-killer/server db:migrate
+      - run: pnpm --filter @sudoku-killer/server bank:load
+      - name: Realistic and stress
+        run: |
+          extra=()
+          [ -n "$ROOMS" ] && extra+=(--rooms "$ROOMS")
+          [ -n "$DURATION" ] && extra+=(--duration "$DURATION")
+          [ -n "$SEED" ] && extra+=(--seed "$SEED")
+          for scenario in realistic stress; do
+            pnpm --filter @sudoku-killer/server load --scenario "$scenario" --reset-matches \
+              --out "$GITHUB_WORKSPACE/load-$scenario.json" "${extra[@]}"
+          done
+        env:
+          ROOMS: ${{ inputs.rooms }}
+          DURATION: ${{ inputs.duration }}
+          SEED: ${{ inputs.seed }}
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: load-report
+          path: load-*.json

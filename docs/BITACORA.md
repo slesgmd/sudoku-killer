@@ -776,3 +776,19 @@ Al aprobar, agregó:
 **Tiempo real:** de 09:32 a 09:42 (UTC−5), unas 0,2 h.
 
 **Siguiente:** F11e.
+
+## 2026-10-25 — F11e: prueba de carga, primera medición
+
+**Hecho:**
+- PostgreSQL: la red de esta máquina bloquea PGDG (`apt.postgresql.org` y `www.postgresql.org` rechazados por el proxy), así que se usó PostgreSQL 16.15 del sistema, como decidió el usuario. Rol `sudoku_load` sin privilegios y base `sudoku_load` en 127.0.0.1; la contraseña salió de `node:crypto` y la URL quedó en un archivo con permisos 600 fuera del repositorio, sin mostrarse. Migraciones y banco completo cargados (2000 puzzles, 500 vigentes por dificultad).
+- Script `apps/server/scripts/load/load.ts` (`pnpm --filter @sudoku-killer/server load`) y parámetros versionados en `params.json` (versión 1): escenarios realista (una acción cada 2–5 s, con errores y notas) y estrés (20 comandos por segundo por conexión, el máximo de los límites), 50 salas × 6, 15 s de calentamiento, 60 s de medición y semilla fija. El servidor corre en un proceso hijo; los clientes resuelven el puzzle público con el solver; al terminar una partida empieza otra. Mide la latencia de cada `cell.place` en el cliente, la memoria y la CPU del servidor desde `/proc` y el retraso del bucle del generador. `--reset-matches` solo se acepta con una base `*_load`.
+- Workflow `load.yml`, semanal y manual, con PostgreSQL 18 como servicio, `db:migrate`, `bank:load`, los dos escenarios y el informe como artefacto. No corre en cada push.
+- **Primera medición** (`docs/carga.md`): realista, p95 de 15,3 ms (62 jugadas por segundo, RSS de unos 160–176 MB, 11,5 % de CPU); estrés, p95 de 74,2 ms y p99 de 130,9 ms (1 201 jugadas por segundo, CPU media del 75 %). Sin cierres 1013 ni `rate_limited`. Los clientes corren en la misma máquina; la cifra de producción se mide en F12.
+- **Para el punto de control:** en estrés, la memoria del servidor subió de 208 a 343 MB en los 60 s, con más de 1 300 partidas jugadas; no se distingue todavía una meseta de una fuga. No se optimizó nada.
+- Esta máquina tiene Node 22.22, no la 24 del proyecto: queda anotado en el informe.
+
+**Verificación:** `check`, `test` y `build` en verde; `pnpm e2e` 10 de 10, sin reintentos.
+
+**Tiempo real:** de 09:42 a 09:52 (UTC−5), unas 0,2 h, con la carga del banco en paralelo.
+
+**Siguiente:** punto de control del usuario con el informe de carga.

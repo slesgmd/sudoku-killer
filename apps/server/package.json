@@ -18,7 +18,8 @@
     "db:check-local": "node --env-file-if-exists=.env scripts/check-local-db.ts",
     "db:migrate": "node --conditions=@sudoku-killer/source --env-file-if-exists=.env scripts/migrate.ts",
     "bank:load": "node --conditions=@sudoku-killer/source --env-file-if-exists=.env scripts/load-bank.ts",
-    "demo": "node --conditions=@sudoku-killer/source --env-file-if-exists=.env scripts/demo-match.ts"
+    "demo": "node --conditions=@sudoku-killer/source --env-file-if-exists=.env scripts/demo-match.ts",
+    "load": "node --conditions=@sudoku-killer/source --env-file-if-exists=.env scripts/load/load.ts"
   },
   "dependencies": {
     "@sudoku-killer/bank": "workspace:*",

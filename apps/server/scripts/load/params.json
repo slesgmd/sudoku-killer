@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "rooms": 50,
+  "playersPerRoom": 6,
+  "difficulty": "medium",
+  "warmupSeconds": 15,
+  "durationSeconds": 60,
+  "seed": 20261025,
+  "connectGapMs": 20,
+  "pingEveryMs": 5000,
+  "restartAfterEndMs": 1000,
+  "scenarios": {
+    "realistic": {
+      "description": "Una jugada cada 2-5 s por jugador, con errores y notas.",
+      "minGapMs": 2000,
+      "maxGapMs": 5000,
+      "mix": { "correct": 0.65, "wrong": 0.1, "note": 0.25 }
+    },
+    "stress": {
+      "description": "El ritmo máximo de los límites de velocidad: 20 comandos por segundo por conexión (SPEC 4.8), más la presencia.",
+      "minGapMs": 50,
+      "maxGapMs": 50,
+      "mix": { "correct": 0.3, "wrong": 0.02, "note": 0.68 }
+    }
+  }
+}
