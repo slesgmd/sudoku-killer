@@ -11,12 +11,16 @@ services:
     region: virginia
     branch: main
     autoDeployTrigger: checksPass
-    buildCommand: corepack enable pnpm && pnpm install --frozen-lockfile && pnpm --filter "@sudoku-killer/server..." build
-    startCommand: pnpm --filter @sudoku-killer/server start
+    # `corepack enable` falla en Render (/usr/bin es de solo lectura): `corepack pnpm` no crea enlaces.
+    buildCommand: corepack pnpm install --frozen-lockfile && corepack pnpm --filter "@sudoku-killer/server..." build
+    # Node directo sobre lo compilado (lo mismo que `start` del servidor), sin depender de pnpm.
+    startCommand: cd apps/server && node --env-file-if-exists=.env dist/index.js
     healthCheckPath: /healthz
     envVars:
       - key: NODE_ENV
         value: production
+      - key: COREPACK_ENABLE_DOWNLOAD_PROMPT
+        value: "0"
       - key: HOST
         value: 0.0.0.0
       - key: LOG_LEVEL
@@ -36,7 +40,7 @@ services:
     runtime: static
     branch: main
     autoDeployTrigger: checksPass
-    buildCommand: corepack enable pnpm && pnpm install --frozen-lockfile && pnpm --filter "@sudoku-killer/web..." build
+    buildCommand: corepack pnpm install --frozen-lockfile && corepack pnpm --filter "@sudoku-killer/web..." build
     staticPublishPath: apps/web/dist
     # Cabeceras de seguridad (S-05): las mismas que apps/web/scripts/security-headers.ts.
     headers:
@@ -62,5 +66,7 @@ services:
         name: Permissions-Policy
         value: "camera=(), microphone=(), geolocation=()"
     envVars:
+      - key: COREPACK_ENABLE_DOWNLOAD_PROMPT
+        value: "0"
       - key: VITE_SERVER_URL
         value: wss://sudoku-killer-lima-ws.onrender.com/ws

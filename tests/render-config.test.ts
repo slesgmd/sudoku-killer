@@ -22,6 +22,8 @@ interface Service {
   readonly region?: string;
   readonly branch?: string;
   readonly autoDeployTrigger?: string;
+  readonly buildCommand?: string;
+  readonly startCommand?: string;
   readonly healthCheckPath?: string;
   readonly staticPublishPath?: string;
   readonly headers?: readonly {
@@ -47,9 +49,33 @@ const env = (s: Service, key: string) => s.envVars?.find((v) => v.key === key);
 /** Las variables que solo se escriben en el panel de Render. */
 const SECRETS = ["DATABASE_URL", "ACCESS_KEY_HASH"];
 
+/** Los comandos que llaman a `corepack enable` o a un `pnpm` suelto (en Render /usr/bin es de solo lectura). */
+export function badPnpmCommands(commands: readonly string[]): string[] {
+  return commands.filter((c) => /corepack\s+enable/.test(c) || /(^|[&;|]\s*)pnpm\b/.test(c));
+}
+
 describe("F12 render.yaml (ADR 0007)", () => {
   const server = service("node");
   const web = service("static");
+
+  it("never runs `corepack enable` or a bare pnpm: Render's /usr/bin is read-only", () => {
+    const commands = render.services.flatMap((s) => [s.buildCommand, s.startCommand]);
+    const present = commands.filter((c): c is string => c !== undefined);
+    expect(present).toHaveLength(3);
+    expect(badPnpmCommands(present)).toEqual([]);
+    for (const s of render.services) {
+      expect(s.buildCommand, s.name).toContain("corepack pnpm install");
+      expect(env(s, "COREPACK_ENABLE_DOWNLOAD_PROMPT")?.value, s.name).toBe("0");
+    }
+  });
+
+  it("negative check: the detector flags the command that failed on Render", () => {
+    const failed =
+      'corepack enable pnpm && pnpm install --frozen-lockfile && pnpm --filter "x..." build';
+    expect(badPnpmCommands([failed])).toEqual([failed]);
+    expect(badPnpmCommands(["pnpm --filter @sudoku-killer/server start"])).toHaveLength(1);
+    expect(badPnpmCommands(["corepack pnpm install && corepack pnpm build"])).toEqual([]);
+  });
 
   it("never carries a secret: those variables only exist with sync: false", () => {
     for (const s of render.services)
