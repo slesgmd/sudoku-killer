@@ -35,6 +35,18 @@ export const DIFFICULTIES = ["easy", "medium", "hard", "expert"] as const;
 export const difficultySchema = z.enum(DIFFICULTIES);
 export type Difficulty = z.infer<typeof difficultySchema>;
 
+/**
+ * Números iniciales de cada dificultad, según la equivalencia versión 2 (`docs/dificultad.md`).
+ * Única fuente: `packages/bank` arma con ella sus reglas y el Lobby la muestra. Va en el protocolo
+ * porque el cliente de producción no puede importar el banco (T-31.2) y no revela nada de la solución.
+ */
+export const DIFFICULTY_GIVENS: Readonly<Record<Difficulty, number>> = {
+  easy: 30,
+  medium: 22,
+  hard: 10,
+  expert: 0,
+};
+
 export const ROOM_STATES = ["waiting", "running", "finished"] as const;
 export const roomStateSchema = z.enum(ROOM_STATES);
 export type RoomState = z.infer<typeof roomStateSchema>;

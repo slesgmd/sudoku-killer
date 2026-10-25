@@ -62,7 +62,7 @@ Todas las pantallas fuera de la partida comparten la **cabecera** (`.apphead`): 
 **Contenido:**
 - **Código:** «HPQ6NZ» en grande (40 px; 32 en móvil), «Copiar código» (pasa a «Código copiado» con una marca y se anuncia) y «Compartir». Nota: «Quien tenga el código puede entrar mientras queden asientos, también con la partida en curso.»
 - **Jugadores** con «N de 6»: monograma, nombre, « · tú», etiqueta «Inicia la partida» y «Desconectado»; asientos libres con círculo discontinuo. Con la sala llena: «Sala llena: nadie más puede entrar hasta que se libere un asiento.»
-- **Dificultad:** quien inicia ve opciones de radio (Fácil, con la nota «Incluye algunos números iniciales»; Media; Difícil; Experto) y «Solo tú puedes cambiarla. Los demás la ven al momento.» Los demás ven la dificultad elegida y «La elige Tomás, que inicia la partida.»
+- **Dificultad:** quien inicia ve opciones de radio, cada una con sus números iniciales según la equivalencia versión 2 (Fácil, «30 números iniciales»; Media, «22 números iniciales»; Difícil, «10 números iniciales»; Experto, «Sin números iniciales»; corrección del punto de control de F10) y «Solo tú puedes cambiarla. Los demás la ven al momento.» Los demás ven la dificultad elegida y «La elige Tomás, que inicia la partida.»
 
 **Acciones:** quien inicia: «Iniciar partida» (principal) con la nota «Puedes iniciar aunque estés solo. Quien entre después se suma a la partida en curso con 3 vidas.» Los demás: bloque de espera «Esperando a que Tomás inicie la partida.» Todos: «Salir de la sala».
 
