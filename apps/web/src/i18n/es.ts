@@ -276,6 +276,7 @@ export const es = {
   // Actividad
   "activity.label": "Actividad",
   "activity.empty": "Todavía no hay jugadas.",
+  "activity.gap": "La actividad anterior a la reconexión no está disponible.",
   "activity.open": "Ver actividad",
   "activity.solved": "{name} · acierto en {cell}",
   "activity.mistake": "{name} · error en {cell}",
