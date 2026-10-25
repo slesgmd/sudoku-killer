@@ -113,4 +113,13 @@ El servidor escribe una línea JSON por entrada en la salida estándar, que el p
 | `accessLocked` | Handshakes con 429 en el período: una red que agotó sus 10 intentos y vuelve a ofrecer una clave (T-39.3). |
 | `addressUnknown` | Handshakes en el período cuya IP no se pudo saber (T-39.8): si no es 0, `TRUST_PROXY_HOPS` no coincide con lo que manda el proxy (el primer caso deja en el log `client address unknown` con el número de entradas de `X-Forwarded-For`, nunca su contenido). |
 
-En F12k, la medición de carga en el hosting se lee junto con estas líneas.
+Desde F12, estas líneas reemplazan la prueba de carga en el hosting (sección 8).
+
+## 8. Carga en el hosting: desviación aprobada (F12k)
+
+El plan pedía repetir la prueba de carga en Render con 1, 3 y 5 salas y un p95 menor que 150 ms desde Actions. El usuario aprobó el 2026-10-25 no hacerla con bots y reemplazarla por la línea `metrics` de producción durante la beta de F13. Motivos:
+- El plan gratuito: 0,1 CPU y 512 MB compartidos con las partidas reales; una carga sintética mide sobre todo ese límite y puede tumbar la instancia del grupo.
+- No exponer la clave del grupo en GitHub: los bots necesitarían un secreto con ella en un repositorio público.
+- No mezclar partidas de bots con las reales, que `scoring:report` analiza en F13 (el registro de eventos es de solo agregar, ADR 0004).
+
+Qué se mira en F13, en el log de Render, con las partidas reales: `commitP95Ms` y `commitMaxMs` (la espera de la base en cada jugada), `eventLoopP95Ms` (la primera señal de saturación con 0,1 CPU) y `rssMb` y `heapUsedMb` (frente a los 512 MB), junto con `rooms`, `playersConnected` y `connections` para saber con cuánta carga se midió. Los valores de referencia son los de la sección 4, en local. Si en la beta el p95 de la base o del bucle se acerca a 150 ms, o la memoria a 512 MB, se registra en la BITÁCORA y se decide con el usuario.
