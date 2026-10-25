@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { NORMAL_RULES } from "@sudoku-killer/game/client";
 import { DIFFICULTIES, type PublicPlayer } from "@sudoku-killer/protocol";
 import { AppHeader } from "../components/AppHeader.tsx";
+import { NetworkBanner } from "../components/Network.tsx";
 import { CopyDialog, LeaveDialog, SettingsDialog, nextStarter } from "../components/Dialogs.tsx";
 import { Icon } from "../components/Icon.tsx";
 import { Toasts } from "../components/Toasts.tsx";
@@ -72,6 +73,7 @@ export function Lobby({ client, state, share, link, onLeave }: LobbyProps) {
           setDialog("settings");
         }}
       />
+      <NetworkBanner state={state} game={false} />
       <main className="wrap lobby">
         <div className="lobby-head">
           <h1 className="h-l">{t("lobby.title")}</h1>

@@ -4,6 +4,7 @@
 import { useState, type CSSProperties } from "react";
 import type { RankingEntry } from "@sudoku-killer/protocol";
 import { AppHeader } from "../components/AppHeader.tsx";
+import { NetworkBanner } from "../components/Network.tsx";
 import { LeaveDialog, SettingsDialog, nextStarter } from "../components/Dialogs.tsx";
 import { Toasts } from "../components/Toasts.tsx";
 import type { GameClient } from "../game/client.ts";
@@ -48,6 +49,7 @@ export function Results({ client, state, onLeave }: ResultsProps) {
           setDialog("settings");
         }}
       />
+      <NetworkBanner state={state} game={false} />
       <main className="results">
         <section aria-labelledby="results-title" className="results-panel">
           <div className="stack-s">

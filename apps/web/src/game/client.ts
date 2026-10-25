@@ -658,6 +658,8 @@ export class GameClient {
   }
 
   private noteOps(ops: readonly Omit<PendingNote, "id">[]): void {
+    // Sin servidor no se encola nada: no se registraría (docs/diseno.md §9).
+    if (this.state.connection === "unavailable") return;
     const group: UndoGroup = { waiting: new Set(), opSeqs: [], cells: new Map() };
     const pendingNotes = [...this.state.pendingNotes];
     for (const op of ops) {
@@ -676,7 +678,7 @@ export class GameClient {
 
   /** Ctrl+Z: deshace el último grupo de notas propio (R-25, decisión 5). */
   undo(): void {
-    if (this.undoRun) return;
+    if (this.undoRun || this.state.connection === "unavailable") return;
     const group = this.undoStack.pop();
     this.set({ canUndo: this.undoStack.length > 0 });
     if (!group || group.opSeqs.length === 0) {
@@ -885,6 +887,9 @@ export class GameClient {
           ? "loading"
           : "lobby",
       starting: false,
+      // Volver a una sala con la partida terminada lleva a Resultados (decisión 3); tras un corte en
+      // la misma sesión, se queda donde estaba.
+      showResults: (match?.endedAt ?? null) !== null && (returning ? this.state.showResults : true),
       ...(match ? {} : NO_MATCH),
     });
     if (match) {
@@ -910,6 +915,12 @@ export class GameClient {
     for (const pending of this.outbox.values()) {
       this.transport.send(pending);
       if (pending.type.startsWith("note.")) queued++;
+    }
+    // Llegada directa a una partida en curso (R-12): se entra con 3 vidas.
+    if (match?.endedAt === null && !returning && you.personalNotes.length === 0) {
+      const self = room.players.find((p) => p.id === playerId);
+      if (self?.role === "active" && self.lives === NORMAL_RULES.initialLives && self.score === 0)
+        this.toast("status", t("state.joinedRunning"));
     }
     if (returning) {
       this.toast(

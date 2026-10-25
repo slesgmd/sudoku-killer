@@ -414,7 +414,7 @@
     margin: 0 calc(-1 * var(--s-8)) var(--s-8);
     padding: 0 var(--s-8);
   }
-  .pg-banner .banner {
+  .pg-banner .banners {
     margin: calc(-1 * var(--s-8)) calc(-1 * var(--s-8)) var(--s-6);
   }
   .pg-side {
@@ -452,7 +452,7 @@
     margin: 0 calc(-1 * var(--s-6)) var(--s-4);
     padding: 0 var(--s-6);
   }
-  .pg-banner .banner {
+  .pg-banner .banners {
     margin: calc(-1 * var(--s-4)) calc(-1 * var(--s-6)) var(--s-4);
   }
   .pg-board {
@@ -501,8 +501,10 @@
     margin: 0 calc(-1 * var(--s-3)) var(--s-2);
     padding: 0 var(--s-1) 0 var(--s-3);
   }
-  .pg-banner .banner {
+  .pg-banner .banners {
     margin: calc(-1 * var(--s-2)) calc(-1 * var(--s-3)) var(--s-2);
+  }
+  .pg-banner .banner {
     padding: 10px var(--s-3);
   }
   .pg-players {
@@ -570,6 +572,11 @@
     right: var(--s-3);
     top: var(--s-3);
     z-index: 30;
+  }
+  .pg-banner .banners {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
   }
   .pg-banner .banner {
     margin: 0;

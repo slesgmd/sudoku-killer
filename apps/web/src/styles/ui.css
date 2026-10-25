@@ -655,3 +655,10 @@ fieldset {
     animation: none;
   }
 }
+.banner-text {
+  flex: 1;
+  min-width: 0;
+}
+.scr > .banner {
+  border-bottom-width: var(--bw);
+}
