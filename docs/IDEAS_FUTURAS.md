@@ -52,3 +52,10 @@ Formato de cada entrada: título, descripción breve, origen (fecha y contexto) 
   - Cliente: reemplazar la actividad por esas entradas al recibir el snapshot, sin duplicar las que llegan después (por `seq`).
   - Pruebas: el inspector de filtración sobre la bienvenida (sin notas personales ni dígitos no revelados en `value`), una prueba de integración tras un reinicio y una de componente. En total, unas 1–1,5 h.
 - **Notas:** los avisos locales (toasts) del historial anterior se pierden igual, porque son del cliente.
+
+## 8. Tiempos reales por nivel de celda, T(L)
+
+- **Descripción:** medir T(L), el tiempo que lleva resolver una celda de nivel L, con partidas reales, para reemplazar el supuesto del modelo del mundo de la puntuación (`docs/puntuacion.md`, secciones 10 y 11). La medida directa necesita el momento en que un jugador selecciona la celda, que hoy solo viaja como presencia y no se guarda.
+- **Origen:** 2026-10-25, plan de F11. El usuario decidió no agregar un evento de selección al registro en la v1: T(L) queda fuera.
+- **Alternativa sin cambiar el registro:** estimarlo con el tiempo entre jugadas de un mismo jugador (`at` de sus `cell.solved` y `cell.mistake` consecutivos), que ya está en el registro, agrupado por el `level` de la celda resuelta. Es una cota superior ruidosa (incluye el tiempo que el jugador dedicó a otras celdas y a las notas), pero sirve para comparar los perfiles del simulador. `scoring:report` (F11) puede calcularla.
+- **Costo de la medida directa:** un evento de selección solo en el servidor, sin difusión (SPEC y ADR 0004), con su volumen en la base (la presencia llega hasta 10 veces por segundo por jugador; habría que guardar solo la primera selección de cada celda), unas 1–2 h.

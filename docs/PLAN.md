@@ -1,6 +1,6 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.21
+Versión del plan: 1.22
 Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F5 hecha (2026-10-23) · F6 hecha (2026-10-24) · F7 hecha (2026-10-23) · F8 hecha (2026-10-24) · F9 hecha (2026-10-24) · F10 hecha (2026-10-25)
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
@@ -121,10 +121,10 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 | F8 | Cliente con servidor local simulado | 4–8 | F4, F7 | Hecha | ~3,4 |
 | F9 | Servidor de salas | 3–6 | F3, F5, F6 | Hecha | ~1,9 |
 | F10 | Integración en tiempo real | 5–10 | F8, F9 | Hecha | ~3,1 |
-| F11 | Pruebas integrales, carga y seguridad | 3–6 | F10 | Pendiente | |
+| F11 | Pruebas integrales, carga y seguridad | 2–4 | F10 | En curso | |
 | F12 | Despliegue privado | 2–4 | F11 | Pendiente | |
 | F13 | Beta cerrada y cierre de la v1 | 10 (+1–2 semanas de calendario) | F12 | Pendiente | |
-| **Total** | | **unas 46–68 h** (41–63 h de F5 a F13 y unas 4,8 h reales de F0 a F4; la estimación original era de 130–230 h). F10 pasó de 4–8 h a 5–10 h al cerrar F8 (plan 1.18). | | | |
+| **Total** | | **unas 33–37 h** (18,9 h reales de F0 a F10 más 14–18 h de F11 a F13; la estimación original era de 130–230 h). F10 pasó de 4–8 h a 5–10 h al cerrar F8 (plan 1.18), y F11 de 3–6 h a 2–4 h al cerrar F10 (plan 1.22). | | | |
 
 Equivale a unas **2,5–4,5 semanas** dedicando 15–20 horas por semana, más las 1–2 semanas de calendario de la beta. Si otra persona trabaja F7 en paralelo, el total se reduce en unas 10 h.
 
@@ -160,7 +160,7 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, fre
 - F10 llevó unas **3,1 h** frente a 5–10 h (entre el 31 % y el 62 %; el plan aprobado de F10 estimaba unas 9 h). La entrada de la BITÁCORA dejó las horas para el cierre; se reconstruyeron con las horas de los commits de cada sesión (detalle en la BITÁCORA). No cuentan el punto de control del usuario ni sus revisiones.
 - De F5 a F10 van unas **14,1 h** frente a 26–43 h aprobadas (entre el 33 % y el 54 %): F5 2,0 (2–4), F6 2,2 (2–5), F7 1,5 (10), F8 3,4 (4–8), F9 1,9 (3–6) y F10 3,1 (5–10). De F0 a F10, unas **18,9 h**.
 - Las fases de interfaz e integración (F8 a F10), que la recalibración de F4 suponía más lentas, quedaron entre el 31 % y el 85 % de su rango: más cerca de lo estimado que F4, pero todas por debajo.
-- **Propuesta de recalibración (pendiente de aprobación del usuario, no aplicada):**
+- **Recalibración (aprobada por el usuario el 2026-10-25, plan 1.22):**
 
   | Fase | Aprobada (h) | Propuesta (h) | Motivo |
   |---|---|---|---|
@@ -168,7 +168,7 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, fre
   | F12 | 2–4 | 2–4 | Sin cambio: depende de cuentas, dominio y secretos del usuario. |
   | F13 | 10 (+1–2 semanas) | 10 (+1–2 semanas) | Sin cambio: beta con personas. |
 
-  Con la propuesta, el total de la v1 quedaría en unas 33–37 h (18,9 h reales de F0 a F10 más 14–18 h de F11 a F13). Mientras no se apruebe, la tabla de arriba mantiene F11 en 3–6 h.
+  Con la recalibración, el total de la v1 queda en unas 33–37 h (18,9 h reales de F0 a F10 más 14–18 h de F11 a F13). La tabla de arriba ya la usa.
 - Próxima comparación: al cerrar F11.
 
 ---
@@ -667,7 +667,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
   - SPEC 1.8 con un campo opcional (`defeatCause`) y R-38; el protocolo sigue en la versión 1 y el registro de eventos no cambia de forma.
   - El arnés de las pruebas del servidor pone la generación en los `id` de los comandos: tras un reinicio, el transporte en memoria numeraba las conexiones desde 1 y la deduplicación guardada tomaba los comandos nuevos por viejos. Los clientes reales usan `id` al azar.
 
-### F11 — Pruebas integrales, carga y seguridad (3–6 h; original 10–16 h)
+### F11 — Pruebas integrales, carga y seguridad (2–4 h; antes 3–6 h; original 10–16 h)
 **Tareas:**
 - Pruebas E2E con Playwright para los flujos principales y los casos límite.
 - Pruebas de caos: cortes de red aleatorios.
@@ -679,6 +679,28 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - Latencia p95 de jugada menor a 150 ms en la prueba de carga.
 - 0 fallos E2E.
 - Hallazgos documentados.
+
+**Al aprobar el plan, el usuario decidió y pidió (2026-10-25):**
+- F11 baja de 3–6 h a 2–4 h (recalibración del cierre de F10).
+- E2E nuevas solo donde el cliente hace algo que las pruebas de integración no ven; toda prueba nueva cita su T-xx o E-xx; un fallo por tiempo o intermitente se investiga, sin subir límites ni agregar reintentos.
+- Caos: cada corte cierra el socket de verdad (nunca el modo sin conexión de Chromium, que no cierra los WebSocket abiertos) y la prueba comprueba que el servidor registró cada desconexión. En cada push corre una semilla fija; las semillas nuevas van en un workflow programado semanal, y cada semilla que falle queda como regresión fija.
+- Carga con PostgreSQL 18 real (PGDG; si la red lo bloquea, la 16, con la diferencia anotada en `docs/carga.md`). Dos escenarios con los mismos parámetros versionados: realista (una jugada cada 2–5 s por jugador, con errores y notas) y estrés (el ritmo máximo de los límites de velocidad). Script reproducible con parámetros y semilla; se corre a mano o con un workflow programado, no en cada push. El informe dice que los clientes corren en la misma máquina que el servidor; la cifra de producción se mide en F12. Punto de control del usuario tras la primera medición, antes de optimizar.
+- Seguridad en `docs/seguridad.md`, con severidad y estado de cada hallazgo. Se corrigen en F11 los críticos, altos y medios; si uno toca el protocolo o lleva más de 30 min, se pregunta. Los bajos se documentan con su fase (F12 o F13). Recomendación sobre las actualizaciones de Dependabot, sin activarlas.
+- Puntuación: `scoring:report` sobre `match_events`, sin cambiar los parámetros. La decisión sobre P y la versión nueva de los parámetros pasan a F13. T(L) queda fuera de la v1 (sin evento de selección), registrado en `docs/IDEAS_FUTURAS.md`.
+
+**Subtareas** (unas 3,3 h estimadas):
+
+| Subtarea | Contenido | Estado |
+|---|---|---|
+| F11a | Registros: recalibración aprobada (F11 en 2–4 h), plan aprobado e idea de T(L). | Hecha |
+| F11b | E2E nuevas: derrota y Resultados (E-10, T-01.6, decisión 3), reinicio del servidor (E-15, T-32.2), fallo de la base (E-16, T-32.3) y vuelta con ficha a una sala llena (E-02, E-23, T-26.4). | Pendiente |
+| F11c | Caos con semilla (E-01, E-07 en Playwright; E-17 con clientes Node sobre `ws`), cortes reales comprobados en el servidor, verificación negativa y workflow semanal. | Pendiente |
+| F11d | Equivalencia de la reconstrucción (T-32.1, E-07, E-15): partida aleatoria con un reinicio, `replay(registro)` y la caché de idempotencia, con verificación negativa. | Pendiente |
+| F11e | Carga: PostgreSQL real, script con escenarios realista y estrés, workflow programado e informe en `docs/carga.md`. Punto de control del usuario. | Pendiente |
+| F11f | Optimización si hace falta y calibración de los límites de SPEC §4.8. | Pendiente |
+| F11g | Seguridad: `docs/seguridad.md`, `pnpm audit`, correcciones y recomendación sobre Dependabot. | Pendiente |
+| F11h | `scoring:report`. | Pendiente |
+| F11i | Cierre y comparación de horas. | Pendiente |
 
 ### F12 — Despliegue privado (2–4 h; original 5–10 h)
 **Tareas:**
@@ -786,3 +808,4 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
   - Punto de control del usuario con PC, iPhone y iPad (F10h): todo funcionó, con cinco correcciones: números iniciales de cada dificultad en el Lobby, la causa de la derrota (SPEC 1.8, `defeatCause` opcional), el aviso de la actividad tras una reconexión (R-38, con la alternativa en `IDEAS_FUTURAS.md`), T-32.2 con un error a través del reinicio y casos fijos de T-32.1.
   - Criterios de aceptación revisados contra las E2E en la CI, el punto de control y las correcciones.
   - Comparación de horas al cerrar F10 en la sección 5: de F5 a F10, unas 14,1 h frente a 26–43 h. Propuesta pendiente de aprobación: F11 de 3–6 h a 2–4 h; F12 y F13 sin cambios. La tabla no cambia hasta que se apruebe.
+- **1.22:** recalibración del cierre de F10 aprobada por el usuario (2026-10-25): F11 de 3–6 h a 2–4 h; F12 y F13 sin cambios; total de la v1 en unas 33–37 h. Plan de F11 aprobado, con las subtareas F11a a F11i y sus decisiones (cortes reales en el caos, dos escenarios de carga con PostgreSQL 18, política de los hallazgos de seguridad, `scoring:report` sin cambiar parámetros y T(L) fuera de la v1).

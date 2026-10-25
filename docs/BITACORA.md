@@ -694,3 +694,14 @@ Al aprobar, agregó:
 
 **Siguiente:** planificar F11 en modo plan, y decidir la recalibración propuesta.
 
+
+## 2026-10-25 — F11a: plan de F11 aprobado y recalibración
+
+**Hecho:**
+- El usuario aprobó la recalibración del cierre de F10: F11 baja de 3–6 h a 2–4 h; F12 y F13 sin cambios. El total de la v1 queda en unas 33–37 h (PLAN 1.22, sección 5).
+- Plan de F11 aprobado con las subtareas F11a a F11i y las decisiones del usuario, registradas en `docs/PLAN.md` (F11): cortes reales en el caos (nunca el modo sin conexión) comprobados en el servidor, una semilla fija en cada push y semillas nuevas cada semana; carga con PostgreSQL 18 en dos escenarios (realista y estrés) y punto de control antes de optimizar; corrección en F11 de los hallazgos de seguridad críticos, altos y medios; recomendación sobre Dependabot sin activarla; `scoring:report` sin cambiar los parámetros.
+- T(L) queda fuera de la v1, sin evento de selección: `docs/IDEAS_FUTURAS.md`, sección 8, con la alternativa de estimarlo con el tiempo entre jugadas de un mismo jugador.
+
+**Tiempo real:** de 08:35 a 08:55 (UTC−5), unas 0,3 h con la planificación.
+
+**Siguiente:** F11b.

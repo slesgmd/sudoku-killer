@@ -5,10 +5,9 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.21. **SPEC:** versión 1.8.
-- **Fase actual:** F11, pruebas integrales, carga y seguridad (3–6 h; `docs/PLAN.md`, F11). F10 se cerró el 2026-10-25 con unas 3,1 h frente a 5–10 h. De F0 a F10 van unas 18,9 h.
-- **Pendiente de aprobación del usuario:** la recalibración propuesta al cerrar F10 (F11 de 3–6 h a 2–4 h; F12 y F13 sin cambios; `docs/PLAN.md`, sección 5). No está aplicada.
-- **Próxima tarea exacta:** planificar F11 en plan mode. Las ramas de trabajo no corren la CI sin PR: verificar `check`, `test`, `build` y `e2e` en local.
+- **Plan:** versión 1.22. **SPEC:** versión 1.8.
+- **Fase actual:** F11, pruebas integrales, carga y seguridad (2–4 h, recalibración aprobada; plan aprobado con las subtareas F11a a F11i y sus decisiones en `docs/PLAN.md`, F11). F10 se cerró el 2026-10-25 con unas 3,1 h. De F0 a F10 van unas 18,9 h.
+- **Próxima tarea exacta:** F11b (E2E nuevas: E-10, E-15, E-16 y E-02/E-23). Después F11c, F11d y F11e, que termina en un punto de control del usuario con el informe de carga. Las ramas de trabajo no corren la CI sin PR: verificar `check`, `test`, `build` y `e2e` en local.
 - **Servidor (F9):**
   - `apps/server/src/`: `rooms/` (actor por sala con cola y bandeja de salida ordenada), `match/` (repositorio y group commit), `infra/` (`Transport` en memoria y `ws`, reloj, azar y fichas), `config/` y `app.ts`.
   - Esquema en SPEC §2.5. El registro se confirma antes de difundir, las partidas se reconstruyen al arrancar y E-16 cierra con 1012.
