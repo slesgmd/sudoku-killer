@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { connect } from "../src/db/connect.ts";
 import { RESTORE_DATABASE, StepError, freshDatabase, restoreDump, run } from "./db/pg-tools.ts";
 import { bootOn, printCounts, tableCounts } from "./db/restore-check.ts";
+import { isMain } from "./is-main.ts";
 
 export const ARTIFACT_NAME = "db-backup";
 
@@ -89,7 +90,7 @@ async function main(): Promise<void> {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1] ?? ""}`) {
+if (isMain(import.meta.url, process.argv[1])) {
   try {
     await main();
   } catch (error) {

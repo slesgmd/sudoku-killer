@@ -7,6 +7,7 @@ import { randomInt } from "node:crypto";
 import { stdin, stdout } from "node:process";
 import { isValidAccessKey, normalizeAccessKey } from "@sudoku-killer/protocol";
 import { hashAccessKey } from "../src/infra/access.ts";
+import { isMain } from "./is-main.ts";
 
 /** Crockford base32: sin I, L, O ni U (no se confunden al dictarla). */
 const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -64,6 +65,6 @@ async function main(argv: readonly string[]): Promise<number> {
   return 0;
 }
 
-if (import.meta.url === `file://${process.argv[1] ?? ""}`) {
+if (isMain(import.meta.url, process.argv[1])) {
   process.exitCode = await main(process.argv.slice(2));
 }

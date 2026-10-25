@@ -3,6 +3,7 @@
 // contenido de una respuesta. Variables: SMOKE_WEB_URL (https://…) y SMOKE_SERVER_URL (wss://…/ws).
 import WebSocket from "ws";
 import { securityHeaders } from "../../web/scripts/security-headers.ts";
+import { isMain } from "./is-main.ts";
 
 const WAKE_MS = 120_000;
 
@@ -94,7 +95,7 @@ export async function smoke(): Promise<boolean> {
   return results.every(([, ok]) => ok);
 }
 
-if (import.meta.url === `file://${process.argv[1] ?? ""}`) {
+if (isMain(import.meta.url, process.argv[1])) {
   try {
     process.exitCode = (await smoke()) ? 0 : 1;
   } catch {
