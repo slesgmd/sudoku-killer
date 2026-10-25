@@ -7,11 +7,11 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 - **Plan:** versión 1.22. **SPEC:** versión 1.8.
 - **Fase actual:** F11, pruebas integrales, carga y seguridad (2–4 h, recalibración aprobada; plan aprobado con las subtareas F11a a F11i y sus decisiones en `docs/PLAN.md`, F11). F10 se cerró el 2026-10-25 con unas 3,1 h. De F0 a F10 van unas 18,9 h.
-- **Próxima tarea exacta:** F11d (equivalencia de la reconstrucción). F11a a F11c hechas. Después F11e, que termina en un punto de control del usuario con el informe de carga. Las ramas de trabajo no corren la CI sin PR: verificar `check`, `test`, `build` y `e2e` en local.
+- **Próxima tarea exacta:** F11e (carga con PostgreSQL real; en esta máquina, la 16, porque la red bloquea PGDG). F11a a F11d hechas. F11e que termina en un punto de control del usuario con el informe de carga. Las ramas de trabajo no corren la CI sin PR: verificar `check`, `test`, `build` y `e2e` en local.
 - **Servidor (F9):**
   - `apps/server/src/`: `rooms/` (actor por sala con cola y bandeja de salida ordenada), `match/` (repositorio y group commit), `infra/` (`Transport` en memoria y `ws`, reloj, azar y fichas), `config/` y `app.ts`.
   - Esquema en SPEC §2.5. El registro se confirma antes de difundir, las partidas se reconstruyen al arrancar y E-16 cierra con 1012.
-  - Pruebas I con `createTestServer` (`apps/server/test/helpers/server.ts`): PGlite, reloj falso e inspector de filtración siempre activo. Tras `restart()`, los `id` de los comandos llevan la generación del servidor.
+  - Pruebas I con `createTestServer` (`apps/server/test/helpers/server.ts`): PGlite, reloj falso e inspector de filtración siempre activo. Tras `restart()`, los `id` de los comandos llevan la generación del servidor. Equivalencia de la reconstrucción con la caché de idempotencia en `test/rebuild.test.ts` (`SK_REBUILD_BREAK=log`: verificación negativa).
 - **Cliente (F8):**
   - Protocolo v1 completo en `packages/protocol/src/v1/`. Reductor y modo Normal definitivos en `packages/game` (`decide`, `apply`, `replay`, `project`, `createNormalMode`); F9 los reutiliza sin reescribirlos.
   - Lo puro del banco está en `packages/bank` (dificultad, `regenerateSeed`, `canonicalPuzzle`); el servidor conserva el hash con `node:crypto` y la carga.
