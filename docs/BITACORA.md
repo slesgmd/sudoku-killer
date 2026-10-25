@@ -807,3 +807,14 @@ Al aprobar, agregó:
 - PostgreSQL estaba detenido al retomar (el contenedor se reinició): se volvió a levantar; la base y el banco seguían ahí.
 
 **Tiempo real:** de 09:59 a 10:20 (UTC−5), unas 0,35 h, con las corridas de carga en segundo plano mientras avanzaban F11g y F11h.
+
+## 2026-10-25 — F11g: revisión de seguridad
+
+**Hecho:**
+- `docs/seguridad.md`: lista de revisión (Zod, límites de velocidad, `maxPayload`, orígenes, filtración de la solución, de las fichas y de las notas personales, errores sin detalles internos, fichas solo como hash, secretos, cliente y dependencias) y siete hallazgos con severidad y estado.
+- **S-01 (media), corregido:** no había tope de conexiones ni de salas por instancia; conexiones sin autenticar podían crear salas sin límite. Ahora: 2 000 conexiones abiertas (el handshake recibe 503) y 500 salas (`room.create` recibe `server.unavailable`, un código que ya existía: el protocolo no cambia). SPEC 1.9 (§4.8). Pruebas S-01 en `ws.test.ts` con el adaptador `ws` real; **verificación negativa:** sin los topes, las dos fallan.
+- **S-02 (alta en internet, hoy sin exposición), abierto para F12:** sin autenticación, el código de sala es la única barrera. Es la clave de acceso del grupo, que el usuario ya decidió obligatoria en F12 (nota de F10). Lleva más de 30 min e interfaz nueva; no se adelanta.
+- **Bajos:** S-03 (apodos con caracteres invisibles, F13: cambia la regla D2), S-04 (`pnpm audit`: esbuild en drizzle-kit, solo en desarrollo, aceptado y a revisar en F13), S-05 (ficha en `localStorage`: CSP en F12), S-06 (plazos del HTTP: proxy en F12). S-07 informativa (TLS en F12).
+- Recomendación sobre Dependabot (sin activarla): actualizaciones de seguridad y un `dependabot.yml` mensual agrupado, sin fusión automática, ignorando TypeScript y Playwright; costo de 10–20 min al mes y riesgos anotados. La decisión es del usuario.
+
+**Tiempo real:** de 10:05 a 10:25 (UTC−5), solapado con F11f, unas 0,15 h propias.

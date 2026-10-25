@@ -12,6 +12,13 @@ export const PRESENCE_WINDOW_MS = 100;
 /** `clientMsgId` recordados por jugador (§4.6). */
 export const IDEMPOTENCY_ENTRIES = 256;
 
+/**
+ * Tope de salas a la vez en una instancia (F11, `docs/seguridad.md` S-01): sin él, conexiones sin
+ * autenticar podían crear salas sin límite. Diez veces las 50 de la prueba de carga; `room.create`
+ * por encima recibe `server.unavailable`.
+ */
+export const MAX_ROOMS = 500;
+
 /** Comandos: 20 por segundo con ráfagas de 40. */
 export const COMMAND_BUCKET: BucketSpec = { rate: 20, burst: 40 };
 /** Presencia: lo que sobra se descarta sin aviso. */

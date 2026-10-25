@@ -23,6 +23,7 @@ import {
   CLOSE_TRY_AGAIN_LATER,
   COMMAND_BUCKET,
   DROP_PRESENCE_BYTES,
+  MAX_ROOMS,
   NO_ROOM_MS,
   PING_BUCKET,
   PRESENCE_BUCKET,
@@ -43,6 +44,8 @@ export interface RoomServerOptions {
   readonly logger: Logger;
   readonly mode: GameMode;
   readonly store?: RoomStore;
+  /** Tope de salas a la vez (por defecto `MAX_ROOMS`). */
+  readonly maxRooms?: number;
 }
 
 /** `clientMsgId` de un mensaje que no pasó la validación, si tiene la forma correcta. */
@@ -306,6 +309,11 @@ export class RoomServer {
         }
         if (!isValidNickname(message.payload.nickname)) {
           connection.error(message.id, "nickname.invalid");
+          return;
+        }
+        if (this.rooms.size + this.rebuilding.size >= (this.options.maxRooms ?? MAX_ROOMS)) {
+          this.options.logger.warn("room limit reached", { rooms: this.rooms.size });
+          connection.error(message.id, "server.unavailable");
           return;
         }
         const room = this.newRoom();

@@ -698,7 +698,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | F11d | Equivalencia de la reconstrucción (T-32.1, E-07, E-15): partida aleatoria con un reinicio, `replay(registro)` y la caché de idempotencia, con verificación negativa (`apps/server/test/rebuild.test.ts`). | Hecha |
 | F11e | Carga: PostgreSQL real, script con escenarios realista y estrés, workflow programado e informe en `docs/carga.md`. Punto de control del usuario. | Hecha (p95 de 15,3 ms realista y 74,2 ms en estrés, PostgreSQL 16; punto de control del usuario hecho) |
 | F11f | Memoria en estrés de 5 min (pedida en el punto de control): la caché del catálogo retenía cada puzzle jugado con el contexto del calificador; ahora es una LRU de 64 (`docs/carga.md` §6). Los límites de SPEC §4.8 quedan confirmados. | Hecha |
-| F11g | Seguridad: `docs/seguridad.md`, `pnpm audit`, correcciones y recomendación sobre Dependabot. | Pendiente |
+| F11g | Seguridad: `docs/seguridad.md` (S-01 medio corregido con topes de conexiones y de salas, SPEC 1.9; S-02 a F12 con la clave de acceso; bajos con su fase), `pnpm audit` y recomendación sobre Dependabot. | Hecha |
 | F11h | `scoring:report`. | Pendiente |
 | F11i | Cierre y comparación de horas. | Pendiente |
 

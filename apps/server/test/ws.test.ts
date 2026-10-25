@@ -2,7 +2,7 @@
 // ruta, `maxPayload` (1009), mensajes binarios, heartbeat, E-19 (4000) y E-08 (4001). El inspector
 // de filtración revisa también todo lo que reciben estos clientes (T-31.1).
 import { CLOSE_REPLACED, CLOSE_UNSUPPORTED, type ServerEnvelope } from "@sudoku-killer/protocol";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 import { WS_PATH } from "../src/infra/ws-transport.ts";
 import { testBank } from "./helpers/server.ts";
@@ -28,8 +28,8 @@ afterEach(async () => {
   expect(current.inspector.violations, "leak inspector (SPEC §8.3)").toEqual([]);
 });
 
-async function start(): Promise<Running> {
-  running = await startWsServer();
+async function start(options: Parameters<typeof startWsServer>[0] = {}): Promise<Running> {
+  running = await startWsServer(options);
   return running;
 }
 
@@ -124,9 +124,38 @@ describe("ADR 0002 handshake", () => {
     await connect(r, { origin: "HTTP://LOCALHOST:5173/" }).opened;
   });
 
+  it("S-01 above the connection cap the handshake gets 503; a closed connection frees its slot", async () => {
+    const r = await start({ maxConnections: 2 });
+    const first = connect(r);
+    await first.opened;
+    await connect(r).opened;
+    await expect(connect(r).opened).rejects.toThrow(/HTTP 503/);
+    first.ws.close();
+    await first.closed;
+    await vi.waitFor(() => {
+      expect(r.transport.openConnections).toBe(1);
+    });
+    await connect(r).opened;
+  });
+
   it("only /ws is a WebSocket endpoint", async () => {
     const r = await start();
     await expect(connect(r, { path: "/other" }).opened).rejects.toThrow(/HTTP 404/);
+  });
+});
+
+describe("S-01 room cap", () => {
+  it("above the room cap room.create gets server.unavailable; joining an existing room still works", async () => {
+    const r = await start({ maxRooms: 1 });
+    const ana = await welcomed(r, "Ana");
+    const other = connect(r);
+    await other.opened;
+    other.send("room.create", { nickname: "Bea" });
+    const refused = await other.next("error");
+    expect(refused.type === "error" && refused.payload.code).toBe("server.unavailable");
+    expect(r.server.rooms.size).toBe(1);
+    other.send("room.join", { code: ana.welcome.payload.snapshot.room.code, nickname: "Bea" });
+    expect((await other.next("room.welcome")).type).toBe("room.welcome");
   });
 });
 

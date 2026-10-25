@@ -1,6 +1,6 @@
 # SPEC — Sudoku Killer Multijugador · v1
 
-- Versión del documento: 1.8 (F10, 2026-10-25). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2); R-20 suma el banco de puzzles (T-20.3 a T-20.5) y `PuzzleRecord` guarda `graderVersion` y `seed` (1.3); P2 y R-20 escalonan los números iniciales por dificultad y `givensReason` cambia `easy` por `difficulty` (1.4); F6 fija B, w, P, β y H, el nivel se calcula con los descartes públicos de los errores (§2.3 y §5), R-35 suma T-35.7 y T-35.8 y la nueva R-36 reúne las pruebas de la puntuación (1.5); F8 fija el destello en 1500 ms (§1.4 y T-04.3), el evento `cell.solved` guarda `level` y `graderVersion` (§5), T-31.2 describe su detector, las pruebas de esquema, T-15.1 y la base de T-32.1 se adelantan a F8, R-06 suma la preferencia local «Usar notas» (T-06.3) y la nueva R-37 cubre el arranque que falla (1.6); F9 fija las cubetas de presencia y de ping, los cierres 4002 y 1012, el 403 por origen, el apodo en grafemas, la persistencia de §2.5 y el registro de las desconexiones al reconstruir (1.7); F10 suma `defeatCause`, opcional, a `match.ended` y al snapshot (§4.3, §4.5, T-01.6 y T-01.7), y la nueva R-38 cubre la actividad tras una reconexión (1.8). El protocolo sigue en la versión 1: un campo opcional es un cambio compatible (§4.7).
+- Versión del documento: 1.9 (F11, 2026-10-25). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2); R-20 suma el banco de puzzles (T-20.3 a T-20.5) y `PuzzleRecord` guarda `graderVersion` y `seed` (1.3); P2 y R-20 escalonan los números iniciales por dificultad y `givensReason` cambia `easy` por `difficulty` (1.4); F6 fija B, w, P, β y H, el nivel se calcula con los descartes públicos de los errores (§2.3 y §5), R-35 suma T-35.7 y T-35.8 y la nueva R-36 reúne las pruebas de la puntuación (1.5); F8 fija el destello en 1500 ms (§1.4 y T-04.3), el evento `cell.solved` guarda `level` y `graderVersion` (§5), T-31.2 describe su detector, las pruebas de esquema, T-15.1 y la base de T-32.1 se adelantan a F8, R-06 suma la preferencia local «Usar notas» (T-06.3) y la nueva R-37 cubre el arranque que falla (1.6); F9 fija las cubetas de presencia y de ping, los cierres 4002 y 1012, el 403 por origen, el apodo en grafemas, la persistencia de §2.5 y el registro de las desconexiones al reconstruir (1.7); F10 suma `defeatCause`, opcional, a `match.ended` y al snapshot (§4.3, §4.5, T-01.6 y T-01.7), y la nueva R-38 cubre la actividad tras una reconexión (1.8); F11 suma a §4.8 los topes de conexiones y de salas por instancia (`docs/seguridad.md`, S-01) y registra que la prueba de carga confirmó los valores iniciales (1.9). El protocolo sigue en la versión 1: un campo opcional es un cambio compatible (§4.7).
 - Versión del protocolo: **1**
 - Fuente de las reglas: `docs/PLAN.md`, secciones 1 y 2, más las decisiones de producto de F2 (sección 1 de este documento).
 - Decisiones técnicas: `docs/adr/0001`–`0006`.
@@ -409,7 +409,7 @@ Se envía al entrar, al volver con ficha y tras una reconstrucción del servidor
 - Los esquemas viven en `packages/protocol/src/v1/`. Cada versión nueva será una carpeta aparte.
 - El cliente ignora los tipos que no conoce y los registra en el log de depuración.
 
-### 4.8 Límites (valores iniciales; se calibran en F11)
+### 4.8 Límites (valores iniciales, confirmados por la prueba de carga de F11: `docs/carga.md`)
 
 | Límite | Valor |
 |---|---|
@@ -419,6 +419,8 @@ Se envía al entrar, al volver con ficha y tras una reconstrucción del servidor
 | Heartbeat | Ping del servidor cada 15 s; la conexión se corta si pasan 30 s sin pong |
 | Ping de aplicación del cliente | Cada 5 s; sirve para sincronizar el reloj y detectar caídas desde el cliente |
 | Saturación (backpressure) | Con `bufferedAmount` por encima de 256 KiB se descarta la presencia. Por encima de 1 MiB se cierra con el código 1013 y el cliente se reconecta. |
+| Conexiones por instancia (F11) | Como máximo 2 000 abiertas a la vez; por encima, el handshake recibe 503. |
+| Salas por instancia (F11) | Como máximo 500 a la vez; por encima, `room.create` recibe `server.unavailable`. |
 
 ---
 

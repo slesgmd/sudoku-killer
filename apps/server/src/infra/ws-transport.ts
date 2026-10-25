@@ -15,6 +15,11 @@ import type { Link, LinkHandlers, Transport } from "./transport.ts";
 export const WS_PATH = "/ws";
 export const MAX_PAYLOAD_BYTES = 16 * 1024;
 export const HEARTBEAT_MS = 15_000;
+/**
+ * Tope de conexiones abiertas a la vez (F11, `docs/seguridad.md` S-01): por encima, el handshake
+ * recibe 503. Unas 6 veces las 300 de la prueba de carga.
+ */
+export const MAX_CONNECTIONS = 2_000;
 
 export interface WsTransportOptions {
   readonly host: string;
@@ -24,6 +29,8 @@ export interface WsTransportOptions {
   readonly clock: Clock;
   readonly logger: Logger;
   readonly heartbeatMs?: number;
+  /** Tope de conexiones abiertas (por defecto `MAX_CONNECTIONS`). */
+  readonly maxConnections?: number;
 }
 
 /** Un origen comparable: minúsculas y sin barra final. */
@@ -31,8 +38,10 @@ export function normalizeOrigin(origin: string): string {
   return origin.trim().toLowerCase().replace(/\/+$/, "");
 }
 
-function reject(socket: Duplex, status: 403 | 404): void {
-  const text = status === 403 ? "Forbidden" : "Not Found";
+const STATUS_TEXT = { 403: "Forbidden", 404: "Not Found", 503: "Service Unavailable" } as const;
+
+function reject(socket: Duplex, status: keyof typeof STATUS_TEXT): void {
+  const text = STATUS_TEXT[status];
   socket.end(
     `HTTP/1.1 ${String(status)} ${text}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`,
   );
@@ -49,6 +58,11 @@ export class WsTransport implements Transport {
   constructor(options: WsTransportOptions) {
     this.options = options;
     this.allowed = new Set(options.allowedOrigins.map(normalizeOrigin));
+  }
+
+  /** Conexiones abiertas ahora (las que cuentan para el tope). */
+  get openConnections(): number {
+    return this.alive.size;
   }
 
   /** El puerto en que escucha (útil con el puerto 0 en las pruebas). */
@@ -79,6 +93,11 @@ export class WsTransport implements Transport {
         // El origen rechazado no se registra completo: puede ser cualquier texto.
         logger.warn("websocket origin rejected", { hasOrigin: origin !== undefined });
         reject(socket, 403);
+        return;
+      }
+      if (this.alive.size >= (this.options.maxConnections ?? MAX_CONNECTIONS)) {
+        logger.warn("websocket connection limit reached", { open: this.alive.size });
+        reject(socket, 503);
         return;
       }
       wss.handleUpgrade(request, socket, head, (ws) => {
