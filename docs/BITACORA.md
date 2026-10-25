@@ -724,7 +724,7 @@ Al aprobar, agregó:
 
 **Verificación:** `check`, `test` (632 pruebas) y `build` en verde; `pnpm e2e` tres veces seguidas, 9 de 9 cada vez, sin reintentos.
 
-**Tiempo real:** de 08:55 a 09:15 (UTC−5), unas 0,35 h.
+**Tiempo real:** de 08:55 a 09:12 (UTC−5), unas 0,3 h.
 
 **Siguiente:** F11c.
 
@@ -749,6 +749,30 @@ Al aprobar, agregó:
 
 **Verificación:** `check`, `test` (632) y `build` en verde; `pnpm e2e` tres veces seguidas, 10 de 10 cada vez, sin reintentos.
 
-**Tiempo real:** de 09:15 a 09:45 (UTC−5), unas 0,5 h.
+**Tiempo real:** de 09:12 a 09:32 (UTC−5), unas 0,35 h.
 
 **Siguiente:** F11d.
+
+## 2026-10-25 — F11d: equivalencia de la reconstrucción
+
+**Hecho:**
+- `apps/server/test/rebuild.test.ts` (T-32.1, E-07 y E-15), propiedad con fast-check, 30 ejecuciones. Partida aleatoria de tres jugadores (aciertos, errores, pistas, notas personales y grupales, deshacer, caídas y vueltas con ficha, avances del reloj) con un reinicio del servidor en un punto al azar; tras el reinicio vuelven quienes estaban. Al final:
+  - el estado de la sala es igual a `replay(registro)`;
+  - cada comando aplicado (sin `error` ni `ack { applied: false }`) está en el registro con su `id` y, reenviado con ese `id`, recibe exactamente las respuestas de la primera vez: los de antes del reinicio, desde la caché repoblada con el registro; los de después, desde la caché viva;
+  - los reenvíos no cambian nada: el registro (salvo las conexiones), las celdas, las notas grupales, y las vidas, puntos y errores de cada uno siguen iguales, y `replay` sigue dando el estado en vivo.
+  - Una comprobación de cobertura exige más de 30 respuestas comparadas de antes del reinicio entre todas las ejecuciones.
+- Los comandos rechazados o sin efecto no se guardan en el registro: tras un reinicio se vuelven a evaluar (SPEC §4.6), y la prueba no los reenvía.
+- **Verificaciones negativas:**
+  - `SK_REBUILD_BREAK=log` altera en la base (con el disparador desactivado un momento) el `clientMsgId` del último evento con autor antes del reinicio: falla («hint.use f11d-4 in the log: expected false to be true»).
+  - Sin repoblar la caché en `Room.restore` (cambio temporal, revertido): falla («cell.place f11d-2: expected [ Array(1) ] to deeply equal [ Array(1) ]»). Revertido, pasa.
+- Cinco corridas más con semillas de fast-check distintas: todas en verde. Unos 5 s por corrida.
+
+**Problemas y soluciones:**
+- **La primera verificación negativa no fallaba:** la prueba elegía qué reenviar a partir del registro, así que el comando alterado quedaba fuera. Ahora los elige por sus respuestas y exige que cada uno esté en el registro.
+- Al reenviar desde el mismo cliente, `send` juntaba la respuesta vieja con la nueva: se comparan solo los mensajes recibidos después del reenvío. Las notas sin efecto (`ack { applied: false }`) no dejan evento y no se reenvían.
+
+**Verificación:** `check`, `test` (633) y `build` en verde; `pnpm e2e` 10 de 10, sin reintentos.
+
+**Tiempo real:** de 09:32 a 09:42 (UTC−5), unas 0,2 h.
+
+**Siguiente:** F11e.
