@@ -24,7 +24,11 @@ export interface GameServer {
   /** Un inspector nuevo con las mismas fuentes (soluciones y celdas bloqueadas), para el control. */
   newInspector(): LeakInspector;
   /** Las conexiones abiertas en el servidor, por la que se puede enviar un mensaje de control. */
-  links(): readonly Link[];
+  links(): readonly TappedLink[];
+  /** La conexión abierta de un jugador (por el apodo de su `room.create` o `room.join`). */
+  linkOf(nickname: string): TappedLink | undefined;
+  /** Verificación negativa del caos: los reenvíos llegan con otro `id` (ver `TappedTransport`). */
+  breakResend(broken: boolean): void;
   /** La solución de la partida de una sala (solo en las pruebas). */
   solution(code: string): readonly number[];
   /**
@@ -41,9 +45,46 @@ export interface GameServer {
   stop(): Promise<void>;
 }
 
-/** El transporte `ws` real, con registro de las conexiones abiertas (para el control). */
+/**
+ * Una conexión real vista por el fixture, con fallas a pedido para el caos (F11c): sabe de quién es
+ * (por su `room.create` o `room.join`), puede cerrarse justo después de entregar el próximo comando que cambia el
+ * estado, antes de su respuesta (E-07), y puede declarar más bytes encolados de los que tiene, para
+ * que el servidor tome su propio camino de saturación (E-17).
+ */
+export class TappedLink implements Link {
+  nickname: string | null = null;
+  /** Bytes que se suman a `bufferedAmount` (E-17). */
+  extraBuffered = 0;
+  /** Se cierra después de entregar el próximo comando de estos tipos (E-07). */
+  dropAfter: ReadonlySet<string> | null = null;
+  readonly inner: Link;
+
+  constructor(inner: Link) {
+    this.inner = inner;
+  }
+
+  send(text: string): void {
+    this.inner.send(text);
+  }
+
+  get bufferedAmount(): number {
+    return this.inner.bufferedAmount + this.extraBuffered;
+  }
+
+  close(code: number, reason: string): void {
+    this.inner.close(code, reason);
+  }
+}
+
+/** El transporte `ws` real, con registro de las conexiones abiertas (para el control y el caos). */
 class TappedTransport implements Transport {
-  readonly open = new Set<Link>();
+  readonly open = new Set<TappedLink>();
+  /**
+   * Verificación negativa del caos: el reenvío de un comando llega con un `id` nuevo, como un
+   * cliente que no conservara el `id` (E-07).
+   */
+  breakResend = false;
+  private readonly seenIds = new Set<string>();
   private readonly inner: Transport;
 
   constructor(inner: Transport) {
@@ -51,12 +92,26 @@ class TappedTransport implements Transport {
   }
 
   start(accept: (link: Link) => LinkHandlers): Promise<void> {
-    return this.inner.start((link) => {
+    return this.inner.start((raw) => {
+      const link = new TappedLink(raw);
       this.open.add(link);
       const handlers = accept(link);
       return {
         message: (text) => {
-          handlers.message(text);
+          const parsed = parse(text);
+          if (parsed?.type === "room.join" || parsed?.type === "room.create")
+            link.nickname = parsed.nickname ?? null;
+          let delivered = text;
+          if (parsed?.id !== undefined && parsed.type !== "sys.ping") {
+            if (this.breakResend && this.seenIds.has(parsed.id))
+              delivered = text.replace(`"id":"${parsed.id}"`, `"id":"${parsed.id}-again"`);
+            this.seenIds.add(parsed.id);
+          }
+          handlers.message(delivered);
+          if (parsed && link.dropAfter?.has(parsed.type)) {
+            link.dropAfter = null;
+            link.close(1011, "chaos");
+          }
         },
         closed: () => {
           this.open.delete(link);
@@ -126,6 +181,10 @@ async function startGameServer(): Promise<GameServer> {
     inspector: newInspector(),
     newInspector,
     links: () => [...current().transport.open],
+    linkOf: (nickname) => [...current().transport.open].find((l) => l.nickname === nickname),
+    breakResend(broken) {
+      current().transport.breakResend = broken;
+    },
     solution(code) {
       const match = current().server.rooms.get(code)?.match;
       if (!match) throw new Error(`No match in ${code}`);
@@ -144,6 +203,27 @@ async function startGameServer(): Promise<GameServer> {
     events: (matchId) => repository.events(matchId),
     stop: () => current().transport.stop(1001, "e2e over"),
   };
+}
+
+/** El tipo, el `id` y el apodo (en `room.join`) de un mensaje entrante, si se puede leer. */
+function parse(text: string): { type: string; id?: string; nickname?: string } | null {
+  try {
+    const message = JSON.parse(text) as {
+      type?: unknown;
+      id?: unknown;
+      payload?: { nickname?: unknown };
+    };
+    if (typeof message.type !== "string") return null;
+    return {
+      type: message.type,
+      ...(typeof message.id === "string" ? { id: message.id } : {}),
+      ...(typeof message.payload?.nickname === "string"
+        ? { nickname: message.payload.nickname }
+        : {}),
+    };
+  } catch {
+    return null;
+  }
 }
 
 let sockets = 0;

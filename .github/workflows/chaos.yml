@@ -1,0 +1,57 @@
+name: Caos
+
+# Caos E2E (F11c, SPEC §8.1): la partida de tres personas con cortes reales de `e2e/chaos.spec.ts`,
+# con semillas nuevas. En cada push, la CI corre la semilla fija y las regresiones (job `e2e`); este
+# workflow suma cada semana `count` semillas desde `run_number × 100`, y la ejecución manual permite
+# elegirlas. Cada fallo imprime su semilla (`SK_CHAOS_SEED=…`); al final se listan las que fallaron,
+# que se agregan a `REGRESSIONS` en `chaos.spec.ts`. Sin reintentos.
+
+on:
+  schedule:
+    - cron: "41 6 * * 2"
+  workflow_dispatch:
+    inputs:
+      base_seed:
+        description: "Primera semilla (vacío: la del número de ejecución)"
+        required: false
+      count:
+        description: "Cantidad de semillas"
+        required: false
+        default: "10"
+
+permissions:
+  contents: read
+
+jobs:
+  chaos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+        working-directory: apps/web
+      - name: Chaos with new seeds
+        run: |
+          base="${BASE_SEED:-$(( RUN_NUMBER * 100 ))}"
+          failed=""
+          for i in $(seq 0 $(( ${COUNT:-10} - 1 ))); do
+            seed=$(( base + i ))
+            echo "::group::SK_CHAOS_SEED=$seed"
+            if ! SK_CHAOS_SEED="$seed" pnpm e2e chaos.spec.ts; then failed="$failed $seed"; fi
+            echo "::endgroup::"
+          done
+          if [ -n "$failed" ]; then
+            echo "Semillas que fallaron:$failed. Agregarlas a REGRESSIONS en apps/web/e2e/chaos.spec.ts."
+            exit 1
+          fi
+        env:
+          CI: "true"
+          BASE_SEED: ${{ inputs.base_seed }}
+          COUNT: ${{ inputs.count }}
+          RUN_NUMBER: ${{ github.run_number }}

@@ -727,3 +727,28 @@ Al aprobar, agregó:
 **Tiempo real:** de 08:55 a 09:15 (UTC−5), unas 0,35 h.
 
 **Siguiente:** F11c.
+
+## 2026-10-25 — F11c: caos con semilla
+
+**Hecho:**
+- `apps/web/e2e/chaos.spec.ts`: tres personas (cada una con su contexto) juegan 18 pasos al azar (aciertos, errores, notas personales y grupales), y en la mitad de los pasos hay antes un corte real elegido por la semilla:
+  - **E-01:** el servidor cierra la conexión; la página cierra su WebSocket (los guarda un script de inicio); o la página se cierra y se abre otra en el mismo contexto, que vuelve con la ficha.
+  - **E-07:** la conexión se cierra justo después de entregar la jugada al servidor y antes de su respuesta. La jugada es un error mientras le queden vidas para eso: un reenvío mal hecho penalizaría dos veces.
+  - **E-17:** la conexión declara más de 256 KiB encolados y no recibe la presencia de otro jugador (un tercero sí); con más de 1 MiB, el servidor la cierra con 1013 por su propio camino de saturación.
+- En cada corte, la prueba espera en el registro un `player.connection` `disconnected` más de ese jugador (si no está, falla), un snapshot nuevo en la página y la conexión de vuelta. Al final, con todo el registro confirmado: cada página muestra lo mismo que el servidor (celdas, notas personales y grupales, y las vidas de cada persona en cada página); los `cell.solved` y `cell.mistake` de cada uno son exactamente los que hizo la prueba; vidas y errores cuadran; y ningún `clientMsgId` aparece dos veces.
+- Semillas: en cada push corre la fija (20261025, que cubre los cinco cortes) más `REGRESSIONS` (vacía). `SK_CHAOS_SEED` corre otra, y el workflow semanal `chaos.yml` corre 10 nuevas desde `run_number × 100` y lista las que fallen. Cada fallo antepone `[SK_CHAOS_SEED=…]` al mensaje, y los pasos quedan en las anotaciones del informe.
+- **Verificación negativa:** con `SK_CHAOS_BREAK=1`, el fixture le cambia el `id` a cada reenvío. La prueba falla: «[SK_CHAOS_SEED=20261025] Ana: mistakes in the log», dos `cell.mistake` del mismo error (`…-7` y `…-7-again`). Sin la variable, pasa.
+- Semillas 1 a 10 en local: las diez en verde.
+- El transporte del fixture envuelve cada conexión (`TappedLink`): sabe de quién es por su `room.create` o `room.join`, y tiene `dropAfter` (E-07) y `extraBuffered` (E-17).
+
+**Desviación:** E-17 no usa clientes Node que dejan de leer sobre `ws`. En loopback, los búferes del kernel absorben varios MB antes de que `bufferedAmount` suba, y con los límites de velocidad (20 comandos por segundo por conexión) llegar a 1 MiB tardaría minutos. Se declara el exceso en el `bufferedAmount` de la conexión, así que la decisión del servidor (descartar la presencia y cerrar con 1013), el cierre real y la reconexión del navegador son los de producción.
+
+**Problemas y soluciones:**
+- **Errores de la prueba, ninguno de tiempo:** dos botones con el nombre «Grupal» (la capa y el filtro de notas); el estado previo de una nota se leía después de tocarla; la conexión de quien crea la sala entra con `room.create` y no con `room.join`; y el registro se leía antes de que el group commit confirmara la última jugada (el estado en memoria va primero). Ahora la prueba espera a que el último `seq` del registro sea el de la partida.
+- **E-15 en la suite completa:** el reinicio reconstruyó 2 partidas, porque la del caos sigue en curso en el servidor compartido del worker. La prueba comprueba ahora que se reconstruyó su partida, no el total.
+
+**Verificación:** `check`, `test` (632) y `build` en verde; `pnpm e2e` tres veces seguidas, 10 de 10 cada vez, sin reintentos.
+
+**Tiempo real:** de 09:15 a 09:45 (UTC−5), unas 0,5 h.
+
+**Siguiente:** F11d.
