@@ -6,8 +6,8 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 ## Estado
 
 - **Plan:** versión 1.20. **SPEC:** versión 1.7.
-- **Fase actual:** F10, integración en tiempo real (5–10 h), con el plan aprobado (F10a a F10i). F9 (servidor de salas) se cerró el 2026-10-24 con unas 1,9 h frente a 3–6 h; F6 y F8, el mismo día; F4, F5 y F7, el 2026-10-23.
-- **Próxima tarea exacta:** F10e, pantallas de la prioridad 3 (Inicio, Entrar o crear, Lobby, Resultados y Ayuda) con rutas por hash y Compartir (`docs/PLAN.md`, F10). F10d dejó el proxy de `/ws`, `dev:lan` en el servidor y los bots Node.
+- **Fase actual:** F10, integración en tiempo real (5–10 h), con el plan aprobado (F10a a F10i). F10a a F10g, hechas; F10h e F10i, pendientes. F9 se cerró el 2026-10-24 con unas 1,9 h frente a 3–6 h.
+- **Próxima tarea exacta:** F10h, punto de control del usuario con PC, celular y iPad (`docs/PLAN.md`, F10): recorrer Inicio, Entrar, Lobby, partida, Resultados y Ayuda a 360 y a 1280 px, los estados de red y «Compartir», y anotar las correcciones. Las ramas de trabajo no corren la CI sin PR: verificar `check`, `test`, `build` y `e2e` en local.
 - **Servidor (F9):**
   - `apps/server/src/`: `rooms/` (actor por sala con cola y bandeja de salida ordenada), `match/` (repositorio y group commit), `infra/` (`Transport` en memoria y `ws`, reloj, azar y fichas), `config/` y `app.ts`.
   - Esquema en SPEC §2.5. El registro se confirma antes de difundir, las partidas se reconstruyen al arrancar y E-16 cierra con 1012.
@@ -16,8 +16,8 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
   - Protocolo v1 completo en `packages/protocol/src/v1/`. Reductor y modo Normal definitivos en `packages/game` (`decide`, `apply`, `replay`, `project`, `createNormalMode`); F9 los reutiliza sin reescribirlos.
   - Lo puro del banco está en `packages/bank` (dificultad, `regenerateSeed`, `canonicalPuzzle`); el servidor conserva el hash con `node:crypto` y la carga.
   - Servidor simulado y bot solo en desarrollo (`apps/web/src/dev/`). `check-dist` revisa el build en cada `pnpm build` (T-31.2). El cliente de producción solo importa `@sudoku-killer/engine/model` y `@sudoku-killer/game/client`.
-  - Prioridad 3 (Inicio, Entrar, Lobby, Resultados y Ayuda), estados de red, decisión 3 y pendientes de `design/entrega-f8.md` §4: en F10, con su criterio de aceptación.
-  - **Para F10:** en desarrollo, Vite reenvía `/ws` al servidor (proxy), así el servidor sigue en 127.0.0.1. `ALLOWED_ORIGINS` incluye el origen de `dev:lan` solo en desarrollo.
+- **Cliente (F10):** transporte `ws` con reconexión y bandeja de pendientes (`src/transport/`, `src/game/client.ts`); rutas por hash en `src/routes.ts` (`#/`, `#/entrar[/CODIGO]`, `#/sala/CODIGO`, `#/ayuda`), y la pantalla de la sala sale de su estado (decisión 3). Pantallas en `src/screens/`, estados de red en `src/components/Network.tsx`. En desarrollo, Vite reenvía `/ws` al servidor.
+  - E2E en `apps/web/e2e/`: el build servido con `vite preview` y el servidor real en el worker (PGlite), con el inspector sobre el tráfico WS y su control.
 - **Puntuación (F6, `docs/puntuacion.md`):**
   - Parámetros v1 (`packages/scoring/src/params.v1.json`): B = 10, w = 1/2/3/4/5, P = 90, β = 1 y H = 60.
   - El nivel se calcula con los descartes públicos de los errores (`BoardState.excluded`, `Match.excluded`).
@@ -59,13 +59,14 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 - Base de datos local: PostgreSQL 18 (servicio `postgresql-x64-18`), rol `sudoku_killer` sin privilegios y base `sudoku_killer`. `DATABASE_URL` va solo en `apps/server/.env` (no se versiona; la forma está en `apps/server/.env.example`). Nunca se muestra ni se registra en el log.
 - `pnpm dev:lan`: servidor con `--lan` (suma a los orígenes permitidos la web en cada IP privada de la máquina; se rechaza en producción) y web con `--host`, para probar desde el celular. **Solo en la red de casa, nunca en una red pública.**
 - `pnpm check`: typecheck, ESLint (con tipos) y Prettier. `pnpm test`: Vitest en todo el monorepo. `pnpm build`: `tsc` a `dist/` y Vite.
+- `pnpm e2e`: Playwright (Chromium, sin reintentos) contra el servidor real; `SK_E2E_FORGET_TOKEN=1` hace fallar T-13.5 a propósito (verificación negativa).
 - `pnpm test:corpus`: corpus de 1000 puzzles (A y B, calificador y cotas), el banco completo y la validación de la puntuación (semilla fija, unos 10 min; también en el workflow programado `corpus.yml`).
 - Servidor: `pnpm --filter @sudoku-killer/server bank:generate` (manifiesto, unos 13 min), `bank:sample` (muestra imprimible), `db:generate` (migraciones de Drizzle en `apps/server/drizzle/`), `db:migrate`, `bank:load` (banco completo, unos minutos), `db:setup-local` (crea el rol y la base locales y escribe `DATABASE_URL`, sin mostrarla), `db:check-local` y `demo` (dos clientes por `ws` hasta la victoria; `--pglite` para no usar la base local).
 - Puntuación: `scoring:simulate` (simulación Monte Carlo, unos 14 min con 8 réplicas) y `scoring:calibrate` (grilla), en el mismo paquete.
 - Pruebas de propiedades: `assertProperty` (`packages/engine/test/helpers/property.ts`), no `fc.assert` (lint). Cada semilla que falle se agrega a `regressions` (`docs/motor.md`).
 - Los paquetes exportan sus fuentes con la condición `@sudoku-killer/source`. Los imports relativos llevan la extensión `.ts`.
 - TypeScript fijado en 6.0.x: `typescript-eslint` no admite la 7 (ADR 0001, nota de F3).
-- Remoto público: https://github.com/slesgmd/sudoku-killer. La CI (GitHub Actions) corre `check`, `test`, `build` y `attribution-guard` en cada push a `main` y en cada PR.
+- Remoto público: https://github.com/slesgmd/sudoku-killer. La CI (GitHub Actions) corre `check`, `test`, `build`, `e2e` y `attribution-guard` en cada push a `main` y en cada PR.
 - Entorno verificado en F0: Node 24.21, pnpm 12.12, Git 2.54 y REA 6.7.0.
 
 ## Mapa de carpetas
