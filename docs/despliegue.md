@@ -15,4 +15,6 @@ Pasos del usuario para el primer despliegue (F12j), en orden. Hosting en el ADR 
 7. **Comprobar:** Actions → «Humo del despliegue» → Run workflow (con los nombres reales si cambiaron); después, «Respaldo de la base» y «Simulacro de restauración».
 8. **Grupo:** comparte el enlace de invitación (`…/#k=…`) por un canal privado; quien lo abre ya no tiene que escribir la clave.
 
-Lo que sigue (F12j a F12m, en otra sesión): confirmar los nombres y `TRUST_PROXY_HOPS` (la línea `metrics` del log de Render), la carga en el hosting y la partida real entre iPad, iPhone y PC.
+En la cadena de Neon, cambia `sslmode=require` por `sslmode=verify-full` (en Render y en el secreto de GitHub). `pg` 8 ya trata `require` como `verify-full` y avisa al arrancar (enlace a libpq-ssl) que en la versión 9 pasará a la semántica de libpq, que no verifica el certificado; con `verify-full` el comportamiento no cambia, el aviso desaparece y la conexión sigue verificada después. El resto de la cadena (por ejemplo, `channel_binding=require`) queda igual.
+
+Lo que sigue (F12j a F12m, en otra sesión): confirmar los nombres y `TRUST_PROXY_HOPS` (la línea `metrics` del log de Render: `addresses` con dos redes distintas debe dar 2, y `addressUnknown` debe quedar en 0), la carga en el hosting y la partida real entre iPad, iPhone y PC.

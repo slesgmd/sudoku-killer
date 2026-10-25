@@ -1,7 +1,8 @@
 // Servidor dormido (F12g, decisión del usuario en el plan de F12): si la conexión no abre en 3 s al
 // entrar, Entrar avisa «Despertando el servidor…» y se sigue intentando; el estado `unavailable` no
 // corta la entrada; a los 2 min aparece el aviso con «Reintentar». Si abre, el aviso se va y vale el
-// plazo normal de 15 s para entrar (T-37.1).
+// plazo normal de 15 s para entrar (T-37.1). Un handshake rechazado (429, 403 o 4003) no es el
+// servidor dormido (T-39.10).
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Screens } from "../src/App.tsx";
@@ -12,7 +13,7 @@ import {
   WAKE_TIMEOUT_MS,
 } from "../src/game/client.ts";
 import { memoryPrefs } from "../src/game/prefs.ts";
-import { memorySession } from "../src/game/session.ts";
+import { memorySession, type SessionStore } from "../src/game/session.ts";
 import { fakeTransport, type FakeTransport } from "./helpers/ui.tsx";
 
 beforeEach(() => {
@@ -26,10 +27,10 @@ afterEach(() => {
   window.history.replaceState(null, "", "#/");
 });
 
-function mountAsleep(): FakeTransport {
+function mountAsleep(session: SessionStore = memorySession()): FakeTransport {
   const transport = fakeTransport();
   transport.setStatus("idle");
-  const client = new GameClient({ transport, prefs: memoryPrefs(), session: memorySession() });
+  const client = new GameClient({ transport, prefs: memoryPrefs(), session });
   render(<Screens client={client} />);
   fireEvent.change(screen.getByLabelText("Tu apodo"), { target: { value: "Inés" } });
   fireEvent.click(screen.getByRole("button", { name: "Crear sala nueva" }));
@@ -72,6 +73,44 @@ describe("F12g the server is waking up", () => {
     expect(failed()).toBeNull();
     advance(1);
     expect(failed()).not.toBeNull();
+  });
+
+  it("T-39.10 a handshake refused with 429 is not a sleeping server: it says to wait, keeps the key and «Reintentar» repeats the entry", () => {
+    const session = memorySession();
+    session.saveAccessKey("ABCDEFGHJKMNPQRS");
+    const transport = mountAsleep(session);
+    advance(WAKE_NOTICE_MS);
+    expect(waking()).not.toBeNull();
+    transport.setStatus("locked");
+    expect(waking()).toBeNull();
+    expect(screen.getByRole("heading", { name: "Clave del grupo" })).toBeDefined();
+    expect(screen.getByRole("alert").textContent).toMatch(/Espera unos minutos/);
+    expect(screen.queryByLabelText("Clave")).toBeNull();
+    expect(session.accessKey()).toBe("ABCDEFGHJKMNPQRS");
+    // El plazo de la entrada ya no corre: nada cambia solo.
+    advance(WAKE_TIMEOUT_MS);
+    expect(screen.getByRole("heading", { name: "Clave del grupo" })).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
+    expect(screen.queryByRole("heading", { name: "Clave del grupo" })).toBeNull();
+    transport.setStatus("open");
+    expect(transport.last("room.create")?.payload).toEqual({ nickname: "Inés" });
+  });
+
+  it("T-39.10 a handshake refused with 403 is not a sleeping server: the entry fails at once with «Reintentar»", () => {
+    const transport = mountAsleep();
+    advance(WAKE_NOTICE_MS);
+    transport.setStatus("refused");
+    expect(waking()).toBeNull();
+    expect(failed()).not.toBeNull();
+    expect(screen.getByText("Sin conexión.")).toBeDefined();
+  });
+
+  it("T-39.10 without a stored key, 4003 leads to «Clave del grupo» even after the waking notice", () => {
+    const transport = mountAsleep();
+    advance(WAKE_NOTICE_MS);
+    transport.setStatus("denied");
+    expect(waking()).toBeNull();
+    expect(screen.getByText(/Este juego es privado/)).toBeDefined();
   });
 
   it("negative check: with the connection already open there is no notice and the usual timeout applies", () => {

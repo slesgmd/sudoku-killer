@@ -11,6 +11,9 @@ import type { ClientEnvelope, ServerEnvelope } from "@sudoku-killer/protocol";
  * - `replaced`: otra pestaña tomó la sesión (4001, E-08); no se reconecta solo.
  * - `incompatible`: el servidor usa otra versión del protocolo (4000, E-19); no se reconecta.
  * - `denied`: falta la clave de acceso del grupo o no vale (4003, R-39); no se reconecta solo.
+ * - `locked`: el handshake recibió 429 (demasiadas claves que no valen desde esta red, T-39.10);
+ *   no se reconecta solo.
+ * - `refused`: el handshake recibió 403 (la página no es de un origen permitido); no se reconecta.
  */
 export type TransportStatus =
   | "idle"
@@ -20,7 +23,9 @@ export type TransportStatus =
   | "unavailable"
   | "replaced"
   | "incompatible"
-  | "denied";
+  | "denied"
+  | "locked"
+  | "refused";
 
 export interface Transport {
   /** Envía un mensaje ya armado. Sin conexión abierta, se descarta: el cliente decide qué reenviar. */

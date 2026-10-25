@@ -11,6 +11,7 @@ import {
   type ServerEnvelope,
 } from "@sudoku-killer/protocol";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { request as httpRequest } from "node:http";
 import { createConnection } from "node:net";
 import WebSocket from "ws";
 import {
@@ -128,6 +129,61 @@ function connect(
   return { ws, opened, closed, next, send, messages };
 }
 
+/**
+ * Cómo termina un intento: `HTTP <status>` si el handshake no se acepta, `close <código>` si el
+ * servidor cierra enseguida, u `open` si la conexión sigue abierta (y se cierra).
+ */
+async function handshake(r: Running, options: Parameters<typeof connect>[1]): Promise<string> {
+  const client = connect(r, options);
+  try {
+    await client.opened;
+  } catch (error) {
+    client.ws.terminate();
+    return (error as Error).message;
+  }
+  return Promise.race([
+    client.closed.then((code) => `close ${String(code)}`),
+    new Promise<string>((resolve) =>
+      setTimeout(() => {
+        client.ws.close();
+        resolve("open");
+      }, 500),
+    ),
+  ]);
+}
+
+/** El handshake con `node:http`, para leer el estado y las cabeceras de una respuesta que no es 101. */
+function rawHandshake(r: Running, protocols: readonly string[], forwardedFor: string) {
+  return new Promise<{ status: number; headers: Record<string, string | string[] | undefined> }>(
+    (resolve, reject) => {
+      const request = httpRequest({
+        host: "127.0.0.1",
+        port: r.port,
+        path: WS_PATH,
+        headers: {
+          connection: "Upgrade",
+          upgrade: "websocket",
+          "sec-websocket-version": "13",
+          "sec-websocket-key": "dGhlIHNhbXBsZSBub25jZQ==",
+          "sec-websocket-protocol": protocols.join(", "),
+          origin: ORIGIN,
+          "x-forwarded-for": forwardedFor,
+        },
+      });
+      request.on("response", (response) => {
+        response.resume();
+        resolve({ status: response.statusCode ?? 0, headers: response.headers });
+      });
+      request.on("upgrade", (_response, socket) => {
+        socket.destroy();
+        reject(new Error("the handshake was accepted"));
+      });
+      request.on("error", reject);
+      request.end();
+    },
+  );
+}
+
 async function welcomed(r: Running, nickname: string, code?: string, token?: string) {
   const client = connect(r);
   await client.opened;
@@ -218,6 +274,21 @@ describe("F12 access key (R-39, S-02)", () => {
     await connect(r, { protocols: good, forwardedFor: "203.0.113.7" }).opened;
   });
 
+  it("T-39.3 the 429 is a real HTTP answer to the handshake, with Retry-After", async () => {
+    const r = await start({ accessKey: KEY, trustProxyHops: 1 });
+    const bad = accessProtocols("WXYZ-WXYZ-WXYZ-WXYZ");
+    for (let i = 0; i < MAX_ACCESS_FAILURES; i++)
+      expect(await handshake(r, { protocols: bad, forwardedFor: "203.0.113.7" })).toBe(
+        "close 4003",
+      );
+    const answer = await rawHandshake(r, accessProtocols(KEY), "203.0.113.7");
+    expect(answer.status).toBe(429);
+    expect(Number(answer.headers["retry-after"])).toBeGreaterThan(0);
+    expect(Number(answer.headers["retry-after"])).toBeLessThanOrEqual(
+      ACCESS_FAILURE_WINDOW_MS / 1000,
+    );
+  });
+
   it("negative check: without a configured key the same offers are accepted", async () => {
     const r = await start();
     expect(r.access.required).toBe(false);
@@ -254,6 +325,88 @@ describe("F12 access key (R-39, S-02)", () => {
     expect(text).toContain("websocket access denied");
     for (const secret of ["ABCD", "WXYZ", KEY_PROTOCOL_PREFIX, hashAccessKey(KEY).slice(7, 20)])
       expect(text).not.toContain(secret);
+  });
+});
+
+// El fallo del primer despliegue (F12j): detrás del proxy de Render, cada intento recibía 429 sin
+// que ninguna clave se hubiera rechazado desde el navegador. Las cabeceras son las que arma un proxy:
+// lo que trae el cliente a la izquierda y, a la derecha, una entrada por proxy.
+describe("F12 access behind the proxy (T-39.7, T-39.8, T-39.9)", () => {
+  const KEY = "ABCD-EFGH-JKMN-PQRS";
+  const WRONG = "WXYZ-WXYZ-WXYZ-WXYZ";
+
+  it("T-39.7 browsers without a key are never locked out, even many behind the same proxy entry", async () => {
+    const r = await start({ accessKey: KEY, trustProxyHops: 1 });
+    // Doce navegadores sin clave guardada, de redes distintas, que llegan por la misma IP del borde.
+    for (let i = 1; i <= MAX_ACCESS_FAILURES + 2; i++)
+      expect(
+        await handshake(r, {
+          protocols: accessProtocols(null),
+          forwardedFor: `198.51.100.${String(i)}, 203.0.113.250`,
+        }),
+        `browser ${String(i)}`,
+      ).toBe("close 4003");
+    await connect(r, {
+      protocols: accessProtocols(KEY),
+      forwardedFor: "198.51.100.99, 203.0.113.250",
+    }).opened;
+    expect(r.access.denied).toBe(MAX_ACCESS_FAILURES + 2);
+  });
+
+  it("T-39.8 an address that cannot be determined does not lock everyone together", async () => {
+    const r = await start({ accessKey: KEY, trustProxyHops: 2 });
+    // Sin la cabecera, con menos entradas que los proxies de confianza o con una que no es una IP.
+    for (const forwardedFor of [undefined, "", "203.0.113.7", "unknown, 10.0.0.1", "_hidden, x"])
+      for (let i = 0; i < MAX_ACCESS_FAILURES; i++)
+        expect(
+          await handshake(r, {
+            protocols: accessProtocols(WRONG),
+            ...(forwardedFor === undefined ? {} : { forwardedFor }),
+          }),
+        ).toBe("close 4003");
+    await connect(r, { protocols: accessProtocols(KEY) }).opened;
+    await connect(r, { protocols: accessProtocols(KEY), forwardedFor: "203.0.113.7" }).opened;
+    await connect(r, { protocols: accessProtocols(KEY), forwardedFor: "192.0.2.1, 10.0.0.1" })
+      .opened;
+  });
+
+  it("T-39.8 the same address in another format is the same address (port, IPv6 brackets, IPv4-mapped)", async () => {
+    const r = await start({ accessKey: KEY, trustProxyHops: 1 });
+    const bad = accessProtocols(WRONG);
+    const good = accessProtocols(KEY);
+    for (let i = 0; i < MAX_ACCESS_FAILURES; i++)
+      await handshake(r, { protocols: bad, forwardedFor: "203.0.113.7:51234" });
+    for (const forwardedFor of ["203.0.113.7", "::ffff:203.0.113.7", "x, 203.0.113.7:443"])
+      expect(await handshake(r, { protocols: good, forwardedFor }), forwardedFor).toBe("HTTP 429");
+    for (let i = 0; i < MAX_ACCESS_FAILURES; i++)
+      await handshake(r, { protocols: bad, forwardedFor: "[2001:DB8::7]:443" });
+    expect(await handshake(r, { protocols: good, forwardedFor: "2001:db8::7" })).toBe("HTTP 429");
+    await connect(r, { protocols: good, forwardedFor: "203.0.113.8" }).opened;
+  });
+
+  it("T-39.9 GET /ws answers what the handshake would get: 403, 429 with Retry-After, or 204, readable across origins", async () => {
+    const r = await start({ accessKey: KEY, trustProxyHops: 1 });
+    const probe = (origin: string, forwardedFor: string) =>
+      fetch(`http://127.0.0.1:${String(r.port)}${WS_PATH}`, {
+        headers: { origin, "x-forwarded-for": forwardedFor },
+      });
+    const fine = await probe(ORIGIN, "203.0.113.7");
+    expect(fine.status).toBe(204);
+    expect(fine.headers.get("access-control-allow-origin")).toBe("*");
+    expect(fine.headers.get("cache-control")).toBe("no-store");
+    expect((await probe("https://otro-sitio.example", "203.0.113.7")).status).toBe(403);
+    for (let i = 0; i < MAX_ACCESS_FAILURES; i++)
+      await handshake(r, { protocols: accessProtocols(WRONG), forwardedFor: "203.0.113.7" });
+    const locked = await probe(ORIGIN, "203.0.113.7");
+    expect(locked.status).toBe(429);
+    expect(Number(locked.headers.get("retry-after"))).toBeGreaterThan(0);
+    expect(locked.headers.get("access-control-expose-headers")).toMatch(/retry-after/i);
+    expect((await probe(ORIGIN, "203.0.113.8")).status).toBe(204);
+    // Un `fetch` del mismo origen (desarrollo y E2E) no siempre manda `Origin`.
+    const sameOrigin = await fetch(`http://127.0.0.1:${String(r.port)}${WS_PATH}`, {
+      headers: { "x-forwarded-for": "203.0.113.7" },
+    });
+    expect(sameOrigin.status).toBe(429);
   });
 });
 

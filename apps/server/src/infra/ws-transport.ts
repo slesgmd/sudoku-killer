@@ -6,18 +6,24 @@
 // - Heartbeat: ping cada 15 s; si no llegó el pong del anterior, la conexión se termina.
 // - Los mensajes binarios no son del protocolo: llegan al servidor como texto inválido.
 // - `GET /healthz` responde 204 sin cuerpo (F12): el chequeo del hosting y el precalentamiento de
-//   la web. Cualquier otra petición HTTP recibe 404.
+//   la web. `GET /ws` sin upgrade dice qué recibiría el handshake (403, 429 o 204, T-39.9): el
+//   navegador no deja leer el estado de un handshake rechazado, y así la web lo distingue de un
+//   servidor dormido. Cualquier otra petición HTTP recibe 404.
 // - Clave de acceso del grupo (F12, R-39): llega como subprotocolo; si no vale, la conexión se abre
-//   y se cierra en el acto con 4003, sin llegar a las salas. Una IP con demasiados fallos recibe
-//   429 en el handshake. La clave nunca se registra.
+//   y se cierra en el acto con 4003, sin llegar a las salas. Una IP con demasiadas claves que no
+//   valen recibe 429 en el handshake, con `Retry-After`, cuando vuelve a ofrecer una clave. La clave
+//   nunca se registra.
+// - La IP del cliente sale de `X-Forwarded-For` (`clientAddress`). Si no se puede saber, la
+//   conexión sigue sin tope por IP ni bloqueo, en lugar de compartir uno con todos (T-39.8).
 // - Plazos del HTTP (F12, S-06): 10 s para recibir las cabeceras y la petición entera (Node trae
 //   60 s y 300 s); no afectan a un WebSocket ya abierto. Tope de conexiones por IP (F12, S-01).
 import { createServer, type IncomingMessage, type Server } from "node:http";
+import { isIP } from "node:net";
 import type { Duplex } from "node:stream";
 import { ACCESS_PROTOCOL, CLOSE_ACCESS_DENIED } from "@sudoku-killer/protocol";
 import { WebSocketServer, type WebSocket } from "ws";
 import type { Logger } from "../log/logger.ts";
-import type { AccessGate } from "./access.ts";
+import { offersKey, type AccessGate } from "./access.ts";
 import type { Clock } from "./clock.ts";
 import type { Link, LinkHandlers, Transport } from "./transport.ts";
 
@@ -59,19 +65,45 @@ export interface WsTransportOptions {
 }
 
 /**
- * La IP del cliente. Sin proxies de confianza, la del socket. Con `hops` proxies, cada uno agrega a
- * la derecha de `X-Forwarded-For` la dirección de quien le habló: la del cliente es la `hops`-ésima
- * desde el final, y lo que esté más a la izquierda lo escribió el cliente (no se usa).
+ * La IP del cliente, o `null` si no se puede saber. Sin proxies de confianza, la del socket. Con
+ * `hops` proxies, cada uno agrega a la derecha de `X-Forwarded-For` la dirección de quien le habló:
+ * la del cliente es la `hops`-ésima desde el final, y lo que esté más a la izquierda lo escribió el
+ * cliente (no se usa). Si la cabecera falta o tiene menos entradas que proxies, o esa entrada no es
+ * una IP, es `null`: la del socket sería la del proxy, la misma para todos (T-39.8).
  */
-export function clientIp(request: IncomingMessage, hops: number): string {
-  const socketIp = request.socket.remoteAddress ?? "unknown";
-  if (hops <= 0) return socketIp;
+export function clientAddress(request: IncomingMessage, hops: number): string | null {
+  if (hops <= 0) return normalizeAddress(request.socket.remoteAddress ?? "");
+  return normalizeAddress(forwardedEntries(request).at(-hops) ?? "");
+}
+
+/** Las entradas de `X-Forwarded-For` (si llega repetida, una tras otra). */
+function forwardedEntries(request: IncomingMessage): string[] {
   const header = request.headers["x-forwarded-for"];
-  const entries = (Array.isArray(header) ? header.join(",") : (header ?? ""))
+  return (Array.isArray(header) ? header.join(",") : (header ?? ""))
     .split(",")
     .map((entry) => entry.trim())
     .filter((entry) => entry !== "");
-  return entries.at(-hops) ?? socketIp;
+}
+
+/**
+ * Una IP comparable, o `null` si no es una IP: sin puerto (`203.0.113.7:443`, `[2001:db8::7]:443`),
+ * la IPv4 mapeada en IPv6 como IPv4 y la IPv6 en su forma corta y en minúsculas (T-39.8).
+ */
+export function normalizeAddress(raw: string): string | null {
+  let value = raw.trim().replace(/^"(.*)"$/, "$1");
+  const bracketed = /^\[([^\]]+)\](?::\d+)?$/.exec(value);
+  if (bracketed) value = bracketed[1] ?? "";
+  else if (/^[\d.]+:\d+$/.test(value)) value = value.slice(0, value.lastIndexOf(":"));
+  const mapped = /^::ffff:([\d.]+)$/i.exec(value);
+  if (mapped) value = mapped[1] ?? "";
+  const kind = isIP(value);
+  if (kind === 4) return value;
+  if (kind !== 6) return null;
+  try {
+    return new URL(`http://[${value}]/`).hostname.slice(1, -1);
+  } catch {
+    return null;
+  }
 }
 
 /** Los subprotocolos que ofreció el cliente en el handshake. */
@@ -95,11 +127,29 @@ const STATUS_TEXT = {
   503: "Service Unavailable",
 } as const;
 
-function reject(socket: Duplex, status: keyof typeof STATUS_TEXT): void {
-  const text = STATUS_TEXT[status];
-  socket.end(
-    `HTTP/1.1 ${String(status)} ${text}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`,
-  );
+/** Responde al handshake con un estado HTTP completo y cierra (sin cortar antes la respuesta). */
+function reject(
+  socket: Duplex,
+  status: keyof typeof STATUS_TEXT,
+  headers: Readonly<Record<string, string>> = {},
+): void {
+  // Un cliente que corta antes de leer no debe tumbar el proceso.
+  socket.once("error", () => {
+    socket.destroy();
+  });
+  const lines = [
+    `HTTP/1.1 ${String(status)} ${STATUS_TEXT[status]}`,
+    "Connection: close",
+    "Cache-Control: no-store",
+    "Content-Length: 0",
+    ...Object.entries(headers).map(([name, value]) => `${name}: ${value}`),
+  ];
+  socket.end(`${lines.join("\r\n")}\r\n\r\n`);
+}
+
+/** `Retry-After` en segundos enteros, nunca 0. */
+function retryAfter(ms: number): string {
+  return String(Math.max(1, Math.ceil(ms / 1000)));
 }
 
 export class WsTransport implements Transport {
@@ -110,6 +160,10 @@ export class WsTransport implements Transport {
   private readonly alive = new Map<WebSocket, boolean>();
   private readonly perIp = new Map<string, number>();
   private cancelHeartbeat: (() => void) | null = null;
+  /** Handshakes rechazados con 429 desde que arrancó (métricas). */
+  locked = 0;
+  /** Handshakes sin una IP que se pueda saber desde que arrancó (métricas, `TRUST_PROXY_HOPS`). */
+  unknownAddresses = 0;
 
   constructor(options: WsTransportOptions) {
     this.options = options;
@@ -151,9 +205,21 @@ export class WsTransport implements Transport {
       },
       (request, response) => {
         const path = new URL(request.url ?? "/", "http://localhost").pathname;
-        const health =
-          path === HEALTH_PATH && (request.method === "GET" || request.method === "HEAD");
-        response.writeHead(health ? 204 : 404, {
+        const read = request.method === "GET" || request.method === "HEAD";
+        if (path === WS_PATH && read) {
+          const { status, headers } = this.probe(request);
+          response.writeHead(status, {
+            "content-length": "0",
+            "cache-control": "no-store",
+            // Solo el estado, sin datos: cualquier página puede leerlo (la web vive en otro origen).
+            "access-control-allow-origin": "*",
+            "access-control-expose-headers": "Retry-After",
+            ...headers,
+          });
+          response.end();
+          return;
+        }
+        response.writeHead(path === HEALTH_PATH && read ? 204 : 404, {
           "content-length": "0",
           "cache-control": "no-store",
         });
@@ -173,11 +239,15 @@ export class WsTransport implements Transport {
         reject(socket, 403);
         return;
       }
-      const ip = clientIp(request, this.options.trustProxyHops ?? 0);
+      const ip = this.address(request);
       const access = this.options.access;
-      if (access?.locked(ip)) {
+      const offered = offeredProtocols(request);
+      // Solo quien vuelve a probar una clave espera; sin clave, el 4003 lleva a «Clave del grupo».
+      const wait = access && offersKey(offered) ? access.lockedFor(ip) : 0;
+      if (wait > 0) {
+        this.locked++;
         logger.warn("websocket access locked for an address");
-        reject(socket, 429);
+        reject(socket, 429, { "Retry-After": retryAfter(wait) });
         return;
       }
       if (this.alive.size >= (this.options.maxConnections ?? MAX_CONNECTIONS)) {
@@ -186,6 +256,7 @@ export class WsTransport implements Transport {
         return;
       }
       if (
+        ip !== null &&
         (this.perIp.get(ip) ?? 0) >= (this.options.maxConnectionsPerIp ?? MAX_CONNECTIONS_PER_IP)
       ) {
         logger.warn("websocket per-address connection limit reached");
@@ -193,7 +264,7 @@ export class WsTransport implements Transport {
         return;
       }
       wss.handleUpgrade(request, socket, head, (ws) => {
-        if (access && !access.admit(offeredProtocols(request), ip)) {
+        if (access && !access.admit(offered, ip)) {
           logger.warn("websocket access denied");
           ws.close(CLOSE_ACCESS_DENIED, "access denied");
           return;
@@ -213,9 +284,40 @@ export class WsTransport implements Transport {
     this.scheduleHeartbeat();
   }
 
-  private connected(ws: WebSocket, accept: (link: Link) => LinkHandlers, ip: string): void {
+  /** La IP del cliente; la primera vez que no se puede saber, lo avisa sin mostrar la cabecera. */
+  private address(request: IncomingMessage): string | null {
+    const hops = this.options.trustProxyHops ?? 0;
+    const ip = clientAddress(request, hops);
+    if (ip === null) {
+      if (this.unknownAddresses === 0)
+        this.options.logger.warn("client address unknown", {
+          trustProxyHops: hops,
+          forwardedEntries: forwardedEntries(request).length,
+        });
+      this.unknownAddresses++;
+    }
+    return ip;
+  }
+
+  /** Lo que recibiría ahora el handshake de esta petición (`GET /ws`, T-39.9). */
+  private probe(request: IncomingMessage): {
+    status: 204 | 403 | 429;
+    headers: Record<string, string>;
+  } {
+    // Un `fetch` del mismo origen puede no mandar `Origin`; el handshake siempre lo manda.
+    const origin = request.headers.origin;
+    if (origin !== undefined && !this.allowed.has(normalizeOrigin(origin)))
+      return { status: 403, headers: {} };
+    const wait =
+      this.options.access?.lockedFor(clientAddress(request, this.options.trustProxyHops ?? 0)) ?? 0;
+    return wait > 0
+      ? { status: 429, headers: { "retry-after": retryAfter(wait) } }
+      : { status: 204, headers: {} };
+  }
+
+  private connected(ws: WebSocket, accept: (link: Link) => LinkHandlers, ip: string | null): void {
     this.alive.set(ws, true);
-    this.perIp.set(ip, (this.perIp.get(ip) ?? 0) + 1);
+    if (ip !== null) this.perIp.set(ip, (this.perIp.get(ip) ?? 0) + 1);
     const link: Link = {
       send: (text) => {
         if (ws.readyState === ws.OPEN) ws.send(text);
@@ -233,9 +335,11 @@ export class WsTransport implements Transport {
       if (closed) return;
       closed = true;
       this.alive.delete(ws);
-      const left = (this.perIp.get(ip) ?? 1) - 1;
-      if (left > 0) this.perIp.set(ip, left);
-      else this.perIp.delete(ip);
+      if (ip !== null) {
+        const left = (this.perIp.get(ip) ?? 1) - 1;
+        if (left > 0) this.perIp.set(ip, left);
+        else this.perIp.delete(ip);
+      }
       handlers.closed();
     };
     ws.on("pong", () => {

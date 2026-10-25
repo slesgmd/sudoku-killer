@@ -16,7 +16,8 @@ export function NetworkBanner({
   readonly game: boolean;
 }) {
   const status = state.connection;
-  if (status === "unavailable") {
+  // `refused` (403 en el handshake) no se arregla reintentando: el mismo aviso, sin reconectar.
+  if (status === "unavailable" || status === "refused") {
     return (
       <div className="banner err" role="alert">
         <Icon name="alert" />

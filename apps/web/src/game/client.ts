@@ -326,10 +326,23 @@ export class GameClient {
       this.stopStartTimer();
       const hadKey = this.session.accessKey() !== null;
       this.session.saveAccessKey(null);
-      this.set({ connection: status, accessDenied: hadKey ? "invalid" : "missing" });
+      this.set({ connection: status, accessDenied: hadKey ? "invalid" : "missing", waking: false });
+      return;
+    }
+    if (status === "locked") {
+      // 429 en el handshake (T-39.10): no es el servidor dormido; hay que esperar.
+      this.stopStartTimer();
+      this.set({ connection: status, accessDenied: "locked", waking: false });
       return;
     }
     this.set({ connection: status });
+    if (status === "refused") {
+      // 403 en el handshake: tampoco es el servidor dormido. La entrada falla con «Reintentar».
+      if (this.state.waking) this.set({ waking: false });
+      if (!this.inRoom() && (this.state.phase === "entering" || this.state.phase === "loading"))
+        this.failStart();
+      return;
+    }
     if (status === "open") {
       this.lastAlive = this.now();
       if (!this.openedSinceEntry && this.state.phase === "entering") this.awake();
@@ -461,11 +474,16 @@ export class GameClient {
     const key = normalizeAccessKey(raw);
     if (!isValidAccessKey(key)) return false;
     this.session.saveAccessKey(key);
+    this.retryAccess();
+    return true;
+  }
+
+  /** «Reintentar» tras la espera del bloqueo (429): con la clave guardada, sin escribirla otra vez. */
+  retryAccess(): void {
     this.set({ accessDenied: null });
     if (this.inRoom()) this.transport.reconnect();
     else if (this.state.lastEntry) this.retryEntry();
     else this.backHome();
-    return true;
   }
 
   /** «Volver al inicio» desde «Clave del grupo». */

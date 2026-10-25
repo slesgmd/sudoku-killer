@@ -12,7 +12,14 @@ import type { Logger } from "./logger.ts";
 export const METRICS_INTERVAL_MS = 60_000;
 
 export interface MetricsSources {
-  readonly transport: { readonly openConnections: number; readonly openAddresses: number };
+  readonly transport: {
+    readonly openConnections: number;
+    readonly openAddresses: number;
+    /** Handshakes con 429 desde que arrancó. */
+    readonly locked: number;
+    /** Handshakes sin IP conocida desde que arrancó (si no es 0, revisar `TRUST_PROXY_HOPS`). */
+    readonly unknownAddresses: number;
+  };
   readonly rooms: RoomStore;
   readonly writer: { takeStats(): CommitStats };
   readonly access: Pick<AccessGate, "denied">;
@@ -41,6 +48,8 @@ export function startMetrics({
   loop.enable();
   const startedAt = clock.now();
   let denied = sources.access.denied;
+  let locked = sources.transport.locked;
+  let unknown = sources.transport.unknownAddresses;
   let cancel: (() => void) | null = null;
 
   const report = () => {
@@ -71,8 +80,12 @@ export function startMetrics({
       rssMb: round(rss / MB),
       heapUsedMb: round(heapUsed / MB),
       accessDenied: sources.access.denied - denied,
+      accessLocked: sources.transport.locked - locked,
+      addressUnknown: sources.transport.unknownAddresses - unknown,
     });
     denied = sources.access.denied;
+    locked = sources.transport.locked;
+    unknown = sources.transport.unknownAddresses;
   };
 
   const schedule = () => {

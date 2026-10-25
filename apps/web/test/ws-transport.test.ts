@@ -10,6 +10,7 @@ import {
   RETRY_MIN_MS,
   UNAVAILABLE_AFTER_MS,
   createWsTransport,
+  httpProbe,
   retryDelay,
   sameOriginUrl,
   type Scheduler,
@@ -225,6 +226,100 @@ describe("WebSocket transport (ADR 0002)", () => {
     key = "QUJD";
     transport.reconnect();
     expect(offered).toEqual([["sk.v1"], ["sk.v1", "sk.k.QUJD"]]);
+  });
+
+  describe("T-39.10 a rejected handshake is not a sleeping server", () => {
+    const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    function probed(answer: () => Promise<number | null>) {
+      const sockets: FakeSocket[] = [];
+      const scheduler = new FakeScheduler();
+      let asked = 0;
+      const transport = createWsTransport({
+        url: "wss://example.test/ws",
+        open: () => {
+          const socket = new FakeSocket();
+          sockets.push(socket);
+          return socket;
+        },
+        scheduler,
+        random: () => 0,
+        window: null,
+        document: null,
+        probe: () => {
+          asked++;
+          return answer();
+        },
+      });
+      const last = () => sockets.at(-1) ?? new FakeSocket();
+      return { transport, sockets, scheduler, last, asked: () => asked };
+    }
+
+    it("after an attempt that never opened, 429 leaves it locked and 403 refused, without retrying", async () => {
+      for (const [answer, status] of [
+        [429, "locked"],
+        [403, "refused"],
+      ] as const) {
+        const { transport, sockets, scheduler, last } = probed(() => Promise.resolve(answer));
+        transport.connect();
+        last().drop(1006);
+        await flush();
+        expect(transport.status).toBe(status);
+        scheduler.advance(60_000);
+        expect(sockets).toHaveLength(1);
+        // «Reintentar» abre otro intento al instante.
+        transport.reconnect();
+        expect(sockets).toHaveLength(2);
+        expect(transport.status).toBe("connecting");
+      }
+    });
+
+    it("any other answer, or none (a sleeping server does not answer), keeps the backoff", async () => {
+      for (const answer of [204, 503, null]) {
+        const { transport, sockets, scheduler, last } = probed(() => Promise.resolve(answer));
+        transport.connect();
+        last().drop(1006);
+        await flush();
+        expect(transport.status).toBe("connecting");
+        scheduler.advance(RETRY_MIN_MS / 2);
+        expect(sockets, String(answer)).toHaveLength(2);
+      }
+    });
+
+    it("a connection that had opened does not ask, and an answer that arrives too late is ignored", async () => {
+      const { transport, sockets, scheduler, last, asked } = probed(() => Promise.resolve(429));
+      transport.connect();
+      last().accept();
+      last().drop(1006);
+      await flush();
+      expect(asked()).toBe(0);
+      expect(transport.status).toBe("reconnecting");
+
+      let answer: (status: number) => void = () => undefined;
+      const late = probed(() => new Promise((resolve) => (answer = resolve)));
+      late.transport.connect();
+      late.last().drop(1006);
+      late.transport.disconnect();
+      answer(429);
+      await flush();
+      expect(late.transport.status).toBe("idle");
+      late.scheduler.advance(60_000);
+      expect(late.sockets).toHaveLength(1);
+      scheduler.advance(RETRY_MIN_MS);
+      expect(sockets).toHaveLength(2);
+    });
+
+    it("httpProbe asks GET /ws over https on the same host, and a failure is no answer", async () => {
+      const urls: string[] = [];
+      const ok = httpProbe("wss://sk.example/ws", (input) => {
+        urls.push(input instanceof Request ? input.url : input.toString());
+        return Promise.resolve(new Response(null, { status: 429 }));
+      });
+      expect(await ok()).toBe(429);
+      expect(urls).toEqual(["https://sk.example/ws"]);
+      const down = httpProbe("ws://127.0.0.1:5173/ws", () => Promise.reject(new TypeError("down")));
+      expect(await down()).toBeNull();
+    });
   });
 
   it("«Jugar en esta pestaña»: reconnect() opens a new socket at once after 4001", () => {
