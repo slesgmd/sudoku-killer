@@ -14,6 +14,7 @@ import { Home } from "./screens/Home.tsx";
 import { Lobby } from "./screens/Lobby.tsx";
 import { Results } from "./screens/Results.tsx";
 import { createServerTransport, createTransport } from "./transport/index.ts";
+import { prewarmUrl } from "./transport/server-url.ts";
 
 /** Solo en desarrollo: el tiempo de carga del puzzle en pantalla. No llega al build (T-31.2). */
 const LoadBadge = import.meta.env.DEV ? lazy(() => import("./dev/LoadBadge.tsx")) : null;
@@ -212,6 +213,10 @@ export function App() {
     takeInvitation(window.location, window.history, (key) => {
       browserSession.saveAccessKey(key);
     });
+    // El servidor dormido empieza a despertar apenas abre la página (F12g); la respuesta no importa.
+    const warm = prewarmUrl(import.meta.env.VITE_SERVER_URL);
+    if (warm !== null)
+      void fetch(warm, { mode: "no-cors", cache: "no-store" }).catch(() => undefined);
     let created: GameClient | null = null;
     let cancelled = false;
     void createTransport()

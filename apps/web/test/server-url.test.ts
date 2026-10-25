@@ -1,7 +1,7 @@
 // URL del servidor de salas en producción (F12b, ADR 0007): solo `wss://…/ws`; sin configurar, el
 // mismo origen; el chequeo de salud en el mismo host.
 import { describe, expect, it } from "vitest";
-import { checkServerUrl, healthUrl, serverUrl } from "../src/transport/server-url.ts";
+import { checkServerUrl, healthUrl, prewarmUrl, serverUrl } from "../src/transport/server-url.ts";
 
 const page = { protocol: "https:", host: "sk-web.example" };
 
@@ -27,5 +27,10 @@ describe("F12 server URL", () => {
   it("derives the health check from the WebSocket URL", () => {
     expect(healthUrl("wss://sk-ws.example/ws")).toBe("https://sk-ws.example/healthz");
     expect(healthUrl("ws://127.0.0.1:8080/ws")).toBe("http://127.0.0.1:8080/healthz");
+  });
+
+  it("F12g prewarms the configured server only", () => {
+    expect(prewarmUrl("wss://sk-ws.example/ws")).toBe("https://sk-ws.example/healthz");
+    expect(prewarmUrl(undefined)).toBeNull();
   });
 });

@@ -147,6 +147,8 @@ export interface ClientState {
    * `invalid` si la guardada no valió (se olvida).
    */
   readonly accessDenied: "missing" | "invalid" | null;
+  /** «Despertando el servidor…»: la entrada lleva 3 s sin conexión (F12g). */
+  readonly waking: boolean;
 }
 
 export const INITIAL_STATE: ClientState = {
@@ -182,6 +184,7 @@ export const INITIAL_STATE: ClientState = {
   starting: false,
   showResults: false,
   accessDenied: null,
+  waking: false,
 };
 
 /** Notas de una capa tal como se ven: lo confirmado más las pendientes, en orden (ADR 0005). */

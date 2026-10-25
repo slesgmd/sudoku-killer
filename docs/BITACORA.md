@@ -919,3 +919,16 @@ Al aprobar, agregó:
 **Verificación:** `check`, `test` (674 pruebas), `build` y `e2e` (12 de 12) en verde. `db:migrate` contra el PostgreSQL local: `db.migrations_applied: 0`.
 
 **Tiempo real:** de 12:51 a 12:57 (UTC−5), unas 0,1 h.
+
+## 2026-10-25 — F12g: servidor dormido
+
+**Hecho (opción a, aprobada por el usuario):**
+- Al abrirse, la página pide `GET /healthz` al servidor de `VITE_SERVER_URL` (sin esperar respuesta, `no-cors`) para que empiece a despertar; sin `VITE_SERVER_URL` (desarrollo y E2E), no.
+- Si la conexión no abrió desde que empezó la entrada: a los 3 s, Entrar muestra «Despertando el servidor… La primera vez del día puede tardar hasta 1 minuto. Se sigue intentando solo.»; `unavailable` (10 s) ya no corta la entrada; el plazo es de 2 min y después aparece el aviso de siempre con «Reintentar». Al abrir, el aviso se va y vuelve el plazo de 15 s de T-37.1.
+- **Desviación:** el reintento usa la espera exponencial que ya tenía el transporte, con un tope de 5 s (0,5, 1, 2, 4 y después entre 2,5 y 5 s). Es decir, reintenta como máximo cada 5 s, no exactamente cada 5 s.
+- SPEC R-37 con el servidor dormido, T-37.2 [C] y T-37.3 [E]. Fixture E2E `sleep`/`wake` (el servidor deja de escuchar en su puerto).
+- **Verificaciones negativas:** con la conexión ya abierta no hay aviso (C); con el corte por `unavailable` de antes, la E2E falla.
+
+**Verificación:** `check`, `test` (678 pruebas), `build` y `e2e` (13 de 13) en verde.
+
+**Tiempo real:** de 12:58 a 13:05 (UTC−5), unas 0,1 h.

@@ -755,7 +755,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | F12d | Clave de acceso (S-02): hash en el servidor, espera tras fallos por IP, pantalla de la clave y enlace de invitación; SPEC · pruebas I con verificación negativa y E2E | Hecha |
 | F12e | S-05 (CSP y cabeceras del sitio), S-06 (plazos del HTTP) y S-01 (tope por IP) · E2E con la CSP del sitio; pruebas de los plazos y del tope | Hecha |
 | F12f | Migraciones destructivas bloqueadas en producción salvo `MIGRATIONS_ALLOW` · verificación negativa | Hecha |
-| F12g | Despertar: precalentamiento, aviso y reintento · E2E con el servidor apagado al abrir | Pendiente |
+| F12g | Despertar: precalentamiento, aviso y reintento · E2E con el servidor apagado al abrir | Hecha |
 | F12h | Logs y métricas cada 60 s, sin datos de las personas · prueba I | Pendiente |
 | F12i | Respaldos cifrados (`backup.yml`), simulacro de restauración (`restore-drill.yml`) y `db-admin.yml` · pruebas de los scripts y de la guarda | Pendiente |
 | F12j | Primer despliegue (usuario) y `db-admin` · el servidor arranca con el banco | Pendiente |
