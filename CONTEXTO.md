@@ -5,9 +5,10 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.22. **SPEC:** versión 1.9.
-- **Fase actual:** F11, pruebas integrales, carga y seguridad (2–4 h, recalibración aprobada; plan aprobado con las subtareas F11a a F11i y sus decisiones en `docs/PLAN.md`, F11). F10 se cerró el 2026-10-25 con unas 3,1 h. De F0 a F10 van unas 18,9 h.
-- **Próxima tarea exacta:** F11i (cierre de F11). F11a a F11h hechas. Las ramas de trabajo no corren la CI sin PR: verificar `check`, `test`, `build` y `e2e` en local.
+- **Plan:** versión 1.23. **SPEC:** versión 1.9.
+- **Fase actual:** F12, despliegue privado (2–4 h; `docs/PLAN.md`, F12, con lo heredado de F11). F11 se cerró el 2026-10-25 con unas 2,1 h frente a 2–4 h. De F0 a F11 van unas 21,0 h.
+- **Próxima tarea exacta:** planificar F12 en plan mode. La clave de acceso del grupo es obligatoria antes de exponer el juego a internet (`docs/seguridad.md`, S-02). Las ramas de trabajo no corren la CI sin PR: verificar `check`, `test`, `build` y `e2e` en local.
+- **F11 (pruebas, carga y seguridad):** E2E de casos límite y caos con semilla (abajo); equivalencia de la reconstrucción (`apps/server/test/rebuild.test.ts`); carga en `docs/carga.md` (p95 de 15,3 ms realista y de 49–74 ms en estrés con 50 salas, en local con PostgreSQL 16 y Node 22.22); la caché del catálogo de puzzles es una LRU de 64 (F11f); seguridad en `docs/seguridad.md` (topes de 2 000 conexiones y 500 salas, SPEC 1.9 §4.8); `scoring:report` para F13 (`docs/puntuacion.md` §11).
 - **Servidor (F9):**
   - `apps/server/src/`: `rooms/` (actor por sala con cola y bandeja de salida ordenada), `match/` (repositorio y group commit), `infra/` (`Transport` en memoria y `ws`, reloj, azar y fichas), `config/` y `app.ts`.
   - Esquema en SPEC §2.5. El registro se confirma antes de difundir, las partidas se reconstruyen al arrancar y E-16 cierra con 1012.
@@ -61,10 +62,10 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 - `pnpm dev:lan`: servidor con `--lan` (suma a los orígenes permitidos la web en cada IP privada de la máquina; se rechaza en producción) y web con `--host`, para probar desde el celular. **Solo en la red de casa, nunca en una red pública.**
 - `pnpm check`: typecheck, ESLint (con tipos) y Prettier. `pnpm test`: Vitest en todo el monorepo. `pnpm build`: `tsc` a `dist/` y Vite.
 - `pnpm e2e`: Playwright (Chromium, sin reintentos) contra el servidor real; `SK_E2E_FORGET_TOKEN=1` hace fallar T-13.5 a propósito (verificación negativa).
-- Carga (F11e): `pnpm --filter @sudoku-killer/server load --scenario realistic|stress [--reset-matches]` con `DATABASE_URL` de una base `*_load` migrada y con el banco; parámetros en `apps/server/scripts/load/params.json`; workflow programado `load.yml`. Informe en `docs/carga.md`.
+- Carga (F11e): `pnpm --filter @sudoku-killer/server load --scenario realistic|stress [--reset-matches] [--memory]` con `DATABASE_URL` de una base `*_load` migrada y con el banco; parámetros en `apps/server/scripts/load/params.json`; workflow programado `load.yml`. Informe en `docs/carga.md`.
 - `pnpm test:corpus`: corpus de 1000 puzzles (A y B, calificador y cotas), el banco completo y la validación de la puntuación (semilla fija, unos 10 min; también en el workflow programado `corpus.yml`).
 - Servidor: `pnpm --filter @sudoku-killer/server bank:generate` (manifiesto, unos 13 min), `bank:sample` (muestra imprimible), `db:generate` (migraciones de Drizzle en `apps/server/drizzle/`), `db:migrate`, `bank:load` (banco completo, unos minutos), `db:setup-local` (crea el rol y la base locales y escribe `DATABASE_URL`, sin mostrarla), `db:check-local` y `demo` (dos clientes por `ws` hasta la victoria; `--pglite` para no usar la base local).
-- Puntuación: `scoring:simulate` (simulación Monte Carlo, unos 14 min con 8 réplicas) y `scoring:calibrate` (grilla), en el mismo paquete.
+- Puntuación: `scoring:simulate` (simulación Monte Carlo, unos 14 min con 8 réplicas), `scoring:calibrate` (grilla) y `scoring:report` (análisis de las partidas de la base, F11), en el mismo paquete.
 - Pruebas de propiedades: `assertProperty` (`packages/engine/test/helpers/property.ts`), no `fc.assert` (lint). Cada semilla que falle se agrega a `regressions` (`docs/motor.md`).
 - Los paquetes exportan sus fuentes con la condición `@sudoku-killer/source`. Los imports relativos llevan la extensión `.ts`.
 - TypeScript fijado en 6.0.x: `typescript-eslint` no admite la 7 (ADR 0001, nota de F3).
@@ -85,7 +86,8 @@ docs/motor.md          motor del puzzle: API, algoritmos y mediciones (F4)
 docs/diseno.md         guía de estilo y revisión de originalidad (F7)
 docs/dificultad.md     equivalencia de dificultades, banco y prueba manual (F5)
 docs/puntuacion.md     fórmulas, simulación, calibración y limitaciones de la puntuación (F6)
-docs/carga.md          prueba de carga: método, entorno y resultados (F11)
+docs/carga.md          prueba de carga: método, entorno, resultados y memoria (F11)
+docs/seguridad.md      revisión de seguridad: lista, hallazgos y Dependabot (F11)
 design/                prototipo (prototipo/), pantallas, entrega a F8, fotos y muestra de F5 (muestra-f5/)
 evidence/              evidencia local de REA (ignorada por git)
 packages/engine        motor del puzzle (puro)

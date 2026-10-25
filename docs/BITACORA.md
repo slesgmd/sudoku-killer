@@ -830,3 +830,15 @@ Al aprobar, agregó:
 **Verificación (F11f a F11h):** `check`, `test` (637 pruebas) y `build` en verde; `pnpm e2e` dos veces, 10 de 10, sin reintentos.
 
 **Tiempo real:** de 10:20 a 10:34 (UTC−5), unas 0,1 h propias (el análisis se escribió mientras corrían las mediciones).
+
+## 2026-10-25 — F11i: cierre de F11
+
+**Hecho:**
+- Criterios de aceptación revisados en `docs/PLAN.md` (F11): p95 de jugada por debajo de 150 ms (15,3 ms realista y de 49,3 a 74,2 ms en estrés, en local); 0 fallos E2E (10 E2E sin reintentos); hallazgos documentados en `docs/seguridad.md` y `docs/carga.md`.
+- Lo que F11 deja a F12 (clave de acceso obligatoria por S-02, tope por IP detrás del proxy, cabeceras del sitio, plazos del HTTP y la carga en el hosting) y a F13 (S-03, S-04, la decisión sobre P con `scoring:report` y la de Dependabot) quedó en las tareas de esas fases.
+- **Horas reales de F11:** F11a 0,3; F11b 0,3; F11c 0,35; F11d 0,2; F11e 0,2; F11f 0,35; F11g 0,15; F11h 0,1; F11i 0,1. **Total: unas 2,1 h** frente a 2–4 h; no cuentan el punto de control del usuario ni las corridas de carga que siguieron solas en segundo plano. De F0 a F11, unas 21,0 h. Comparación en el PLAN, sección 5: sin cambios para F12 y F13.
+- PLAN 1.23, SPEC 1.9 y CONTEXTO con la fase F12.
+
+**Tiempo real:** de 10:34 a 10:45 (UTC−5), unas 0,1 h. F11 suma unas 2,1 h.
+
+**Siguiente:** planificar F12 en plan mode.

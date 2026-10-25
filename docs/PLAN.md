@@ -1,7 +1,7 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.22
-Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F5 hecha (2026-10-23) · F6 hecha (2026-10-24) · F7 hecha (2026-10-23) · F8 hecha (2026-10-24) · F9 hecha (2026-10-24) · F10 hecha (2026-10-25)
+Versión del plan: 1.23
+Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F5 hecha (2026-10-23) · F6 hecha (2026-10-24) · F7 hecha (2026-10-23) · F8 hecha (2026-10-24) · F9 hecha (2026-10-24) · F10 hecha (2026-10-25) · F11 hecha (2026-10-25)
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
 ---
@@ -121,7 +121,7 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 | F8 | Cliente con servidor local simulado | 4–8 | F4, F7 | Hecha | ~3,4 |
 | F9 | Servidor de salas | 3–6 | F3, F5, F6 | Hecha | ~1,9 |
 | F10 | Integración en tiempo real | 5–10 | F8, F9 | Hecha | ~3,1 |
-| F11 | Pruebas integrales, carga y seguridad | 2–4 | F10 | En curso | |
+| F11 | Pruebas integrales, carga y seguridad | 2–4 | F10 | Hecha | ~2,1 |
 | F12 | Despliegue privado | 2–4 | F11 | Pendiente | |
 | F13 | Beta cerrada y cierre de la v1 | 10 (+1–2 semanas de calendario) | F12 | Pendiente | |
 | **Total** | | **unas 33–37 h** (18,9 h reales de F0 a F10 más 14–18 h de F11 a F13; la estimación original era de 130–230 h). F10 pasó de 4–8 h a 5–10 h al cerrar F8 (plan 1.18), y F11 de 3–6 h a 2–4 h al cerrar F10 (plan 1.22). | | | |
@@ -170,6 +170,12 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, fre
 
   Con la recalibración, el total de la v1 queda en unas 33–37 h (18,9 h reales de F0 a F10 más 14–18 h de F11 a F13). La tabla de arriba ya la usa.
 - Próxima comparación: al cerrar F11.
+
+**Comparación al cerrar F11 (2026-10-25):**
+- F11 llevó unas **2,1 h** frente a 2–4 h (entre el 52 % y el 105 %; el plan aprobado estimaba unas 3,3 h), con las mediciones de carga y de memoria corriendo en segundo plano. No cuenta el punto de control del usuario.
+- De F0 a F11 van unas **21,0 h**. De F5 a F11, unas 16,2 h frente a 28–47 h aprobadas.
+- **Sin propuesta de cambio:** F12 (2–4 h) depende de cuentas, dominio y secretos del usuario, y suma lo que F11 le asignó (clave de acceso obligatoria por S-02, tope por IP detrás del proxy, cabeceras del sitio y la medición de carga en el hosting); F13 sigue en 10 h más la beta. El total de la v1 queda en unas 33–35 h (21,0 h reales más 12–14 h de F12 y F13).
+- Próxima comparación: al cerrar F12.
 
 ---
 
@@ -700,7 +706,20 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | F11f | Memoria en estrés de 5 min (pedida en el punto de control): la caché del catálogo retenía cada puzzle jugado con el contexto del calificador; ahora es una LRU de 64 (`docs/carga.md` §6). Los límites de SPEC §4.8 quedan confirmados. | Hecha |
 | F11g | Seguridad: `docs/seguridad.md` (S-01 medio corregido con topes de conexiones y de salas, SPEC 1.9; S-02 a F12 con la clave de acceso; bajos con su fase), `pnpm audit` y recomendación sobre Dependabot. | Hecha |
 | F11h | `scoring:report` (`docs/puntuacion.md` §11), sin cambiar los parámetros. | Hecha |
-| F11i | Cierre y comparación de horas. | Pendiente |
+| F11i | Cierre y comparación de horas. | Hecha |
+
+**Criterios de aceptación, revisados al cerrar (F11i):**
+- **Latencia p95 de jugada menor a 150 ms en la prueba de carga:** cumplido en esta máquina con 50 salas × 6 jugadores y PostgreSQL 16: 15,3 ms en el escenario realista y entre 49,3 y 74,2 ms en estrés (`docs/carga.md`). La cifra de producción se mide en F12.
+- **0 fallos E2E:** cumplido. 10 E2E (las 5 de F10, 4 de casos límite y la de caos con su semilla fija), sin reintentos, en verde en cada subtarea y dos o tres veces seguidas al cerrar cada una.
+- **Hallazgos documentados:** cumplido. `docs/seguridad.md` (S-01 medio corregido; S-02 asignado a F12; bajos con su fase), `docs/carga.md` (memoria, cuello de botella y límites) y la recomendación sobre Dependabot.
+
+**Estado:** hecha el 2026-10-25, en unas 2,1 h, frente a 2–4 h (el plan aprobado estimaba unas 3,3 h). No incluye el punto de control del usuario.
+- **Desviaciones registradas:**
+  - PostgreSQL 16.15 en lugar de 18 (la red bloquea PGDG) y Node 22.22 en lugar de 24 en esta máquina; el workflow `load.yml` usa PostgreSQL 18.
+  - E-17 se provoca forzando el valor de bytes encolados, no con clientes que dejan de leer (`docs/carga.md`, sección 4).
+  - Corrección del cliente en F11b: «Volver a la sala» con el aviso de sala llena a la vista. Corrección del servidor en F11f: la caché del catálogo de puzzles, acotada. Corrección de seguridad en F11g: topes de conexiones y de salas (SPEC 1.9).
+  - Para F12: la clave de acceso obligatoria (S-02), el tope por IP detrás del proxy (S-01), las cabeceras del sitio (S-05), los plazos del HTTP (S-06) y la medición de carga en el hosting.
+  - Para F13: los apodos con caracteres invisibles (S-03), esbuild en drizzle-kit (S-04), la decisión sobre P con `scoring:report` y la de Dependabot (del usuario).
 
 ### F12 — Despliegue privado (2–4 h; original 5–10 h)
 **Tareas:**
@@ -708,9 +727,10 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - HTTPS y WSS.
 - Base de datos gestionada y respaldos.
 - Variables de entorno.
-- Clave de acceso del grupo cerrado: **obligatoria** con el juego en internet (nota de F10). La lista de orígenes permitidos (`ALLOWED_ORIGINS`) no autentica: solo frena a otros sitios web en un navegador, y cualquier script puede enviar el `Origin` que quiera.
+- Clave de acceso del grupo cerrado: **obligatoria** con el juego en internet (nota de F10; `docs/seguridad.md`, S-02). La lista de orígenes permitidos (`ALLOWED_ORIGINS`) no autentica: solo frena a otros sitios web en un navegador, y cualquier script puede enviar el `Origin` que quiera.
 - Logs y métricas básicas.
 - Revisar las migraciones automáticas al arrancar (F9): en producción, una migración destructiva no debe aplicarse sola.
+- Heredado de F11 (`docs/seguridad.md` y `docs/carga.md`): tope de conexiones por IP detrás del proxy (S-01), cabeceras del sitio con CSP (S-05), plazos del HTTP con el proxy (S-06) y la prueba de carga repetida en el hosting (`load.yml` o a mano).
 
 **Criterios de aceptación:**
 - Una partida real entre dispositivos distintos funciona.
@@ -721,7 +741,8 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - Partidas con el grupo cerrado.
 - Formulario de retroalimentación.
 - Análisis de registros de partidas.
-- Recalibración final de la puntuación y de la dificultad.
+- Recalibración final de la puntuación y de la dificultad, con `scoring:report` (F11h) sobre las partidas de la beta; la decisión sobre P.
+- Heredado de F11: apodos con caracteres invisibles (S-03), esbuild en drizzle-kit (S-04) y la decisión del usuario sobre Dependabot (`docs/seguridad.md`).
 - Corrección de errores.
 - Etiqueta `v1.0.0`.
 
@@ -809,3 +830,4 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
   - Criterios de aceptación revisados contra las E2E en la CI, el punto de control y las correcciones.
   - Comparación de horas al cerrar F10 en la sección 5: de F5 a F10, unas 14,1 h frente a 26–43 h. Propuesta pendiente de aprobación: F11 de 3–6 h a 2–4 h; F12 y F13 sin cambios. La tabla no cambia hasta que se apruebe.
 - **1.22:** recalibración del cierre de F10 aprobada por el usuario (2026-10-25): F11 de 3–6 h a 2–4 h; F12 y F13 sin cambios; total de la v1 en unas 33–37 h. Plan de F11 aprobado, con las subtareas F11a a F11i y sus decisiones (cortes reales en el caos, dos escenarios de carga con PostgreSQL 18, política de los hallazgos de seguridad, `scoring:report` sin cambiar parámetros y T(L) fuera de la v1).
+- **1.23:** F11 hecha (~2,1 h reales frente a 2–4 h). E2E de casos límite y caos con semilla, equivalencia de la reconstrucción, prueba de carga (p95 de 15,3 ms realista y de 49–74 ms en estrés con 50 salas), memoria acotada (caché del catálogo), revisión de seguridad (topes de conexiones y de salas; SPEC 1.9) y `scoring:report`. Comparación de horas al cerrar F11 en la sección 5, sin cambios para F12 y F13. F12 suma lo que F11 le asignó.
