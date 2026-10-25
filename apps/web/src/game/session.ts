@@ -1,5 +1,6 @@
 // Sesión guardada en este navegador (SPEC §2.4): la ficha de reconexión de cada sala, en
-// `sk:token:<code>`, el último apodo y la última sala. La ficha solo sale de aquí hacia el servidor,
+// `sk:token:<code>`, el último apodo, la última sala y la clave de acceso del grupo (`sk:access`,
+// F12, R-39), que solo sale de aquí en el handshake del WebSocket. La ficha solo sale de aquí hacia el servidor,
 // en `room.join`: nunca va a la URL, a un log, al estado de la interfaz ni a otros jugadores. Si el
 // almacenamiento no está disponible (modo privado estricto), la sesión dura lo que la página.
 export interface SessionStore {
@@ -11,6 +12,9 @@ export interface SessionStore {
   /** La última sala en la que se entró (para «Volver a la sala»). */
   lastRoom(): string | null;
   saveLastRoom(code: string | null): void;
+  /** La clave de acceso del grupo, normalizada (R-39). */
+  accessKey(): string | null;
+  saveAccessKey(key: string | null): void;
 }
 
 /** Lo que se usa de `localStorage`. */
@@ -23,6 +27,7 @@ export interface KeyValueStorage {
 export const TOKEN_PREFIX = "sk:token:";
 const NICKNAME_KEY = "sk:nickname";
 const LAST_ROOM_KEY = "sk:lastRoom";
+export const ACCESS_KEY = "sk:access";
 
 function storageSession(storage: () => KeyValueStorage | undefined): SessionStore {
   const memory = new Map<string, string>();
@@ -63,6 +68,10 @@ function storageSession(storage: () => KeyValueStorage | undefined): SessionStor
     lastRoom: () => get(LAST_ROOM_KEY),
     saveLastRoom: (code) => {
       set(LAST_ROOM_KEY, code);
+    },
+    accessKey: () => get(ACCESS_KEY),
+    saveAccessKey: (key) => {
+      set(ACCESS_KEY, key);
     },
   };
 }

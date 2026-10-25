@@ -195,6 +195,7 @@ describe("WebSocket transport (ADR 0002)", () => {
       [4001, "replaced"],
       [4000, "incompatible"],
       [4002, "idle"],
+      [4003, "denied"],
     ] as const) {
       const { transport, sockets, scheduler, last } = setup();
       transport.connect();
@@ -204,6 +205,26 @@ describe("WebSocket transport (ADR 0002)", () => {
       scheduler.advance(60_000);
       expect(sockets).toHaveLength(1);
     }
+  });
+
+  it("T-39.4 each attempt offers the protocols of that moment, and reconnect() after 4003 uses the new key", () => {
+    const offered: (readonly string[])[] = [];
+    let key: string | null = null;
+    const transport = createWsTransport({
+      url: "ws://example.test/ws",
+      open: (_url, protocols) => {
+        offered.push(protocols);
+        return new FakeSocket();
+      },
+      protocols: () => (key === null ? ["sk.v1"] : ["sk.v1", `sk.k.${key}`]),
+      scheduler: new FakeScheduler(),
+      window: null,
+      document: null,
+    });
+    transport.connect();
+    key = "QUJD";
+    transport.reconnect();
+    expect(offered).toEqual([["sk.v1"], ["sk.v1", "sk.k.QUJD"]]);
   });
 
   it("«Jugar en esta pestaña»: reconnect() opens a new socket at once after 4001", () => {

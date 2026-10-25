@@ -32,6 +32,8 @@ try {
     port: app.port,
     path: WS_PATH,
     allowedOrigins: config.allowedOrigins,
+    accessKeyRequired: config.accessKeyHash !== null,
+    trustProxyHops: config.trustProxyHops,
     restoredMatches: app.restored,
   });
   let stopping = false;

@@ -5,9 +5,9 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.24. **SPEC:** versión 1.9.
+- **Plan:** versión 1.24. **SPEC:** versión 1.10.
 - **Fase actual:** F12, despliegue privado (3–5 h; `docs/PLAN.md`, F12, plan aprobado el 2026-10-25). Hosting en el ADR 0007: Render (servidor en Virginia y web estática) y Neon (AWS us-east-1), 0 USD. Se hacen F12a a F12i (código, `render.yaml` y workflows) y se para antes del primer despliegue (F12j), que hace el usuario; F12j a F12m van en una sesión nueva.
-- **Próxima tarea exacta:** F12d (clave de acceso, S-02: subprotocolo `sk.k.` en el handshake, cierre 4003, espera tras fallos por IP, pantalla de la clave y enlace de invitación `#k=`; SPEC R-39). Hechas F12a a F12c (`render.yaml`, `/healthz`, `VITE_SERVER_URL` solo `wss://`, `smoke.yml`, `scripts/ci/quiet.ts` con `tests/workflow-logs.test.ts`, y `ACCESS_KEY_HASH` obligatoria en producción).
+- **Próxima tarea exacta:** F12e (S-05: CSP y cabeceras del sitio estático en `render.yaml`, también en `vite preview` para las E2E; S-06: plazos del HTTP; S-01: tope de conexiones por IP). Hechas F12a a F12d (`render.yaml`, `/healthz`, `VITE_SERVER_URL` solo `wss://`, `smoke.yml`, `scripts/ci/quiet.ts` con `tests/workflow-logs.test.ts`, `ACCESS_KEY_HASH` obligatoria en producción y la clave del grupo: R-39, `access:key`, «Clave del grupo» y enlace `#k=`).
 - **F11 (pruebas, carga y seguridad):** E2E de casos límite y caos con semilla (abajo); equivalencia de la reconstrucción (`apps/server/test/rebuild.test.ts`); carga en `docs/carga.md` (p95 de 15,3 ms realista y de 49–74 ms en estrés con 50 salas, en local con PostgreSQL 16 y Node 22.22); la caché del catálogo de puzzles es una LRU de 64 (F11f); seguridad en `docs/seguridad.md` (topes de 2 000 conexiones y 500 salas, SPEC 1.9 §4.8); `scoring:report` para F13 (`docs/puntuacion.md` §11).
 - **Servidor (F9):**
   - `apps/server/src/`: `rooms/` (actor por sala con cola y bandeja de salida ordenada), `match/` (repositorio y group commit), `infra/` (`Transport` en memoria y `ws`, reloj, azar y fichas), `config/` y `app.ts`.

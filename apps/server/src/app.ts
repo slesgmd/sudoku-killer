@@ -4,6 +4,7 @@
 import { createNormalMode } from "@sudoku-killer/game";
 import { PARAMS_V1 } from "@sudoku-killer/scoring";
 import type { Database } from "./db/database.ts";
+import { AccessGate } from "./infra/access.ts";
 import { systemClock, type Clock } from "./infra/clock.ts";
 import { systemIds, systemRandom } from "./infra/random.ts";
 import { WsTransport } from "./infra/ws-transport.ts";
@@ -22,6 +23,10 @@ export interface AppOptions {
   readonly allowedOrigins: readonly string[];
   readonly logger: Logger;
   readonly clock?: Clock;
+  /** El hash de la clave de acceso del grupo (F12); `null` o ausente, sin clave. */
+  readonly accessKeyHash?: string | null;
+  /** Proxies de confianza delante del servidor (F12). */
+  readonly trustProxyHops?: number;
 }
 
 export interface App {
@@ -41,11 +46,22 @@ export async function startApp({
   allowedOrigins,
   logger,
   clock = systemClock,
+  accessKeyHash = null,
+  trustProxyHops = 0,
 }: AppOptions): Promise<App> {
   const catalog = await createPuzzleCatalog(createPuzzleRepository(db));
   const repository = createMatchRepository(db);
   const sink = new EventWriter({ repository, clock, logger });
-  const transport = new WsTransport({ host, port, allowedOrigins, clock, logger });
+  const access = new AccessGate({ hash: accessKeyHash, clock });
+  const transport = new WsTransport({
+    host,
+    port,
+    allowedOrigins,
+    clock,
+    logger,
+    access,
+    trustProxyHops,
+  });
   const server = new RoomServer({
     transport,
     clock,

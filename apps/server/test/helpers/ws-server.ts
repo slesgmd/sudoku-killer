@@ -2,6 +2,7 @@
 // un reloj falso y el inspector de filtración (SPEC §8.3). Lo usan las pruebas del adaptador `ws`
 // y las del cliente contra el servidor real (F10).
 import { createRng } from "@sudoku-killer/engine";
+import { AccessGate, hashAccessKey } from "../../src/infra/access.ts";
 import { seededIds } from "../../src/infra/random.ts";
 import { WsTransport } from "../../src/infra/ws-transport.ts";
 import { silentLogger } from "../../src/log/logger.ts";
@@ -20,6 +21,7 @@ export interface RunningWsServer {
   readonly server: RoomServer;
   readonly inspector: LeakInspector;
   readonly transport: WsTransport;
+  readonly access: AccessGate;
   /** Las soluciones de los puzzles del banco de pruebas (para jugar y para el inspector). */
   readonly solutions: readonly (readonly number[])[];
   stop(): Promise<void>;
@@ -29,23 +31,34 @@ export interface WsServerOptions {
   /** Topes más bajos que los de producción, para probarlos (S-01). */
   readonly maxConnections?: number;
   readonly maxRooms?: number;
+  /** La clave de acceso del grupo que pide el servidor (F12, R-39); sin ella, no pide. */
+  readonly accessKey?: string;
+  readonly trustProxyHops?: number;
 }
 
 export async function startWsServer({
   maxConnections,
   maxRooms,
+  accessKey,
+  trustProxyHops,
 }: WsServerOptions = {}): Promise<RunningWsServer> {
   const { db, client, catalog, solutions } = await testBank();
   await client.query("TRUNCATE match_events, matches");
   const clock = new FakeClock();
   const repository = createMatchRepository(db);
+  const access = new AccessGate({
+    hash: accessKey === undefined ? null : hashAccessKey(accessKey),
+    clock,
+  });
   const transport = new WsTransport({
+    access,
     host: "127.0.0.1",
     port: 0,
     allowedOrigins: [TEST_ORIGIN],
     clock,
     logger: silentLogger,
     ...(maxConnections === undefined ? {} : { maxConnections }),
+    ...(trustProxyHops === undefined ? {} : { trustProxyHops }),
   });
   const server = new RoomServer({
     transport,
@@ -84,6 +97,7 @@ export async function startWsServer({
     server,
     inspector,
     transport,
+    access,
     solutions,
     stop: () => transport.stop(1001, "test over"),
   };

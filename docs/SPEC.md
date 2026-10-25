@@ -1,6 +1,6 @@
 # SPEC — Sudoku Killer Multijugador · v1
 
-- Versión del documento: 1.9 (F11, 2026-10-25). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2); R-20 suma el banco de puzzles (T-20.3 a T-20.5) y `PuzzleRecord` guarda `graderVersion` y `seed` (1.3); P2 y R-20 escalonan los números iniciales por dificultad y `givensReason` cambia `easy` por `difficulty` (1.4); F6 fija B, w, P, β y H, el nivel se calcula con los descartes públicos de los errores (§2.3 y §5), R-35 suma T-35.7 y T-35.8 y la nueva R-36 reúne las pruebas de la puntuación (1.5); F8 fija el destello en 1500 ms (§1.4 y T-04.3), el evento `cell.solved` guarda `level` y `graderVersion` (§5), T-31.2 describe su detector, las pruebas de esquema, T-15.1 y la base de T-32.1 se adelantan a F8, R-06 suma la preferencia local «Usar notas» (T-06.3) y la nueva R-37 cubre el arranque que falla (1.6); F9 fija las cubetas de presencia y de ping, los cierres 4002 y 1012, el 403 por origen, el apodo en grafemas, la persistencia de §2.5 y el registro de las desconexiones al reconstruir (1.7); F10 suma `defeatCause`, opcional, a `match.ended` y al snapshot (§4.3, §4.5, T-01.6 y T-01.7), y la nueva R-38 cubre la actividad tras una reconexión (1.8); F11 suma a §4.8 los topes de conexiones y de salas por instancia (`docs/seguridad.md`, S-01) y registra que la prueba de carga confirmó los valores iniciales (1.9). El protocolo sigue en la versión 1: un campo opcional es un cambio compatible (§4.7).
+- Versión del documento: 1.10 (F12, 2026-10-25). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2); R-20 suma el banco de puzzles (T-20.3 a T-20.5) y `PuzzleRecord` guarda `graderVersion` y `seed` (1.3); P2 y R-20 escalonan los números iniciales por dificultad y `givensReason` cambia `easy` por `difficulty` (1.4); F6 fija B, w, P, β y H, el nivel se calcula con los descartes públicos de los errores (§2.3 y §5), R-35 suma T-35.7 y T-35.8 y la nueva R-36 reúne las pruebas de la puntuación (1.5); F8 fija el destello en 1500 ms (§1.4 y T-04.3), el evento `cell.solved` guarda `level` y `graderVersion` (§5), T-31.2 describe su detector, las pruebas de esquema, T-15.1 y la base de T-32.1 se adelantan a F8, R-06 suma la preferencia local «Usar notas» (T-06.3) y la nueva R-37 cubre el arranque que falla (1.6); F9 fija las cubetas de presencia y de ping, los cierres 4002 y 1012, el 403 por origen, el apodo en grafemas, la persistencia de §2.5 y el registro de las desconexiones al reconstruir (1.7); F10 suma `defeatCause`, opcional, a `match.ended` y al snapshot (§4.3, §4.5, T-01.6 y T-01.7), y la nueva R-38 cubre la actividad tras una reconexión (1.8); F11 suma a §4.8 los topes de conexiones y de salas por instancia (`docs/seguridad.md`, S-01) y registra que la prueba de carga confirmó los valores iniciales (1.9); F12 suma la clave de acceso del grupo en el handshake (R-39, cierre 4003, espera por IP y `sk:access`) (1.10). El protocolo sigue en la versión 1: un campo opcional es un cambio compatible (§4.7).
 - Versión del protocolo: **1**
 - Fuente de las reglas: `docs/PLAN.md`, secciones 1 y 2, más las decisiones de producto de F2 (sección 1 de este documento).
 - Decisiones técnicas: `docs/adr/0001`–`0006`.
@@ -202,6 +202,7 @@ type CellState =
 - Son 128 bits aleatorios codificados en base64url. Se generan con un CSPRNG al entrar por primera vez.
 - Se envían **solo** al dueño, en `room.welcome`. El navegador la guarda en `localStorage` bajo la clave `sk:token:<code>`.
 - El servidor guarda solo `tokenHash` (SHA-256), en memoria y en el registro de eventos.
+- **Clave de acceso del grupo (F12, R-39):** el navegador la guarda normalizada en `localStorage` bajo `sk:access` y solo la envía en el handshake del WebSocket. Es la misma para todo el grupo y no identifica a nadie.
 - La ficha vale para una sala y deja de valer cuando el jugador se purga, es decir, al terminar la partida si había salido o expirado, o al salir o expirar fuera de una partida.
 
 ### 2.5 Persistencia
@@ -287,7 +288,7 @@ Si un jugador vuelve con ficha a una sala que está en `waiting` o `finished` y 
 ## 4. Protocolo v1
 
 ### 4.1 Transporte y sobre
-WebSocket con `ws`, en una sola ruta `/ws` (ADR 0002). Los mensajes son texto JSON validados con Zod en ambos extremos (`packages/protocol`).
+WebSocket con `ws`, en una sola ruta `/ws` (ADR 0002). Los mensajes son texto JSON validados con Zod en ambos extremos (`packages/protocol`). El cliente ofrece el subprotocolo `sk.v1` y, si tiene la clave de acceso del grupo, `sk.k.<clave normalizada en base64url>` (R-39); el servidor responde siempre con `sk.v1`, nunca con la clave.
 
 ```ts
 // cliente → servidor
@@ -372,7 +373,7 @@ interface RankingEntry { playerId; nickname; score; mistakes; scoreReachedAt; po
 | `undo.not_applicable` | `reason`: `modified` (otro jugador, una limpieza o un bloqueo cambiaron ese candidato), `not_owner` o `unknown_op`. |
 | `server.unavailable` | La base de datos no responde (ADR 0004), la sala se está reconstruyendo tras un fallo (E-16) o el servidor tuvo un error interno. Nunca lleva detalles. |
 
-Códigos de cierre de la conexión: 1001 (apagado del servidor), 1009 (mensaje de más de 16 KiB), 1012 (la sala se cerró para reconstruirla, E-16), 1013 (saturación, E-17), 4000 (versión, E-19), 4001 (reemplazo, E-08) y 4002 (la conexión no entró a ninguna sala en 30 s, ADR 0002). Un handshake con un `Origin` ausente o fuera de `ALLOWED_ORIGINS` recibe HTTP 403, y una ruta distinta de `/ws`, 404.
+Códigos de cierre de la conexión: 1001 (apagado del servidor), 1009 (mensaje de más de 16 KiB), 1012 (la sala se cerró para reconstruirla, E-16), 1013 (saturación, E-17), 4000 (versión, E-19), 4001 (reemplazo, E-08) y 4002 (la conexión no entró a ninguna sala en 30 s, ADR 0002) y 4003 (falta la clave de acceso del grupo o no vale, R-39). Un handshake con un `Origin` ausente o fuera de `ALLOWED_ORIGINS` recibe HTTP 403; una ruta distinta de `/ws`, 404; y uno desde una IP que agotó sus intentos de clave, 429. `GET /healthz` responde 204 sin cuerpo (F12).
 
 Un error **nunca** cambia vidas ni puntos.
 
@@ -421,6 +422,7 @@ Se envía al entrar, al volver con ficha y tras una reconstrucción del servidor
 | Saturación (backpressure) | Con `bufferedAmount` por encima de 256 KiB se descarta la presencia. Por encima de 1 MiB se cierra con el código 1013 y el cliente se reconecta. |
 | Conexiones por instancia (F11) | Como máximo 2 000 abiertas a la vez; por encima, el handshake recibe 503. |
 | Salas por instancia (F11) | Como máximo 500 a la vez; por encima, `room.create` recibe `server.unavailable`. |
+| Intentos de clave por IP (F12) | 10 claves que no valen en 10 min; después, el handshake desde esa IP recibe 429 hasta que pase la ventana. La IP sale de `X-Forwarded-For` contando `TRUST_PROXY_HOPS` desde la derecha. |
 
 ---
 
@@ -703,6 +705,14 @@ Entre corchetes va la fase en que se implementa cada prueba.
 
 **R-38 Actividad tras una reconexión (F10).** El snapshot no trae el historial de jugadas. Si llega con una partida en curso que ya tiene jugadas (alguna celda bloqueada que no es un número inicial), la línea de actividad y el diálogo «Ver actividad» muestran «La actividad anterior a la reconexión no está disponible.» y las jugadas nuevas se agregan después. Con una partida sin jugadas sigue «Todavía no hay jugadas». La alternativa (las últimas 50 jugadas públicas en el snapshot) está en `docs/IDEAS_FUTURAS.md`.
 - T-38.1 Al reconectar o recargar con jugadas previas aparece el aviso en la línea y en el diálogo, y una jugada nueva queda antes que él; sin jugadas, «Todavía no hay jugadas». [C, F10]
+
+**R-39 Clave de acceso del grupo (F12, `docs/seguridad.md` S-02).** Con el juego en internet, el servidor pide una clave compartida por el grupo antes de cualquier sala. Guarda solo su hash (`ACCESS_KEY_HASH`, SHA-256 con prefijo de dominio), obligatorio en producción. La clave se compara normalizada (NFKC, mayúsculas, sin espacios ni guiones) y tiene de 12 a 64 caracteres. Sin clave o con una que no vale, la conexión se cierra con 4003 sin procesar ningún mensaje. El cliente la pide en «Clave del grupo» una sola vez, la guarda en el dispositivo y repite lo que estaba haciendo; si la guardada no vale, la olvida y la vuelve a pedir. El enlace de invitación (`…/#k=CLAVE`) la guarda y la quita de la URL y del historial; el enlace «Compartir» de la sala nunca la lleva, ni la ficha. La clave nunca va en la URL del WebSocket, en un mensaje ni en un log.
+- T-39.1 La clave se normaliza y viaja como subprotocolo `sk.k.` en base64url (también con caracteres fuera de ASCII); una oferta mal formada, corta o larga no trae clave. [U, F12]
+- T-39.2 Sin clave o con una que no vale, el handshake se cierra con 4003 y no se crea ninguna sala; con la clave (escrita en minúsculas y sin guiones), el servidor elige `sk.v1` y se juega. Sin clave configurada, las mismas ofertas se aceptan (verificación negativa). Ni la clave, ni su hash, ni la oferta llegan al log. [I, F12]
+- T-39.3 Tras 10 claves que no valen desde una IP, esa IP recibe 429 hasta que pasa la ventana; otra IP no se ve afectada, y escribir otra dirección a la izquierda de `X-Forwarded-For` no cambia la del cliente. [I, F12]
+- T-39.4 El cierre 4003 lleva a «Clave del grupo» sin reintentar solo; una clave corta se rechaza; la válida se guarda normalizada y la entrada se repite con los mismos datos; una guardada que no valió se olvida. [C, F12]
+- T-39.5 El enlace `#k=` guarda la clave y deja la URL en `#/`, también con una clave inválida (que no se guarda). [C, F12]
+- T-39.6 Contra el servidor real: la invitación guarda la clave; la URL del WebSocket termina en `/ws`, la página y el enlace de «Compartir» no tienen la clave; otra persona sin clave ve «Clave del grupo», con una que no vale ve que ya no vale y con la vigente entra a la sala. [E, F12]
 
 ---
 
