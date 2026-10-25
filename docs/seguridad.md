@@ -33,7 +33,20 @@ Revisión del servidor de salas, del cliente y de las dependencias al cerrar F11
 | S-06 | Baja | **Plazos del HTTP por defecto de Node** (60 s para las cabeceras): conexiones lentas a propósito ocupan sockets antes del handshake. El tope de S-01 acota el daño. | **Abierto, F12:** el proxy del hosting corta antes; revisar `headersTimeout` con él. |
 | S-07 | Informativa | Sin TLS en desarrollo (`ws://`). | F12: HTTPS y WSS en el hosting (ya en el plan). |
 
-## 3. Actualizaciones de Dependabot (recomendación; no activadas)
+## 3. Despliegue (F12)
+
+### Retención de la base en Neon
+- **Riesgo:** la [página de regiones de Neon](https://neon.com/docs/introduction/regions) (consultada el 2026-10-25) dice que los proyectos del plan gratuito con 90 días o más sin uso pueden borrarse desde el 2026-10-05. La nota está junto a las regiones de Azure retiradas y no queda claro si alcanza a AWS us-east-1, la región elegida (ADR 0007); se toma como si aplicara. Neon no define «uso»: lo más cercano es la última actividad del cómputo de cada rama ([ramas](https://neon.com/docs/manage/branches)), que se enciende con cualquier conexión ([escala a cero](https://neon.com/docs/introduction/scale-to-zero)).
+- **Mitigación:** el respaldo semanal (`backup.yml`) se conecta y lee todas las tablas: cuenta como uso, igual que una partida.
+- **Comprobación:** tras el primer respaldo programado, la «última actividad» de la rama principal en la consola de Neon coincide con la hora del job. Se repite una vez al mes.
+- **Riesgo encadenado:** GitHub desactiva los workflows programados de un repositorio público tras 60 días sin actividad ([GitHub Docs](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows)). Quedarían 30 días antes de los 90 de Neon; la revisión mensual lo detecta.
+
+### Logs públicos de Actions
+- **Riesgo:** el repositorio es público, y con él los logs de cada workflow. Un `pg_dump`, un error de conexión o un `set -x` pueden imprimir la cadena de conexión, una clave, un hash, apodos o filas de la base.
+- **Regla:** ningún workflow imprime cadenas de conexión, claves, hashes, apodos ni contenido de la base, solo recuentos. Los pasos que tocan secretos o la base corren con `scripts/ci/quiet.mjs`, que guarda la salida en un archivo temporal y solo deja pasar líneas de recuento (`clave: número`) y mensajes de la lista. El test `tests/workflow-logs.test.ts` falla si un workflow nuevo usa un secreto o la base fuera de ese envoltorio, o con `set -x`, `env`, `printenv` o `cat`.
+- **Artefactos:** los artefactos de un repositorio público los descarga cualquier persona con cuenta de GitHub. Los respaldos se suben cifrados con `age`; la clave privada nunca entra al repositorio.
+
+## 4. Actualizaciones de Dependabot (recomendación; no activadas)
 
 Hoy solo están activas las **alertas** de Dependabot. Las **actualizaciones automáticas** abrirían PR con versiones nuevas.
 

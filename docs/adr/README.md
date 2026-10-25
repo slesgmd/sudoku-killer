@@ -33,3 +33,4 @@ Qué se gana, qué se pierde y qué queda pendiente.
 | [0004](0004-registro-de-eventos.md) | Registro de eventos por partida | aceptada |
 | [0005](0005-notas-grupales.md) | Notas grupales | aceptada |
 | [0006](0006-banco-como-manifiesto.md) | Banco de puzzles como manifiesto de semillas | aceptada |
+| [0007](0007-hosting.md) | Hosting: Render (servidor y web estática) y Neon (PostgreSQL) | aceptada |
