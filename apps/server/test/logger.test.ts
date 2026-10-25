@@ -24,6 +24,15 @@ describe("logger redaction", () => {
     });
   });
 
+  it("F12 replaces the access key, its hash and any sha256 hash in a text", () => {
+    const hash = `sha256:${"0f".repeat(32)}`;
+    const text = JSON.stringify(
+      redact({ accessKey: "ABCD-EFGH", ACCESS_KEY_HASH: hash, note: `got ${hash} here` }),
+    );
+    expect(text).not.toContain("ABCD-EFGH");
+    expect(text).not.toContain("0f0f0f");
+  });
+
   it("keeps errors without leaking a connection string in the message", () => {
     const error = new Error("connect failed for postgresql://u:secret@db/x");
     expect(JSON.stringify(redact({ error }))).not.toContain("secret");

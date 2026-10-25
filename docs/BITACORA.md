@@ -866,3 +866,15 @@ Al aprobar, agregó:
 **Verificación:** `check`, `test` (649 pruebas), `build` y `e2e` (10 de 10) en verde.
 
 **Tiempo real:** de 12:15 a 12:27 (UTC−5), unas 0,2 h.
+
+## 2026-10-25 — F12c: secretos
+
+**Hecho:**
+- Configuración: `ACCESS_KEY_HASH` (`sha256:` y 64 dígitos hexadecimales), **obligatoria con `NODE_ENV=production`**, y `TRUST_PROXY_HOPS` (0 a 3, por defecto 0). Un valor inválido se informa por el nombre de la variable, nunca por su valor.
+- Log: también se redactan la clave de acceso, su hash y cualquier texto con forma de `sha256:…`.
+- `render.yaml`: `ACCESS_KEY_HASH` con `sync: false` (se escribe en el panel) y `TRUST_PROXY_HOPS=1`, a confirmar en F12j. `.env.example` documenta las dos.
+- Prueba `secrets.test.ts`: el proceso real del servidor, con la cadena de conexión y el hash definidos y una base inalcanzable, falla sin escribirlos; sin `ACCESS_KEY_HASH` en producción no arranca y solo nombra la variable. **Verificación negativa:** con una línea temporal que imprimía `DATABASE_URL` al arrancar, la prueba falla.
+
+**Verificación:** `check`, `test` (653 pruebas), `build` y `e2e` (10 de 10) en verde.
+
+**Tiempo real:** de 12:27 a 12:33 (UTC−5), unas 0,1 h.

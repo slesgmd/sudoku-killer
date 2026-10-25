@@ -57,7 +57,7 @@ describe("F12 render.yaml (ADR 0007)", () => {
           expect(variable.value, variable.key).toBeUndefined();
           expect(variable.sync, variable.key).toBe(false);
         }
-    expect(env(server, "DATABASE_URL")?.sync).toBe(false);
+    for (const key of SECRETS) expect(env(server, key)?.sync, key).toBe(false);
   });
 
   it("deploys from main only after the commit checks pass", () => {

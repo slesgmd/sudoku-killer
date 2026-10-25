@@ -14,7 +14,16 @@ export interface Config {
   readonly port: number;
   readonly allowedOrigins: readonly string[];
   readonly logLevel: LogLevel;
+  /** `NODE_ENV=production`: la clave de acceso es obligatoria (F12, S-02). */
+  readonly production: boolean;
+  /** El hash de la clave de acceso del grupo (`sha256:…`), o `null` sin clave (solo en desarrollo). */
+  readonly accessKeyHash: string | null;
+  /** Proxies de confianza delante del servidor, para la IP del cliente (F12, S-01). */
+  readonly trustProxyHops: number;
 }
+
+/** La forma de `ACCESS_KEY_HASH` (la escribe `pnpm --filter @sudoku-killer/server access:key`). */
+export const ACCESS_KEY_HASH_PATTERN = /^sha256:[0-9a-f]{64}$/;
 
 /** El puerto de Vite en desarrollo. */
 export const DEV_WEB_PORT = 5173;
@@ -68,6 +77,8 @@ const schema = z.object({
   ALLOWED_ORIGINS: originList.default([DEV_ORIGIN]),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   NODE_ENV: z.string().optional(),
+  ACCESS_KEY_HASH: z.string().regex(ACCESS_KEY_HASH_PATTERN).optional(),
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(3).default(0),
 });
 
 export interface LoadConfigOptions {
@@ -98,10 +109,25 @@ export function loadConfig(
       `Configuración inválida: ${[...new Set(problems)].join(", ")}. Defínelas en ${ENV_FILE} (ver apps/server/.env.example) o en el entorno.`,
     );
   }
-  const { DATABASE_URL, HOST, PORT, ALLOWED_ORIGINS, LOG_LEVEL, NODE_ENV } = parsed.data;
-  if (lan && NODE_ENV === "production") {
+  const {
+    DATABASE_URL,
+    HOST,
+    PORT,
+    ALLOWED_ORIGINS,
+    LOG_LEVEL,
+    NODE_ENV,
+    ACCESS_KEY_HASH,
+    TRUST_PROXY_HOPS,
+  } = parsed.data;
+  const production = NODE_ENV === "production";
+  if (lan && production) {
     throw new ConfigError(
       "Configuración inválida: --lan (pnpm dev:lan) es solo para desarrollo en la red de casa, no para producción.",
+    );
+  }
+  if (production && ACCESS_KEY_HASH === undefined) {
+    throw new ConfigError(
+      "Configuración inválida: falta ACCESS_KEY_HASH, obligatoria en producción (la clave de acceso del grupo, docs/seguridad.md S-02).",
     );
   }
   return {
@@ -112,5 +138,8 @@ export function loadConfig(
       ? [...new Set([...ALLOWED_ORIGINS, ...lanOrigins(interfaces)])]
       : ALLOWED_ORIGINS,
     logLevel: LOG_LEVEL,
+    production,
+    accessKeyHash: ACCESS_KEY_HASH ?? null,
+    trustProxyHops: TRUST_PROXY_HOPS,
   };
 }

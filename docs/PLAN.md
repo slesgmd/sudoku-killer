@@ -751,7 +751,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 |---|---|---|
 | F12a | ADR 0007, plan aprobado y registros · el ADR queda en el índice | Hecha |
 | F12b | HTTPS y WSS: `render.yaml`, URL del servidor en el build (solo `wss://`), `/healthz`; workflow `smoke` y guarda de los logs públicos · test de la URL y de la guarda | Hecha |
-| F12c | Secretos solo en el panel; nunca en el log · prueba con los secretos definidos | Pendiente |
+| F12c | Secretos solo en el panel; nunca en el log · prueba con los secretos definidos | Hecha |
 | F12d | Clave de acceso (S-02): hash en el servidor, espera tras fallos por IP, pantalla de la clave y enlace de invitación; SPEC · pruebas I con verificación negativa y E2E | Pendiente |
 | F12e | S-05 (CSP y cabeceras del sitio), S-06 (plazos del HTTP) y S-01 (tope por IP) · E2E con la CSP del sitio; pruebas de los plazos y del tope | Pendiente |
 | F12f | Migraciones destructivas bloqueadas en producción salvo `MIGRATIONS_ALLOW` · verificación negativa | Pendiente |

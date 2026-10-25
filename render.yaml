@@ -23,7 +23,12 @@ services:
         value: info
       - key: ALLOWED_ORIGINS
         value: https://sudoku-killer-lima.onrender.com
+      # Render agrega una entrada a X-Forwarded-For (F12, S-01); se confirma en F12j.
+      - key: TRUST_PROXY_HOPS
+        value: "1"
       - key: DATABASE_URL
+        sync: false
+      - key: ACCESS_KEY_HASH
         sync: false
 
   - type: web
