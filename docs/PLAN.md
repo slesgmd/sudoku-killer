@@ -120,7 +120,7 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 | F7 | Diseño visual propio | 10 | F2 (puede ir en paralelo con F4–F6) | Hecha | ~1,5 |
 | F8 | Cliente con servidor local simulado | 4–8 | F4, F7 | Hecha | ~3,4 |
 | F9 | Servidor de salas | 3–6 | F3, F5, F6 | Hecha | ~1,9 |
-| F10 | Integración en tiempo real | 5–10 | F8, F9 | Pendiente | |
+| F10 | Integración en tiempo real | 5–10 | F8, F9 | En curso (F10a a F10g hechas; F10h pendiente) | |
 | F11 | Pruebas integrales, carga y seguridad | 3–6 | F10 | Pendiente | |
 | F12 | Despliegue privado | 2–4 | F11 | Pendiente | |
 | F13 | Beta cerrada y cierre de la v1 | 10 (+1–2 semanas de calendario) | F12 | Pendiente | |

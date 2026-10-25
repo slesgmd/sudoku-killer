@@ -644,3 +644,22 @@ Al aprobar, agregó:
 **Tiempo real:** unas 1,9 h, frente a 3–6 h (el plan aprobado estimaba 6–7 h). No incluye la revisión del usuario ni el tiempo de las ventanas de configuración de la base.
 
 **Siguiente:** F10 en modo plan. Antes, la segunda prueba en papel de F5, que sigue pendiente del usuario.
+
+## 2026-10-25 — F10: de F10a a F10g, antes del punto de control
+
+**Hecho:**
+- **F10a a F10d** (2026-10-24): registros previos, transporte `ws` con reconexión y bandeja de pendientes, notas optimistas con T-16.2, proxy de `/ws`, `dev:lan` y bots Node.
+- **Corrección de T-32.1:** la propiedad fallaba con «No room» (semilla -1802840427). El servidor estaba bien: el arnés elegía al «jugador 3» con `who % 3`, que era el 0, así que se caían todos y la sala se borraba a los 120 s, como pide R-14. Primero se excluyó al jugador 0; después se recuperó la cobertura: cada comando elige su actor entre los conectados, el 0 vuelve a poder salir, caerse y volver, y si no queda nadie y pasan 120 s la propiedad comprueba el borrado (`room.not_found`, registro en derrota) y termina esa ejecución. La regresión guarda `seed` y `path`, que reproducen ese caso exacto.
+- **F10e, pantallas:** Inicio, Entrar o crear, Lobby, Resultados y Ayuda, con rutas por hash. Con la ficha guardada, el enlace de la sala reanuda la sesión; sin ficha, abre Entrar con el código. «Compartir» usa la hoja del sistema, el portapapeles o un diálogo con el enlace. Sin fotos y una columna por debajo de 1024 px.
+- **F10f, estados de red:** banners de reconexión (con las notas en cola) y de servidor no disponible, diálogos de otra pestaña y de versión, la decisión 3 y las transiciones que faltaban. `design/entrega-f8.md` §4 quedó resuelto.
+- **F10g, E2E:** Playwright con el build de producción y el servidor real: seis pestañas juegan una partida completa (T-05.4), el reloj desfasado 10 minutos (T-07.2), un corte real con la página cerrada y la vuelta (T-13.5, con verificación negativa sin ficha) y E-08. El inspector revisa cada mensaje WS que reciben las páginas, con un control que debe fallar. Job `e2e` en la CI, sin reintentos.
+
+**Problemas y soluciones:**
+- **El modo sin conexión no corta:** en Chromium no cierra los WebSocket ya abiertos, así que T-13.5 no probaba un corte real. Ahora se cierra la página y se abre otra en el mismo contexto, y otro contexto ve `disconnected` y después `connected`.
+- **El control del inspector:** los mensajes inyectados con una ruta de WebSocket del navegador no llegan a la captura de tráfico. El mensaje de control se envía desde el servidor, por la conexión real de la página.
+- **La CI no corre en las ramas:** solo en `main` y en los PR. Sin PR, la verificación de cada subtarea se hizo en local.
+
+**Tiempo real:** se registra al cerrar F10 (F10i).
+
+**Siguiente:** F10h, punto de control del usuario.
+
