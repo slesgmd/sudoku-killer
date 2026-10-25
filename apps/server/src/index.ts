@@ -4,6 +4,7 @@
 import { startApp } from "./app.ts";
 import { ConfigError, loadConfig } from "./config/config.ts";
 import { connect, migrateDatabase } from "./db/connect.ts";
+import { DestructiveMigrationError } from "./db/migration-guard.ts";
 import { WS_PATH } from "./infra/ws-transport.ts";
 import { createLogger } from "./log/logger.ts";
 import { EmptyBankError } from "./puzzles/catalog.ts";
@@ -25,7 +26,15 @@ const logger = createLogger({ level: config.logLevel });
 const connection = connect(config.databaseUrl);
 
 try {
-  await migrateDatabase(connection.db);
+  // En producción, una migración destructiva no se aplica sola (F12f, MIGRATIONS_ALLOW).
+  const migrations = await migrateDatabase(connection.db, {
+    guard: config.production,
+    allow: config.migrationsAllow,
+  });
+  if (migrations.blocked.length > 0)
+    logger.warn("destructive migrations applied outside production", {
+      migrations: migrations.blocked,
+    });
   const app = await startApp({ ...config, db: connection.db, logger });
   logger.info("room server listening", {
     host: config.host,
@@ -35,6 +44,7 @@ try {
     accessKeyRequired: config.accessKeyHash !== null,
     trustProxyHops: config.trustProxyHops,
     restoredMatches: app.restored,
+    migrationsApplied: migrations.pending.length,
   });
   let stopping = false;
   const shutdown = (signal: string) => {
@@ -54,6 +64,8 @@ try {
   });
 } catch (error) {
   if (error instanceof EmptyBankError) logger.error(error.message);
+  else if (error instanceof DestructiveMigrationError)
+    logger.error("destructive migrations blocked", { migrations: error.tags });
   else logger.error("server failed to start", { error });
   await connection.close();
   process.exit(1);
