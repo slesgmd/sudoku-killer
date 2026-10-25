@@ -1,6 +1,7 @@
-// Log del servidor: una línea JSON por entrada. Nunca registra fichas, sus hash ni la cadena de
-// conexión a la base de datos: esas claves, y cualquier texto con forma de URL de PostgreSQL, se
-// reemplazan por "[redacted]" aunque lleguen por error.
+// Log del servidor: una línea JSON por entrada. Nunca registra fichas, sus hash, la clave de acceso
+// del grupo ni su hash (F12) ni la cadena de conexión a la base de datos: esas claves, y cualquier
+// texto con forma de URL de PostgreSQL o de hash `sha256:…`, se reemplazan por "[redacted]" aunque
+// lleguen por error.
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
 const LEVELS: Record<LogLevel, number> = { debug: 10, info: 20, warn: 30, error: 40 };
@@ -21,12 +22,18 @@ const REDACTED_KEYS = new Set([
   "password",
   "databaseurl",
   "database_url",
+  "accesskey",
+  "access_key",
+  "accesskeyhash",
+  "access_key_hash",
 ]);
 const POSTGRES_URL = /postgres(?:ql)?:\/\/\S+/gi;
+const SHA256_HASH = /sha256:[0-9a-f]{64}/gi;
 const MAX_DEPTH = 6;
 
 export function redact(value: unknown, depth = 0): unknown {
-  if (typeof value === "string") return value.replace(POSTGRES_URL, "[redacted]");
+  if (typeof value === "string")
+    return value.replace(POSTGRES_URL, "[redacted]").replace(SHA256_HASH, "[redacted]");
   if (depth > MAX_DEPTH || value === null || typeof value !== "object") return value;
   if (value instanceof Error) {
     // Solo el nombre y el mensaje: la traza se queda en el servidor, pero sin datos sensibles.

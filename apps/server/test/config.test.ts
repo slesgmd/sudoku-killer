@@ -13,6 +13,7 @@ import { table } from "./helpers/play.ts";
 import { createTestServer, testBank } from "./helpers/server.ts";
 
 const URL_WITH_SECRET = "postgres://sudoku_killer:s3cr3t-value@127.0.0.1:5432/sudoku_killer";
+const HASH = `sha256:${"ab".repeat(32)}`;
 
 beforeAll(async () => {
   await testBank();
@@ -26,7 +27,26 @@ describe("server configuration", () => {
       port: 8080,
       allowedOrigins: [DEV_ORIGIN],
       logLevel: "info",
+      production: false,
+      accessKeyHash: null,
+      trustProxyHops: 0,
     });
+  });
+
+  it("F12 production requires ACCESS_KEY_HASH, and reports a bad one by name, never by value", () => {
+    const production = { DATABASE_URL: URL_WITH_SECRET, NODE_ENV: "production" };
+    expect(() => loadConfig(production)).toThrow(/falta ACCESS_KEY_HASH/);
+    const config = loadConfig({ ...production, ACCESS_KEY_HASH: HASH, TRUST_PROXY_HOPS: "1" });
+    expect(config).toMatchObject({ production: true, accessKeyHash: HASH, trustProxyHops: 1 });
+    let message = "";
+    try {
+      loadConfig({ ...production, ACCESS_KEY_HASH: "s3cr3t-key", TRUST_PROXY_HOPS: "9" });
+    } catch (error) {
+      message = error instanceof Error ? error.message : "";
+    }
+    expect(message).toMatch(/ACCESS_KEY_HASH no es válida/);
+    expect(message).toMatch(/TRUST_PROXY_HOPS no es válida/);
+    expect(message).not.toContain("s3cr3t");
   });
 
   it("a missing DATABASE_URL names the variable and the .env path", () => {
