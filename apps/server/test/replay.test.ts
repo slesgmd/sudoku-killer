@@ -2,20 +2,24 @@
 // deshacer, ajustes, presencia, entradas, salidas, caídas, vueltas con ficha y avances del reloj),
 // `replay(registro)` da el mismo estado que el servidor en vivo: tablero, notas, vidas, puntajes,
 // roles, conexiones y ranking. El registro es el que confirmó el `MatchRepository`.
+// Cualquiera, también quien creó la sala, puede salir, caerse y volver. Si no queda nadie conectado
+// y pasan 120 s, la sala se borra (R-14): la propiedad lo comprueba y termina esa ejecución.
 import fc from "fast-check";
 import { replay } from "@sudoku-killer/game";
 import { beforeAll, describe, expect, it } from "vitest";
 import { answer, emptyCells, started, wrong } from "./helpers/play.ts";
 import { assertAsyncProperty } from "./helpers/property.ts";
-import { createTestServer, mode, testBank, type TestClient } from "./helpers/server.ts";
+import { GRACE_MS } from "../src/rooms/limits.ts";
+import { createTestServer, errorOf, mode, testBank, type TestClient } from "./helpers/server.ts";
 
 const PLAYERS = 3;
 
-const who = fc.nat(PLAYERS - 1);
 /**
- * Quien no es el jugador 0 puede salir, caerse y volver: el 0 mantiene viva la sala. Llega hasta
- * `PLAYERS` para alcanzar también a los que entran después; `otherSeat` nunca da el 0.
+ * El actor de un comando, entre los jugadores conectados (o, para `back`, entre los que están
+ * fuera): `who % cantidad`. Los rangos son los de siempre para que las semillas registradas sigan
+ * generando las mismas acciones.
  */
+const who = fc.nat(PLAYERS - 1);
 const other = fc.integer({ min: 1, max: PLAYERS });
 const actionArb = fc.oneof(
   {
@@ -61,9 +65,9 @@ const actionArb = fc.oneof(
   },
 );
 
-/** El asiento de `other`: entre el 1 y el último, nunca el 0 (que con `% length` caería en el 0). */
-function otherSeat(who: number, seats: number): number {
-  return 1 + ((who - 1) % (seats - 1));
+/** El elemento `who % length` de una lista, o `undefined` si está vacía. */
+function pickOf<T>(list: readonly T[], who: number): T | undefined {
+  return list.length === 0 ? undefined : list[who % list.length];
 }
 
 interface Seat {
@@ -79,16 +83,6 @@ beforeAll(async () => {
 }, 60_000);
 
 describe("R-32 reproducible log", () => {
-  it("T-32.1 the harness never makes player 0 leave, drop or come back", () => {
-    for (let seats = PLAYERS; seats <= PLAYERS + 5; seats++) {
-      for (let who = 1; who <= PLAYERS; who++) {
-        const seat = otherSeat(who, seats);
-        expect(seat).toBeGreaterThanOrEqual(1);
-        expect(seat).toBeLessThan(seats);
-      }
-    }
-  });
-
   it("T-32.1 replay(log) equals the live server state", { timeout: 180_000 }, async () => {
     await assertAsyncProperty(
       fc.asyncProperty(
@@ -106,6 +100,24 @@ describe("R-32 reproducible log", () => {
             ops: [],
           }));
           const matchId = h.room(code).match?.state.id ?? "";
+          const puzzle = h.room(code).match?.puzzle;
+          if (!puzzle) throw new Error("No match");
+          /** Desde cuándo no queda nadie conectado (hora del reloj falso), o `null`. */
+          let emptySince: number | null = null;
+          /** La sala se borró (R-14): nadie puede volver y el registro termina en derrota. */
+          const deleted = async () => {
+            expect(h.server.rooms.has(code)).toBe(false);
+            const back = seats.find((s) => s.token !== null);
+            if (!back?.token) throw new Error("No token");
+            const replies = await h.client().join(code, back.nickname, back.token);
+            expect(errorOf(replies)).toBe("room.not_found");
+            const events = await h.repository.events(matchId);
+            expect(events.map((e) => e.seq)).toEqual(events.map((_, i) => i + 1));
+            const replayed = replay(events, { mode, puzzle });
+            expect(replayed.result).toBe("defeat");
+            for (const p of replayed.players.values())
+              expect(["left", "expired"]).toContain(p.connection);
+          };
           const cellOf = (pick: number, onlyEmpty: boolean) => {
             const pool = onlyEmpty ? emptyCells(h, code) : Array.from({ length: 81 }, (_, i) => i);
             return pool[pick % Math.max(1, pool.length)] ?? 0;
@@ -113,13 +125,16 @@ describe("R-32 reproducible log", () => {
 
           for (const action of actions) {
             if (h.room(code).state !== "running") break;
-            const index =
-              action.kind === "leave" || action.kind === "drop" || action.kind === "back"
-                ? otherSeat(action.who, seats.length)
+            const inside = seats.filter((s) => s.inside);
+            const seat =
+              action.kind === "back"
+                ? pickOf(
+                    seats.filter((s) => !s.inside),
+                    action.who,
+                  )
                 : "who" in action
-                  ? action.who % seats.length
+                  ? pickOf(inside, action.who)
                   : undefined;
-            const seat = index === undefined ? undefined : seats[index];
             const client = seat?.inside ? seat.client : undefined;
             switch (action.kind) {
               case "place": {
@@ -188,6 +203,13 @@ describe("R-32 reproducible log", () => {
                 await h.advance(action.ms);
                 break;
             }
+            if (seats.some((s) => s.inside)) emptySince = null;
+            else emptySince ??= h.clock.now();
+            if (emptySince !== null && h.clock.now() - emptySince >= GRACE_MS) {
+              await h.settle();
+              await deleted();
+              return;
+            }
           }
           await h.settle();
 
@@ -202,8 +224,14 @@ describe("R-32 reproducible log", () => {
       ),
       {
         numRuns: 40,
-        // El «jugador 3» de 3 asientos era el 0: se caían todos y la sala se borraba (bien) a los 120 s.
-        regressions: [{ seed: -1802840427 }],
+        // Los jugadores 1, 2 y 0 se caen y pasan 120 s: la sala se borra (R-14). Antes el arnés
+        // lo tomaba por un fallo; el `path` reproduce ese contraejemplo reducido.
+        regressions: [
+          {
+            seed: -1802840427,
+            path: "14:2:4:9:17:14:11:13:13:13:13:13:13:13:13:13:13:13:13:13",
+          },
+        ],
       },
     );
   });
