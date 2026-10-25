@@ -23,6 +23,7 @@ import {
   parseServerEnvelope,
   type ServerEnvelope,
 } from "@sudoku-killer/protocol";
+import { probeUrl } from "./server-url.ts";
 import { Listeners, type Transport, type TransportStatus } from "./types.ts";
 
 /** Lo que el transporte usa de un WebSocket (el del navegador y el de `ws` lo cumplen). */
@@ -80,11 +81,10 @@ export function httpProbe(
   wsUrl: string,
   fetcher: typeof fetch = (input, init) => globalThis.fetch(input, init),
 ): () => Promise<number | null> {
-  const url = new URL(wsUrl);
-  url.protocol = url.protocol === "wss:" ? "https:" : "http:";
+  const url = probeUrl(wsUrl);
   return async () => {
     try {
-      const response = await fetcher(url.href, {
+      const response = await fetcher(url, {
         cache: "no-store",
         signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
       });
