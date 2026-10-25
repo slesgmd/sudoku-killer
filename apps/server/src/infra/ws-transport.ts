@@ -10,6 +10,8 @@
 // - Clave de acceso del grupo (F12, R-39): llega como subprotocolo; si no vale, la conexión se abre
 //   y se cierra en el acto con 4003, sin llegar a las salas. Una IP con demasiados fallos recibe
 //   429 en el handshake. La clave nunca se registra.
+// - Plazos del HTTP (F12, S-06): 10 s para recibir las cabeceras y la petición entera (Node trae
+//   60 s y 300 s); no afectan a un WebSocket ya abierto. Tope de conexiones por IP (F12, S-01).
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { Duplex } from "node:stream";
 import { ACCESS_PROTOCOL, CLOSE_ACCESS_DENIED } from "@sudoku-killer/protocol";
@@ -28,6 +30,13 @@ export const HEARTBEAT_MS = 15_000;
  * recibe 503. Unas 6 veces las 300 de la prueba de carga.
  */
 export const MAX_CONNECTIONS = 2_000;
+/**
+ * Tope de conexiones abiertas desde una misma IP (F12, S-01): una casa con el grupo entero y varias
+ * pestañas, o la prueba de carga en el hosting (5 salas × 6), caben.
+ */
+export const MAX_CONNECTIONS_PER_IP = 40;
+/** Plazo para recibir las cabeceras y la petición HTTP (F12, S-06). */
+export const HTTP_TIMEOUT_MS = 10_000;
 
 export interface WsTransportOptions {
   readonly host: string;
@@ -43,6 +52,10 @@ export interface WsTransportOptions {
   readonly access?: AccessGate;
   /** Proxies de confianza delante del servidor (`TRUST_PROXY_HOPS`, F12). */
   readonly trustProxyHops?: number;
+  /** Tope de conexiones por IP (por defecto `MAX_CONNECTIONS_PER_IP`). */
+  readonly maxConnectionsPerIp?: number;
+  /** Plazo del HTTP (por defecto `HTTP_TIMEOUT_MS`); las pruebas lo bajan. */
+  readonly httpTimeoutMs?: number;
 }
 
 /**
@@ -95,6 +108,7 @@ export class WsTransport implements Transport {
   private http: Server | null = null;
   private wss: WebSocketServer | null = null;
   private readonly alive = new Map<WebSocket, boolean>();
+  private readonly perIp = new Map<string, number>();
   private cancelHeartbeat: (() => void) | null = null;
 
   constructor(options: WsTransportOptions) {
@@ -122,16 +136,25 @@ export class WsTransport implements Transport {
       // Se elige `sk.v1` cuando se ofrece; la clave (`sk.k.…`) nunca vuelve en la respuesta.
       handleProtocols: (protocols) => (protocols.has(ACCESS_PROTOCOL) ? ACCESS_PROTOCOL : false),
     });
-    const http = createServer((request, response) => {
-      const path = new URL(request.url ?? "/", "http://localhost").pathname;
-      const health =
-        path === HEALTH_PATH && (request.method === "GET" || request.method === "HEAD");
-      response.writeHead(health ? 204 : 404, {
-        "content-length": "0",
-        "cache-control": "no-store",
-      });
-      response.end();
-    });
+    const timeout = this.options.httpTimeoutMs ?? HTTP_TIMEOUT_MS;
+    const http = createServer(
+      {
+        headersTimeout: timeout,
+        requestTimeout: timeout,
+        // Cada cuánto Node revisa esos plazos (por defecto, 30 s).
+        connectionsCheckingInterval: Math.min(1_000, timeout),
+      },
+      (request, response) => {
+        const path = new URL(request.url ?? "/", "http://localhost").pathname;
+        const health =
+          path === HEALTH_PATH && (request.method === "GET" || request.method === "HEAD");
+        response.writeHead(health ? 204 : 404, {
+          "content-length": "0",
+          "cache-control": "no-store",
+        });
+        response.end();
+      },
+    );
     http.on("upgrade", (request: IncomingMessage, socket: Duplex, head: Buffer) => {
       const path = new URL(request.url ?? "/", "http://localhost").pathname;
       if (path !== WS_PATH) {
@@ -157,13 +180,20 @@ export class WsTransport implements Transport {
         reject(socket, 503);
         return;
       }
+      if (
+        (this.perIp.get(ip) ?? 0) >= (this.options.maxConnectionsPerIp ?? MAX_CONNECTIONS_PER_IP)
+      ) {
+        logger.warn("websocket per-address connection limit reached");
+        reject(socket, 503);
+        return;
+      }
       wss.handleUpgrade(request, socket, head, (ws) => {
         if (access && !access.admit(offeredProtocols(request), ip)) {
           logger.warn("websocket access denied");
           ws.close(CLOSE_ACCESS_DENIED, "access denied");
           return;
         }
-        this.connected(ws, accept);
+        this.connected(ws, accept, ip);
       });
     });
     this.http = http;
@@ -178,8 +208,9 @@ export class WsTransport implements Transport {
     this.scheduleHeartbeat();
   }
 
-  private connected(ws: WebSocket, accept: (link: Link) => LinkHandlers): void {
+  private connected(ws: WebSocket, accept: (link: Link) => LinkHandlers, ip: string): void {
     this.alive.set(ws, true);
+    this.perIp.set(ip, (this.perIp.get(ip) ?? 0) + 1);
     const link: Link = {
       send: (text) => {
         if (ws.readyState === ws.OPEN) ws.send(text);
@@ -197,6 +228,9 @@ export class WsTransport implements Transport {
       if (closed) return;
       closed = true;
       this.alive.delete(ws);
+      const left = (this.perIp.get(ip) ?? 1) - 1;
+      if (left > 0) this.perIp.set(ip, left);
+      else this.perIp.delete(ip);
       handlers.closed();
     };
     ws.on("pong", () => {

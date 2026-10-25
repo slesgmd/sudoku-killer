@@ -892,3 +892,17 @@ Al aprobar, agregó:
 **Verificación:** `check`, `test` (664 pruebas), `build` y `e2e` (11 de 11) en verde.
 
 **Tiempo real:** de 12:33 a 12:41 (UTC−5), unas 0,15 h.
+
+## 2026-10-25 — F12e: cabeceras del sitio, plazos del HTTP y tope por IP (S-05, S-06, S-01)
+
+**Hecho:**
+- **S-05:** `apps/web/scripts/security-headers.ts` es la única fuente de las cabeceras del sitio: CSP con `default-src 'none'`, todo solo del propio sitio y `connect-src` también hacia el servidor de salas (`wss://` y `https://` por `/healthz`), `frame-ancestors`, `base-uri` y `form-action` en `'none'`; HSTS, `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, COOP y `Permissions-Policy`. Las usan `render.yaml` (comprobado por `tests/render-config.test.ts`), `vite preview` en las E2E y `smoke`.
+- Todas las E2E fallan ante una violación de la CSP (fixture `player`). `e2e/headers.spec.ts` comprueba las cabeceras y es el control: un script en línea queda bloqueado y el detector lo ve. La aplicación entera corre con la CSP sin violaciones.
+- **S-06:** `headersTimeout` y `requestTimeout` de 10 s (408), revisados cada segundo (Node revisaba cada 30 s); no cortan un WebSocket abierto.
+- **S-01:** 40 conexiones abiertas por IP (503), con la IP de `X-Forwarded-For` contando `TRUST_PROXY_HOPS` desde la derecha; sin proxies de confianza, la del socket.
+- SPEC §4.8 con los dos límites nuevos; `docs/seguridad.md` con S-01 (parte por IP), S-05, S-06 y S-07 corregidos.
+- **Verificaciones negativas:** sin el tope por IP y con los plazos de Node, las tres pruebas nuevas fallan; el control de la CSP ve el script bloqueado.
+
+**Verificación:** `check`, `test` (669 pruebas), `build` y `e2e` (12 de 12) en verde.
+
+**Tiempo real:** de 12:43 a 12:50 (UTC−5), unas 0,1 h.

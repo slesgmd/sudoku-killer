@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { HEALTH_PATH } from "../apps/server/src/infra/ws-transport.ts";
+import { securityHeaders } from "../apps/web/scripts/security-headers.ts";
 import { checkServerUrl } from "../apps/web/src/transport/server-url.ts";
 
 interface EnvVar {
@@ -74,6 +75,15 @@ describe("F12 render.yaml (ADR 0007)", () => {
     expect(server.healthCheckPath).toBe(HEALTH_PATH);
     expect(env(server, "NODE_ENV")?.value).toBe("production");
     expect(env(server, "HOST")?.value).toBe("0.0.0.0");
+  });
+
+  it("S-05 serves the security headers of security-headers.ts on every path, with the server in connect-src", () => {
+    const url = env(web, "VITE_SERVER_URL")?.value ?? null;
+    expect(web.headers?.every((h) => h.path === "/*")).toBe(true);
+    expect(web.headers?.map(({ name, value }) => ({ name, value }))).toEqual(securityHeaders(url));
+    const csp = web.headers?.find((h) => h.name === "Content-Security-Policy")?.value ?? "";
+    expect(csp).toContain(`wss://${server.name}.onrender.com`);
+    expect(csp).toContain("frame-ancestors 'none'");
   });
 
   it("points the web to the server over wss:// and allows only the web origin", () => {

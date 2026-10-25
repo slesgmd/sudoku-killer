@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defaultClientConditions, defineConfig, loadEnv, type Plugin } from "vite";
 import { writeModuleReport } from "./scripts/module-report.ts";
+import { securityHeaders } from "./scripts/security-headers.ts";
 import { checkServerUrl } from "./src/transport/server-url.ts";
 
 /**
@@ -50,7 +51,12 @@ function config(command: "build" | "serve") {
     // Puerto fijo: el servidor solo acepta el origen de 5173 (y el de las IP locales con dev:lan).
     // Si está ocupado, Vite falla en lugar de pasar a otro puerto que el servidor rechazaría.
     server: { proxy: wsProxy, strictPort: true },
-    preview: { proxy: wsProxy },
+    // Las cabeceras del sitio publicado (S-05), con el servidor en el mismo origen: las E2E fallan
+    // ante cualquier violación de la CSP.
+    preview: {
+      proxy: wsProxy,
+      headers: Object.fromEntries(securityHeaders(null).map((h) => [h.name, h.value])),
+    },
     build: {
       // Nada se incrusta en base64: las fuentes van como archivos woff2 (entrega-f8.md §5).
       assetsInlineLimit: 0,
