@@ -7,7 +7,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 - **Plan:** versión 1.22. **SPEC:** versión 1.8.
 - **Fase actual:** F11, pruebas integrales, carga y seguridad (2–4 h, recalibración aprobada; plan aprobado con las subtareas F11a a F11i y sus decisiones en `docs/PLAN.md`, F11). F10 se cerró el 2026-10-25 con unas 3,1 h. De F0 a F10 van unas 18,9 h.
-- **Próxima tarea exacta:** F11b (E2E nuevas: E-10, E-15, E-16 y E-02/E-23). Después F11c, F11d y F11e, que termina en un punto de control del usuario con el informe de carga. Las ramas de trabajo no corren la CI sin PR: verificar `check`, `test`, `build` y `e2e` en local.
+- **Próxima tarea exacta:** F11c (caos con semilla: E-01, E-07 y E-17). F11a y F11b hechas. Después F11d y F11e, que termina en un punto de control del usuario con el informe de carga. Las ramas de trabajo no corren la CI sin PR: verificar `check`, `test`, `build` y `e2e` en local.
 - **Servidor (F9):**
   - `apps/server/src/`: `rooms/` (actor por sala con cola y bandeja de salida ordenada), `match/` (repositorio y group commit), `infra/` (`Transport` en memoria y `ws`, reloj, azar y fichas), `config/` y `app.ts`.
   - Esquema en SPEC §2.5. El registro se confirma antes de difundir, las partidas se reconstruyen al arrancar y E-16 cierra con 1012.
@@ -17,7 +17,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
   - Lo puro del banco está en `packages/bank` (dificultad, `regenerateSeed`, `canonicalPuzzle`); el servidor conserva el hash con `node:crypto` y la carga.
   - Servidor simulado y bot solo en desarrollo (`apps/web/src/dev/`). `check-dist` revisa el build en cada `pnpm build` (T-31.2). El cliente de producción solo importa `@sudoku-killer/engine/model` y `@sudoku-killer/game/client`.
 - **Cliente (F10):** transporte `ws` con reconexión y bandeja de pendientes (`src/transport/`, `src/game/client.ts`); rutas por hash en `src/routes.ts` (`#/`, `#/entrar[/CODIGO]`, `#/sala/CODIGO`, `#/ayuda`), y la pantalla de la sala sale de su estado (decisión 3). Pantallas en `src/screens/`, estados de red en `src/components/Network.tsx`. En desarrollo, Vite reenvía `/ws` al servidor.
-  - E2E en `apps/web/e2e/`: el build servido con `vite preview` y el servidor real en el worker (PGlite), con el inspector sobre el tráfico WS y su control.
+  - E2E en `apps/web/e2e/`: el build servido con `vite preview` y el servidor real en el worker (PGlite), con el inspector sobre el tráfico WS y su control. El fixture `game` reinicia el servidor (`restart`, E-15) y hace fallar la base (`failDatabase`, E-16); ayudas de juego en `e2e/game.ts`.
   - Correcciones del punto de control (SPEC 1.8): la derrota dice su causa (`defeatCause` opcional en `match.ended` y en el snapshot, derivado del estado final por `defeatCause` de `packages/game`), y tras reconectar con jugadas previas la actividad avisa que lo anterior no está disponible (R-38).
 - **Puntuación (F6, `docs/puntuacion.md`):**
   - Parámetros v1 (`packages/scoring/src/params.v1.json`): B = 10, w = 1/2/3/4/5, P = 90, β = 1 y H = 60.

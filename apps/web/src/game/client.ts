@@ -227,6 +227,15 @@ export class GameClient {
     return true;
   }
 
+  /**
+   * Quita el aviso de Inicio (sala llena o borrada). «Volver a la sala» lo llama antes de navegar:
+   * con el aviso a la vista, la ruta de esa sala vuelve a Inicio sin intentar (evita el bucle tras el
+   * rechazo), y la persona tiene que poder probar otra vez si se liberó un asiento (E-02, T-26.4).
+   */
+  dismissNotice(): void {
+    if (this.state.roomNotice) this.set({ roomNotice: null });
+  }
+
   /** La última sala con ficha guardada, para «Volver a la sala». */
   savedRoom(): string | null {
     const code = this.session.lastRoom();

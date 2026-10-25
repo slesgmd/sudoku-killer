@@ -160,7 +160,15 @@ export function Screens({
     );
   }
   if (route.name === "home" && state.phase !== "entering") {
-    return <Home savedRoom={client.savedRoom()} notice={state.roomNotice} />;
+    return (
+      <Home
+        savedRoom={client.savedRoom()}
+        notice={state.roomNotice}
+        onResume={() => {
+          client.dismissNotice();
+        }}
+      />
+    );
   }
   const code =
     route.name === "enter" || route.name === "room" ? route.code : (state.lastEntry?.code ?? null);

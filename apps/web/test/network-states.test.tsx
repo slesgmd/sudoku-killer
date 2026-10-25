@@ -325,6 +325,31 @@ describe("F10f transitions that were not drawn", () => {
     expect(transport.sent.filter((m) => m.type === "room.join")).toHaveLength(1);
   });
 
+  it("E-02 T-26.4 with the full-room notice on Inicio, «Volver a la sala» tries again", () => {
+    const session = memorySession();
+    session.saveToken(CODE, TOKEN);
+    session.saveNickname("Inés");
+    session.saveLastRoom(CODE);
+    window.history.replaceState(null, "", `#/sala/${CODE}`);
+    const transport = fakeTransport();
+    const client = new GameClient({ transport, prefs: memoryPrefs(), session });
+    render(<Screens client={client} share={{}} />);
+    const join = transport.last("room.join");
+    transport.emit({
+      type: "error",
+      ...(join ? { replyTo: join.id } : {}),
+      payload: { code: "room.full" },
+    });
+    expect(window.location.hash).toBe("#/");
+    // jsdom no sigue el enlace: el clic y la navegación, como en la decisión 3.
+    fireEvent.click(screen.getByRole("link", { name: `Volver a la sala ${CODE}` }));
+    act(() => {
+      navigate({ name: "room", code: CODE });
+    });
+    expect(window.location.hash).toBe(`#/sala/${CODE}`);
+    expect(transport.sent.filter((m) => m.type === "room.join")).toHaveLength(2);
+  });
+
   it("a room that filled up during a reconnection sends the player to Inicio with the notice", () => {
     const { transport } = entered();
     transport.setStatus("reconnecting");
