@@ -41,7 +41,9 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @sudoku-killer/web exec playwright install --with-deps chromium
+      # El navegador de la versión fijada de @playwright/test, con sus dependencias del sistema.
+      - run: pnpm exec playwright install --with-deps chromium
+        working-directory: apps/web
       - run: pnpm e2e
         env:
           CI: "true"
