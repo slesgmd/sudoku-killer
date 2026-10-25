@@ -2,6 +2,7 @@
 // servidor publicados. Solo imprime `smoke.<prueba>: ok|fail` (docs/seguridad.md §3); nunca el
 // contenido de una respuesta. Variables: SMOKE_WEB_URL (https://…) y SMOKE_SERVER_URL (wss://…/ws).
 import WebSocket from "ws";
+import { securityHeaders } from "../../web/scripts/security-headers.ts";
 
 const WAKE_MS = 120_000;
 
@@ -71,6 +72,10 @@ export async function smoke(): Promise<boolean> {
 
   const page = await fetch(web.href, { redirect: "manual" });
   record("web_status", page.status === 200);
+  record(
+    "web_security_headers",
+    securityHeaders(server.href).every(({ name, value }) => page.headers.get(name) === value),
+  );
 
   const plain = new URL(web.href);
   plain.protocol = "http:";

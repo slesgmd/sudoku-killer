@@ -237,6 +237,14 @@ function parse(text: string): { type: string; id?: string; nickname?: string } |
 
 let sockets = 0;
 
+/** Junta las violaciones de la CSP del sitio (S-05) que la página informa en la consola. */
+export function watchCsp(page: Page, violations: string[]): void {
+  page.on("console", (message) => {
+    if (message.type() === "error" && /Content Security Policy/i.test(message.text()))
+      violations.push(message.text());
+  });
+}
+
 /** Revisa con el inspector cada mensaje que recibe la página por WebSocket. */
 export function inspect(page: Page, inspector: LeakInspector): void {
   page.on("websocket", (ws) => {
@@ -277,14 +285,17 @@ export const test = base.extend<Fixtures, { game: GameServer }>({
     const contexts: BrowserContext[] = [];
     const before = game.inspector.violations.length;
     const inspected = game.inspector.inspected;
+    const csp: string[] = [];
     await provide(async ({ context } = {}) => {
       const target = context ?? (await browser.newContext());
       if (!context) contexts.push(target);
       const page = await target.newPage();
       inspect(page, game.inspector);
+      watchCsp(page, csp);
       return page;
     });
     for (const context of contexts) await context.close();
+    expect(csp, "Content-Security-Policy violations (S-05)").toEqual([]);
     expect(game.inspector.violations.slice(before), "leak inspector (SPEC §8.3)").toEqual([]);
     expect(game.inspector.inspected, "messages seen by the inspector").toBeGreaterThan(inspected);
   },

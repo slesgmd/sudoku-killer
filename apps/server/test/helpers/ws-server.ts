@@ -34,6 +34,8 @@ export interface WsServerOptions {
   /** La clave de acceso del grupo que pide el servidor (F12, R-39); sin ella, no pide. */
   readonly accessKey?: string;
   readonly trustProxyHops?: number;
+  readonly maxConnectionsPerIp?: number;
+  readonly httpTimeoutMs?: number;
 }
 
 export async function startWsServer({
@@ -41,6 +43,8 @@ export async function startWsServer({
   maxRooms,
   accessKey,
   trustProxyHops,
+  maxConnectionsPerIp,
+  httpTimeoutMs,
 }: WsServerOptions = {}): Promise<RunningWsServer> {
   const { db, client, catalog, solutions } = await testBank();
   await client.query("TRUNCATE match_events, matches");
@@ -59,6 +63,8 @@ export async function startWsServer({
     logger: silentLogger,
     ...(maxConnections === undefined ? {} : { maxConnections }),
     ...(trustProxyHops === undefined ? {} : { trustProxyHops }),
+    ...(maxConnectionsPerIp === undefined ? {} : { maxConnectionsPerIp }),
+    ...(httpTimeoutMs === undefined ? {} : { httpTimeoutMs }),
   });
   const server = new RoomServer({
     transport,

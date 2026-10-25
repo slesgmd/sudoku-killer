@@ -11,6 +11,7 @@ import {
   type ServerEnvelope,
 } from "@sudoku-killer/protocol";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { createConnection } from "node:net";
 import WebSocket from "ws";
 import {
   ACCESS_FAILURE_WINDOW_MS,
@@ -268,6 +269,56 @@ describe("F12 health check", () => {
     }
     expect((await fetch(`${base}${HEALTH_PATH}`, { method: "POST" })).status).toBe(404);
     expect((await fetch(`${base}/`)).status).toBe(404);
+  });
+});
+
+describe("F12 per-address cap and HTTP timeouts (S-01, S-06)", () => {
+  it("S-01 above the per-address cap the handshake gets 503; other addresses and a freed slot get in; a spoofed entry does not evade it", async () => {
+    const r = await start({ maxConnectionsPerIp: 2, trustProxyHops: 1 });
+    const first = connect(r, { forwardedFor: "203.0.113.7" });
+    await first.opened;
+    await connect(r, { forwardedFor: "198.51.100.9, 203.0.113.7" }).opened;
+    await expect(connect(r, { forwardedFor: "203.0.113.7" }).opened).rejects.toThrow(/HTTP 503/);
+    await expect(connect(r, { forwardedFor: "192.0.2.1, 203.0.113.7" }).opened).rejects.toThrow(
+      /HTTP 503/,
+    );
+    await connect(r, { forwardedFor: "203.0.113.8" }).opened;
+    first.ws.close();
+    await first.closed;
+    await vi.waitFor(async () => {
+      await connect(r, { forwardedFor: "203.0.113.7" }).opened;
+    });
+  });
+
+  it("without trusted proxies the socket address counts, and X-Forwarded-For is ignored", async () => {
+    const r = await start({ maxConnectionsPerIp: 1 });
+    await connect(r, { forwardedFor: "203.0.113.7" }).opened;
+    await expect(connect(r, { forwardedFor: "203.0.113.8" }).opened).rejects.toThrow(/HTTP 503/);
+  });
+
+  it("S-06 a client that never finishes its headers is cut off after the HTTP timeout", async () => {
+    const r = await start({ httpTimeoutMs: 300 });
+    const socket = createConnection({ host: "127.0.0.1", port: r.port });
+    await new Promise((resolve) => socket.once("connect", resolve));
+    let answer = "";
+    // Sin leer, el socket nunca llega a cerrarse.
+    socket.on("data", (chunk: Buffer) => (answer += chunk.toString("utf8")));
+    const started = Date.now();
+    socket.write("GET /ws HTTP/1.1\r\nHost: 127.0.0.1\r\n");
+    await new Promise((resolve) => socket.once("close", resolve));
+    const elapsed = Date.now() - started;
+    expect(elapsed).toBeGreaterThanOrEqual(250);
+    expect(elapsed).toBeLessThan(3_000);
+    expect(answer).toMatch(/^HTTP\/1\.1 408/);
+  });
+
+  it("S-06 the HTTP timeout does not cut an open WebSocket", async () => {
+    const r = await start({ httpTimeoutMs: 300 });
+    const client = connect(r);
+    await client.opened;
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    client.send("sys.ping", { t0: 1 });
+    expect((await client.next("sys.pong")).type).toBe("sys.pong");
   });
 });
 
