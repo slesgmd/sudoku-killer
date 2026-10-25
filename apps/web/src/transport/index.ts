@@ -1,16 +1,18 @@
-// Elección del transporte. Por defecto, el servidor real por WebSocket en el mismo origen (`/ws`; en
-// desarrollo, Vite lo reenvía al servidor local). Solo en desarrollo, con `?sim=1`, el servidor
+// Elección del transporte. Por defecto, el servidor real por WebSocket: en producción, el de
+// `VITE_SERVER_URL` (F12, solo `wss://`); sin ella, el del mismo origen (`/ws`; en desarrollo, Vite lo
+// reenvía al servidor local). Solo en desarrollo, con `?sim=1`, el servidor
 // simulado en memoria (`src/dev/sim/`), que es el único lugar del navegador donde existe la
 // solución. En producción no se incluye (T-31.2): la rama de `import.meta.env.DEV` desaparece del
 // build, y con ella el `import()` del simulador.
 import type { Transport } from "./types.ts";
-import { createWsTransport, sameOriginUrl } from "./ws.ts";
+import { serverUrl } from "./server-url.ts";
+import { createWsTransport } from "./ws.ts";
 
 export type { Transport, TransportStatus } from "./types.ts";
 
 export function createServerTransport(): Transport {
   return createWsTransport({
-    url: sameOriginUrl(window.location),
+    url: serverUrl(import.meta.env.VITE_SERVER_URL, window.location),
     ...(import.meta.env.DEV
       ? {
           debug: (message: string) => {

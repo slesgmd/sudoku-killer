@@ -43,7 +43,7 @@ Revisión del servidor de salas, del cliente y de las dependencias al cerrar F11
 
 ### Logs públicos de Actions
 - **Riesgo:** el repositorio es público, y con él los logs de cada workflow. Un `pg_dump`, un error de conexión o un `set -x` pueden imprimir la cadena de conexión, una clave, un hash, apodos o filas de la base.
-- **Regla:** ningún workflow imprime cadenas de conexión, claves, hashes, apodos ni contenido de la base, solo recuentos. Los pasos que tocan secretos o la base corren con `scripts/ci/quiet.mjs`, que guarda la salida en un archivo temporal y solo deja pasar líneas de recuento (`clave: número`) y mensajes de la lista. El test `tests/workflow-logs.test.ts` falla si un workflow nuevo usa un secreto o la base fuera de ese envoltorio, o con `set -x`, `env`, `printenv` o `cat`.
+- **Regla:** ningún workflow imprime cadenas de conexión, claves, hashes, apodos ni contenido de la base, solo recuentos. Los pasos que tocan secretos o la base corren con `scripts/ci/quiet.ts`, que retiene la salida en memoria y solo deja pasar líneas de recuento (`clave: número`) y mensajes de la lista. El test `tests/workflow-logs.test.ts` falla si un workflow nuevo usa un secreto o la base fuera de ese envoltorio, o con `set -x`, `env`, `printenv` o `cat`.
 - **Artefactos:** los artefactos de un repositorio público los descarga cualquier persona con cuenta de GitHub. Los respaldos se suben cifrados con `age`; la clave privada nunca entra al repositorio.
 
 ## 4. Actualizaciones de Dependabot (recomendación; no activadas)

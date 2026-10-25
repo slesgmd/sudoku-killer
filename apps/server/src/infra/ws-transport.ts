@@ -5,6 +5,8 @@
 // - `permessage-deflate` desactivado.
 // - Heartbeat: ping cada 15 s; si no llegó el pong del anterior, la conexión se termina.
 // - Los mensajes binarios no son del protocolo: llegan al servidor como texto inválido.
+// - `GET /healthz` responde 204 sin cuerpo (F12): el chequeo del hosting y el precalentamiento de
+//   la web. Cualquier otra petición HTTP recibe 404.
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
@@ -13,6 +15,7 @@ import type { Clock } from "./clock.ts";
 import type { Link, LinkHandlers, Transport } from "./transport.ts";
 
 export const WS_PATH = "/ws";
+export const HEALTH_PATH = "/healthz";
 export const MAX_PAYLOAD_BYTES = 16 * 1024;
 export const HEARTBEAT_MS = 15_000;
 /**
@@ -78,8 +81,14 @@ export class WsTransport implements Transport {
       maxPayload: MAX_PAYLOAD_BYTES,
       perMessageDeflate: false,
     });
-    const http = createServer((_request, response) => {
-      response.writeHead(404, { "content-length": "0" });
+    const http = createServer((request, response) => {
+      const path = new URL(request.url ?? "/", "http://localhost").pathname;
+      const health =
+        path === HEALTH_PATH && (request.method === "GET" || request.method === "HEAD");
+      response.writeHead(health ? 204 : 404, {
+        "content-length": "0",
+        "cache-control": "no-store",
+      });
       response.end();
     });
     http.on("upgrade", (request: IncomingMessage, socket: Duplex, head: Buffer) => {

@@ -1,0 +1,40 @@
+name: Humo del despliegue
+
+# Prueba de humo del despliegue (F12b, ADR 0007), a mano: TLS de la web y del servidor, la
+# redirección de http a https, `/healthz` (espera hasta 2 min a que el servidor despierte) y el
+# handshake del WebSocket con un origen ajeno (403) y con el de la web. Los logs de Actions son
+# públicos: todo paso corre con `scripts/ci/quiet.ts`, que solo deja pasar `smoke.<prueba>: ok|fail`
+# (docs/seguridad.md §3; lo comprueba tests/workflow-logs.test.ts).
+
+on:
+  workflow_dispatch:
+    inputs:
+      web_url:
+        description: "Web (https://…)"
+        required: true
+        default: "https://sudoku-killer-lima.onrender.com"
+      server_url:
+        description: "Servidor (wss://…/ws)"
+        required: true
+        default: "wss://sudoku-killer-lima-ws.onrender.com/ws"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: node scripts/ci/quiet.ts -- pnpm install --frozen-lockfile
+      - name: Smoke
+        run: node scripts/ci/quiet.ts -- pnpm --filter @sudoku-killer/server smoke
+        env:
+          SMOKE_WEB_URL: ${{ inputs.web_url }}
+          SMOKE_SERVER_URL: ${{ inputs.server_url }}

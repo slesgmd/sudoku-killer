@@ -4,7 +4,7 @@
 import { CLOSE_REPLACED, CLOSE_UNSUPPORTED, type ServerEnvelope } from "@sudoku-killer/protocol";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
-import { WS_PATH } from "../src/infra/ws-transport.ts";
+import { HEALTH_PATH, WS_PATH } from "../src/infra/ws-transport.ts";
 import { testBank } from "./helpers/server.ts";
 import { TEST_ORIGIN, startWsServer, type RunningWsServer } from "./helpers/ws-server.ts";
 
@@ -141,6 +141,21 @@ describe("ADR 0002 handshake", () => {
   it("only /ws is a WebSocket endpoint", async () => {
     const r = await start();
     await expect(connect(r, { path: "/other" }).opened).rejects.toThrow(/HTTP 404/);
+  });
+});
+
+describe("F12 health check", () => {
+  it("GET and HEAD /healthz get 204 without a body; any other path gets 404", async () => {
+    const r = await start();
+    const base = `http://127.0.0.1:${String(r.port)}`;
+    for (const method of ["GET", "HEAD"]) {
+      const response = await fetch(`${base}${HEALTH_PATH}`, { method });
+      expect(response.status).toBe(204);
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(await response.text()).toBe("");
+    }
+    expect((await fetch(`${base}${HEALTH_PATH}`, { method: "POST" })).status).toBe(404);
+    expect((await fetch(`${base}/`)).status).toBe(404);
   });
 });
 

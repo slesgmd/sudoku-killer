@@ -851,4 +851,18 @@ Al aprobar, agregó:
 - `docs/seguridad.md`, sección 3 nueva: retención de la base y la regla de los logs públicos de Actions.
 - PLAN 1.24: plan de F12 aprobado (subtareas F12a a F12m, decisiones del usuario) y F12 de 2–4 h a 3–5 h.
 
-**Tiempo real:** planificación de 11:45 a 12:00 y F12a de 12:08 a 12:25 (UTC−5), unas 0,5 h.
+**Tiempo real:** planificación de 11:45 a 12:00 y F12a de 12:08 a 12:15 (UTC−5), unas 0,35 h.
+
+## 2026-10-25 — F12b: HTTPS y WSS, `render.yaml` y logs públicos
+
+**Hecho:**
+- `render.yaml` (Blueprint, ADR 0007): servidor `sudoku-killer-lima-ws` (gratuito, Virginia, `NODE_ENV=production`, `HOST=0.0.0.0`, chequeo en `/healthz`) y web estática `sudoku-killer-lima` (`apps/web/dist`), los dos desde `main` con `autoDeployTrigger: checksPass`. `DATABASE_URL` solo con `sync: false`. Render da el TLS de los subdominios `onrender.com`.
+- Servidor: `GET` y `HEAD /healthz` responden 204 sin cuerpo y con `cache-control: no-store`; el resto del HTTP sigue en 404.
+- Web: `VITE_SERVER_URL` (solo `wss://…/ws`, sin consulta, fragmento ni credenciales); sin ella, el mismo origen. `vite.config.ts` detiene el build con un valor que no sea `wss://`.
+- Logs públicos de Actions (`docs/seguridad.md` §3): `scripts/ci/quiet.ts` retiene la salida en memoria y solo deja pasar `prefijo.clave: número|ok|fail|skipped` con los prefijos de los scripts del proyecto; `tests/workflow-logs.test.ts` exige a todo workflow nuevo disparadores manuales o programados, `contents: read`, secretos solo en el `env` del paso, ninguna expresión dentro de `run`, sin contenedores de servicio (imprimen sus logs), acciones de una lista, artefactos solo `.age` y cada comando con `quiet.ts`; con su verificación negativa.
+- `smoke.yml` (manual) y `scripts/smoke.ts`: TLS, redirección de http a https, `/healthz` (espera hasta 2 min), 403 con un origen ajeno y apertura con el de la web. `tests/render-config.test.ts` comprueba los nombres cruzados, `wss://`, la región, el plan y que no haya secretos.
+- Comprobado en local: el build de producción del servidor (`pnpm --filter "@sudoku-killer/server..." build`) arranca con `node dist/index.js` contra un PostgreSQL 16 con el banco completo y responde `/healthz`.
+
+**Verificación:** `check`, `test` (649 pruebas), `build` y `e2e` (10 de 10) en verde.
+
+**Tiempo real:** de 12:15 a 12:27 (UTC−5), unas 0,2 h.

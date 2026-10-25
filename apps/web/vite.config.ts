@@ -1,7 +1,8 @@
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
-import { defaultClientConditions, defineConfig, type Plugin } from "vite";
+import { defaultClientConditions, defineConfig, loadEnv, type Plugin } from "vite";
 import { writeModuleReport } from "./scripts/module-report.ts";
+import { checkServerUrl } from "./src/transport/server-url.ts";
 
 /**
  * Alias que solo existen al servir en desarrollo y en las pruebas: el manifiesto del banco para el
@@ -32,19 +33,27 @@ function moduleReport(): Plugin {
   };
 }
 
-export default defineConfig(({ command }) => ({
-  plugins: [react(), moduleReport()],
-  resolve: {
-    // Los paquetes del monorepo se consumen desde sus fuentes TypeScript.
-    conditions: ["@sudoku-killer/source", ...defaultClientConditions],
-    alias: command === "serve" ? devAliases : {},
-  },
-  // Puerto fijo: el servidor solo acepta el origen de 5173 (y el de las IP locales con dev:lan).
-  // Si está ocupado, Vite falla en lugar de pasar a otro puerto que el servidor rechazaría.
-  server: { proxy: wsProxy, strictPort: true },
-  preview: { proxy: wsProxy },
-  build: {
-    // Nada se incrusta en base64: las fuentes van como archivos woff2 (entrega-f8.md §5).
-    assetsInlineLimit: 0,
-  },
-}));
+export default defineConfig(({ command, mode }) => {
+  // F12: un `VITE_SERVER_URL` que no sea `wss://…/ws` detiene el build (TLS obligatorio).
+  checkServerUrl(loadEnv(mode, process.cwd(), "VITE_")["VITE_SERVER_URL"]);
+  return config(command);
+});
+
+function config(command: "build" | "serve") {
+  return {
+    plugins: [react(), moduleReport()],
+    resolve: {
+      // Los paquetes del monorepo se consumen desde sus fuentes TypeScript.
+      conditions: ["@sudoku-killer/source", ...defaultClientConditions],
+      alias: command === "serve" ? devAliases : {},
+    },
+    // Puerto fijo: el servidor solo acepta el origen de 5173 (y el de las IP locales con dev:lan).
+    // Si está ocupado, Vite falla en lugar de pasar a otro puerto que el servidor rechazaría.
+    server: { proxy: wsProxy, strictPort: true },
+    preview: { proxy: wsProxy },
+    build: {
+      // Nada se incrusta en base64: las fuentes van como archivos woff2 (entrega-f8.md §5).
+      assetsInlineLimit: 0,
+    },
+  };
+}

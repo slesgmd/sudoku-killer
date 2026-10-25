@@ -67,13 +67,7 @@ const realScheduler: Scheduler = {
   },
 };
 
-/** `ws(s)://<host>/ws` del mismo origen que la página. */
-export function sameOriginUrl(location: {
-  readonly protocol: string;
-  readonly host: string;
-}): string {
-  return `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/ws`;
-}
+export { sameOriginUrl } from "./server-url.ts";
 
 /** Espera antes del reintento `attempt` (desde 0): exponencial, con jitter entre la mitad y el total. */
 export function retryDelay(attempt: number, random: () => number): number {
