@@ -92,6 +92,8 @@ describe("F12h metrics", () => {
         rssMb: 200,
         heapUsedMb: 50,
         accessDenied: 1,
+        accessLocked: 0,
+        addressUnknown: 0,
       });
       for (const field of ["commits", "events", "commitP95Ms", "commitMaxMs", "eventLoopP95Ms"])
         expect(typeof entry[field], field).toBe("number");

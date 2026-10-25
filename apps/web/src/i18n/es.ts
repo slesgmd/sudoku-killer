@@ -77,6 +77,10 @@ export const es = {
     "Te la pasan junto con el enlace de invitación. Da igual si la escribes en mayúsculas o minúsculas.",
   "access.invalid": "La clave tiene entre 12 y 64 caracteres, sin contar espacios ni guiones.",
   "access.submit": "Continuar",
+  "access.lockedTitle": "Demasiados intentos.",
+  "access.lockedText":
+    "Desde esta red se probaron demasiadas claves que no valen. Espera unos minutos (hasta 10) y vuelve a intentarlo; la clave guardada se conserva.",
+  "access.retry": "Reintentar",
   "access.back": "Volver al inicio",
 
   // Inicio mínimo de F8 (arranque directo, solo en las pruebas)

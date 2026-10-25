@@ -2,8 +2,12 @@
 // guarda solo el hash (`ACCESS_KEY_HASH`, SHA-256 con un prefijo de dominio) y compara en tiempo
 // constante. Tras `MAX_ACCESS_FAILURES` claves que no valen desde una IP en `ACCESS_FAILURE_WINDOW_MS`,
 // esa IP recibe 429 en el handshake hasta que pase la ventana.
+// - Solo cuenta una clave ofrecida que no vale: un navegador que todavía no tiene clave no la está
+//   adivinando, recibe 4003 siempre y nunca queda bloqueado (T-39.7).
+// - Sin dirección conocida (`null`, T-39.8), los fallos no se cuentan: si se contaran juntos, unos
+//   pocos bloquearían a todos.
 import { createHash, timingSafeEqual } from "node:crypto";
-import { keyFromProtocols, normalizeAccessKey } from "@sudoku-killer/protocol";
+import { KEY_PROTOCOL_PREFIX, keyFromProtocols, normalizeAccessKey } from "@sudoku-killer/protocol";
 import type { Clock } from "./clock.ts";
 
 export const MAX_ACCESS_FAILURES = 10;
@@ -55,28 +59,33 @@ export class AccessGate {
     return this.hash !== null;
   }
 
-  /** Si la IP agotó sus intentos en la ventana actual. */
-  locked(ip: string): boolean {
+  /** Cuánto falta (en ms) para que la IP pueda volver a probar claves, o 0 si no está bloqueada. */
+  lockedFor(ip: string | null): number {
+    if (ip === null) return 0;
     const entry = this.failures.get(ip);
-    if (!entry) return false;
-    if (this.clock.now() >= entry.resetAt) {
+    if (!entry) return 0;
+    const left = entry.resetAt - this.clock.now();
+    if (left <= 0) {
       this.failures.delete(ip);
-      return false;
+      return 0;
     }
-    return entry.count >= this.maxFailures;
+    return entry.count >= this.maxFailures ? left : 0;
   }
 
-  /** Si los subprotocolos ofrecidos traen la clave; si no, cuenta un fallo para la IP. */
-  admit(protocols: Iterable<string>, ip: string): boolean {
+  /**
+   * Si los subprotocolos ofrecidos traen la clave. Si traen otra (o una mal formada), cuenta un
+   * fallo para la IP; si no traen ninguna, no.
+   */
+  admit(protocols: readonly string[], ip: string | null): boolean {
     if (this.hash === null) return true;
     const key = keyFromProtocols(protocols);
     if (key !== null && sameHash(hashAccessKey(key), this.hash)) return true;
-    this.fail(ip);
+    this.denied++;
+    if (offersKey(protocols) && ip !== null) this.fail(ip);
     return false;
   }
 
   private fail(ip: string): void {
-    this.denied++;
     const now = this.clock.now();
     const entry = this.failures.get(ip);
     if (entry && now < entry.resetAt) {
@@ -91,6 +100,11 @@ export class AccessGate {
     for (const [ip, entry] of this.failures) if (now >= entry.resetAt) this.failures.delete(ip);
     if (this.failures.size >= MAX_TRACKED_IPS) this.failures.clear();
   }
+}
+
+/** Si el cliente ofreció alguna clave (válida o no): solo esas ofertas cuentan como intentos. */
+export function offersKey(protocols: readonly string[]): boolean {
+  return protocols.some((protocol) => protocol.startsWith(KEY_PROTOCOL_PREFIX));
 }
 
 function sameHash(a: string, b: string): boolean {

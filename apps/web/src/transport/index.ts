@@ -8,15 +8,18 @@ import { accessProtocols } from "@sudoku-killer/protocol";
 import { browserSession } from "../game/session.ts";
 import type { Transport } from "./types.ts";
 import { serverUrl } from "./server-url.ts";
-import { createWsTransport } from "./ws.ts";
+import { createWsTransport, httpProbe } from "./ws.ts";
 
 export type { Transport, TransportStatus } from "./types.ts";
 
 export function createServerTransport(): Transport {
+  const url = serverUrl(import.meta.env.VITE_SERVER_URL, window.location);
   return createWsTransport({
-    url: serverUrl(import.meta.env.VITE_SERVER_URL, window.location),
+    url,
     // La clave del grupo (R-39) se lee en cada intento: una recién escrita vale en el siguiente.
     protocols: () => accessProtocols(browserSession.accessKey()),
+    // Un handshake rechazado (429 o 403) no se confunde con el servidor dormido (T-39.10).
+    probe: httpProbe(url),
     ...(import.meta.env.DEV
       ? {
           debug: (message: string) => {

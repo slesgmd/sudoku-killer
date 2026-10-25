@@ -7,6 +7,10 @@
 //   la red, se reintenta al instante, sin esperar la espera exponencial.
 // - 4001 (otra pestaña), 4000 (versión) y 4003 (clave de acceso, R-39) no se reintentan solos;
 //   4002 (sin sala) deja `idle`.
+// - El navegador no deja leer el estado de un handshake rechazado: lo ve como un cierre 1006, igual
+//   que un servidor dormido. Tras un intento que no llegó a abrir, `probe` pregunta por HTTP qué
+//   recibe el handshake (`GET /ws`, T-39.9): 429 deja `locked` y 403, `refused`, sin reintentar solos;
+//   cualquier otra respuesta, o ninguna, sigue con la espera exponencial (T-39.10).
 // - Cada intento ofrece los subprotocolos de `protocols` (`sk.v1` y la clave del grupo, F12), que se
 //   leen en el momento: una clave recién escrita vale en el intento siguiente.
 // - Cada mensaje entrante se valida con el esquema del protocolo; uno inválido se ignora.
@@ -58,11 +62,38 @@ export interface WsTransportOptions {
   readonly document?: (LifecycleTarget & { readonly visibilityState?: string }) | null;
   /** Log de depuración: nunca recibe el contenido de los mensajes, solo su tipo. */
   readonly debug?: (message: string) => void;
+  /**
+   * El estado HTTP que recibiría ahora el handshake, o `null` si no se pudo saber (por defecto, no
+   * se pregunta). Nunca rechaza.
+   */
+  readonly probe?: () => Promise<number | null>;
 }
 
 export const RETRY_MIN_MS = 500;
 export const RETRY_MAX_MS = 5000;
 export const UNAVAILABLE_AFTER_MS = 10_000;
+/** Plazo de la pregunta por HTTP: un servidor dormido no contesta, y se sigue reintentando. */
+export const PROBE_TIMEOUT_MS = 3000;
+
+/** `probe` sobre `GET /ws` del mismo servidor que `wsUrl` (`ws` → `http`, `wss` → `https`). */
+export function httpProbe(
+  wsUrl: string,
+  fetcher: typeof fetch = (input, init) => globalThis.fetch(input, init),
+): () => Promise<number | null> {
+  const url = new URL(wsUrl);
+  url.protocol = url.protocol === "wss:" ? "https:" : "http:";
+  return async () => {
+    try {
+      const response = await fetcher(url.href, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+      });
+      return response.status;
+    } catch {
+      return null;
+    }
+  };
+}
 
 const OPEN = 1;
 
@@ -90,6 +121,7 @@ export function createWsTransport(options: WsTransportOptions): Transport {
     scheduler = realScheduler,
     random = Math.random,
     debug = () => undefined,
+    probe,
   } = options;
   const win = options.window === undefined ? globalThis.window : options.window;
   const doc = options.document === undefined ? globalThis.document : options.document;
@@ -103,6 +135,8 @@ export function createWsTransport(options: WsTransportOptions): Transport {
   let attempt = 0;
   let retryTimer: unknown = null;
   let unavailableTimer: unknown = null;
+  /** Cuenta las preguntas por HTTP: solo vale la respuesta de la última. */
+  let probes = 0;
 
   const setStatus = (next: TransportStatus) => {
     if (status === next) return;
@@ -153,7 +187,26 @@ export function createWsTransport(options: WsTransportOptions): Transport {
     attempt++;
   };
 
-  const onClose = (code: number) => {
+  /** Un estado del que no se sale solo: se deja de reintentar. */
+  const stop = (next: TransportStatus) => {
+    wanted = false;
+    clearTimers();
+    setStatus(next);
+  };
+
+  /** El intento no llegó a abrir: si el servidor lo rechazó, se para; si no, se reintenta. */
+  const askWhy = (ask: () => Promise<number | null>) => {
+    const asked = ++probes;
+    void ask().then((answer) => {
+      // Mientras tanto se salió, se abrió otro intento o llegó otra respuesta: esta ya no vale.
+      if (asked !== probes || disposed || !wanted || socket !== null) return;
+      if (answer === 429) stop("locked");
+      else if (answer === 403) stop("refused");
+      else scheduleRetry();
+    });
+  };
+
+  const onClose = (code: number, opened: boolean) => {
     socket = null;
     if (!wanted) {
       setStatus("idle");
@@ -167,14 +220,13 @@ export function createWsTransport(options: WsTransportOptions): Transport {
     };
     const next = final[code];
     if (next !== undefined) {
-      wanted = false;
-      clearTimers();
-      setStatus(next);
+      stop(next);
       return;
     }
     if (status === "open") setStatus("reconnecting");
     startUnavailableTimer();
-    scheduleRetry();
+    if (!opened && probe) askWhy(probe);
+    else scheduleRetry();
   };
 
   function openNow(): void {
@@ -189,19 +241,21 @@ export function createWsTransport(options: WsTransportOptions): Transport {
       created = open(url, protocols());
     } catch {
       debug("[ws] could not create the socket");
-      onClose(1006);
+      onClose(1006, false);
       return;
     }
     socket = created;
+    let opened = false;
     created.onopen = () => {
       if (socket !== created) return;
+      opened = true;
       attempt = 0;
       clearTimers();
       setStatus("open");
     };
     created.onclose = (event) => {
       if (socket !== created) return;
-      onClose(event.code);
+      onClose(event.code, opened);
     };
     created.onerror = () => {
       // El cierre llega después, con su código.
@@ -272,6 +326,8 @@ export function createWsTransport(options: WsTransportOptions): Transport {
         status === "replaced" ||
         status === "incompatible" ||
         status === "denied" ||
+        status === "locked" ||
+        status === "refused" ||
         status === "idle"
       )
         setStatus("connecting");

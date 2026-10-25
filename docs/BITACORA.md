@@ -963,3 +963,30 @@ Al aprobar, agregó:
 **Tiempo real:** de 13:12 a 13:22 (UTC−5), unas 0,15 h. **F12a a F12i suman unas 1,35 h** (con la planificación), frente a las 5,3 h estimadas para todo F12.
 
 **Siguiente:** alto antes del primer despliegue. El usuario sigue `docs/despliegue.md`; F12j a F12m van en una sesión nueva.
+
+## 2026-10-25 — F12j (corrección): nadie podía conectarse en Render
+
+**Síntoma (log de Render, sin datos sensibles):** desde el primer intento, `websocket access locked for an address`; en `metrics`, `accessDenied`, `connections` y `addresses` en 0; el navegador ofrecía solo `sk.v1` (sin clave guardada) y quedaba en «Despertando el servidor…».
+
+**Causa:**
+- El bloqueo por IP contaba cualquier 4003, también la conexión sin clave: un navegador sin clave no está adivinando, pero sumaba intentos.
+- La IP salía de `X-Forwarded-For` tomando la entrada `TRUST_PROXY_HOPS` desde la derecha; si la cabecera faltaba o tenía menos entradas, se usaba la del socket (el proxy), y una entrada con otro formato (puerto, IPv6) se comparaba tal cual. Si Render agrega más de una entrada por proxy, `TRUST_PROXY_HOPS=1` toma la de un proxy, la misma para todos: los 4003 de todos caían en un solo contador, y bastaban 10 para dejar a todo el mundo con 429. Sobre Render, su personal dice que la primera entrada es la del cliente y que el proxy agrega sin limpiar lo que trae el cliente (https://feedback.render.com/features/p/send-the-correct-xforwardedfor); no hay una página oficial con el número de entradas, así que se diseñó para cualquier caso.
+- El servidor sí respondía 429, pero el navegador no deja leer el estado de un handshake rechazado: lo ve como un cierre 1006, igual que un servidor dormido, y la entrada quedaba en «Despertando el servidor…».
+
+**Hecho:**
+- `AccessGate`: solo una clave ofrecida que no vale cuenta (`offersKey`); `lockedFor` devuelve lo que falta del bloqueo y solo se consulta si el handshake ofrece una clave; sin IP conocida no se cuenta nada.
+- `clientAddress` y `normalizeAddress` (`ws-transport.ts`): `null` si la cabecera falta, es corta o la entrada no es una IP; sin puerto, IPv4 mapeada como IPv4, IPv6 canónica. Con `null`, sin tope ni bloqueo por IP; la primera vez se registra `client address unknown` con `trustProxyHops` y la cantidad de entradas (nunca su contenido).
+- El 429 lleva `Retry-After` y `Cache-Control: no-store`; un error del socket al rechazar no tumba el proceso.
+- `GET /ws` sin upgrade responde lo que recibiría el handshake (403, 429 o 204), con `Access-Control-Allow-Origin: *`.
+- Cliente: tras un intento que no abrió, `httpProbe` pregunta `GET /ws` (3 s de plazo); 429 deja `locked` («Clave del grupo» con «Demasiados intentos», la clave guardada se conserva y «Reintentar» repite la entrada) y 403, `refused` (la entrada falla con «Reintentar»; en la sala, el aviso de servidor sin respuesta). Ninguno deja «Despertando el servidor…».
+- Métricas: `accessLocked` y `addressUnknown` (`docs/carga.md` §7).
+- SPEC 1.11: R-39 en §4.4 y §4.8; T-39.3 precisa el `Retry-After`; nuevas T-39.7 a T-39.10. `docs/seguridad.md` S-01 y `docs/despliegue.md` (también `sslmode=verify-full`, abajo).
+- Advertencia de `pg` al arrancar: `pg` 8.23 trata `sslmode=require` como `verify-full` y avisa que la versión 9 adoptará la semántica de libpq, que no verifica el certificado. Ajuste del usuario en la cadena de Neon (Render y secreto de GitHub): `sslmode=verify-full`. No cambia el comportamiento.
+
+**Verificación negativa:** las pruebas nuevas, contra el código anterior: en el servidor fallan 5 (T-39.7 con «browser 11: expected 'HTTP 429' to be 'close 4003'», que reproduce el fallo; T-39.8 dos veces; T-39.3 sin `Retry-After`; T-39.9 con 404); en el cliente, 4 (T-39.10). Con la corrección pasan todas.
+
+**Verificación:** `check`, `test` (3 archivos ajenos fallaron por plazo con la suite en paralelo y pasan solos), `build` y `e2e` (13 de 13) en verde.
+
+**Tiempo real:** de 14:55 a 15:35 (UTC−5), unas 0,65 h.
+
+**Siguiente:** el usuario despliega `fix-access-lock` (PR a `main`), cambia `sslmode` y sigue con F12j: `smoke`, `backup`, `restore-drill` y confirmar `TRUST_PROXY_HOPS` con `addresses` y `addressUnknown`.

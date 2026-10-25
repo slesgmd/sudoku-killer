@@ -144,9 +144,10 @@ export interface ClientState {
   readonly showResults: boolean;
   /**
    * El servidor pidió la clave de acceso del grupo (4003, R-39): `missing` si no había una guardada,
-   * `invalid` si la guardada no valió (se olvida).
+   * `invalid` si la guardada no valió (se olvida); `locked` si el handshake recibió 429 por
+   * demasiadas claves que no valen desde esta red (T-39.10; la guardada se conserva).
    */
-  readonly accessDenied: "missing" | "invalid" | null;
+  readonly accessDenied: "missing" | "invalid" | "locked" | null;
   /** «Despertando el servidor…»: la entrada lleva 3 s sin conexión (F12g). */
   readonly waking: boolean;
 }

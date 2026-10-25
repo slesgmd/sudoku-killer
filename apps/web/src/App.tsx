@@ -121,6 +121,9 @@ export function Screens({
       <AccessKey
         reason={state.accessDenied}
         onSubmit={(key) => client.submitAccessKey(key)}
+        onRetry={() => {
+          client.retryAccess();
+        }}
         onBack={() => {
           client.cancelAccess();
           navigate({ name: "home" });
