@@ -120,7 +120,7 @@ jobs:
           set -x
           pg_dump "$DATABASE_URL"
       - run: node scripts/ci/quiet.ts -- echo \${{ secrets.KEY }}
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           path: dump.sql
 `;
