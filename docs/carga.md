@@ -95,3 +95,19 @@ Método (`--memory`): el servidor corre con `--expose-gc` y el inspector de Node
 **Corrección.** La caché del catálogo es ahora una LRU de 64 puzzles (`CATALOG_CACHE_ENTRIES`). Las partidas en curso conservan su puzzle aunque salga de la caché, y lo que sale se vuelve a leer de la base al empezar otra partida o al reconstruir. Prueba: `apps/server/test/catalog.test.ts`, que falla sin la corrección (el puzzle menos usado nunca se volvía a leer).
 
 **Latencia después de la corrección** (corridas normales de 60 s, como las de la sección 4): estrés, p95 de 49,3 ms (p99 de 85,8 ms y máximo de 144,1 ms; antes, 74,2 ms) y pico de RSS de 295 MB (antes, 343 MB); realista, p95 de 15,2 ms (antes, 15,3 ms). En las corridas de 5 min con el inspector conectado, el p95 de estrés fue de 39,9 ms antes y de 102,3 ms después, con la CPU media del servidor en el 83 % y el 97 %. Entre corridas, la latencia de estrés de esta máquina varía más que esa diferencia, y con 64 puzzles en caché cada partida nueva puede recalcular el contexto del calificador: en estrés empiezan unas 19 por segundo, y en un uso real, muy pocas. Se vuelve a medir en F12, en el hosting.
+
+## 7. Logs y métricas en producción (F12h)
+
+El servidor escribe una línea JSON por entrada en la salida estándar, que el panel de Render muestra como log del servicio. Cada 60 s escribe una línea `metrics` con estos campos, todos recuentos o tiempos. Nunca lleva códigos de sala, apodos, fichas, claves ni direcciones IP (prueba `apps/server/test/metrics.test.ts`).
+
+| Campo | Qué es |
+|---|---|
+| `uptimeS` | Segundos desde el arranque (un valor bajo delata un reinicio o un despertar). |
+| `connections` / `addresses` | Conexiones abiertas y cuántas direcciones distintas las abren (para confirmar `TRUST_PROXY_HOPS` en F12j: con dos redes distintas, 2). |
+| `rooms` / `matchesRunning` / `playersConnected` | Salas en memoria, partidas en curso y jugadores conectados. |
+| `commits` / `events` / `commitP95Ms` / `commitMaxMs` | Escrituras en la base del período, eventos escritos y su duración (la espera que suma cada jugada, ADR 0004). |
+| `eventLoopP95Ms` | Retraso del bucle de eventos en el p95 (con 0,1 CPU, la primera señal de saturación). |
+| `rssMb` / `heapUsedMb` | Memoria del proceso (el plan gratuito tiene 512 MB). |
+| `accessDenied` | Claves rechazadas en el período (R-39): un número alto es alguien probando claves. |
+
+En F12k, la medición de carga en el hosting se lee junto con estas líneas.

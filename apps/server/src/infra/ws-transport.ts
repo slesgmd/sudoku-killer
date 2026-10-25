@@ -121,6 +121,11 @@ export class WsTransport implements Transport {
     return this.alive.size;
   }
 
+  /** Direcciones distintas con alguna conexión abierta (métricas, F12h; nunca cuáles). */
+  get openAddresses(): number {
+    return this.perIp.size;
+  }
+
   /** El puerto en que escucha (útil con el puerto 0 en las pruebas). */
   get port(): number {
     const address = this.http?.address();

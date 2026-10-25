@@ -22,6 +22,7 @@ export interface RunningWsServer {
   readonly inspector: LeakInspector;
   readonly transport: WsTransport;
   readonly access: AccessGate;
+  readonly sink: EventWriter;
   /** Las soluciones de los puzzles del banco de pruebas (para jugar y para el inspector). */
   readonly solutions: readonly (readonly number[])[];
   stop(): Promise<void>;
@@ -66,20 +67,21 @@ export async function startWsServer({
     ...(maxConnectionsPerIp === undefined ? {} : { maxConnectionsPerIp }),
     ...(httpTimeoutMs === undefined ? {} : { httpTimeoutMs }),
   });
+  const sink = new EventWriter({
+    repository,
+    clock,
+    logger: silentLogger,
+    schedule: (flush) => {
+      setImmediate(flush);
+    },
+  });
   const server = new RoomServer({
     transport,
     clock,
     random: createRng(7),
     ids: seededIds(createRng(8)),
     catalog,
-    sink: new EventWriter({
-      repository,
-      clock,
-      logger: silentLogger,
-      schedule: (flush) => {
-        setImmediate(flush);
-      },
-    }),
+    sink,
     repository,
     logger: silentLogger,
     mode,
@@ -104,6 +106,7 @@ export async function startWsServer({
     inspector,
     transport,
     access,
+    sink,
     solutions,
     stop: () => transport.stop(1001, "test over"),
   };

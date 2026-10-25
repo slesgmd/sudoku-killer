@@ -61,8 +61,21 @@ function deferred(): { promise: Promise<void>; resolve: () => void } {
   return { promise, resolve };
 }
 
+/** Lo que tardaron las escrituras en la base desde la última lectura (métricas, F12h). */
+export interface CommitStats {
+  readonly commits: number;
+  readonly events: number;
+  readonly p95Ms: number;
+  readonly maxMs: number;
+}
+
+/** Duraciones que se guardan por período (la cola más antigua se descarta). */
+const MAX_TIMINGS = 5_000;
+
 export class EventWriter implements EventSink {
   private queue: Pending[] = [];
+  private timings: number[] = [];
+  private committedEvents = 0;
   private flushing = false;
   private scheduled = false;
   private failingSince: number | null = null;
@@ -82,6 +95,20 @@ export class EventWriter implements EventSink {
       },
       ...options,
     };
+  }
+
+  /** Las escrituras desde la última llamada, y empieza un período nuevo. */
+  takeStats(): CommitStats {
+    const sorted = [...this.timings].sort((a, b) => a - b);
+    const stats = {
+      commits: sorted.length,
+      events: this.committedEvents,
+      p95Ms: sorted.length === 0 ? 0 : (sorted[Math.ceil(sorted.length * 0.95) - 1] ?? 0),
+      maxMs: sorted.at(-1) ?? 0,
+    };
+    this.timings = [];
+    this.committedEvents = 0;
+    return stats;
   }
 
   get unavailable(): boolean {
@@ -140,6 +167,7 @@ export class EventWriter implements EventSink {
       batch.push(next);
       count += next.entry.events.length;
     }
+    const started = performance.now();
     try {
       await this.options.repository.commit({
         matches: batch.flatMap((p) => (p.entry.match ? [p.entry.match] : [])),
@@ -147,6 +175,9 @@ export class EventWriter implements EventSink {
           p.entry.events.map((event) => ({ matchId: p.entry.matchId, event })),
         ),
       });
+      if (this.timings.length >= MAX_TIMINGS) this.timings.shift();
+      this.timings.push(performance.now() - started);
+      this.committedEvents += count;
       for (const pending of batch) pending.resolve();
       this.flushing = false;
       this.recovered();

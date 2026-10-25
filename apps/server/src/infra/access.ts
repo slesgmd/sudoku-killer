@@ -36,6 +36,8 @@ export class AccessGate {
   private readonly maxFailures: number;
   private readonly windowMs: number;
   private readonly failures = new Map<string, { count: number; resetAt: number }>();
+  /** Claves rechazadas desde que arrancó (métricas, F12h). */
+  denied = 0;
 
   constructor({
     hash,
@@ -74,6 +76,7 @@ export class AccessGate {
   }
 
   private fail(ip: string): void {
+    this.denied++;
     const now = this.clock.now();
     const entry = this.failures.get(ip);
     if (entry && now < entry.resetAt) {

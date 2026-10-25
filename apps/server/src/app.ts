@@ -9,6 +9,7 @@ import { systemClock, type Clock } from "./infra/clock.ts";
 import { systemIds, systemRandom } from "./infra/random.ts";
 import { WsTransport } from "./infra/ws-transport.ts";
 import type { Logger } from "./log/logger.ts";
+import { METRICS_INTERVAL_MS, startMetrics } from "./log/metrics.ts";
 import { createMatchRepository } from "./match/repository.ts";
 import { EventWriter } from "./match/sink.ts";
 import { createPuzzleCatalog } from "./puzzles/catalog.ts";
@@ -27,6 +28,8 @@ export interface AppOptions {
   readonly accessKeyHash?: string | null;
   /** Proxies de confianza delante del servidor (F12). */
   readonly trustProxyHops?: number;
+  /** Cada cuánto se escribe la línea `metrics` (F12h); 0 para no escribirla. */
+  readonly metricsIntervalMs?: number;
 }
 
 export interface App {
@@ -48,6 +51,7 @@ export async function startApp({
   clock = systemClock,
   accessKeyHash = null,
   trustProxyHops = 0,
+  metricsIntervalMs = METRICS_INTERVAL_MS,
 }: AppOptions): Promise<App> {
   const catalog = await createPuzzleCatalog(createPuzzleRepository(db));
   const repository = createMatchRepository(db);
@@ -74,10 +78,22 @@ export async function startApp({
     mode: createNormalMode(PARAMS_V1),
   });
   const restored = await server.start();
+  const stopMetrics =
+    metricsIntervalMs > 0
+      ? startMetrics({
+          sources: { transport, rooms: server.rooms, writer: sink, access },
+          clock,
+          logger,
+          intervalMs: metricsIntervalMs,
+        })
+      : () => undefined;
   return {
     server,
     port: transport.port,
     restored,
-    stop: () => server.stop(CLOSE_GOING_AWAY, "server shutting down"),
+    stop: () => {
+      stopMetrics();
+      return server.stop(CLOSE_GOING_AWAY, "server shutting down");
+    },
   };
 }

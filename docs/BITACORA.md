@@ -932,3 +932,15 @@ Al aprobar, agregó:
 **Verificación:** `check`, `test` (678 pruebas), `build` y `e2e` (13 de 13) en verde.
 
 **Tiempo real:** de 12:58 a 13:05 (UTC−5), unas 0,1 h.
+
+## 2026-10-25 — F12h: logs y métricas
+
+**Hecho:**
+- `apps/server/src/log/metrics.ts`: cada 60 s, una línea `metrics` en el log (JSON, que muestra el panel de Render) con el tiempo desde el arranque, las conexiones y cuántas direcciones distintas las abren, las salas, las partidas en curso, los jugadores conectados, las escrituras en la base del período (cantidad, eventos, p95 y máximo), el p95 del bucle de eventos, la memoria (RSS y heap) y las claves rechazadas del período. Solo recuentos y tiempos; nunca códigos de sala, apodos, fichas, claves ni direcciones IP.
+- `EventWriter.takeStats()` mide cada escritura; `AccessGate.denied` cuenta los rechazos; `WsTransport.openAddresses`. `startApp` arranca las métricas (`metricsIntervalMs`, 0 para apagarlas).
+- `docs/carga.md` §7: qué es cada campo y cómo leerlo en F12j y F12k (por ejemplo, `addresses` para confirmar `TRUST_PROXY_HOPS`).
+- Prueba `metrics.test.ts` contra el servidor real: los valores de cada período, el reinicio de los contadores y la ausencia del apodo, el código de la sala, la dirección y la clave.
+
+**Verificación:** `check`, `test` (679 pruebas), `build` y `e2e` (13 de 13) en verde.
+
+**Tiempo real:** de 13:05 a 13:10 (UTC−5), unas 0,1 h.
