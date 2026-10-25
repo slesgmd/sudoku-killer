@@ -1,0 +1,50 @@
+name: Administración de la base
+
+# Administración de la base de producción (F12i), a mano: `status` (recuentos y migraciones
+# pendientes), `migrate` (con la guarda de F12f: una migración destructiva necesita su nombre en
+# «allow_destructive») y `bank-load` (migra y carga el banco del manifiesto, unos minutos; se usa en
+# el primer despliegue). Cada paso corre con `scripts/ci/quiet.ts`, que solo publica recuentos
+# (docs/seguridad.md §3; tests/workflow-logs.test.ts).
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Qué hacer"
+        type: choice
+        required: true
+        default: status
+        options:
+          - status
+          - migrate
+          - bank-load
+      allow_destructive:
+        description: "Migraciones destructivas permitidas (MIGRATIONS_ALLOW), separadas por comas"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-admin
+  cancel-in-progress: false
+
+jobs:
+  admin:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: node scripts/ci/quiet.ts -- pnpm install --frozen-lockfile
+      - name: Run the action
+        run: node scripts/ci/quiet.ts -- pnpm --filter @sudoku-killer/server db:admin
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DB_ADMIN_ACTION: ${{ inputs.action }}
+          MIGRATIONS_ALLOW: ${{ inputs.allow_destructive }}

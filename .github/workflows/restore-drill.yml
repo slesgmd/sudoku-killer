@@ -1,0 +1,38 @@
+name: Simulacro de restauración
+
+# Simulacro de restauración (F12i, criterio de F12: «restaurar un respaldo funciona»), a mano. Baja
+# el último artefacto `db-backup` de `Respaldo de la base`, lo descifra con la clave privada de `age`
+# (secreto BACKUP_AGE_KEY), lo restaura en un PostgreSQL efímero del runner y lo comprueba: recuentos
+# y arranque del servidor con la reconstrucción de las partidas. No toca la base de producción. Cada
+# paso corre con `scripts/ci/quiet.ts`, que solo publica recuentos (docs/seguridad.md §3).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  drill:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: node scripts/ci/quiet.ts -- pnpm install --frozen-lockfile
+      - name: PostgreSQL 18, age and unzip
+        run: node scripts/ci/quiet.ts -- bash scripts/ci/install-postgres.sh
+      - name: Throwaway PostgreSQL for the restore
+        run: node scripts/ci/quiet.ts -- bash scripts/ci/pg-local.sh
+      - name: Restore the latest backup and check it
+        run: node scripts/ci/quiet.ts -- pnpm --filter @sudoku-killer/server backup:restore-drill
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BACKUP_AGE_KEY: ${{ secrets.BACKUP_AGE_KEY }}
+          RESTORE_DATABASE_URL: postgres://postgres@127.0.0.1:54329/postgres
+          PG_BIN: /usr/lib/postgresql/18/bin

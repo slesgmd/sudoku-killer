@@ -6,8 +6,9 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 ## Estado
 
 - **Plan:** versión 1.24. **SPEC:** versión 1.10.
-- **Fase actual:** F12, despliegue privado (3–5 h; `docs/PLAN.md`, F12, plan aprobado el 2026-10-25). Hosting en el ADR 0007: Render (servidor en Virginia y web estática) y Neon (AWS us-east-1), 0 USD. Se hacen F12a a F12i (código, `render.yaml` y workflows) y se para antes del primer despliegue (F12j), que hace el usuario; F12j a F12m van en una sesión nueva.
-- **Próxima tarea exacta:** F12i (respaldos cifrados `backup.yml`, simulacro `restore-drill.yml` y `db-admin.yml`). Hechas F12a a F12h (métricas cada 60 s en el log, `docs/carga.md` §7; servidor dormido: `/healthz` al abrir, «Despertando el servidor…» y 2 min de plazo, R-37; guarda de migraciones destructivas, `MIGRATIONS_ALLOW`): `render.yaml`, `/healthz`, `VITE_SERVER_URL` solo `wss://`, `smoke.yml`, `scripts/ci/quiet.ts` con `tests/workflow-logs.test.ts`, `ACCESS_KEY_HASH` obligatoria en producción, la clave del grupo (R-39, `access:key`, «Clave del grupo», `#k=`), las cabeceras con CSP (`apps/web/scripts/security-headers.ts`; las E2E fallan ante una violación), plazos del HTTP de 10 s y 40 conexiones por IP.
+- **Fase actual:** F12, despliegue privado (3–5 h; `docs/PLAN.md`, F12, plan aprobado el 2026-10-25). Hosting en el ADR 0007: Render (servidor `sudoku-killer-lima-ws` en Virginia y web estática `sudoku-killer-lima`) y Neon (AWS us-east-1), 0 USD. F12a a F12i hechas (unas 1,35 h); alto antes del primer despliegue.
+- **Próxima tarea exacta:** F12j, en una sesión nueva, después de que el usuario siga `docs/despliegue.md` (cuentas, PR a `main`, secretos y `db-admin bank-load`): correr `smoke`, `backup` y `restore-drill`; confirmar los nombres de Render (si cambiaron, `render.yaml` y la CSP) y `TRUST_PROXY_HOPS` (campo `addresses` de la línea `metrics`). Después F12k (carga en el hosting), F12l (partida real) y F12m (cierre). Las ramas de trabajo no corren la CI sin PR: verificar `check`, `test`, `build` y `e2e` en local.
+- **F12 (despliegue):** `render.yaml`; `/healthz`; `VITE_SERVER_URL` solo `wss://`; clave del grupo (R-39: subprotocolo `sk.k.`, cierre 4003, 10 intentos por IP, «Clave del grupo», enlace `#k=`, `access:key`); `ACCESS_KEY_HASH` obligatoria en producción; CSP y cabeceras en `apps/web/scripts/security-headers.ts` (las E2E fallan ante una violación); plazos del HTTP de 10 s; 40 conexiones por IP; guarda de migraciones destructivas (`MIGRATIONS_ALLOW`); aviso «Despertando el servidor…» (R-37); línea `metrics` cada 60 s (`docs/carga.md` §7); workflows `smoke`, `backup`, `restore-drill` y `db-admin`, todos con `scripts/ci/quiet.ts` (logs públicos: solo recuentos; `tests/workflow-logs.test.ts`).
 - **F11 (pruebas, carga y seguridad):** E2E de casos límite y caos con semilla (abajo); equivalencia de la reconstrucción (`apps/server/test/rebuild.test.ts`); carga en `docs/carga.md` (p95 de 15,3 ms realista y de 49–74 ms en estrés con 50 salas, en local con PostgreSQL 16 y Node 22.22); la caché del catálogo de puzzles es una LRU de 64 (F11f); seguridad en `docs/seguridad.md` (topes de 2 000 conexiones y 500 salas, SPEC 1.9 §4.8); `scoring:report` para F13 (`docs/puntuacion.md` §11).
 - **Servidor (F9):**
   - `apps/server/src/`: `rooms/` (actor por sala con cola y bandeja de salida ordenada), `match/` (repositorio y group commit), `infra/` (`Transport` en memoria y `ws`, reloj, azar y fichas), `config/` y `app.ts`.
@@ -50,9 +51,8 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 - Código e identificadores en inglés. Documentación e interfaz en español.
 - TypeScript estricto. Textos de la interfaz preparados para i18n.
 - Aserción `!` prohibida salvo en `packages/engine/src/solver-{a,b}/` (`docs/motor.md`); fuera, `for...of`, comprobaciones o `at()` de `src/model/at.ts`.
-- Commits con formato Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `test:`, `refactor:`).
+- Commits con formato Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `test:`, `refactor:`). Rama principal: `main`.
 - Nunca agregues atribuciones de IA en commits ni PR. El hook `.husky/commit-msg` (`scripts/strip-attribution.mjs`) las quita igual, y el job `attribution-guard` de la CI (`scripts/attribution-guard.mjs`) falla si quedan en archivos versionados o en mensajes de commit. Los términos están codificados en `scripts/attribution-patterns.mjs`.
-- Rama principal: `main`.
 
 ## Comandos
 
@@ -87,7 +87,8 @@ docs/diseno.md         guía de estilo y revisión de originalidad (F7)
 docs/dificultad.md     equivalencia de dificultades, banco y prueba manual (F5)
 docs/puntuacion.md     fórmulas, simulación, calibración y limitaciones de la puntuación (F6)
 docs/carga.md          prueba de carga: método, entorno, resultados y memoria (F11)
-docs/seguridad.md      revisión de seguridad: lista, hallazgos y Dependabot (F11)
+docs/seguridad.md      revisión de seguridad: lista, hallazgos, despliegue, respaldos y Dependabot (F11, F12)
+docs/despliegue.md     pasos del usuario para el primer despliegue (F12j)
 design/                prototipo (prototipo/), pantallas, entrega a F8, fotos y muestra de F5 (muestra-f5/)
 evidence/              evidencia local de REA (ignorada por git)
 packages/engine        motor del puzzle (puro)
@@ -116,3 +117,4 @@ tests/                 pruebas del repositorio (reglas de lint)
 - 0004 Registro de eventos: solo hechos, con `seq` por partida. Los eventos se confirman en la base de datos antes de difundirse. Reductor puro en `packages/game`.
 - 0005 Notas grupales: operaciones `add` y `remove` ordenadas por el servidor, cliente optimista y deshacer con comprobación.
 - 0006 Banco de puzzles como manifiesto de semillas, verificado al cargar; `id` opaco (UUID).
+- 0007 Hosting: Render (servidor gratuito en Virginia y web estática) y Neon (AWS us-east-1); respaldos propios cifrados.

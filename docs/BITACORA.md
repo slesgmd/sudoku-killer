@@ -944,3 +944,22 @@ Al aprobar, agregó:
 **Verificación:** `check`, `test` (679 pruebas), `build` y `e2e` (13 de 13) en verde.
 
 **Tiempo real:** de 13:05 a 13:10 (UTC−5), unas 0,1 h.
+
+## 2026-10-25 — F12i: respaldos, simulacro de restauración y administración de la base
+
+**Hecho:**
+- `backup.yml` (domingos 08:17 UTC y a mano): instala PostgreSQL 18 de PGDG, `age` y `unzip`; levanta un PostgreSQL efímero en 127.0.0.1:54329 con su log en un archivo (sin contenedor de servicio, que publicaría su log); `scripts/backup.ts` vuelca la base (`pg_dump` en formato propio), la restaura, compara los recuentos con el origen, arranca el servidor sobre la copia (guarda de migraciones, banco y reconstrucción de las partidas) y la cifra con `age` para `BACKUP_AGE_RECIPIENT`; se sube solo `sudoku-killer.dump.age` (artefacto `db-backup`, 90 días). Leer la base cuenta como uso para Neon.
+- `restore-drill.yml` (a mano) y `scripts/restore-drill.ts`: bajan el último `db-backup` vigente por la API de GitHub, lo descifran con `BACKUP_AGE_KEY`, lo restauran en el PostgreSQL efímero y lo comprueban igual. No tocan producción.
+- `db-admin.yml` (a mano) y `scripts/db-admin.ts`: `status`, `migrate` (con la guarda de F12f y `allow_destructive`) y `bank-load`.
+- Toda la salida es de recuentos (`backup.*`, `restore.*`, `db.*`); las herramientas corren con su salida descartada y un fallo solo nombra el paso. `tests/workflow-logs.test.ts` exige los cuatro workflows nuevos y sus reglas.
+- `docs/seguridad.md` §3 (respaldos y restauración de emergencia) y `docs/despliegue.md` (los pasos del usuario para F12j).
+- Comprobado en local contra PostgreSQL 16 con una partida de `demo`: respaldo (2000 puzzles, 1 partida y 55 eventos restaurados, 650 KB cifrados), simulacro desde el archivo cifrado y `db-admin status`. El script del PostgreSQL efímero se probó con otro usuario (el de la máquina es root) y `backup` restauró en él.
+- Prueba `restore-check.test.ts`: recuentos, arranque con la reconstrucción de una partida en curso (1), los descuadres que se detectan, el formato de la salida y la elección del último artefacto vigente.
+
+**Verificación:** `check`, `test` (683 pruebas), `build` y `e2e` (13 de 13) en verde.
+
+**Pendiente de F12j:** los workflows con secretos solo pueden correr en GitHub, después de que el usuario cree las cuentas y escriba los secretos; la primera corrida de `smoke`, `backup` y `restore-drill` es parte de F12j.
+
+**Tiempo real:** de 13:12 a 13:22 (UTC−5), unas 0,15 h. **F12a a F12i suman unas 1,35 h** (con la planificación), frente a las 5,3 h estimadas para todo F12.
+
+**Siguiente:** alto antes del primer despliegue. El usuario sigue `docs/despliegue.md`; F12j a F12m van en una sesión nueva.

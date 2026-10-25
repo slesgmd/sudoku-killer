@@ -46,6 +46,13 @@ Revisión del servidor de salas, del cliente y de las dependencias al cerrar F11
 - **Regla:** ningún workflow imprime cadenas de conexión, claves, hashes, apodos ni contenido de la base, solo recuentos. Los pasos que tocan secretos o la base corren con `scripts/ci/quiet.ts`, que retiene la salida en memoria y solo deja pasar líneas de recuento (`clave: número`) y mensajes de la lista. El test `tests/workflow-logs.test.ts` falla si un workflow nuevo usa un secreto o la base fuera de ese envoltorio, o con `set -x`, `env`, `printenv` o `cat`.
 - **Artefactos:** los artefactos de un repositorio público los descarga cualquier persona con cuenta de GitHub. Los respaldos se suben cifrados con `age`; la clave privada nunca entra al repositorio.
 
+### Respaldos (F12i)
+- **`backup.yml`** (domingos a las 03:17 de Lima y a mano): `pg_dump` de la base de Neon, restauración en un PostgreSQL 18 efímero del runner (no en un contenedor de servicio, que publicaría su log), comprobación (recuentos y arranque del servidor con la reconstrucción de las partidas) y cifrado con `age` para la clave pública `BACKUP_AGE_RECIPIENT` (variable del repositorio). Solo se sube el archivo cifrado (artefacto `db-backup`, 90 días); el volcado sin cifrar se borra del runner.
+- **`restore-drill.yml`** (a mano): baja el último `db-backup`, lo descifra con `BACKUP_AGE_KEY` (secreto de Actions), lo restaura en un PostgreSQL efímero y lo comprueba de la misma forma. No toca producción. Es el criterio de F12 «restaurar un respaldo funciona».
+- **`db-admin.yml`** (a mano): `status`, `migrate` (con la guarda de F12f) y `bank-load`.
+- **Claves:** la privada de `age` vive en el secreto `BACKUP_AGE_KEY` y en una copia fuera de línea del usuario (por ejemplo, en un gestor de contraseñas). Sin ella, los respaldos no se pueden leer. Ningún paso imprime la cadena de conexión, la clave, apodos ni filas: solo recuentos (`backup.*`, `restore.*`, `db.*`).
+- **Restaurar en producción (emergencia, a mano):** bajar el artefacto `db-backup` de la pestaña Actions; `age --decrypt --identity clave.txt --output sk.dump sudoku-killer.dump.age`; crear en Neon una rama o un proyecto nuevo y `pg_restore --no-owner --no-privileges --dbname="<cadena de la base nueva>" sk.dump`; cambiar `DATABASE_URL` en Render y redesplegar. El volcado sin cifrar se borra al terminar.
+
 ## 4. Actualizaciones de Dependabot (recomendación; no activadas)
 
 Hoy solo están activas las **alertas** de Dependabot. Las **actualizaciones automáticas** abrirían PR con versiones nuevas.
