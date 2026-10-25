@@ -142,6 +142,11 @@ export interface ClientState {
   readonly starting: boolean;
   /** Con la partida terminada, si se pasó a Resultados con «Ver resultados». */
   readonly showResults: boolean;
+  /**
+   * El servidor pidió la clave de acceso del grupo (4003, R-39): `missing` si no había una guardada,
+   * `invalid` si la guardada no valió (se olvida).
+   */
+  readonly accessDenied: "missing" | "invalid" | null;
 }
 
 export const INITIAL_STATE: ClientState = {
@@ -176,6 +181,7 @@ export const INITIAL_STATE: ClientState = {
   lobbyNotice: null,
   starting: false,
   showResults: false,
+  accessDenied: null,
 };
 
 /** Notas de una capa tal como se ven: lo confirmado más las pendientes, en orden (ADR 0005). */

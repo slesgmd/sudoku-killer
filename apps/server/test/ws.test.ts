@@ -1,10 +1,26 @@
 // Adaptador `ws` de producción (ADR 0002) con conexiones reales en 127.0.0.1: orígenes permitidos,
 // ruta, `maxPayload` (1009), mensajes binarios, heartbeat, E-19 (4000) y E-08 (4001). El inspector
 // de filtración revisa también todo lo que reciben estos clientes (T-31.1).
-import { CLOSE_REPLACED, CLOSE_UNSUPPORTED, type ServerEnvelope } from "@sudoku-killer/protocol";
+import {
+  ACCESS_PROTOCOL,
+  CLOSE_ACCESS_DENIED,
+  CLOSE_REPLACED,
+  CLOSE_UNSUPPORTED,
+  KEY_PROTOCOL_PREFIX,
+  accessProtocols,
+  type ServerEnvelope,
+} from "@sudoku-killer/protocol";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
-import { HEALTH_PATH, WS_PATH } from "../src/infra/ws-transport.ts";
+import {
+  ACCESS_FAILURE_WINDOW_MS,
+  AccessGate,
+  MAX_ACCESS_FAILURES,
+  hashAccessKey,
+} from "../src/infra/access.ts";
+import { HEALTH_PATH, WS_PATH, WsTransport } from "../src/infra/ws-transport.ts";
+import { createLogger } from "../src/log/logger.ts";
+import { FakeClock } from "./helpers/clock.ts";
 import { testBank } from "./helpers/server.ts";
 import { TEST_ORIGIN, startWsServer, type RunningWsServer } from "./helpers/ws-server.ts";
 
@@ -40,12 +56,21 @@ function connect(
     origin = ORIGIN,
     autoPong = true,
     path = WS_PATH,
-  }: { origin?: string | null; autoPong?: boolean; path?: string } = {},
+    protocols = [],
+    forwardedFor,
+  }: {
+    origin?: string | null;
+    autoPong?: boolean;
+    path?: string;
+    protocols?: readonly string[];
+    forwardedFor?: string;
+  } = {},
 ) {
   const id = ++clientIds;
-  const ws = new WebSocket(`ws://127.0.0.1:${String(r.port)}${path}`, {
+  const ws = new WebSocket(`ws://127.0.0.1:${String(r.port)}${path}`, [...protocols], {
     autoPong,
     ...(origin === null ? {} : { origin }),
+    ...(forwardedFor === undefined ? {} : { headers: { "x-forwarded-for": forwardedFor } }),
   });
   const messages: ServerEnvelope[] = [];
   const waiters: { test: (m: ServerEnvelope) => boolean; done: (m: ServerEnvelope) => void }[] = [];
@@ -141,6 +166,93 @@ describe("ADR 0002 handshake", () => {
   it("only /ws is a WebSocket endpoint", async () => {
     const r = await start();
     await expect(connect(r, { path: "/other" }).opened).rejects.toThrow(/HTTP 404/);
+  });
+});
+
+describe("F12 access key (R-39, S-02)", () => {
+  const KEY = "ABCD-EFGH-JKMN-PQRS";
+
+  it("T-39.2 without the key or with a wrong one the connection closes with 4003 before any room; with it, it plays", async () => {
+    const r = await start({ accessKey: KEY });
+    const missing = connect(r);
+    await missing.opened;
+    expect(await missing.closed).toBe(CLOSE_ACCESS_DENIED);
+    const withoutKey = connect(r, { protocols: accessProtocols(null) });
+    expect(await withoutKey.closed).toBe(CLOSE_ACCESS_DENIED);
+    const wrong = connect(r, { protocols: accessProtocols("WXYZ-WXYZ-WXYZ-WXYZ") });
+    await wrong.opened;
+    wrong.send("room.create", { nickname: "Intrusa" });
+    expect(await wrong.closed).toBe(CLOSE_ACCESS_DENIED);
+    expect(r.server.rooms.size).toBe(0);
+    expect(wrong.messages).toEqual([]);
+
+    // La clave escrita a mano (minúsculas, sin guiones) vale igual; la respuesta elige sk.v1.
+    const ok = connect(r, { protocols: accessProtocols("abcdefgh jkmnpqrs") });
+    await ok.opened;
+    expect(ok.ws.protocol).toBe(ACCESS_PROTOCOL);
+    ok.send("room.create", { nickname: "Ana" });
+    expect((await ok.next("room.welcome")).type).toBe("room.welcome");
+  });
+
+  it("T-39.3 after 10 wrong keys an address gets 429 until the window passes; other addresses are not affected", async () => {
+    const r = await start({ accessKey: KEY, trustProxyHops: 1 });
+    const bad = accessProtocols("WXYZ-WXYZ-WXYZ-WXYZ");
+    for (let i = 0; i < MAX_ACCESS_FAILURES; i++) {
+      const attempt = connect(r, { protocols: bad, forwardedFor: "203.0.113.7" });
+      expect(await attempt.closed).toBe(CLOSE_ACCESS_DENIED);
+    }
+    const good = accessProtocols(KEY);
+    await expect(
+      connect(r, { protocols: good, forwardedFor: "203.0.113.7" }).opened,
+    ).rejects.toThrow(/HTTP 429/);
+    // Escribir otra IP a la izquierda no cambia la del cliente (la agrega el proxy, a la derecha).
+    await expect(
+      connect(r, { protocols: good, forwardedFor: "198.51.100.1, 203.0.113.7" }).opened,
+    ).rejects.toThrow(/HTTP 429/);
+    await connect(r, { protocols: good, forwardedFor: "203.0.113.8" }).opened;
+    await r.clock.advance(
+      ACCESS_FAILURE_WINDOW_MS,
+      () => new Promise<void>((resolve) => setImmediate(resolve)),
+    );
+    await connect(r, { protocols: good, forwardedFor: "203.0.113.7" }).opened;
+  });
+
+  it("negative check: without a configured key the same offers are accepted", async () => {
+    const r = await start();
+    expect(r.access.required).toBe(false);
+    const open = connect(r, { protocols: accessProtocols("WXYZ-WXYZ-WXYZ-WXYZ") });
+    await open.opened;
+    open.send("room.create", { nickname: "Ana" });
+    expect((await open.next("room.welcome")).type).toBe("room.welcome");
+  });
+
+  it("never logs the key, its hash or the offered protocol", async () => {
+    const lines: string[] = [];
+    const logger = createLogger({ level: "debug", write: (line) => lines.push(line) });
+    const gate = new AccessGate({ hash: hashAccessKey(KEY), clock: new FakeClock() });
+    const transport = new WsTransport({
+      host: "127.0.0.1",
+      port: 0,
+      allowedOrigins: [ORIGIN],
+      clock: new FakeClock(),
+      logger,
+      access: gate,
+    });
+    await transport.start(() => ({ message: () => undefined, closed: () => undefined }));
+    try {
+      const url = `ws://127.0.0.1:${String(transport.port)}${WS_PATH}`;
+      for (const key of [KEY, "WXYZ-WXYZ-WXYZ-WXYZ"]) {
+        const ws = new WebSocket(url, accessProtocols(key), { origin: ORIGIN });
+        await new Promise((resolve) => ws.on("open", resolve));
+        ws.close();
+      }
+    } finally {
+      await transport.stop(1001, "test over");
+    }
+    const text = lines.join("\n");
+    expect(text).toContain("websocket access denied");
+    for (const secret of ["ABCD", "WXYZ", KEY_PROTOCOL_PREFIX, hashAccessKey(KEY).slice(7, 20)])
+      expect(text).not.toContain(secret);
   });
 });
 

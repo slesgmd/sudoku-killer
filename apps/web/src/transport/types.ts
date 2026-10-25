@@ -10,9 +10,17 @@ import type { ClientEnvelope, ServerEnvelope } from "@sudoku-killer/protocol";
  * - `unavailable`: no hubo conexión en un tiempo; se sigue reintentando.
  * - `replaced`: otra pestaña tomó la sesión (4001, E-08); no se reconecta solo.
  * - `incompatible`: el servidor usa otra versión del protocolo (4000, E-19); no se reconecta.
+ * - `denied`: falta la clave de acceso del grupo o no vale (4003, R-39); no se reconecta solo.
  */
 export type TransportStatus =
-  "idle" | "connecting" | "open" | "reconnecting" | "unavailable" | "replaced" | "incompatible";
+  | "idle"
+  | "connecting"
+  | "open"
+  | "reconnecting"
+  | "unavailable"
+  | "replaced"
+  | "incompatible"
+  | "denied";
 
 export interface Transport {
   /** Envía un mensaje ya armado. Sin conexión abierta, se descarta: el cliente decide qué reenviar. */

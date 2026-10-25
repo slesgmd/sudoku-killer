@@ -1,7 +1,8 @@
 // Rutas por hash (F10, design/pantallas.md): Inicio, Entrar o crear, la sala y Ayuda. La sala tiene
 // una sola ruta, `#/sala/CODIGO`: el lobby, la partida o Resultados salen del estado de la sala
-// (decisión 3). La ficha nunca va en la URL (SPEC §2.4): el enlace solo lleva el código.
-import { isRoomCodeShape } from "@sudoku-killer/protocol";
+// (decisión 3). La ficha nunca va en la URL (SPEC §2.4): el enlace solo lleva el código. El enlace de
+// invitación del grupo (`#k=CLAVE`, R-39) es aparte: la clave se guarda y sale de la URL al abrirlo.
+import { isRoomCodeShape, isValidAccessKey, normalizeAccessKey } from "@sudoku-killer/protocol";
 import { useSyncExternalStore } from "react";
 
 export type Route =
@@ -37,6 +38,33 @@ export function routeHash(route: Route): string {
 /** El enlace para invitar a la sala: el mismo origen y ruta, con `#/sala/CODIGO`. */
 export function roomLink(code: string, location: Pick<Location, "origin" | "pathname" | "search">) {
   return `${location.origin}${location.pathname}${location.search}${routeHash({ name: "room", code })}`;
+}
+
+/** La clave de un enlace de invitación (`#k=…`), normalizada, o `null` si no es una válida. */
+export function invitationKey(hash: string): string | null {
+  if (!hash.startsWith("#k=")) return null;
+  try {
+    const key = normalizeAccessKey(decodeURIComponent(hash.slice(3)));
+    return isValidAccessKey(key) ? key : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Al abrir un enlace de invitación (R-39): guarda la clave y la saca de la URL y del historial
+ * (reemplaza la entrada por `#/`), aunque no sea una clave válida. Devuelve si había invitación.
+ */
+export function takeInvitation(
+  location: Pick<Location, "hash" | "pathname" | "search">,
+  history: Pick<History, "replaceState">,
+  save: (key: string) => void,
+): boolean {
+  if (!location.hash.startsWith("#k=")) return false;
+  const key = invitationKey(location.hash);
+  if (key !== null) save(key);
+  history.replaceState(null, "", `${location.pathname}${location.search}#/`);
+  return true;
 }
 
 /**

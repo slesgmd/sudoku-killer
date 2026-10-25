@@ -12,6 +12,7 @@ import type {
   ServerEnvelope,
   ServerMessage,
 } from "@sudoku-killer/protocol";
+import { isValidAccessKey, normalizeAccessKey } from "@sudoku-killer/protocol";
 import { t } from "../i18n/index.ts";
 import type { Transport, TransportStatus } from "../transport/types.ts";
 import { USE_NOTES_KEY, browserPrefs, type Prefs } from "./prefs.ts";
@@ -310,6 +311,14 @@ export class GameClient {
       this.welcomed = false;
       this.stopPing();
     }
+    if (status === "denied") {
+      // Falta la clave del grupo o no valió (4003, R-39): se olvida la guardada y se pide otra.
+      this.stopStartTimer();
+      const hadKey = this.session.accessKey() !== null;
+      this.session.saveAccessKey(null);
+      this.set({ connection: status, accessDenied: hadKey ? "invalid" : "missing" });
+      return;
+    }
     this.set({ connection: status });
     if (status === "open") {
       this.lastAlive = this.now();
@@ -423,6 +432,27 @@ export class GameClient {
     if (last.kind === "create") this.create(last.nickname);
     else if (last.code !== null)
       this.enter({ kind: "join", code: last.code, nickname: last.nickname, resume: last.resume });
+  }
+
+  /**
+   * La clave escrita en «Clave del grupo» (R-39): se guarda en este dispositivo y se repite lo que
+   * se estaba haciendo (volver a la sala o la última entrada). Devuelve `false` si no tiene el largo
+   * de una clave.
+   */
+  submitAccessKey(raw: string): boolean {
+    const key = normalizeAccessKey(raw);
+    if (!isValidAccessKey(key)) return false;
+    this.session.saveAccessKey(key);
+    this.set({ accessDenied: null });
+    if (this.inRoom()) this.transport.reconnect();
+    else if (this.state.lastEntry) this.retryEntry();
+    else this.backHome();
+    return true;
+  }
+
+  /** «Volver al inicio» desde «Clave del grupo». */
+  cancelAccess(): void {
+    this.backHome();
   }
 
   /** «Jugar en esta pestaña» (E-08): vuelve con la ficha y desplaza a la otra pestaña. */

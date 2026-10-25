@@ -3,8 +3,10 @@ import { SettingsDialog } from "./components/Dialogs.tsx";
 import { SessionDialogs } from "./components/Network.tsx";
 import { browserShareApi, type ShareApi } from "./components/share.ts";
 import { GameClient } from "./game/client.ts";
+import { browserSession } from "./game/session.ts";
 import { INITIAL_STATE, type Phase } from "./game/state.ts";
-import { navigate, parseRoute, roomLink, useHash } from "./routes.ts";
+import { navigate, parseRoute, roomLink, takeInvitation, useHash } from "./routes.ts";
+import { AccessKey } from "./screens/AccessKey.tsx";
 import { Enter } from "./screens/Enter.tsx";
 import { GameScreen } from "./screens/GameScreen.tsx";
 import { Help } from "./screens/Help.tsx";
@@ -113,6 +115,18 @@ export function Screens({
     />
   ) : null;
 
+  if (state.accessDenied !== null) {
+    return (
+      <AccessKey
+        reason={state.accessDenied}
+        onSubmit={(key) => client.submitAccessKey(key)}
+        onBack={() => {
+          client.cancelAccess();
+          navigate({ name: "home" });
+        }}
+      />
+    );
+  }
   if (route.name === "help") {
     return (
       <>
@@ -194,6 +208,10 @@ export function Screens({
 export function App() {
   const [client, setClient] = useState<GameClient | null>(null);
   useEffect(() => {
+    // Enlace de invitación del grupo (`#k=…`, R-39): la clave se guarda y sale de la URL.
+    takeInvitation(window.location, window.history, (key) => {
+      browserSession.saveAccessKey(key);
+    });
     let created: GameClient | null = null;
     let cancelled = false;
     void createTransport()

@@ -878,3 +878,17 @@ Al aprobar, agregó:
 **Verificación:** `check`, `test` (653 pruebas), `build` y `e2e` (10 de 10) en verde.
 
 **Tiempo real:** de 12:27 a 12:33 (UTC−5), unas 0,1 h.
+
+## 2026-10-25 — F12d: clave de acceso del grupo (S-02)
+
+**Hecho:**
+- Protocolo (`packages/protocol/src/v1/access.ts`): la clave viaja solo en el handshake, como subprotocolo `sk.k.<base64url>` junto a `sk.v1`; normalización (NFKC, mayúsculas, sin espacios ni guiones), de 12 a 64 caracteres; cierre `CLOSE_ACCESS_DENIED` = 4003.
+- Servidor: `AccessGate` (`src/infra/access.ts`) con el hash SHA-256 y prefijo de dominio, comparación en tiempo constante y 10 fallos por IP cada 10 min (después, 429 en el handshake; memoria acotada a 10 000 IP). El transporte elige siempre `sk.v1`, cierra con 4003 antes de cualquier sala y toma la IP de `X-Forwarded-For` contando `TRUST_PROXY_HOPS` desde la derecha. El log nunca lleva la clave, su hash ni la oferta.
+- `pnpm --filter @sudoku-killer/server access:key [--own] [--web …]`: genera una clave de 80 bits (`XXXX-XXXX-XXXX-XXXX`, Crockford base32) o toma una propia sin mostrarla, y escribe la clave, el enlace de invitación y el valor de `ACCESS_KEY_HASH`. Solo en la computadora de quien administra el grupo.
+- Cliente: estado `denied` del transporte (sin reintento solo), los subprotocolos se leen en cada intento, la clave en `sk:access`, la pantalla «Clave del grupo» (se escribe una vez; una guardada que no vale se olvida y se vuelve a pedir; al continuar se repite la entrada o se vuelve a la sala) y el enlace de invitación `#k=`, que guarda la clave y deja la URL en `#/` (también en el historial). El enlace «Compartir» de la sala sigue sin la clave ni la ficha.
+- SPEC 1.10: R-39 con T-39.1 a T-39.6, §2.4, §4.1, códigos 4003 y 429, `/healthz` y el límite de intentos en §4.8. `docs/seguridad.md`: S-02 corregido (falta exponerlo en F12j).
+- **Verificaciones negativas:** con la compuerta que acepta todo, tres de las cuatro pruebas I de R-39 fallan; con un servidor E2E que no pide la clave, la E2E falla.
+
+**Verificación:** `check`, `test` (664 pruebas), `build` y `e2e` (11 de 11) en verde.
+
+**Tiempo real:** de 12:33 a 12:41 (UTC−5), unas 0,15 h.

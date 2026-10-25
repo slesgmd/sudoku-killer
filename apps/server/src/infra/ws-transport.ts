@@ -7,10 +7,15 @@
 // - Los mensajes binarios no son del protocolo: llegan al servidor como texto inválido.
 // - `GET /healthz` responde 204 sin cuerpo (F12): el chequeo del hosting y el precalentamiento de
 //   la web. Cualquier otra petición HTTP recibe 404.
+// - Clave de acceso del grupo (F12, R-39): llega como subprotocolo; si no vale, la conexión se abre
+//   y se cierra en el acto con 4003, sin llegar a las salas. Una IP con demasiados fallos recibe
+//   429 en el handshake. La clave nunca se registra.
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { Duplex } from "node:stream";
+import { ACCESS_PROTOCOL, CLOSE_ACCESS_DENIED } from "@sudoku-killer/protocol";
 import { WebSocketServer, type WebSocket } from "ws";
 import type { Logger } from "../log/logger.ts";
+import type { AccessGate } from "./access.ts";
 import type { Clock } from "./clock.ts";
 import type { Link, LinkHandlers, Transport } from "./transport.ts";
 
@@ -34,6 +39,35 @@ export interface WsTransportOptions {
   readonly heartbeatMs?: number;
   /** Tope de conexiones abiertas (por defecto `MAX_CONNECTIONS`). */
   readonly maxConnections?: number;
+  /** La clave de acceso del grupo (F12); sin ella, no se pide. */
+  readonly access?: AccessGate;
+  /** Proxies de confianza delante del servidor (`TRUST_PROXY_HOPS`, F12). */
+  readonly trustProxyHops?: number;
+}
+
+/**
+ * La IP del cliente. Sin proxies de confianza, la del socket. Con `hops` proxies, cada uno agrega a
+ * la derecha de `X-Forwarded-For` la dirección de quien le habló: la del cliente es la `hops`-ésima
+ * desde el final, y lo que esté más a la izquierda lo escribió el cliente (no se usa).
+ */
+export function clientIp(request: IncomingMessage, hops: number): string {
+  const socketIp = request.socket.remoteAddress ?? "unknown";
+  if (hops <= 0) return socketIp;
+  const header = request.headers["x-forwarded-for"];
+  const entries = (Array.isArray(header) ? header.join(",") : (header ?? ""))
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== "");
+  return entries.at(-hops) ?? socketIp;
+}
+
+/** Los subprotocolos que ofreció el cliente en el handshake. */
+function offeredProtocols(request: IncomingMessage): string[] {
+  const header = request.headers["sec-websocket-protocol"];
+  return (header ?? "")
+    .split(",")
+    .map((protocol) => protocol.trim())
+    .filter((protocol) => protocol !== "");
 }
 
 /** Un origen comparable: minúsculas y sin barra final. */
@@ -41,7 +75,12 @@ export function normalizeOrigin(origin: string): string {
   return origin.trim().toLowerCase().replace(/\/+$/, "");
 }
 
-const STATUS_TEXT = { 403: "Forbidden", 404: "Not Found", 503: "Service Unavailable" } as const;
+const STATUS_TEXT = {
+  403: "Forbidden",
+  404: "Not Found",
+  429: "Too Many Requests",
+  503: "Service Unavailable",
+} as const;
 
 function reject(socket: Duplex, status: keyof typeof STATUS_TEXT): void {
   const text = STATUS_TEXT[status];
@@ -80,6 +119,8 @@ export class WsTransport implements Transport {
       noServer: true,
       maxPayload: MAX_PAYLOAD_BYTES,
       perMessageDeflate: false,
+      // Se elige `sk.v1` cuando se ofrece; la clave (`sk.k.…`) nunca vuelve en la respuesta.
+      handleProtocols: (protocols) => (protocols.has(ACCESS_PROTOCOL) ? ACCESS_PROTOCOL : false),
     });
     const http = createServer((request, response) => {
       const path = new URL(request.url ?? "/", "http://localhost").pathname;
@@ -104,12 +145,24 @@ export class WsTransport implements Transport {
         reject(socket, 403);
         return;
       }
+      const ip = clientIp(request, this.options.trustProxyHops ?? 0);
+      const access = this.options.access;
+      if (access?.locked(ip)) {
+        logger.warn("websocket access locked for an address");
+        reject(socket, 429);
+        return;
+      }
       if (this.alive.size >= (this.options.maxConnections ?? MAX_CONNECTIONS)) {
         logger.warn("websocket connection limit reached", { open: this.alive.size });
         reject(socket, 503);
         return;
       }
       wss.handleUpgrade(request, socket, head, (ws) => {
+        if (access && !access.admit(offeredProtocols(request), ip)) {
+          logger.warn("websocket access denied");
+          ws.close(CLOSE_ACCESS_DENIED, "access denied");
+          return;
+        }
         this.connected(ws, accept);
       });
     });

@@ -5,3 +5,4 @@ export * from "./errors.ts";
 export * from "./client.ts";
 export * from "./server.ts";
 export * from "./room.ts";
+export * from "./access.ts";

@@ -63,6 +63,19 @@ export const es = {
   "enter.statusJoin": "Entrando en la sala {code}…",
   "enter.statusCreate": "Creando la sala…",
 
+  // Clave de acceso del grupo (F12, R-39)
+  "access.title": "Clave del grupo",
+  "access.leadMissing":
+    "Este juego es privado. Escribe la clave del grupo una sola vez: queda guardada en este dispositivo.",
+  "access.leadInvalid":
+    "La clave guardada en este dispositivo ya no vale; quizá cambió. Escribe la clave vigente del grupo.",
+  "access.label": "Clave",
+  "access.hint":
+    "Te la pasan junto con el enlace de invitación. Da igual si la escribes en mayúsculas o minúsculas.",
+  "access.invalid": "La clave tiene entre 12 y 64 caracteres, sin contar espacios ni guiones.",
+  "access.submit": "Continuar",
+  "access.back": "Volver al inicio",
+
   // Inicio mínimo de F8 (arranque directo, solo en las pruebas)
   "home.failedTitle": "No se pudo empezar.",
   "home.failedText": "La partida no terminó de cargar. Revisa tu conexión y vuelve a intentarlo.",

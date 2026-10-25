@@ -5,10 +5,14 @@
 //   10 s, el estado pasa a `unavailable` y se sigue reintentando.
 // - En el celular, al volver a primer plano, al restaurar la página desde la caché o al recuperar
 //   la red, se reintenta al instante, sin esperar la espera exponencial.
-// - 4001 (otra pestaña) y 4000 (versión) no se reintentan solos; 4002 (sin sala) deja `idle`.
+// - 4001 (otra pestaña), 4000 (versión) y 4003 (clave de acceso, R-39) no se reintentan solos;
+//   4002 (sin sala) deja `idle`.
+// - Cada intento ofrece los subprotocolos de `protocols` (`sk.v1` y la clave del grupo, F12), que se
+//   leen en el momento: una clave recién escrita vale en el intento siguiente.
 // - Cada mensaje entrante se valida con el esquema del protocolo; uno inválido se ignora.
 // La implementación de WebSocket se inyecta: el navegador usa la suya y los bots Node, la de `ws`.
 import {
+  CLOSE_ACCESS_DENIED,
   CLOSE_NO_ROOM,
   CLOSE_REPLACED,
   CLOSE_UNSUPPORTED,
@@ -42,7 +46,9 @@ export interface LifecycleTarget {
 export interface WsTransportOptions {
   readonly url: string;
   /** Crea el socket (por defecto, el WebSocket del entorno). */
-  readonly open?: (url: string) => SocketLike;
+  readonly open?: (url: string, protocols: readonly string[]) => SocketLike;
+  /** Los subprotocolos de cada intento (por defecto, ninguno). */
+  readonly protocols?: () => readonly string[];
   readonly scheduler?: Scheduler;
   /** Azar del jitter, en [0, 1). */
   readonly random?: () => number;
@@ -78,7 +84,9 @@ export function retryDelay(attempt: number, random: () => number): number {
 export function createWsTransport(options: WsTransportOptions): Transport {
   const {
     url,
-    open = (target: string) => new WebSocket(target) as unknown as SocketLike,
+    open = (target: string, offered: readonly string[]) =>
+      new WebSocket(target, [...offered]) as unknown as SocketLike,
+    protocols = () => [],
     scheduler = realScheduler,
     random = Math.random,
     debug = () => undefined,
@@ -151,12 +159,17 @@ export function createWsTransport(options: WsTransportOptions): Transport {
       setStatus("idle");
       return;
     }
-    if (code === CLOSE_REPLACED || code === CLOSE_UNSUPPORTED || code === CLOSE_NO_ROOM) {
+    const final: Partial<Record<number, TransportStatus>> = {
+      [CLOSE_REPLACED]: "replaced",
+      [CLOSE_UNSUPPORTED]: "incompatible",
+      [CLOSE_ACCESS_DENIED]: "denied",
+      [CLOSE_NO_ROOM]: "idle",
+    };
+    const next = final[code];
+    if (next !== undefined) {
       wanted = false;
       clearTimers();
-      setStatus(
-        code === CLOSE_REPLACED ? "replaced" : code === CLOSE_UNSUPPORTED ? "incompatible" : "idle",
-      );
+      setStatus(next);
       return;
     }
     if (status === "open") setStatus("reconnecting");
@@ -173,7 +186,7 @@ export function createWsTransport(options: WsTransportOptions): Transport {
     startUnavailableTimer();
     let created: SocketLike;
     try {
-      created = open(url);
+      created = open(url, protocols());
     } catch {
       debug("[ws] could not create the socket");
       onClose(1006);
@@ -255,7 +268,12 @@ export function createWsTransport(options: WsTransportOptions): Transport {
       attempt = 0;
       clearTimers();
       if (status === "open") setStatus("reconnecting");
-      else if (status === "replaced" || status === "incompatible" || status === "idle")
+      else if (
+        status === "replaced" ||
+        status === "incompatible" ||
+        status === "denied" ||
+        status === "idle"
+      )
         setStatus("connecting");
       openNow();
     },

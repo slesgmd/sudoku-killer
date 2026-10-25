@@ -7,6 +7,7 @@ import type { ServerEnvelope } from "@sudoku-killer/protocol";
 import { PARAMS_V1 } from "@sudoku-killer/scoring";
 import { systemClock } from "../../server/src/infra/clock.ts";
 import { systemIds, systemRandom } from "../../server/src/infra/random.ts";
+import { AccessGate, hashAccessKey } from "../../server/src/infra/access.ts";
 import type { Link, LinkHandlers, Transport } from "../../server/src/infra/transport.ts";
 import { WsTransport } from "../../server/src/infra/ws-transport.ts";
 import { silentLogger } from "../../server/src/log/logger.ts";
@@ -42,6 +43,8 @@ export interface GameServer {
   failDatabase(failing: boolean): void;
   /** El registro confirmado de una partida. */
   events(matchId: string): Promise<MatchEvent[]>;
+  /** Pide (o deja de pedir, con `null`) la clave de acceso del grupo en el handshake (R-39). */
+  requireAccessKey(key: string | null): void;
   stop(): Promise<void>;
 }
 
@@ -131,6 +134,8 @@ async function startGameServer(): Promise<GameServer> {
   await client.query("TRUNCATE match_events, matches");
   const repository = new FaultyRepository(createMatchRepository(db));
   let live: { server: RoomServer; transport: TappedTransport; sink: EventWriter } | null = null;
+  // Sin clave salvo en las pruebas de R-39; sobrevive a los reinicios.
+  const access = new AccessGate({ hash: null, clock: systemClock });
   const current = () => {
     if (!live) throw new Error("No server");
     return live;
@@ -144,6 +149,7 @@ async function startGameServer(): Promise<GameServer> {
         allowedOrigins: [E2E_ORIGIN],
         clock: systemClock,
         logger: silentLogger,
+        access,
       }),
     );
     const sink = new EventWriter({ repository, clock: systemClock, logger: silentLogger });
@@ -201,6 +207,9 @@ async function startGameServer(): Promise<GameServer> {
       repository.failing = failing;
     },
     events: (matchId) => repository.events(matchId),
+    requireAccessKey(key) {
+      access.hash = key === null ? null : hashAccessKey(key);
+    },
     stop: () => current().transport.stop(1001, "e2e over"),
   };
 }
