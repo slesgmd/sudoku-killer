@@ -818,3 +818,15 @@ Al aprobar, agregó:
 - Recomendación sobre Dependabot (sin activarla): actualizaciones de seguridad y un `dependabot.yml` mensual agrupado, sin fusión automática, ignorando TypeScript y Playwright; costo de 10–20 min al mes y riesgos anotados. La decisión es del usuario.
 
 **Tiempo real:** de 10:05 a 10:25 (UTC−5), solapado con F11f, unas 0,15 h propias.
+
+## 2026-10-25 — F11h: `scoring:report`
+
+**Hecho:**
+- `apps/server/scripts/scoring-report/` (`analyze.ts`, puro, y `report.ts`, que lee la base) y `pnpm --filter @sudoku-killer/server scoring:report`: por dificultad, partidas y victorias, puntaje por jugador y por equipo, P frente al puntaje mediano, tasa de errores y sus señales (intervalo desde la acción anterior, repetido en la celda, evidente y nivel de la celda), «probar hasta acertar», pistas, la parte de los puntos del cierre de unidades, desempates y la estimación de T(L) por el tiempo entre jugadas del mismo jugador. No cambia parámetros: P y la versión nueva de los parámetros pasan a F13.
+- Prueba `scoring-report.test.ts` (R-36): una partida jugada contra el servidor de pruebas con un reintento, un error evidente, un error repetido en la misma celda y una pista; los conteos son exactos y el puntaje del equipo coincide con el del servidor.
+- Corrido sobre las partidas de la prueba de carga (clientes automáticos): 50 partidas en alrededor de 1 s. Sirve para comprobar la herramienta, no para calibrar.
+- `docs/puntuacion.md`, sección 11: cómo se usa y sus límites (T(L) es una cota superior; el robo de pistas no se puede medir sin la presencia).
+
+**Verificación (F11f a F11h):** `check`, `test` (637 pruebas) y `build` en verde; `pnpm e2e` dos veces, 10 de 10, sin reintentos.
+
+**Tiempo real:** de 10:20 a 10:34 (UTC−5), unas 0,1 h propias (el análisis se escribió mientras corrían las mediciones).

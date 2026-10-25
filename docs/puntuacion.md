@@ -219,6 +219,14 @@ Si los descuidos dominan, la opción prevista es **escalar P por dificultad** (p
 - **Pistas:** quién las usa, sobre qué nivel de celda y si alguna cae sobre la celda que otro tenía seleccionada (robo).
 - **Ranking:** cuántas partidas se definen por desempate.
 
+### Herramienta de análisis: `scoring:report` (F11h)
+
+`pnpm --filter @sudoku-killer/server scoring:report [--since AAAA-MM-DD] [--limit 500] [--out informe.json]` lee las partidas terminadas de la base (`DATABASE_URL`), las reproduce con el reductor y da, por dificultad: partidas y victorias; puntaje por jugador y por equipo (mediana y p95); **P frente al puntaje mediano de un jugador**; aciertos, errores y tasa de errores; las señales de cada error (tiempo desde la acción anterior del mismo jugador, error repetido en la misma celda, error evidente porque el dígito ya está bloqueado en su fila, columna o caja, y nivel de la celda, que es el del acierto posterior en ella); «probar hasta acertar» (el mismo jugador acierta la celda en menos de 30 s tras fallarla); pistas por jugador; la parte de los puntos que viene del cierre de unidades (β); partidas definidas por desempate y empates exactos; y una **estimación de T(L)**: el tiempo entre jugadas del mismo jugador, por nivel de la celda resuelta.
+
+Solo lee: no cambia parámetros ni filas. **La decisión sobre P y una versión nueva de los parámetros quedan para F13** (decisión del usuario en el plan de F11), con las partidas de la beta. Limitaciones, que el informe también lista: T(L) es una cota superior (el intervalo incluye otras celdas y las notas) y el «robo» de pistas no se puede medir, porque la presencia no se guarda (T(L) medido de forma directa queda fuera de la v1: `docs/IDEAS_FUTURAS.md`, sección 8). La prueba `apps/server/test/scoring-report.test.ts` comprueba los conteos sobre el registro de una partida jugada contra el servidor de pruebas.
+
+Hasta F11 no hay partidas reales para analizar: las partidas internas son tiempo de personas, fuera de las horas de F11, y las de la prueba de carga son de clientes automáticos (aciertos y errores al azar), así que solo sirven para comprobar que la herramienta corre sobre miles de partidas, no para calibrar.
+
 ## 12. Cómo se ejecuta
 
 - `pnpm --filter @sudoku-killer/server scoring:simulate [--games 10000] [--base-seed 2] [--replicates 8] [--robustness-every 4] [--params archivo.json]`: imprime todo lo de la sección 9 y escribe el informe en JSON en el directorio temporal del sistema.
