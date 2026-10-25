@@ -1068,3 +1068,27 @@ Al aprobar, agregó:
 **Tiempo real:** de 17:26 a 17:41 (UTC−5), unas 0,25 h.
 
 **Siguiente:** el usuario lleva `fix-f12-cierre` a `main`, cambia `sslmode=require` por `sslmode=verify-full` en `DATABASE_URL` (Render y el secreto de GitHub) y corre `smoke` y `backup`. Después, planificar F13 en plan mode.
+
+## 2026-10-25 — Corrección de la clave del grupo: comprobación por HTTP antes del WebSocket
+
+**Problema:** en producción, un navegador sin clave guardada seguía viendo «Sin conexión» en lugar de «Clave del grupo», también con el 4003 enviado tras el primer mensaje (T-39.11) ya desplegado. En el humo fallaba solo `smoke.ws_keyless_4003`.
+
+**Diagnóstico** (cliente `ws` contra producción con `Origin` de la web y solo `sk.v1`, como el navegador): el 101 llega con `sk.v1`; después no llega ningún marco ni el 4003, envíe o no el cliente un primer mensaje, y el proxy corta la conexión con 1006 a los 20–25 s. `GET /ws` responde 204. El proxy de Render pierde el cierre del servidor, así que el diseño no puede depender de él.
+
+**Hecho:**
+- Servidor: `POST /access` en `apps/server/src/infra/ws-transport.ts` comprueba la clave de la cabecera `X-Sk-Access-Key` (normalizada, en base64url; nunca en la URL) con `AccessGate.check`, que comparte con el handshake los intentos, la espera por IP y las métricas (`accessMissing`, `accessDenied`, `accessLocked`). Responde 204, 401, 429 con `Retry-After` o 403 (origen ausente o ajeno, sin CORS); CORS solo para el origen permitido que preguntó, y `OPTIONS` para la consulta previa. El 4003 queda de respaldo. Protocolo: `ACCESS_PATH`, `ACCESS_KEY_HEADER`, `encodeAccessKey` y `decodeAccessKey`.
+- Cliente: antes de abrir cada WebSocket, el transporte pregunta `POST /access` con la clave guardada (204 o 404 abren; 401 `denied`, 429 `locked`, 403 `refused`; sin respuesta, la espera exponencial). La clave escrita y la del enlace `#k=` se comprueban y solo se guardan con 204; con 401, «Esa clave no vale» sin guardarla; mientras tanto, «Comprobando la clave…». Una guardada que deja de valer se olvida con el aviso de siempre. Vite reenvía `/access` en desarrollo y en las E2E.
+- Proxy de prueba compartido (`apps/server/test/helpers/lossy-proxy.ts`): el modo `early` es el de T-39.11, y el modo `close` pierde el marco de cierre y el fin de la conexión, como se midió en producción. Las E2E corren con el servidor detrás de ese proxy (sin pérdidas salvo en las pruebas de la clave).
+- Humo: `smoke.ws_keyless_4003` se reemplaza por `smoke.access_keyless_401`, `smoke.access_wrong_key_401` (una clave inventada al azar en cada corrida, nunca la real) y `smoke.access_foreign_origin_403`.
+- SPEC 1.14: R-39, §2.4 y §4.4 con `POST /access`; T-39.4 a T-39.6 y T-39.11 ajustadas; T-39.12 a T-39.17 nuevas. `docs/seguridad.md` (S-02) y `docs/carga.md` (§7) al día.
+
+**Verificación negativa:**
+- I (T-39.16): detrás del proxy `close`, el cliente sin clave no recibe el 4003 aunque envíe un mensaje; sin el proxy, sí. `POST /access` responde igual detrás de él.
+- E (T-39.16): con `SK_E2E_SKIP_ACCESS_CHECK=1`, tres de las cuatro E2E de la clave fallan (la página nunca muestra «Clave del grupo» y abre WebSockets); la de la invitación válida pasa, porque no depende de la comprobación.
+- Humo (T-39.17): contra un servidor que no pide clave, `access_keyless_401` y `access_wrong_key_401` fallan.
+
+**Verificación:** `check` y `build` (con `check-dist`) en verde; `test`, 725 de 726 (`migration-guard.test.ts` falló por plazo en la suite completa y pasa sola, 4 de 4); E2E, 16 de 16.
+
+**Tiempo real:** de 17:50 a 18:35 (UTC−5), unas 0,75 h.
+
+**Siguiente:** el usuario lleva `fix-access-http` a `main` por PR (incluye `fix-f12-cierre`), cambia `sslmode=require` por `sslmode=verify-full` en `DATABASE_URL` (Render y el secreto de GitHub) y corre `smoke` y `backup`. Después, comprobar en producción con un navegador sin clave que aparece «Clave del grupo», y planificar F13 en plan mode.

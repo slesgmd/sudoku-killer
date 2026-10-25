@@ -1,7 +1,8 @@
 // Prueba de humo del despliegue (F12b): se corre desde Actions (`smoke.yml`) contra la web y el
 // servidor publicados. Solo imprime `smoke.<prueba>: ok|fail` (docs/seguridad.md §3); nunca el
 // contenido de una respuesta. Variables: SMOKE_WEB_URL (https://…) y SMOKE_SERVER_URL (wss://…/ws).
-import { ACCESS_PROTOCOL, CLOSE_ACCESS_DENIED } from "@sudoku-killer/protocol";
+import { randomBytes } from "node:crypto";
+import { ACCESS_KEY_HEADER, ACCESS_PATH, encodeAccessKey } from "@sudoku-killer/protocol";
 import WebSocket from "ws";
 import { securityHeaders, type SecurityHeader } from "../../web/scripts/security-headers.ts";
 import { isMain } from "./is-main.ts";
@@ -16,8 +17,7 @@ function env(name: string): string {
 
 /**
  * Abre un WebSocket y dice cómo terminó: abierto, rechazado con un estado HTTP o cerrado. Al abrir
- * envía un `sys.ping`, como el navegador, que envía algo en cuanto abre: sin la clave, el servidor
- * responde a ese primer mensaje con 4003 (T-39.11).
+ * envía un `sys.ping`, como el navegador, que envía algo en cuanto abre.
  */
 export function tryWebSocket(
   url: string,
@@ -46,6 +46,38 @@ export function tryWebSocket(
       resolve({ opened: false });
     });
   });
+}
+
+/**
+ * El camino real de la clave (T-39.17): `POST /access` sin clave y con una inválida, generada al azar
+ * en cada corrida (nunca la real), tienen que dar 401, con CORS para el origen de la web; desde un
+ * origen ajeno, 403. Con el 4003 no se puede contar: el proxy de Render lo pierde (T-39.16).
+ */
+export async function checkAccess(serverUrl: string, origin: string): Promise<[string, boolean][]> {
+  const url = new URL(serverUrl);
+  url.protocol = url.protocol === "wss:" ? "https:" : "http:";
+  url.pathname = ACCESS_PATH;
+  const post = async (from: string, key: string | null) => {
+    const encoded = key === null ? null : encodeAccessKey(key);
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { origin: from, ...(encoded === null ? {} : { [ACCESS_KEY_HEADER]: encoded }) },
+        signal: AbortSignal.timeout(30_000),
+      });
+      return { status: response.status, cors: response.headers.get("access-control-allow-origin") };
+    } catch {
+      return { status: 0, cors: null };
+    }
+  };
+  const keyless = await post(origin, null);
+  const wrong = await post(origin, randomBytes(16).toString("hex"));
+  const foreign = await post("https://otro-sitio.example", null);
+  return [
+    ["access_keyless_401", keyless.status === 401 && keyless.cors === origin],
+    ["access_wrong_key_401", wrong.status === 401 && wrong.cors === origin],
+    ["access_foreign_origin_403", foreign.status === 403 && foreign.cors === null],
+  ];
 }
 
 /** El `max-age` de una cabecera `Strict-Transport-Security`, o `null` si no lo tiene. */
@@ -126,10 +158,9 @@ export async function smoke(): Promise<boolean> {
   record("ws_foreign_origin_403", foreign.status === 403);
   const allowed = await tryWebSocket(server.href, origin);
   record("ws_allowed_origin_opens", allowed.opened);
-  // Sin clave, el navegador tiene que recibir 4003 para mostrar «Clave del grupo» (T-39.11). Si el
-  // servidor no pide clave, el socket sigue abierto y la prueba lo dice.
-  const keyless = await tryWebSocket(server.href, origin, [ACCESS_PROTOCOL]);
-  record("ws_keyless_4003", keyless.closeCode === CLOSE_ACCESS_DENIED);
+  // Sin clave, el navegador muestra «Clave del grupo» por el 401 de `POST /access` (T-39.17). Si el
+  // servidor no pide clave, responde 204 y la prueba lo dice.
+  for (const [name, ok] of await checkAccess(server.href, origin)) record(name, ok);
 
   return results.every(([, ok]) => ok);
 }
