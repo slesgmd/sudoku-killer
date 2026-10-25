@@ -1,8 +1,15 @@
-import { Suspense, lazy, useEffect, useState, useSyncExternalStore } from "react";
+import { Suspense, lazy, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { SettingsDialog } from "./components/Dialogs.tsx";
+import { browserShareApi, type ShareApi } from "./components/share.ts";
 import { GameClient } from "./game/client.ts";
-import { INITIAL_STATE } from "./game/state.ts";
+import { INITIAL_STATE, type Phase } from "./game/state.ts";
+import { navigate, parseRoute, roomLink, useHash } from "./routes.ts";
+import { Enter } from "./screens/Enter.tsx";
 import { GameScreen } from "./screens/GameScreen.tsx";
+import { Help } from "./screens/Help.tsx";
 import { Home } from "./screens/Home.tsx";
+import { Lobby } from "./screens/Lobby.tsx";
+import { Results } from "./screens/Results.tsx";
 import { createServerTransport, createTransport } from "./transport/index.ts";
 
 /** Solo en desarrollo: el tiempo de carga del puzzle en pantalla. No llega al build (T-31.2). */
@@ -11,21 +18,152 @@ const LoadBadge = import.meta.env.DEV ? lazy(() => import("./dev/LoadBadge.tsx")
 const noop = () => () => undefined;
 const initial = () => INITIAL_STATE;
 
-/** Inicio mínimo o partida, según la fase del cliente (F8). */
-export function Screens({ client }: { readonly client: GameClient | null }) {
+/** Fases con la sala abierta: la ruta es `#/sala/CODIGO`. */
+const IN_ROOM = new Set<Phase>(["lobby", "loading", "playing", "ended"]);
+
+/**
+ * Las pantallas según la ruta y el estado del cliente (F10). La sala tiene una sola ruta y la
+ * pantalla sale del estado de la sala: lobby, partida o Resultados (decisión 3). Al abrir el enlace
+ * de una sala con la ficha guardada, la sesión se reanuda sola; sin ficha, se abre Entrar con el
+ * código (plan de F10).
+ */
+export function Screens({
+  client,
+  share = browserShareApi(),
+}: {
+  readonly client: GameClient | null;
+  readonly share?: ShareApi;
+}) {
   const state = useSyncExternalStore(client?.subscribe ?? noop, client?.getState ?? initial);
-  if (!client || state.phase === "home" || state.phase === "entering") {
+  const hash = useHash();
+  const route = parseRoute(hash);
+  const [settings, setSettings] = useState(false);
+  const previousPhase = useRef<Phase>(state.phase);
+  /** La ruta de sala con la que ya se intentó volver con la ficha. */
+  const attempted = useRef<string | null>(null);
+  const previousHash = useRef<string | null>(null);
+  /** Si Ayuda se abrió desde otra pantalla de la aplicación («Volver» vuelve atrás). */
+  const helpFromApp = useRef(false);
+  const inRoom = IN_ROOM.has(state.phase) && state.room !== null;
+
+  useEffect(() => {
+    const now = window.location.hash;
+    if (
+      parseRoute(now).name === "help" &&
+      previousHash.current !== null &&
+      previousHash.current !== now
+    )
+      helpFromApp.current = parseRoute(previousHash.current).name !== "help";
+    previousHash.current = now;
+  }, [hash]);
+
+  useEffect(() => {
+    if (!client) return;
+    const before = previousPhase.current;
+    previousPhase.current = state.phase;
+    const current = parseRoute(window.location.hash);
+    if (current.name !== "room") attempted.current = null;
+    if (current.name === "help") return;
+    const code = state.room?.code ?? null;
+    if (inRoom && code !== null) {
+      if (current.name === "room" && current.code === code) return;
+      // Recién se entró: se pasa a la ruta de la sala. Si no, se navegó fuera de la sala (por
+      // ejemplo, con «Atrás»): se cierra la conexión y el asiento queda reservado (R-13).
+      if (before === "entering" || before === "home")
+        navigate({ name: "room", code }, { replace: current.name === "room" });
+      else client.backHome();
+      return;
+    }
+    if (state.phase === "entering" || current.name !== "room") return;
+    const noticed = state.roomNotice?.code === current.code;
+    if (attempted.current !== current.code && client.hasToken(current.code) && !noticed) {
+      attempted.current = current.code;
+      client.resume(current.code);
+      return;
+    }
+    navigate(noticed ? { name: "home" } : { name: "enter", code: current.code }, {
+      replace: true,
+    });
+  });
+
+  if (!client) return null;
+  const leave = () => {
+    client.leave();
+    navigate({ name: "home" });
+  };
+  const settingsDialog = settings ? (
+    <SettingsDialog
+      autoClean={state.settings.autoCleanPersonalNotes}
+      useNotes={state.notesEnabled}
+      onUseNotes={(value) => {
+        client.setNotesEnabled(value);
+      }}
+      onChange={(value) => {
+        client.setAutoClean(value);
+      }}
+      onClose={() => {
+        setSettings(false);
+      }}
+    />
+  ) : null;
+
+  if (route.name === "help") {
     return (
-      <Home
-        state={state}
-        available={client ? client.available() : null}
-        onStart={(nickname, difficulty) => {
-          client?.start(nickname, difficulty);
-        }}
-      />
+      <>
+        <Help
+          onBack={() => {
+            if (helpFromApp.current) window.history.back();
+            else navigate(inRoom ? { name: "room", code: state.room.code } : { name: "home" });
+          }}
+          onSettings={
+            inRoom
+              ? () => {
+                  setSettings(true);
+                }
+              : undefined
+          }
+        />
+        {settingsDialog}
+      </>
     );
   }
-  return <GameScreen client={client} state={state} />;
+  if (inRoom) {
+    if (state.phase === "lobby")
+      return (
+        <Lobby
+          client={client}
+          state={state}
+          share={share}
+          link={roomLink(state.room.code, window.location)}
+          onLeave={leave}
+        />
+      );
+    if (state.phase === "ended" && state.showResults)
+      return <Results client={client} state={state} onLeave={leave} />;
+    return <GameScreen client={client} state={state} onLeave={leave} />;
+  }
+  if (route.name === "home" && state.phase !== "entering") {
+    return <Home savedRoom={client.savedRoom()} notice={state.roomNotice} />;
+  }
+  const code =
+    route.name === "enter" || route.name === "room" ? route.code : (state.lastEntry?.code ?? null);
+  return (
+    <Enter
+      key={route.name === "room" ? `room-${route.code}` : hash}
+      state={state}
+      code={code}
+      savedNickname={client.savedNickname()}
+      onJoin={(roomCode, nickname) => {
+        client.join(roomCode, nickname);
+      }}
+      onCreate={(nickname) => {
+        client.create(nickname);
+      }}
+      onRetry={() => {
+        client.retryEntry();
+      }}
+    />
+  );
 }
 
 export function App() {

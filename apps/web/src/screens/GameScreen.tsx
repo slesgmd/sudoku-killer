@@ -57,9 +57,12 @@ function Timer({
 export function GameScreen({
   client,
   state,
+  onLeave,
 }: {
   readonly client: GameClient;
   readonly state: ClientState;
+  /** Al confirmar la salida; por defecto, solo sale de la sala. */
+  readonly onLeave?: () => void;
 }) {
   const layout = useLayout();
   const [dialog, setDialog] = useState<DialogKind>(null);
@@ -319,10 +322,10 @@ export function GameScreen({
               className="btn secondary"
               type="button"
               onClick={() => {
-                client.backHome();
+                client.viewResults();
               }}
             >
-              {t("ended.home")}
+              {t("ended.results")}
             </button>
           </div>
         </div>
@@ -438,7 +441,8 @@ export function GameScreen({
           onCancel={close}
           onConfirm={() => {
             close();
-            client.leave();
+            if (onLeave) onLeave();
+            else client.leave();
           }}
         />
       ) : null}

@@ -1,5 +1,6 @@
-// Diálogos de la partida (docs/diseno.md §9): confirmación de pista, de salida y Ajustes.
-import { useRef, type RefObject } from "react";
+// Diálogos (docs/diseno.md §9): confirmación de pista, de salida, Ajustes y el enlace para copiarlo a
+// mano cuando no hay portapapeles.
+import { useEffect, useId, useRef, type RefObject } from "react";
 import { PARAMS_V1 } from "@sudoku-killer/scoring";
 import type { PublicPlayer } from "@sudoku-killer/protocol";
 import { t } from "../i18n/index.ts";
@@ -56,10 +57,13 @@ export function nextStarter(
 
 export function LeaveDialog({
   heir,
+  body = t("leave.body"),
   onConfirm,
   onCancel,
 }: {
   readonly heir: PublicPlayer | null;
+  /** En Resultados: «Dejarás tu asiento libre y no estarás en la próxima partida.» */
+  readonly body?: string;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
 }) {
@@ -81,7 +85,7 @@ export function LeaveDialog({
         </>
       }
     >
-      <p>{t("leave.body")}</p>
+      <p>{body}</p>
       {heir ? <p>{t("leave.starter", { name: heir.nickname })}</p> : null}
     </Dialog>
   );
@@ -168,6 +172,55 @@ export function SettingsDialog({
         onChange={onChange}
       />
       <p className="small muted">{t("settings.motion")}</p>
+    </Dialog>
+  );
+}
+
+/** Sin hoja de compartir ni portapapeles: el texto queda seleccionado para copiarlo a mano. */
+export function CopyDialog({
+  title,
+  text,
+  label,
+  value,
+  onClose,
+}: {
+  readonly title: string;
+  readonly text: string;
+  readonly label: string;
+  readonly value: string;
+  readonly onClose: () => void;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  const id = useId();
+  useEffect(() => {
+    input.current?.select();
+  }, []);
+  return (
+    <Dialog
+      title={title}
+      closeLabel={t("dialog.close")}
+      onCancel={onClose}
+      initialFocus={input}
+      actions={
+        <button className="btn secondary" type="button" onClick={onClose}>
+          {t("dialog.close")}
+        </button>
+      }
+    >
+      <p>{text}</p>
+      <div className="field">
+        <label htmlFor={id}>{label}</label>
+        <input
+          ref={input}
+          id={id}
+          className="input"
+          readOnly
+          value={value}
+          onFocus={(event) => {
+            event.currentTarget.select();
+          }}
+        />
+      </div>
     </Dialog>
   );
 }

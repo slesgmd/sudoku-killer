@@ -45,6 +45,14 @@ const PATHS = {
   chevron: <path d="M4 6l4 4 4-4" />,
   close: <path d="M4 4l8 8M12 4l-8 8" />,
   check: <path d="M3 8.5l3 3 7-7" />,
+  back: <path d="M10 3L5 8l5 5" />,
+  copy: (
+    <>
+      <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
+      <path d="M10.5 5.5v-2a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2" />
+    </>
+  ),
+  share: <path d="M8 10V2M5 5l3-3 3 3M3 9v4.5h10V9" />,
 } as const;
 
 export type IconName = keyof typeof PATHS | "dots";
