@@ -42,6 +42,7 @@ export {
   type Reply,
 } from "./decide.ts";
 export {
+  defeatCause,
   fanOut,
   messagesOf,
   publicPlayer,

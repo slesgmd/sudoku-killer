@@ -4,6 +4,7 @@
 import { digitsOf } from "@sudoku-killer/engine";
 import type {
   Bonus,
+  DefeatCause,
   Difficulty,
   PublicPlayer,
   RoomState,
@@ -52,6 +53,25 @@ export function publicPlayers(state: MatchState): PublicPlayer[] {
 }
 
 const all: Audience = { kind: "all" };
+
+/**
+ * Causa de la derrota (SPEC §4.3) según el estado final: los jugadores del ranking son todos los de
+ * la partida, también los que salieron o expiraron, que la sala purga al terminar. Es pura, así que
+ * `replay` del registro da la misma causa. `undefined` si la partida no terminó en derrota.
+ */
+export function defeatCause(state: MatchState): DefeatCause | undefined {
+  if (state.result !== "defeat") return undefined;
+  const players = [...state.players.values()];
+  const outOfLives = players.filter((player) => player.lives === 0).length;
+  if (outOfLives === 0) return "gone";
+  return outOfLives === players.length ? "lives" : "mixed";
+}
+
+/** `{ defeatCause }` para esparcir en un payload, o nada si no es una derrota. */
+function withDefeatCause(state: MatchState): { defeatCause?: DefeatCause } {
+  const cause = defeatCause(state);
+  return cause === undefined ? {} : { defeatCause: cause };
+}
 
 function pointsOf(effects: Effects, playerId: PlayerId): number {
   return effects.changes.reduce((sum, c) => (c.playerId === playerId ? sum + c.delta : sum), 0);
@@ -190,6 +210,7 @@ export function messagesOf(
           type: "match.ended",
           payload: {
             result: event.payload.result,
+            ...withDefeatCause(after),
             endedAt: event.ts,
             ranking: mode.ranking(after),
           },
@@ -240,6 +261,7 @@ export function snapshotFor(
       startedAt: state.startedAt,
       endedAt: state.endedAt,
       result: state.result,
+      ...withDefeatCause(state),
       hintsLeft: state.hintsLeft,
       locked,
       groupNotes: notesList(state.groupNotes),

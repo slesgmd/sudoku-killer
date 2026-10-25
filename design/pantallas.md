@@ -91,7 +91,7 @@ Todas las pantallas fuera de la partida comparten la **cabecera** (`.apphead`): 
 
 **Distribución:** foto de fondo a pantalla completa; encima, un panel paper de hasta 720 px (48 px de margen en escritorio; a todo el ancho en móvil).
 
-**Contenido:** «Partida terminada · Media»; titular «Tablero resuelto.» o «Partida sin terminar.»; bajada («El equipo completó las 81 celdas.» o «Ningún jugador activo seguía en la partida, así que terminó en derrota.»); datos «Tiempo total» y «Pistas usadas por el equipo»; tabla «Ranking de la partida» (Puesto, Jugador, Puntos, Errores) con «· tú», etiquetas «Empate» y «Salió», y la nota del desempate.
+**Contenido:** «Partida terminada · Media»; titular «Tablero resuelto.» o, en una derrota, el de su causa (SPEC 1.8, corrección del punto de control de F10): «Se acabaron las vidas.», «La partida quedó sin jugadores.» o «La partida quedó sin jugadores activos.»; bajada («El equipo completó las 81 celdas.» o la de la causa: «Todos los jugadores perdieron sus 3 vidas antes de completar el tablero.», «Todos los jugadores salieron o estuvieron desconectados más de 2 minutos.» o «Los jugadores que quedaban perdieron sus vidas o salieron de la partida.»); datos «Tiempo total» y «Pistas usadas por el equipo»; tabla «Ranking de la partida» (Puesto, Jugador, Puntos, Errores) con «· tú», etiquetas «Empate» y «Salió», y la nota del desempate.
 
 **Acciones:** quien inicia: «Volver al lobby» (principal). Los demás: «Esperando a que Inés vuelva al lobby.» Todos: «Salir de la sala», con un diálogo («Dejarás tu asiento libre y no estarás en la próxima partida.» y el aviso de traspaso solo para quien tiene el derecho, decisión 2).
 

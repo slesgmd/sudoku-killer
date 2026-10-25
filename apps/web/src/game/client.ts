@@ -1264,6 +1264,7 @@ export class GameClient {
         ...match,
         endedAt: payload.endedAt,
         result: payload.result,
+        ...(payload.defeatCause === undefined ? {} : { defeatCause: payload.defeatCause }),
         ranking: payload.ranking,
       },
       selected: null,

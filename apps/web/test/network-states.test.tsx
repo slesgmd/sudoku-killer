@@ -366,8 +366,10 @@ describe("F10f decision 3: «Volver a la sala» opens the screen of the room's s
     expect(screen.getByRole("grid", { name: "Tablero" })).toBeDefined();
   });
 
-  it("finished → Resultados", () => {
+  it("finished → Resultados (without a cause, from an older server: the mixed text, true in every case)", () => {
     resume(snapshot({ state: "finished", ended: true }));
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Partida sin terminar.");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+      "La partida quedó sin jugadores activos.",
+    );
   });
 });

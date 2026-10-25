@@ -2,6 +2,7 @@
 // limpieza, pistas, dificultad, partidas siguientes, espectadores, presencia, deshacer y límites.
 // Transporte en memoria, reloj falso, PGlite y el inspector de filtración activo (T-31.1, T-29.1).
 import { digitBit, layoutOf, peersWithCage } from "@sudoku-killer/engine";
+import { defeatCause, replay } from "@sudoku-killer/game";
 import { PARAMS_V1 } from "@sudoku-killer/scoring";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
@@ -15,7 +16,7 @@ import {
   table,
   wrong,
 } from "./helpers/play.ts";
-import { createTestServer, errorOf, testBank, welcomeOf } from "./helpers/server.ts";
+import { createTestServer, errorOf, mode, testBank, welcomeOf } from "./helpers/server.ts";
 
 const { mistakePenalty: P, hintPenalty: H } = PARAMS_V1;
 const GRACE = 120_000;
@@ -75,6 +76,8 @@ describe("R-01 team result", () => {
     expect(ana.last("room.state_changed")?.payload.state).toBe("finished");
     expect(ana.last("cell.mistake")?.payload.role).toBe("spectator");
     expect(ana.last("match.ended")?.payload.result).toBe("defeat");
+    // SPEC 1.8: los dos terminaron con 0 vidas.
+    expect(ana.last("match.ended")?.payload.defeatCause).toBe("lives");
   });
 
   it("T-01.3 the only active player disconnects; at 120 s it expires and the match ends in defeat", async () => {
@@ -88,6 +91,30 @@ describe("R-01 team result", () => {
     expect(h.room(code).state).toBe("running");
     await h.advance(1);
     expect(bea.last("match.ended")?.payload.result).toBe("defeat");
+    // SPEC 1.8: Bea sin vidas y Ana expirada con las suyas, una mezcla.
+    expect(bea.last("match.ended")?.payload.defeatCause).toBe("mixed");
+  });
+
+  it("SPEC 1.8 the defeat cause survives a reload: Ana was purged, the snapshot still says mixed, and replay(log) gives it", async () => {
+    const h = await createTestServer();
+    const { code, clients } = await started(h, ["Ana", "Bea"]);
+    const [ana, bea] = clients;
+    if (!ana || !bea?.token) throw new Error();
+    await exhaust(h, code, bea);
+    await ana.drop();
+    await h.advance(GRACE);
+    const match = h.room(code).match;
+    if (!match) throw new Error();
+    // Bea recarga: Ana ya no está en la sala (purgada), pero sigue en el ranking.
+    await bea.drop();
+    const snapshot = welcomeOf(await h.client().join(code, "Bea", bea.token)).payload.snapshot;
+    expect(snapshot.room.players.map((p) => p.id)).toEqual([bea.playerId]);
+    expect(snapshot.match?.ranking?.map((e) => e.playerId).sort()).toEqual(
+      [ana.playerId, bea.playerId].sort(),
+    );
+    expect(snapshot.match?.defeatCause).toBe("mixed");
+    const events = await h.repository.events(match.state.id);
+    expect(defeatCause(replay(events, { mode, puzzle: match.puzzle }))).toBe("mixed");
   });
 
   it("T-01.4 the only active player disconnected for 60 s with spectators connected: still running", async () => {
