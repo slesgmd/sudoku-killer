@@ -33,6 +33,20 @@ export function run(step: string, file: string, args: readonly string[]): Promis
   });
 }
 
+/**
+ * La URL para las herramientas de libpq (`pg_dump`). Con `sslmode=verify-full` y sin `sslrootcert`,
+ * libpq busca `~/.postgresql/root.crt`, que en el runner no existe; `sslrootcert=system` le hace usar
+ * las raíces del sistema (libpq 16 o posterior), como hace Node con las suyas. No va en DATABASE_URL:
+ * node-postgres leería `system` como la ruta de un archivo.
+ */
+export function libpqUrl(url: string): string {
+  const parsed = new URL(url);
+  const params = parsed.searchParams;
+  if (params.get("sslmode") === "verify-full" && !params.has("sslrootcert"))
+    params.set("sslrootcert", "system");
+  return parsed.href;
+}
+
 /** La misma URL con otra base de datos. */
 export function withDatabase(url: string, database: string): string {
   const parsed = new URL(url);
