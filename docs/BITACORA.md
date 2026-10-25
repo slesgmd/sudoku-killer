@@ -1041,6 +1041,30 @@ Al aprobar, agregó:
 
 **Verificación:** `check` en verde; `test` del servidor (177; `migration-guard.test.ts` falló por plazo con la suite en paralelo y pasa sola, 4 de 4), pruebas del repositorio afectadas, y E2E `access` y `wake` (2 de 2) contra el build. El resto lo corre la CI.
 
-**Tiempo real:** de 16:50 a 17:40 (UTC−5), unas 0,85 h. El tiempo del usuario en el despliegue y la partida real no se registró. **F12 suma unas 2,85 h** frente a 3–5 h.
+**Tiempo real:** de 16:50 a 17:26 (UTC−5), unas 0,6 h (corregido al cierre de F12 con la hora del push; antes decía 17:40 y 0,85 h). El tiempo del usuario en el despliegue y la partida real no se registró. F12 sumaba entonces unas 2,6 h frente a 3–5 h.
 
 **Siguiente:** el usuario lleva `fix-f12-cierre` a `main`, cambia `sslmode` en Render y en GitHub, y corre `smoke` (con `smoke.ws_keyless_4003` y las líneas por cabecera) y `backup`. Después decide las opciones de Brave y de F12k; con eso, F12k y F12m.
+
+## 2026-10-25 — F12m: decisiones de Brave y de F12k, y cierre de F12
+
+**Decisiones del usuario:**
+- Brave: opción A. Precalentar con `GET /ws` en lugar de `/healthz`, que queda para el humo y el chequeo de Render.
+- F12k no se hace con bots: la reemplaza la línea `metrics` de producción (`commitP95Ms`, `eventLoopP95Ms` y la memoria) durante la beta de F13. Desviación aprobada por tres motivos: el plan gratuito, no exponer la clave del grupo en GitHub y no mezclar partidas de bots con las reales.
+
+**Hecho:**
+- `prewarmUrl` (`apps/web/src/transport/server-url.ts`) devuelve `https://<servidor>/ws`; `probeUrl` arma la misma URL para `httpProbe` (`ws.ts`), que antes la calculaba aparte. El servidor responde 204 a `GET /ws` sin `Origin` (el `fetch` `no-cors` no lo manda), y cualquier petición lo despierta.
+- Prueba en `apps/web/test/server-url.test.ts`: el precalentamiento es `GET /ws` y no cae en la regla `||onrender.com/health`. Verificación negativa: con el precalentamiento en `/healthz`, las dos pruebas fallan.
+- SPEC 1.13 (R-37) y ADR 0007: el precalentamiento usa `GET /ws`.
+- `docs/carga.md` §8 y PLAN 1.26: la desviación de F12k, con sus motivos y qué mirar en la beta. F13 suma la lectura de `metrics` y, como pendiente, que `apps/server/test/migration-guard.test.ts` falla por plazo en la suite completa local y pasa sola (4 de 4).
+
+**Criterios de aceptación de F12:**
+- Una partida real entre dispositivos distintos funciona: cumplido. PC, iPhone e iPad jugaron por internet con el enlace de invitación, todo sincronizado (F12l, evidencia del usuario).
+- Restaurar un respaldo funciona: cumplido. `backup` en verde (volcado de Neon restaurado y comprobado en un PostgreSQL efímero, un artefacto cifrado) y `restore-drill` en verde desde ese artefacto (F12j).
+
+**Horas de F12:** unas **2,85 h** frente a 3–5 h (el plan aprobado estimaba unas 5,3 h). F12a a F12i, 1,35 h; la corrección del primer despliegue, 0,65 h; las correcciones del cierre, 0,6 h (corregido: la entrada anterior decía 0,85 h); esta sesión, 0,25 h. No cuenta el tiempo del usuario en las cuentas, el despliegue y la partida real. De F0 a F12, unas 23,9 h; el total de la v1 queda en unas 34 h (comparación en el PLAN, sección 5, sin cambios para F13).
+
+**Verificación:** `check` en verde; pruebas de la web (125 de 125) y del repositorio afectadas. El resto lo corre la CI.
+
+**Tiempo real:** de 17:26 a 17:41 (UTC−5), unas 0,25 h.
+
+**Siguiente:** el usuario lleva `fix-f12-cierre` a `main`, cambia `sslmode=require` por `sslmode=verify-full` en `DATABASE_URL` (Render y el secreto de GitHub) y corre `smoke` y `backup`. Después, planificar F13 en plan mode.
