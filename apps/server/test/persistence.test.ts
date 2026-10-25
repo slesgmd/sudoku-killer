@@ -4,6 +4,7 @@
 // banco al arrancar.
 import { replay } from "@sudoku-killer/game";
 import { DIFFICULTIES } from "@sudoku-killer/protocol";
+import { PARAMS_V1 } from "@sudoku-killer/scoring";
 import { beforeAll, describe, expect, it } from "vitest";
 import { CLOSE_SERVICE_RESTART } from "../src/rooms/limits.ts";
 import { createMatchRepository } from "../src/match/repository.ts";
@@ -13,10 +14,19 @@ import { createPuzzleRepository } from "../src/puzzles/repository.ts";
 import { hashToken } from "../src/infra/tokens.ts";
 import { readManifest } from "./helpers/bank.ts";
 import { createTestDatabase } from "./helpers/db.ts";
-import { answer, firstEmpty, playerIn, started, table, wrong } from "./helpers/play.ts";
+import {
+  answer,
+  firstEmpty,
+  playerIn,
+  solveAllBut,
+  started,
+  table,
+  wrong,
+} from "./helpers/play.ts";
 import { createTestServer, errorOf, mode, testBank, welcomeOf } from "./helpers/server.ts";
 
 const GRACE = 120_000;
+const P = PARAMS_V1.mistakePenalty;
 const SLOW = { timeout: 120_000 };
 
 beforeAll(async () => {
@@ -168,7 +178,7 @@ describe("ADR 0004 the log in the database", () => {
 });
 
 describe("R-32 rebuilding after a restart (E-15)", () => {
-  it("T-32.2 and T-07.3 running matches are rebuilt; players are disconnected with a new grace and come back with their token", async () => {
+  it("T-32.2 and T-07.3 running matches are rebuilt; players are disconnected with a new grace and come back with their token; a mistake keeps its lives, score and penalty up to the ranking", async () => {
     const h = await createTestServer();
     const { code, clients } = await started(h, ["Ana", "Bea"]);
     const [ana, bea] = clients;
@@ -180,6 +190,10 @@ describe("R-32 rebuilding after a restart (E-15)", () => {
     await bea.send("cell.place", { cell: noted, digit: wrong(h, code, noted) });
     const before = h.room(code).match?.state;
     const startedAt = before?.startedAt ?? 0;
+    // El error de Bea antes del reinicio: 2 vidas, −P y 1 error.
+    const beaBefore = playerIn(h, code, bea.playerId);
+    expect(beaBefore).toMatchObject({ lives: 2, score: -P, mistakes: 1 });
+    const anaScore = playerIn(h, code, ana.playerId).score;
     // Una sala en el lobby se pierde con el reinicio.
     const lobby = await table(h, ["Cris"]);
 
@@ -209,10 +223,20 @@ describe("R-32 rebuilding after a restart (E-15)", () => {
       by: ana.playerId,
     });
     expect(snapshot.you.personalNotes).toEqual([{ cell: noted, mask: 1 << 4 }]);
+    // Reconstruida desde el registro, la partida conserva vidas, puntaje y errores.
     expect(snapshot.room.players.find((p) => p.id === bea.playerId)).toMatchObject({
       lives: 2,
+      score: -P,
+      mistakes: 1,
       connection: "disconnected",
     });
+    expect(playerIn(h, code, bea.playerId)).toMatchObject({
+      lives: beaBefore.lives,
+      score: beaBefore.score,
+      mistakes: beaBefore.mistakes,
+      scoreReachedAt: beaBefore.scoreReachedAt,
+    });
+    expect(snapshot.room.players.find((p) => p.id === ana.playerId)?.score).toBe(anaScore);
     // T-07.3: el cronómetro incluye el tiempo de caída.
     expect(snapshot.match?.startedAt).toBe(startedAt);
     expect(snapshot.serverNow - startedAt).toBe(h.clock.now() - startedAt);
@@ -225,6 +249,18 @@ describe("R-32 rebuilding after a restart (E-15)", () => {
       ),
     ).toEqual(["cell.solved"]);
     expect(errorOf(await h.client().join(lobby.code, "Dani"))).toBe("room.not_found");
+
+    // Ana termina el tablero (Bea sigue dentro de su plazo): el ranking muestra el error de Bea y
+    // su penalización, y el cronómetro final cuenta desde el startedAt de antes del reinicio.
+    await solveAllBut(h, code, back);
+    const ended = back.last("match.ended")?.payload;
+    expect(ended?.result).toBe("victory");
+    expect(ended?.ranking.find((e) => e.playerId === bea.playerId)).toMatchObject({
+      score: -P,
+      mistakes: 1,
+    });
+    expect(ended?.ranking.find((e) => e.playerId === ana.playerId)?.mistakes).toBe(0);
+    expect(h.room(code).match?.state.startedAt).toBe(startedAt);
   });
 
   it("if nobody comes back within 120 s of the restart, everybody expires, the match ends in defeat and the room is deleted", async () => {
