@@ -30,7 +30,19 @@ describe("server configuration", () => {
       production: false,
       accessKeyHash: null,
       trustProxyHops: 0,
+      migrationsAllow: [],
     });
+  });
+
+  it("F12f MIGRATIONS_ALLOW is a list of migration tags", () => {
+    const config = loadConfig({
+      DATABASE_URL: URL_WITH_SECRET,
+      MIGRATIONS_ALLOW: "0003_drop_x, 0004_rename_y",
+    });
+    expect(config.migrationsAllow).toEqual(["0003_drop_x", "0004_rename_y"]);
+    expect(() => loadConfig({ DATABASE_URL: URL_WITH_SECRET, MIGRATIONS_ALLOW: "todo" })).toThrow(
+      /MIGRATIONS_ALLOW no es válida/,
+    );
   });
 
   it("F12 production requires ACCESS_KEY_HASH, and reports a bad one by name, never by value", () => {

@@ -906,3 +906,16 @@ Al aprobar, agregó:
 **Verificación:** `check`, `test` (669 pruebas), `build` y `e2e` (12 de 12) en verde.
 
 **Tiempo real:** de 12:43 a 12:50 (UTC−5), unas 0,1 h.
+
+## 2026-10-25 — F12f: migraciones destructivas al arrancar
+
+**Hecho:**
+- `apps/server/src/db/migration-guard.ts`: una migración es destructiva si borra una tabla, una columna (también `ALTER TABLE … DROP "col"`), un tipo, una vista, una secuencia, una función, un disparador o una extensión; si vacía o borra filas (`TRUNCATE`, `DELETE FROM`); si reescribe filas (`UPDATE … SET`); si renombra; o si cambia el tipo de una columna. Quitar un índice o una restricción, o un valor por defecto, no lo es. Los comentarios no cuentan.
+- Las pendientes se calculan como Drizzle: por la marca de la última aplicada en `drizzle.__drizzle_migrations`.
+- `migrateDatabase` con `guard`: si alguna pendiente destructiva no está en `MIGRATIONS_ALLOW`, no aplica **ninguna** (tampoco las anteriores del mismo despliegue) y lanza `DestructiveMigrationError`. El servidor usa la guarda con `NODE_ENV=production` y no arranca (log con los nombres de las migraciones); en desarrollo las aplica y avisa. `db:migrate` (y el `db-admin` de F12i) la usa siempre y escribe `db.migrations_applied` o `db.migrations_blocked`.
+- Las tres migraciones de hoy no son destructivas (`DROP CONSTRAINT` y `DROP INDEX`): el primer despliegue sobre una base vacía las aplica todas.
+- **Verificación negativa:** sin la guarda (desarrollo), una migración que borra `puzzles` se aplica; con la guarda, el despliegue queda bloqueado hasta nombrarla en `MIGRATIONS_ALLOW`.
+
+**Verificación:** `check`, `test` (674 pruebas), `build` y `e2e` (12 de 12) en verde. `db:migrate` contra el PostgreSQL local: `db.migrations_applied: 0`.
+
+**Tiempo real:** de 12:51 a 12:57 (UTC−5), unas 0,1 h.

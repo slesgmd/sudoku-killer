@@ -20,6 +20,8 @@ export interface Config {
   readonly accessKeyHash: string | null;
   /** Proxies de confianza delante del servidor, para la IP del cliente (F12, S-01). */
   readonly trustProxyHops: number;
+  /** Migraciones destructivas que este despliegue puede aplicar (F12f, `MIGRATIONS_ALLOW`). */
+  readonly migrationsAllow: readonly string[];
 }
 
 /** La forma de `ACCESS_KEY_HASH` (la escribe `pnpm --filter @sudoku-killer/server access:key`). */
@@ -79,6 +81,16 @@ const schema = z.object({
   NODE_ENV: z.string().optional(),
   ACCESS_KEY_HASH: z.string().regex(ACCESS_KEY_HASH_PATTERN).optional(),
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(3).default(0),
+  MIGRATIONS_ALLOW: z
+    .string()
+    .transform((value) =>
+      value
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag !== ""),
+    )
+    .pipe(z.array(z.string().regex(/^\d{4}_[a-z0-9_]+$/)))
+    .default([]),
 });
 
 export interface LoadConfigOptions {
@@ -118,6 +130,7 @@ export function loadConfig(
     NODE_ENV,
     ACCESS_KEY_HASH,
     TRUST_PROXY_HOPS,
+    MIGRATIONS_ALLOW,
   } = parsed.data;
   const production = NODE_ENV === "production";
   if (lan && production) {
@@ -141,5 +154,6 @@ export function loadConfig(
     production,
     accessKeyHash: ACCESS_KEY_HASH ?? null,
     trustProxyHops: TRUST_PROXY_HOPS,
+    migrationsAllow: MIGRATIONS_ALLOW,
   };
 }
