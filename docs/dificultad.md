@@ -4,7 +4,7 @@ Cómo se arma cada dificultad del juego a partir de la calificación de un puzzl
 
 ## 1. Equivalencia vigente, versión 2
 
-`DIFFICULTY_MAPPING_VERSION = "2"` (`apps/server/src/puzzles/difficulty.ts`), aprobada el 2026-10-23 tras la prueba en papel (sección 2). Reemplaza a la versión 1 (sección 7) y a la decisión b) de F5, que solo permitía números iniciales en el fácil.
+`DIFFICULTY_MAPPING_VERSION = "2"` (`packages/bank/src/difficulty.ts`), aprobada el 2026-10-23 tras la prueba en papel (sección 2). Reemplaza a la versión 1 (sección 7) y a la decisión b) de F5, que solo permitía números iniciales en el fácil.
 
 | Dificultad | Números iniciales | Banda: nivel calculado con los números iniciales | Piso de la guarda |
 |---|---|---|---|

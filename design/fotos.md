@@ -1,6 +1,6 @@
 # Fotos
 
-En el prototipo de F7 las fotos son **marcadores**: un rectángulo surface con un aspa y una leyenda que describe la foto prevista. Ninguna foto está elegida todavía. Antes de usar una en `apps/web`, se registra aquí su fuente y su licencia.
+En el prototipo de F7 las fotos son **marcadores**: un rectángulo surface con un aspa y una leyenda que describe la foto prevista. Ninguna foto está elegida todavía. Antes de usar una en `apps/web`, se registra aquí su fuente y su licencia. La v1 no usa fotos (plan de F10: una columna centrada en el Inicio y en Resultados), así que este registro queda para una versión posterior.
 
 ## Fotos previstas
 
