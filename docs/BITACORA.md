@@ -659,7 +659,38 @@ Al aprobar, agregó:
 - **El control del inspector:** los mensajes inyectados con una ruta de WebSocket del navegador no llegan a la captura de tráfico. El mensaje de control se envía desde el servidor, por la conexión real de la página.
 - **La CI no corre en las ramas:** solo en `main` y en los PR. Sin PR, la verificación de cada subtarea se hizo en local.
 
-**Tiempo real:** se registra al cerrar F10 (F10i).
+**Tiempo real:** se registra al cerrar F10 (F10i), en la entrada siguiente.
 
 **Siguiente:** F10h, punto de control del usuario.
+
+## 2026-10-25 — F10h y F10i: correcciones del punto de control y cierre de F10
+
+**Punto de control del usuario (F10h):** PC, iPhone y iPad a la vez con `pnpm dev:lan`. Lobby, entrada por enlace, jugadas, notas personales y grupales, reconexión al bloquear el iPad, salir y volver con ficha, recarga, sesión en otra pestaña, caída y reinicio del servidor, «Compartir» (por http con IP cae al diálogo, como estaba decidido), Ayuda, y derrota y victoria con bots. Todo funcionó.
+
+**Hecho (correcciones):**
+- **Dificultades en el Lobby:** «30 números iniciales», «22», «10» y «Sin números iniciales», en i18n. Las cantidades salen de `DIFFICULTY_GIVENS` (`packages/protocol`), que también arma `DIFFICULTY_RULES` en `packages/bank`: una sola fuente. Va en el protocolo porque `check-dist` prohíbe el banco en el cliente (T-31.2).
+- **Causa de la derrota:** el cliente no conserva lo necesario tras recargar. Al terminar, la sala purga a quienes salieron o expiraron, el snapshot ya no los trae y sus vidas se pierden; con un jugador que salió con 0 vidas, «todos sin vidas» y «mezcla» no se distinguen. Por eso `match.ended` y el snapshot llevan `defeatCause` opcional (`lives`, `gone` o `mixed`), calculado por `defeatCause` (`packages/game`) desde el estado final. El evento del registro no cambia de forma, `replay` da la misma causa y el protocolo sigue en la versión 1 (SPEC 1.8, T-01.6 y T-01.7). Resultados y la franja del tablero usan los textos aprobados; sin causa, los de la mezcla. Pruebas de componentes de los tres casos en vivo y de la recarga, y pruebas I de las tres causas, del snapshot tras la purga y del `replay`.
+- **Actividad tras una reconexión (R-38):** si el snapshot trae una partida en curso con jugadas (una celda bloqueada que no es número inicial o algún error), la actividad empieza con «La actividad anterior a la reconexión no está disponible.», y las jugadas nuevas quedan después. Lo que se veía antes del corte en la misma sesión también se reemplaza, porque al historial le faltaría lo ocurrido durante el corte. La alternativa (las últimas 50 jugadas públicas en el snapshot, unas 1–1,5 h) está en `docs/IDEAS_FUTURAS.md`, sección 7.
+- **T-32.2 y T-07.3 extendida:** Bea comete un error, el servidor se reinicia y reconstruye la partida desde el registro con sus 2 vidas, −P, 1 error, `scoreReachedAt` y el `startedAt` de antes (el cronómetro incluye el tiempo caído); después Ana termina el tablero y el ranking muestra el error de Bea y su penalización. **Verificación negativa:** con la reconstrucción saltando los `cell.mistake`, la prueba falla («expected { …(9) } to match object { lives: 2, score: -90, …(2) }», `persistence.test.ts:227`); revertido, pasa. Romper `replay` de `packages/game` no la hacía fallar: la reconstrucción tiene su propio recorrido con `applyWithEffects`, así que la verificación se hizo ahí.
+- **T-32.1, casos fijos:** todos se caen y pasan 120 s (la sala se borra, `room.not_found` con la ficha y derrota en el registro), y otro con el jugador 0 conectado en el que la sala sigue y `replay` coincide con el estado en vivo. No dependen de `seed` ni de `path`.
+- **De 622 a 621 pruebas:** d3bab5d agregó `T-32.1 the harness never makes player 0 leave, drop or come back`, que comprobaba la función `otherSeat` del arnés. 4db2807 dejó que cualquiera saliera, se cayera y volviera, y quitó `otherSeat` con esa prueba. Entre 8ae646a y 4db2807 no cambió ningún otro caso de Vitest (las E2E de 707c0f5 no cuentan en esa suma). La cobertura de la propiedad no bajó: la amplió.
+
+**Problemas y soluciones:**
+- **Comandos tomados por repetidos tras un reinicio:** en la T-32.2 extendida, los comandos del cliente que volvió recibían respuestas viejas. El transporte en memoria de las pruebas vuelve a numerar las conexiones desde 1 tras el reinicio, así que los `id` coincidían con los de antes, y la deduplicación se reconstruye desde el registro. El arnés agrega la generación del servidor a los `id`; los clientes reales usan `id` al azar.
+
+**Cierre de F10 (F10i):**
+- Criterios de aceptación revisados en `docs/PLAN.md` (F10): las E2E de T-05.4, T-07.2, T-13.5 y E-08 en verde en la CI de `main` (2e2c600) y tres veces seguidas en local al cerrar, sin reintentos; el punto de control; y estas correcciones.
+- Verificación final: `check`, `test` (631 pruebas, 57 archivos) y `build` en verde; `pnpm e2e` tres veces seguidas, 5 de 5 cada vez.
+- **Horas reales de F10:** la entrada anterior las dejó para el cierre. Con las horas de los commits:
+  - 2026-10-24, de 16:30 a 17:40 (UTC−5): F10a a F10d, unas 1,2 h;
+  - 2026-10-24, de 18:45 a 19:35 (UTC−5): la corrección de T-32.1 y F10e a F10g, unas 0,8 h;
+  - 2026-10-24, de 21:55 a 22:30 (UTC−5): T-32.1 sin excluir al jugador 0, el corte real de T-13.5 y el registro, unas 0,6 h;
+  - 2026-10-25, de 00:05 a 00:35 (UTC−5): F10h y F10i, unas 0,5 h.
+  - **Total: unas 3,1 h** frente a 5–10 h. Las pausas entre sesiones (la revisión del usuario y el punto de control) no cuentan.
+- Comparación de horas en el PLAN, sección 5: de F5 a F10, unas 14,1 h frente a 26–43 h. Se propone bajar F11 de 3–6 h a 2–4 h, pendiente de aprobación; F12 y F13 sin cambios.
+- PLAN 1.21 y SPEC 1.8.
+
+**Tiempo real:** unas 0,5 h (F10h y F10i). F10 suma unas 3,1 h.
+
+**Siguiente:** planificar F11 en modo plan, y decidir la recalibración propuesta.
 

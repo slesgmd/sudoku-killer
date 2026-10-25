@@ -5,19 +5,21 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 ## Estado
 
-- **Plan:** versión 1.20. **SPEC:** versión 1.7.
-- **Fase actual:** F10, integración en tiempo real (5–10 h), con el plan aprobado (F10a a F10i). F10a a F10g, hechas; F10h e F10i, pendientes. F9 se cerró el 2026-10-24 con unas 1,9 h frente a 3–6 h.
-- **Próxima tarea exacta:** F10h, punto de control del usuario con PC, celular y iPad (`docs/PLAN.md`, F10): recorrer Inicio, Entrar, Lobby, partida, Resultados y Ayuda a 360 y a 1280 px, los estados de red y «Compartir», y anotar las correcciones. Las ramas de trabajo no corren la CI sin PR: verificar `check`, `test`, `build` y `e2e` en local.
+- **Plan:** versión 1.21. **SPEC:** versión 1.8.
+- **Fase actual:** F11, pruebas integrales, carga y seguridad (3–6 h; `docs/PLAN.md`, F11). F10 se cerró el 2026-10-25 con unas 3,1 h frente a 5–10 h. De F0 a F10 van unas 18,9 h.
+- **Pendiente de aprobación del usuario:** la recalibración propuesta al cerrar F10 (F11 de 3–6 h a 2–4 h; F12 y F13 sin cambios; `docs/PLAN.md`, sección 5). No está aplicada.
+- **Próxima tarea exacta:** planificar F11 en plan mode. Las ramas de trabajo no corren la CI sin PR: verificar `check`, `test`, `build` y `e2e` en local.
 - **Servidor (F9):**
   - `apps/server/src/`: `rooms/` (actor por sala con cola y bandeja de salida ordenada), `match/` (repositorio y group commit), `infra/` (`Transport` en memoria y `ws`, reloj, azar y fichas), `config/` y `app.ts`.
   - Esquema en SPEC §2.5. El registro se confirma antes de difundir, las partidas se reconstruyen al arrancar y E-16 cierra con 1012.
-  - Pruebas I con `createTestServer` (`apps/server/test/helpers/server.ts`): PGlite, reloj falso e inspector de filtración siempre activo.
+  - Pruebas I con `createTestServer` (`apps/server/test/helpers/server.ts`): PGlite, reloj falso e inspector de filtración siempre activo. Tras `restart()`, los `id` de los comandos llevan la generación del servidor.
 - **Cliente (F8):**
   - Protocolo v1 completo en `packages/protocol/src/v1/`. Reductor y modo Normal definitivos en `packages/game` (`decide`, `apply`, `replay`, `project`, `createNormalMode`); F9 los reutiliza sin reescribirlos.
   - Lo puro del banco está en `packages/bank` (dificultad, `regenerateSeed`, `canonicalPuzzle`); el servidor conserva el hash con `node:crypto` y la carga.
   - Servidor simulado y bot solo en desarrollo (`apps/web/src/dev/`). `check-dist` revisa el build en cada `pnpm build` (T-31.2). El cliente de producción solo importa `@sudoku-killer/engine/model` y `@sudoku-killer/game/client`.
 - **Cliente (F10):** transporte `ws` con reconexión y bandeja de pendientes (`src/transport/`, `src/game/client.ts`); rutas por hash en `src/routes.ts` (`#/`, `#/entrar[/CODIGO]`, `#/sala/CODIGO`, `#/ayuda`), y la pantalla de la sala sale de su estado (decisión 3). Pantallas en `src/screens/`, estados de red en `src/components/Network.tsx`. En desarrollo, Vite reenvía `/ws` al servidor.
   - E2E en `apps/web/e2e/`: el build servido con `vite preview` y el servidor real en el worker (PGlite), con el inspector sobre el tráfico WS y su control.
+  - Correcciones del punto de control (SPEC 1.8): la derrota dice su causa (`defeatCause` opcional en `match.ended` y en el snapshot, derivado del estado final por `defeatCause` de `packages/game`), y tras reconectar con jugadas previas la actividad avisa que lo anterior no está disponible (R-38).
 - **Puntuación (F6, `docs/puntuacion.md`):**
   - Parámetros v1 (`packages/scoring/src/params.v1.json`): B = 10, w = 1/2/3/4/5, P = 90, β = 1 y H = 60.
   - El nivel se calcula con los descartes públicos de los errores (`BoardState.excluded`, `Match.excluded`).
@@ -26,7 +28,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
   - Limitaciones conocidas (ventaja del veloz, Spearman 0,78) y qué medir en F11 y F13: `docs/puntuacion.md`, secciones 10 y 11. La primera prioridad es el tamaño de P.
 - **Banco (F5):**
   - Equivalencia versión 2 en `docs/dificultad.md`: fácil, 30 números iniciales y nivel 1; media, 22 y nivel 2; difícil, 10 y nivel 3 o 4 con algún paso de nivel 3; experto, 0 y nivel 5.
-  - Los números iniciales salen de `addGivens` (motor), con guarda, repartidos por cajas y con semilla. Cada semilla pertenece a una sola dificultad.
+  - Los números iniciales salen de `addGivens` (motor), con guarda, repartidos por cajas y con semilla. Cada semilla pertenece a una sola dificultad. Las cantidades viven en `DIFFICULTY_GIVENS` (`packages/protocol`), que usan el banco y el Lobby.
   - 2000 puzzles como manifiesto de semillas en `apps/server/bank/manifest.json` (ADR 0006), con el generador "2".
   - Tabla `puzzles` con Drizzle, `PuzzleRepository` y `loadBank` en `apps/server/src/`.
   - Base local cargada con el banco completo (500 vigentes por dificultad). Los puzzles que salen del manifiesto quedan retirados, no borrados (ADR 0006, nota de F9).
