@@ -1,0 +1,38 @@
+# Despliegue en Render (F12, ADR 0007): el servidor de salas (servicio web gratuito, Virginia) y la
+# web (sitio estático gratuito), los dos desde `main` y solo cuando pasan los checks del commit.
+# Sin secretos: DATABASE_URL y ACCESS_KEY_HASH se escriben en el panel de Render (`sync: false`).
+# Si Render agrega un sufijo a algún nombre, hay que ajustar ALLOWED_ORIGINS, VITE_SERVER_URL y la
+# CSP de abajo (las comprueba tests/render-config.test.ts).
+services:
+  - type: web
+    name: sudoku-killer-lima-ws
+    runtime: node
+    plan: free
+    region: virginia
+    branch: main
+    autoDeployTrigger: checksPass
+    buildCommand: corepack enable pnpm && pnpm install --frozen-lockfile && pnpm --filter "@sudoku-killer/server..." build
+    startCommand: pnpm --filter @sudoku-killer/server start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: LOG_LEVEL
+        value: info
+      - key: ALLOWED_ORIGINS
+        value: https://sudoku-killer-lima.onrender.com
+      - key: DATABASE_URL
+        sync: false
+
+  - type: web
+    name: sudoku-killer-lima
+    runtime: static
+    branch: main
+    autoDeployTrigger: checksPass
+    buildCommand: corepack enable pnpm && pnpm install --frozen-lockfile && pnpm --filter "@sudoku-killer/web..." build
+    staticPublishPath: apps/web/dist
+    envVars:
+      - key: VITE_SERVER_URL
+        value: wss://sudoku-killer-lima-ws.onrender.com/ws
