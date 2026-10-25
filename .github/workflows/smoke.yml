@@ -2,7 +2,8 @@ name: Humo del despliegue
 
 # Prueba de humo del despliegue (F12b, ADR 0007), a mano: TLS de la web y del servidor, la
 # redirección de http a https, `/healthz` (espera hasta 2 min a que el servidor despierte) y el
-# handshake del WebSocket con un origen ajeno (403) y con el de la web. Los logs de Actions son
+# handshake del WebSocket con un origen ajeno (403), con el de la web y sin clave (4003, T-39.11).
+# Los logs de Actions son
 # públicos: todo paso corre con `scripts/ci/quiet.ts`, que solo deja pasar `smoke.<prueba>: ok|fail`
 # (docs/seguridad.md §3; lo comprueba tests/workflow-logs.test.ts).
 

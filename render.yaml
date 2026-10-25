@@ -47,6 +47,8 @@ services:
       - path: /*
         name: Content-Security-Policy
         value: "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self' wss://sudoku-killer-lima-ws.onrender.com https://sudoku-killer-lima-ws.onrender.com; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+      # En onrender.com, Render la reemplaza por la suya, más estricta (max-age de diez años,
+      # includeSubdomains y preload); la prueba de humo acepta una HSTS igual o más estricta.
       - path: /*
         name: Strict-Transport-Security
         value: "max-age=31536000"
