@@ -6,49 +6,8 @@
 //   nada (T-13.5);
 // - la misma ficha en otra pestaña desplaza a la primera, y «Jugar en esta pestaña» la recupera (E-08).
 // El inspector de filtración revisa todo lo que reciben las páginas (fixtures.ts).
-import type { Page } from "@playwright/test";
-import {
-  cell,
-  connections,
-  createRoom,
-  expect,
-  joinRoom,
-  record,
-  test,
-  type GameServer,
-} from "./fixtures.ts";
-
-function matchOf(game: GameServer, code: string) {
-  const match = game.server.rooms.get(code)?.match;
-  if (!match) throw new Error(`No match in ${code}`);
-  return match;
-}
-
-function emptyCells(game: GameServer, code: string): number[] {
-  return matchOf(game, code)
-    .state.cells.map((c, i) => (c.status === "empty" ? i : -1))
-    .filter((i) => i >= 0);
-}
-
-async function start(host: Page, players: readonly Page[]): Promise<void> {
-  await host.getByRole("button", { name: "Iniciar partida" }).click();
-  for (const page of players) {
-    await expect(page.getByRole("grid", { name: "Tablero" })).toBeVisible();
-    await expect(cell(page, 0)).toBeVisible();
-  }
-}
-
-function at(pages: readonly Page[], index: number): Page {
-  const page = pages[index];
-  if (!page) throw new Error(`No page ${String(index)}`);
-  return page;
-}
-
-/** Coloca un dígito como lo haría una persona: toca la celda y pulsa la tecla. */
-async function place(page: Page, index: number, digit: number): Promise<void> {
-  await cell(page, index).click();
-  await page.keyboard.press(String(digit));
-}
+import { cell, connections, createRoom, expect, joinRoom, record, test } from "./fixtures.ts";
+import { at, emptyCells, matchOf, place, start } from "./game.ts";
 
 test("T-05.4 six tabs play a full match; six simultaneous clicks on one cell give one hit and no penalty", async ({
   player,

@@ -2,7 +2,7 @@
 // cada worker, y el inspector de filtración (SPEC §8.3) sobre el tráfico WS que captura Playwright:
 // cada mensaje que recibe cada página se revisa, y la prueba falla si hay alguna violación (T-31.1).
 import { test as base, expect, type BrowserContext, type Page } from "@playwright/test";
-import { createNormalMode } from "@sudoku-killer/game";
+import { createNormalMode, type MatchEvent } from "@sudoku-killer/game";
 import type { ServerEnvelope } from "@sudoku-killer/protocol";
 import { PARAMS_V1 } from "@sudoku-killer/scoring";
 import { systemClock } from "../../server/src/infra/clock.ts";
@@ -14,10 +14,11 @@ import { createMatchRepository } from "../../server/src/match/repository.ts";
 import { EventWriter } from "../../server/src/match/sink.ts";
 import { RoomServer } from "../../server/src/rooms/server.ts";
 import { LeakInspector } from "../../server/test/helpers/inspector.ts";
-import { testBank } from "../../server/test/helpers/server.ts";
+import { FaultyRepository, testBank } from "../../server/test/helpers/server.ts";
 import { E2E_ORIGIN, E2E_WS_PORT } from "../playwright.config.ts";
 
 export interface GameServer {
+  /** El servidor vivo (otro tras `restart`). */
   readonly server: RoomServer;
   readonly inspector: LeakInspector;
   /** Un inspector nuevo con las mismas fuentes (soluciones y celdas bloqueadas), para el control. */
@@ -26,6 +27,17 @@ export interface GameServer {
   links(): readonly Link[];
   /** La solución de la partida de una sala (solo en las pruebas). */
   solution(code: string): readonly number[];
+  /**
+   * Reinicio del servidor (E-15): las salas del proceso viejo dejan de procesar, lo ya aceptado por
+   * el group commit se escribe, las conexiones se cierran con 1012 y arranca un servidor nuevo sobre
+   * la misma base y el mismo puerto, que reconstruye las partidas desde el registro. Devuelve
+   * cuántas reconstruyó.
+   */
+  restart(): Promise<number>;
+  /** Hace fallar (o vuelve a funcionar) la base de datos al confirmar y al reconstruir (E-16). */
+  failDatabase(failing: boolean): void;
+  /** El registro confirmado de una partida. */
+  events(matchId: string): Promise<MatchEvent[]>;
   stop(): Promise<void>;
 }
 
@@ -62,33 +74,44 @@ class TappedTransport implements Transport {
 async function startGameServer(): Promise<GameServer> {
   const { db, client, catalog, solutions } = await testBank();
   await client.query("TRUNCATE match_events, matches");
-  const repository = createMatchRepository(db);
-  const transport = new TappedTransport(
-    new WsTransport({
-      host: "127.0.0.1",
-      port: E2E_WS_PORT,
-      allowedOrigins: [E2E_ORIGIN],
+  const repository = new FaultyRepository(createMatchRepository(db));
+  let live: { server: RoomServer; transport: TappedTransport; sink: EventWriter } | null = null;
+  const current = () => {
+    if (!live) throw new Error("No server");
+    return live;
+  };
+  /** Arranca un servidor (el primero o el que sigue a un reinicio) sobre la misma base. */
+  const boot = async () => {
+    const transport = new TappedTransport(
+      new WsTransport({
+        host: "127.0.0.1",
+        port: E2E_WS_PORT,
+        allowedOrigins: [E2E_ORIGIN],
+        clock: systemClock,
+        logger: silentLogger,
+      }),
+    );
+    const sink = new EventWriter({ repository, clock: systemClock, logger: silentLogger });
+    const server = new RoomServer({
+      transport,
       clock: systemClock,
+      random: systemRandom,
+      ids: systemIds,
+      catalog,
+      sink,
+      repository,
       logger: silentLogger,
-    }),
-  );
-  const server = new RoomServer({
-    transport,
-    clock: systemClock,
-    random: systemRandom,
-    ids: systemIds,
-    catalog,
-    sink: new EventWriter({ repository, clock: systemClock, logger: silentLogger }),
-    repository,
-    logger: silentLogger,
-    mode: createNormalMode(PARAMS_V1),
-  });
-  await server.start();
+      mode: createNormalMode(PARAMS_V1),
+    });
+    live = { server, transport, sink };
+    return server.start();
+  };
+  await boot();
   const newInspector = () =>
     new LeakInspector({
       solutions: () => solutions,
       lockedValue: (matchId, cell) => {
-        for (const room of server.rooms.values()) {
+        for (const room of current().server.rooms.values()) {
           const state = room.match?.state;
           const locked = state?.id === matchId ? state.cells[cell] : undefined;
           if (locked?.status === "locked") return locked.value;
@@ -97,16 +120,29 @@ async function startGameServer(): Promise<GameServer> {
       },
     });
   return {
-    server,
+    get server() {
+      return current().server;
+    },
     inspector: newInspector(),
     newInspector,
-    links: () => [...transport.open],
+    links: () => [...current().transport.open],
     solution(code) {
-      const match = server.rooms.get(code)?.match;
+      const match = current().server.rooms.get(code)?.match;
       if (!match) throw new Error(`No match in ${code}`);
       return match.solution;
     },
-    stop: () => transport.stop(1001, "e2e over"),
+    async restart() {
+      const old = current();
+      for (const room of [...old.server.rooms.values()]) room.deleted = true;
+      await old.sink.drain();
+      await old.transport.stop(1012, "service restart");
+      return boot();
+    },
+    failDatabase(failing) {
+      repository.failing = failing;
+    },
+    events: (matchId) => repository.events(matchId),
+    stop: () => current().transport.stop(1001, "e2e over"),
   };
 }
 

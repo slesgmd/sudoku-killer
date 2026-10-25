@@ -693,7 +693,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | Subtarea | Contenido | Estado |
 |---|---|---|
 | F11a | Registros: recalibración aprobada (F11 en 2–4 h), plan aprobado e idea de T(L). | Hecha |
-| F11b | E2E nuevas: derrota y Resultados (E-10, T-01.6, decisión 3), reinicio del servidor (E-15, T-32.2), fallo de la base (E-16, T-32.3) y vuelta con ficha a una sala llena (E-02, E-23, T-26.4). | Pendiente |
+| F11b | E2E nuevas: derrota y Resultados (E-10, T-01.6, decisión 3), reinicio del servidor (E-15, T-32.2), fallo de la base (E-16, T-32.3) y vuelta con ficha a una sala llena (E-02, E-23, T-26.4). Corrige «Volver a la sala» con el aviso de sala llena a la vista. | Hecha |
 | F11c | Caos con semilla (E-01, E-07 en Playwright; E-17 con clientes Node sobre `ws`), cortes reales comprobados en el servidor, verificación negativa y workflow semanal. | Pendiente |
 | F11d | Equivalencia de la reconstrucción (T-32.1, E-07, E-15): partida aleatoria con un reinicio, `replay(registro)` y la caché de idempotencia, con verificación negativa. | Pendiente |
 | F11e | Carga: PostgreSQL real, script con escenarios realista y estrés, workflow programado e informe en `docs/carga.md`. Punto de control del usuario. | Pendiente |

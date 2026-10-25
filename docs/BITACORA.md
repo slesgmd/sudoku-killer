@@ -705,3 +705,25 @@ Al aprobar, agregó:
 **Tiempo real:** de 08:35 a 08:55 (UTC−5), unas 0,3 h con la planificación.
 
 **Siguiente:** F11b.
+
+## 2026-10-25 — F11b: E2E de casos límite
+
+**Hecho:**
+- `apps/web/e2e/edge.spec.ts`, cuatro E2E de casos de SPEC §7 que tenían prueba de integración en el servidor, pero no en el cliente:
+  - **E-10, T-01.2, T-01.6 y T-01.7:** Tomás pierde sus 3 vidas y queda como espectador; Inés, la última activa, pierde la última y la derrota es inmediata. Las dos páginas dicen «Se acabaron las vidas.», `match.ended` trae `defeatCause: "lives"`, Resultados muestra la causa y, al recargar, la sala terminada abre Resultados (decisión 3) con la causa del snapshot.
+  - **E-15 y T-32.2:** el servidor se reinicia a mitad de partida (las salas viejas dejan de procesar, se cierran las conexiones con 1012 y arranca otro sobre la misma base y el mismo puerto). Las páginas vuelven solas; Tomás conserva asiento, vidas, puntos, errores, la celda resuelta y su nota personal, el `startedAt` no cambia y la partida sigue.
+  - **E-16 y T-32.3:** la base falla más de 10 s. La jugada de Tomás no llega a nadie, la sala se cierra y queda reconstruyéndose; cuando la base vuelve, la página reenvía la jugada pendiente con el mismo `id`, se aplica una sola vez (una fila en el registro) y Tomás no pierde vidas.
+  - **E-02, E-23 y T-26.4:** Tomás sale tras un error, cinco personas ocupan los asientos libres, y su vuelta con ficha muestra «no tiene asientos libres». Cuando se libera un asiento, «Volver a la sala» lo devuelve con su `id`, 2 vidas y su error (nunca 3 vidas nuevas).
+- El fixture `game` de las E2E ganó `restart()`, `failDatabase()` y `events()` sobre el `FaultyRepository` de las pruebas del servidor. Las ayudas de juego pasaron de `match.spec.ts` a `e2e/game.ts`.
+- **Error corregido en el cliente:** con el aviso de sala llena en Inicio, «Volver a la sala» no hacía nada. La ruta de la sala vuelve a Inicio mientras el aviso de esa sala está a la vista (para no repetir el intento rechazado), y el aviso no se quitaba nunca. Ahora el enlace quita el aviso antes de navegar (`dismissNotice`). Prueba de componente nueva (E-02, T-26.4) en `network-states.test.tsx`. **Verificación negativa:** sin el `onClick`, falla («expected '#/' to be '#/sala/…'»); con él, pasa.
+- No se agregaron E2E de E-13, E-14, E-18, E-19 ni E-24: sus avisos tienen pruebas de componentes y sus reglas, pruebas de integración.
+
+**Problemas y soluciones:**
+- **Primera corrida, 4 fallos, ninguno de tiempo:** la recarga de una sala terminada abre Resultados, no la franja; tras un reinicio o un fallo de la base, el orden en que vuelven las dos páginas decide si el anfitrión recibe la celda como `cell.solved` o en el snapshot (las aserciones ahora miran el estado y no el mensaje); la prueba dejaba activo el modo Notas; y el error real de «Volver a la sala», de arriba. Ningún límite cambió.
+- Los `EPIPE` y `ECONNRESET` del proxy de `vite preview` en la salida de la E2E son los cierres del reinicio y de la caída de la base: esperados.
+
+**Verificación:** `check`, `test` (632 pruebas) y `build` en verde; `pnpm e2e` tres veces seguidas, 9 de 9 cada vez, sin reintentos.
+
+**Tiempo real:** de 08:55 a 09:15 (UTC−5), unas 0,35 h.
+
+**Siguiente:** F11c.

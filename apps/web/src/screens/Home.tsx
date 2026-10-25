@@ -12,9 +12,11 @@ export interface HomeProps {
   readonly savedRoom: string | null;
   /** Por qué no se pudo volver a una sala. */
   readonly notice: RoomNotice | null;
+  /** Antes de «Volver a la sala»: quita el aviso para que se intente otra vez. */
+  readonly onResume?: () => void;
 }
 
-export function Home({ savedRoom, notice }: HomeProps) {
+export function Home({ savedRoom, notice, onResume }: HomeProps) {
   const facts = [
     [t("home.factPlayers"), t("home.factPlayersValue")],
     [t("home.factLives"), t("home.factLivesValue")],
@@ -48,6 +50,7 @@ export function Home({ savedRoom, notice }: HomeProps) {
                 <a
                   className="btn primary lg block"
                   href={routeHash({ name: "room", code: savedRoom })}
+                  onClick={onResume}
                 >
                   {t("home.resume", { code: savedRoom })}
                 </a>
