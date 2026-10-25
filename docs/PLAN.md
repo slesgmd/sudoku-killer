@@ -696,8 +696,8 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | F11b | E2E nuevas: derrota y Resultados (E-10, T-01.6, decisión 3), reinicio del servidor (E-15, T-32.2), fallo de la base (E-16, T-32.3) y vuelta con ficha a una sala llena (E-02, E-23, T-26.4). Corrige «Volver a la sala» con el aviso de sala llena a la vista. | Hecha |
 | F11c | Caos con semilla (E-01, E-07 y E-17 en Playwright, `e2e/chaos.spec.ts`), cortes reales comprobados en el registro, verificación negativa y workflow semanal (`chaos.yml`). E-17 se provoca declarando más bytes encolados en el fixture, no con clientes Node que dejan de leer (desviación en la BITÁCORA). | Hecha |
 | F11d | Equivalencia de la reconstrucción (T-32.1, E-07, E-15): partida aleatoria con un reinicio, `replay(registro)` y la caché de idempotencia, con verificación negativa (`apps/server/test/rebuild.test.ts`). | Hecha |
-| F11e | Carga: PostgreSQL real, script con escenarios realista y estrés, workflow programado e informe en `docs/carga.md`. Punto de control del usuario. | Medición hecha (p95 de 15,3 ms realista y 74,2 ms en estrés, PostgreSQL 16); punto de control pendiente |
-| F11f | Optimización si hace falta y calibración de los límites de SPEC §4.8. | Pendiente |
+| F11e | Carga: PostgreSQL real, script con escenarios realista y estrés, workflow programado e informe en `docs/carga.md`. Punto de control del usuario. | Hecha (p95 de 15,3 ms realista y 74,2 ms en estrés, PostgreSQL 16; punto de control del usuario hecho) |
+| F11f | Memoria en estrés de 5 min (pedida en el punto de control): la caché del catálogo retenía cada puzzle jugado con el contexto del calificador; ahora es una LRU de 64 (`docs/carga.md` §6). Los límites de SPEC §4.8 quedan confirmados. | Hecha |
 | F11g | Seguridad: `docs/seguridad.md`, `pnpm audit`, correcciones y recomendación sobre Dependabot. | Pendiente |
 | F11h | `scoring:report`. | Pendiente |
 | F11i | Cierre y comparación de horas. | Pendiente |

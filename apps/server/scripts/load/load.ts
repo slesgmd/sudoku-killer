@@ -15,7 +15,14 @@
 //
 // Uso: pnpm --filter @sudoku-killer/server load --scenario realistic|stress [--rooms 50]
 //        [--players 6] [--duration 60] [--warmup 15] [--seed N] [--port 8090] [--reset-matches]
-//        [--out archivo.json]
+//        [--out archivo.json] [--memory [--drain 130]]
+// - `--memory` (F11f): el servidor corre con `--expose-gc` y el inspector de Node en 127.0.0.1, y el
+//   script lee `process.memoryUsage()` del servidor por el protocolo del inspector: el heap base
+//   (tras una recolección, sin salas), RSS y heap cada 10 s durante la medición, y, después de
+//   cerrar todos los clientes y esperar `--drain` segundos a que se borren las salas (R-14, 120 s),
+//   el heap tras forzar la recolección. Así se distingue una meseta de una fuga. Con
+//   `--heap-snapshots carpeta`, guarda además una instantánea del heap al empezar (`base`) y otra al
+//   final (`after`), para buscar qué queda retenido.
 import { spawn, type ChildProcess } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { monitorEventLoopDelay } from "node:perf_hooks";
@@ -69,6 +76,10 @@ const { values: args } = parseArgs({
     port: { type: "string", default: "8090" },
     "reset-matches": { type: "boolean", default: false },
     out: { type: "string" },
+    memory: { type: "boolean", default: false },
+    drain: { type: "string", default: "130" },
+    "inspect-port": { type: "string", default: "9339" },
+    "heap-snapshots": { type: "string" },
   },
 });
 
@@ -127,9 +138,14 @@ async function resetMatches(): Promise<void> {
 // --- Servidor ---
 
 async function startServer(): Promise<ChildProcess> {
+  const inspect = args.memory ? ["--expose-gc", `--inspect=127.0.0.1:${args["inspect-port"]}`] : [];
   const child = spawn(
     process.execPath,
-    ["--conditions=@sudoku-killer/source", new URL("../../src/index.ts", import.meta.url).pathname],
+    [
+      ...inspect,
+      "--conditions=@sudoku-killer/source",
+      new URL("../../src/index.ts", import.meta.url).pathname,
+    ],
     {
       env: {
         ...process.env,
@@ -169,6 +185,77 @@ function sample(pid: number): { rssMb: number; cpuSeconds: number } {
   return { rssMb: rssKb / 1024, cpuSeconds: ticks / 100 };
 }
 
+interface Inspector {
+  memory(gc: boolean): Promise<NodeJS.MemoryUsage>;
+  snapshot(path: string): Promise<void>;
+}
+
+/** Una conexión al inspector del servidor, para leer su memoria y forzar la recolección. */
+async function inspector(): Promise<Inspector> {
+  const list = (await (
+    await fetch(`http://127.0.0.1:${args["inspect-port"]}/json/list`)
+  ).json()) as { webSocketDebuggerUrl: string }[];
+  const url = list[0]?.webSocketDebuggerUrl;
+  if (url === undefined) throw new Error("No inspector target");
+  const ws = new WebSocket(url);
+  await new Promise((resolve, reject) => {
+    ws.once("open", resolve);
+    ws.once("error", reject);
+  });
+  let next = 1;
+  const call = (method: string, params: object, onEvent?: (event: InspectorMessage) => void) =>
+    new Promise<InspectorMessage>((resolve) => {
+      const id = next++;
+      const onMessage = (data: Buffer) => {
+        const reply = JSON.parse(data.toString("utf8")) as InspectorMessage;
+        if (reply.id === undefined) onEvent?.(reply);
+        if (reply.id !== id) return;
+        ws.off("message", onMessage);
+        resolve(reply);
+      };
+      ws.on("message", onMessage);
+      ws.send(JSON.stringify({ id, method, params }));
+    });
+  return {
+    async memory(gc) {
+      const expression = `(${gc ? "globalThis.gc(), globalThis.gc(), " : ""}JSON.stringify(process.memoryUsage()))`;
+      const reply = await call("Runtime.evaluate", { expression, returnByValue: true });
+      return JSON.parse(reply.result?.result?.value ?? "{}") as NodeJS.MemoryUsage;
+    },
+    async snapshot(path) {
+      const chunks: string[] = [];
+      await call("HeapProfiler.takeHeapSnapshot", { reportProgress: false }, (event) => {
+        if (event.method === "HeapProfiler.addHeapSnapshotChunk")
+          chunks.push(event.params?.chunk ?? "");
+      });
+      writeFileSync(path, chunks.join(""));
+    },
+  };
+}
+
+interface InspectorMessage {
+  readonly id?: number;
+  readonly method?: string;
+  readonly params?: { readonly chunk?: string };
+  readonly result?: { readonly result?: { readonly value?: string } };
+}
+
+const mb = (bytes: number) => round(bytes / 1024 / 1024);
+
+/** Partidas sin terminar en la base (las salas borradas terminan las suyas con derrota). */
+async function runningMatches(): Promise<number> {
+  const client = new pg.Client({ connectionString: databaseUrl });
+  await client.connect();
+  try {
+    const rows = await client.query<{ n: string }>(
+      "SELECT count(*) AS n FROM matches WHERE ended_at IS NULL",
+    );
+    return Number(rows.rows[0]?.n ?? 0);
+  } finally {
+    await client.end();
+  }
+}
+
 // --- Medición ---
 
 let measuring = false;
@@ -178,6 +265,8 @@ const latencies: number[] = [];
 const outcomes = new Map<string, number>();
 const count = (key: string) => outcomes.set(key, (outcomes.get(key) ?? 0) + 1);
 let sent = 0;
+/** Comandos enviados durante la medición, por tipo (para el ritmo real por jugador). */
+const sentMeasured = new Map<string, number>();
 let received = 0;
 let matchesStarted = 0;
 let matchesEnded = 0;
@@ -256,6 +345,7 @@ class LoadClient {
     const id = `${this.prefix}-${String(this.nextId++)}`;
     if (type === "cell.place") this.placed.set(id, performance.now());
     sent++;
+    if (measuring) sentMeasured.set(type, (sentMeasured.get(type) ?? 0) + 1);
     this.ws.send(JSON.stringify({ v: 1, id, type, payload }));
     return id;
   }
@@ -381,6 +471,11 @@ const server = await startServer();
 const pid = server.pid;
 if (pid === undefined) throw new Error("No server pid");
 const idle = sample(pid);
+const probe = args.memory ? await inspector() : null;
+const memory = probe ? (gc: boolean) => probe.memory(gc) : null;
+const baseHeap = memory ? await memory(true) : null;
+const snapshots = args["heap-snapshots"];
+if (probe && snapshots !== undefined) await probe.snapshot(`${snapshots}/base.heapsnapshot`);
 const loop = monitorEventLoopDelay({ resolution: 10 });
 
 const clients: LoadClient[] = [];
@@ -419,6 +514,8 @@ try {
   loop.enable();
   const rss: number[] = [];
   const cpu: number[] = [];
+  const timeline: { s: number; rssMb: number; heapUsedMb: number }[] = [];
+  const generatorCpuStart = process.cpuUsage();
   let previous = start;
   for (let s = 0; s < run.durationSeconds; s++) {
     await sleep(1000);
@@ -426,10 +523,34 @@ try {
     rss.push(now.rssMb);
     cpu.push((now.cpuSeconds - previous.cpuSeconds) * 100);
     previous = now;
+    if (memory && (s + 1) % 10 === 0)
+      timeline.push({
+        s: s + 1,
+        rssMb: round(now.rssMb),
+        heapUsedMb: mb((await memory(false)).heapUsed),
+      });
   }
+  const generatorCpu = process.cpuUsage(generatorCpuStart);
   measuring = false;
   loop.disable();
   const elapsed = (performance.now() - startedAt) / 1000;
+  let drained: object | undefined;
+  if (memory && baseHeap) {
+    stopping = true;
+    await Promise.allSettled(loops);
+    for (const client of clients) client.close();
+    await sleep(Number(args.drain) * 1000);
+    const after = await memory(true);
+    if (probe && snapshots !== undefined) await probe.snapshot(`${snapshots}/after.heapsnapshot`);
+    drained = {
+      waitedSeconds: Number(args.drain),
+      runningMatchesInDb: await runningMatches(),
+      baseHeapUsedMb: mb(baseHeap.heapUsed),
+      heapUsedAfterGcMb: mb(after.heapUsed),
+      rssAfterMb: round(sample(pid).rssMb),
+      baseRssMb: round(idle.rssMb),
+    };
+  }
   const sorted = [...latencies].sort((a, b) => a - b);
   const result = {
     run,
@@ -454,6 +575,13 @@ try {
       mean: round(cpu.reduce((a, b) => a + b, 0) / Math.max(1, cpu.length)),
       peak: round(Math.max(...cpu)),
     },
+    generatorCpuPercent: round(((generatorCpu.user + generatorCpu.system) / 1e6 / elapsed) * 100),
+    perPlayerPerSecond: Object.fromEntries(
+      [...sentMeasured]
+        .sort()
+        .map(([type, n]) => [type, round(n / elapsed / (run.rooms * run.players), 2)]),
+    ),
+    ...(memory ? { memoryTimeline: timeline, drained } : {}),
     generatorLoopDelayMs: {
       p95: round(loop.percentile(95) / 1e6),
       max: round(loop.max / 1e6),

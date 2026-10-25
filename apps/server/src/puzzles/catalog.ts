@@ -4,6 +4,7 @@
 import { pickPuzzle } from "@sudoku-killer/bank";
 import type { Rng } from "@sudoku-killer/engine";
 import { DIFFICULTIES, type Difficulty, type PublicPuzzle } from "@sudoku-killer/protocol";
+import { Lru } from "../rooms/lru.ts";
 import type { PuzzleRepository } from "./repository.ts";
 import type { PuzzleRecord } from "./types.ts";
 
@@ -42,13 +43,24 @@ export function publicPuzzleOf(record: PuzzleRecord): PublicPuzzle {
   };
 }
 
-export async function createPuzzleCatalog(repository: PuzzleRepository): Promise<PuzzleCatalog> {
+/**
+ * Puzzles que la caché conserva (F11f, `docs/carga.md` §6). Sin tope, cada puzzle jugado quedaba en
+ * memoria para siempre, y con él el contexto del calificador del motor (unos 80 KB por puzzle, en un
+ * `WeakMap`): hasta unos 160 MB con el banco completo. Las partidas en curso conservan su puzzle
+ * aunque salga de aquí, así que basta con cubrir las que empiezan a la vez.
+ */
+export const CATALOG_CACHE_ENTRIES = 64;
+
+export async function createPuzzleCatalog(
+  repository: PuzzleRepository,
+  { cacheEntries = CATALOG_CACHE_ENTRIES }: { readonly cacheEntries?: number } = {},
+): Promise<PuzzleCatalog> {
   const ids = new Map<Difficulty, string[]>();
   for (const difficulty of DIFFICULTIES) ids.set(difficulty, await repository.listIds(difficulty));
   const missing = DIFFICULTIES.filter((d) => (ids.get(d)?.length ?? 0) === 0);
   if (missing.length > 0) throw new EmptyBankError(missing);
 
-  const cache = new Map<string, ServerPuzzle>();
+  const cache = new Lru<string, ServerPuzzle>(cacheEntries);
   const get = async (id: string): Promise<ServerPuzzle> => {
     const cached = cache.get(id);
     if (cached) return cached;

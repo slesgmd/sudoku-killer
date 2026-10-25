@@ -32,7 +32,7 @@ pnpm --filter @sudoku-killer/server load --scenario realistic|stress [--rooms 50
 
 Los dos usan 50 salas × 6 jugadores (300 conexiones), 15 s de calentamiento, 60 s de medición y la semilla 20261025.
 
-## 3. Entorno de la primera medición (2026-10-25)
+## 3. Entorno de las mediciones (2026-10-25)
 
 - Contenedor Linux con 4 CPU y 16 GB de memoria; **los clientes corren en la misma máquina que el servidor** y compiten con él y con PostgreSQL por la CPU.
 - **PostgreSQL 16.15**, no 18: la red de esta máquina bloquea el repositorio de PGDG, así que se usó la versión del sistema (Ubuntu 24.04), como decidió el usuario. Rol `sudoku_load` sin privilegios, base `sudoku_load` en 127.0.0.1, configuración por defecto, banco completo (2000 puzzles, 500 vigentes por dificultad). El workflow usa PostgreSQL 18.
@@ -60,8 +60,38 @@ Los dos usan 50 salas × 6 jugadores (300 conexiones), 15 s de calentamiento, 60
 - El piso de unos 13 ms del p50 es la espera del group commit (`COMMIT_DELAY_MS` = 10 ms, `apps/server/src/match/sink.ts`) más la escritura en PostgreSQL: el evento se confirma antes de responder.
 - El generador no infló la latencia de forma apreciable: su retraso p95 (unos 11 ms) está en la resolución del monitor.
 - `match.not_running` y `already_solved` son jugadas que llegaron después del final de la partida o sobre una celda ya resuelta por otro: con 6 personas a 20 comandos por segundo, un tablero medio se resuelve en unos 3 s.
-- **Para revisar en el punto de control:** en estrés, la memoria del servidor subió de 208 a 343 MB durante los 60 s de medición y terminó en su pico, con más de 1 300 partidas empezadas y terminadas. Con esta corrida no se puede distinguir una meseta de una fuga (por ejemplo, lo que la sala conserva de cada partida jugada). No se optimizó nada antes del punto de control.
+- **Para revisar en el punto de control:** en estrés, la memoria del servidor subió de 208 a 343 MB durante los 60 s de medición y terminó en su pico, con más de 1 300 partidas empezadas y terminadas. Con esta corrida no se puede distinguir una meseta de una fuga (por ejemplo, lo que la sala conserva de cada partida jugada). No se optimizó nada antes del punto de control. Se investigó en F11f (sección 6).
+
+Todas las mediciones de este documento usaron **Node 22.22 y PostgreSQL 16.15** (sección 3).
+
+### Ritmo real del estrés y cuello de botella
+
+- **Ritmo real por jugador** (medido en los clientes, estrés de 5 min): 12,5 comandos por segundo (4,0 `cell.place`, 4,3 `note.add` y 4,3 `note.remove`), más 12,5 `presence.select` y 0,2 `sys.ping` por segundo. No llega a los 20 comandos por segundo del límite porque, con 6 personas a ese ritmo, un tablero medio se resuelve en unos 3 s y cada partida tiene después alrededor de 1 s sin jugadas (vuelta al lobby y partida nueva). Por instancia: unos 3 750 comandos y 3 750 mensajes de presencia por segundo, y unos 19 partidas nuevas por segundo.
+- **CPU de cada proceso:** el servidor usó de media entre el 75 % y el 97 % de un núcleo, con picos de entre el 111 % y el 129 % (el hilo principal de Node más la recolección de basura y los hilos de E/S). El generador de clientes usó entre el 42 % y el 45 % de un núcleo, y su bucle de eventos se retrasó como mucho unos 11 ms en el p95. **El cuello de botella fue el servidor** (su hilo principal, cerca de un núcleo entero), no el cliente. La CPU de PostgreSQL no se midió por separado. En el escenario realista, el servidor usó un 11 % de un núcleo y el generador, un 5 %.
+
+### Limitación de E-17 (saturación)
+
+Ninguna medición llegó a la saturación: no hubo cierres 1013. La prueba de caos de F11c provoca E-17 **forzando el valor de bytes encolados** (`bufferedAmount`) de la conexión: el servidor toma su camino real (descarta la presencia, cierra con 1013 y el cliente se reconecta), pero **no se prueba un búfer lleno en una red real**. En una conexión local, los búferes del sistema operativo absorben varios MB antes de que `bufferedAmount` suba, y llegar a 1 MiB con los límites de velocidad llevaría minutos. Queda para observar en F12, con clientes reales sobre redes lentas.
 
 ## 5. Estado
 
-Primera medición hecha; **punto de control del usuario pendiente** antes de cualquier optimización (F11f).
+Primera medición hecha y revisada en el punto de control del usuario. F11f (sección 6): se encontró y se corrigió la memoria que retenía la caché del catálogo de puzzles; no hizo falta otra optimización.
+
+## 6. Memoria en estrés de 5 minutos (F11f)
+
+Método (`--memory`): el servidor corre con `--expose-gc` y el inspector de Node; el script lee `process.memoryUsage()` del servidor por el inspector. Primero mide el heap base (tras una recolección, sin salas); durante 5 min de estrés, el RSS y el heap cada 10 s; después cierra todos los clientes, espera 130 s (las salas sin nadie se borran a los 120 s, R-14; se comprobó que no quedaba ninguna partida sin terminar en la base), fuerza la recolección y vuelve a medir el heap. Con `--heap-snapshots`, guarda una instantánea del heap al empezar y otra al final.
+
+| | Antes de la corrección | Después de la corrección |
+|---|---|---|
+| Partidas jugadas en los 5 min | 5 737 | 5 606 |
+| Heap durante la medición (cada 10 s) | entre 75 y 102 MB, sin tendencia | entre 70 y 87 MB, sin tendencia |
+| RSS durante la medición | de 214 a 260 MB, plano desde los 160 s | de 215 a 241 MB, casi plano desde los 60 s |
+| Heap base, sin salas | 18,8 MB | 18,8 MB |
+| **Heap tras borrar las salas y recolectar** | **52,2 MB** | **21,7 MB** |
+| RSS al final / sin salas | 189 / 166 MB | 174 / 166 MB |
+
+**Diagnóstico.** El heap no crecía de forma lineal, pero tras borrar las salas quedaba claramente por encima de la base. Una corrida de 2 min (2 351 partidas) dejó el mismo exceso que la de 5 min (53,2 MB): lo retenido no dependía de la cantidad de partidas. La diferencia entre las instantáneas mostró unas 500 estructuras de puzzle (502 `Uint8Array`, 498 cadenas `medium` y unos 180 000 arreglos): los 500 puzzles medios del banco. La causa: el catálogo (`apps/server/src/puzzles/catalog.ts`) guardaba en un `Map` sin tope cada puzzle jugado, y mientras el puzzle vive, el `WeakMap` del calificador del motor (`packages/engine/src/grader/context.ts`) conserva su contexto, de unos 70–80 KB. No era una fuga por partida, pero la memoria crecía con los puzzles distintos jugados, hasta unos 160 MB con el banco completo (2 000 puzzles).
+
+**Corrección.** La caché del catálogo es ahora una LRU de 64 puzzles (`CATALOG_CACHE_ENTRIES`). Las partidas en curso conservan su puzzle aunque salga de la caché, y lo que sale se vuelve a leer de la base al empezar otra partida o al reconstruir. Prueba: `apps/server/test/catalog.test.ts`, que falla sin la corrección (el puzzle menos usado nunca se volvía a leer).
+
+**Latencia después de la corrección** (corridas normales de 60 s, como las de la sección 4): estrés, p95 de 49,3 ms (p99 de 85,8 ms y máximo de 144,1 ms; antes, 74,2 ms) y pico de RSS de 295 MB (antes, 343 MB); realista, p95 de 15,2 ms (antes, 15,3 ms). En las corridas de 5 min con el inspector conectado, el p95 de estrés fue de 39,9 ms antes y de 102,3 ms después, con la CPU media del servidor en el 83 % y el 97 %. Entre corridas, la latencia de estrés de esta máquina varía más que esa diferencia, y con 64 puzzles en caché cada partida nueva puede recalcular el contexto del calificador: en estrés empiezan unas 19 por segundo, y en un uso real, muy pocas. Se vuelve a medir en F12, en el hosting.
