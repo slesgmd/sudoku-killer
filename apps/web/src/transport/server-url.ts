@@ -39,16 +39,19 @@ export function serverUrl(
 }
 
 /**
- * El `/healthz` que la página pide al abrirse para que el servidor dormido empiece a despertar
- * (F12g), o `null` si el servidor está en el mismo origen (desarrollo y E2E).
+ * Lo que la página pide al abrirse para que el servidor dormido empiece a despertar (F12g), o `null`
+ * si el servidor está en el mismo origen (desarrollo y E2E). Es `GET /ws` (T-39.9), no `/healthz`:
+ * la regla `||onrender.com/health` de EasyPrivacy, que Brave aplica a las peticiones a otro sitio,
+ * bloquea `/healthz` (F12j). `/healthz` queda para el chequeo de Render y la prueba de humo.
  */
 export function prewarmUrl(configured: string | undefined): string | null {
   const url = checkServerUrl(configured);
-  return url === null ? null : healthUrl(url);
+  return url === null ? null : probeUrl(url);
 }
 
-/** El chequeo de salud del mismo servidor: `https://<host>/healthz` (o `http` sin TLS). */
-export function healthUrl(wsUrl: string): string {
+/** `GET /ws` por HTTP en el mismo servidor: `https://<host>/ws` (o `http` sin TLS). */
+export function probeUrl(wsUrl: string): string {
   const url = new URL(wsUrl);
-  return `${url.protocol === "wss:" ? "https:" : "http:"}//${url.host}/healthz`;
+  url.protocol = url.protocol === "wss:" ? "https:" : "http:";
+  return url.href;
 }

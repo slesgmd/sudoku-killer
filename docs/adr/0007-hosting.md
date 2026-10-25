@@ -39,7 +39,7 @@ Fuentes consultadas el 2026-10-25 (resultados de búsqueda sobre las páginas of
 - **Aiven:** trae respaldos, pero no se confirmaron sus regiones ni cuánto tiempo sin uso tolera. Queda como alternativa si Neon falla.
 
 ## Consecuencias
-- **Primera conexión del día:** el servidor tarda alrededor de un minuto en despertar. La web lo precalienta al abrirse (`/healthz`) y muestra el aviso con reintento (F12g). Un reinicio del proveedor reconstruye las partidas (ADR 0003).
+- **Primera conexión del día:** el servidor tarda alrededor de un minuto en despertar. La web lo precalienta al abrirse (`GET /ws`; `/healthz`, que Brave bloquea por una regla de EasyPrivacy, queda para el chequeo de Render y el humo) y muestra el aviso con reintento (F12g). Un reinicio del proveedor reconstruye las partidas (ADR 0003).
 - **CPU:** 0,1 CPU no permite repetir el estrés de 50 salas; la carga en el hosting se adapta a 1, 3 y 5 salas (F12k).
 - **Neon y los 90 días sin uso.** La página de regiones de Neon dice que los proyectos del plan gratuito con 90 días o más sin uso pueden borrarse desde el 2026-10-05. La nota aparece junto a las regiones de Azure retiradas, y no queda claro si alcanza a las de AWS; se toma como si aplicara. Neon no define «uso»; lo más cercano es la última actividad del cómputo de cada rama (página de ramas), que se enciende con cualquier conexión de un cliente. Por eso:
   - **El respaldo semanal cuenta como uso:** se conecta a la base y lee todas las tablas, lo que enciende el cómputo, como una partida.

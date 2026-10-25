@@ -1,7 +1,7 @@
 // URL del servidor de salas en producción (F12b, ADR 0007): solo `wss://…/ws`; sin configurar, el
-// mismo origen; el chequeo de salud en el mismo host.
+// mismo origen; el precalentamiento con `GET /ws` en el mismo host.
 import { describe, expect, it } from "vitest";
-import { checkServerUrl, healthUrl, prewarmUrl, serverUrl } from "../src/transport/server-url.ts";
+import { checkServerUrl, prewarmUrl, probeUrl, serverUrl } from "../src/transport/server-url.ts";
 
 const page = { protocol: "https:", host: "sk-web.example" };
 
@@ -24,13 +24,26 @@ describe("F12 server URL", () => {
     expect(() => checkServerUrl("no es una url")).toThrow(/válida/);
   });
 
-  it("derives the health check from the WebSocket URL", () => {
-    expect(healthUrl("wss://sk-ws.example/ws")).toBe("https://sk-ws.example/healthz");
-    expect(healthUrl("ws://127.0.0.1:8080/ws")).toBe("http://127.0.0.1:8080/healthz");
+  it("derives GET /ws over HTTP from the WebSocket URL", () => {
+    expect(probeUrl("wss://sk-ws.example/ws")).toBe("https://sk-ws.example/ws");
+    expect(probeUrl("ws://127.0.0.1:8080/ws")).toBe("http://127.0.0.1:8080/ws");
   });
 
-  it("F12g prewarms the configured server only", () => {
-    expect(prewarmUrl("wss://sk-ws.example/ws")).toBe("https://sk-ws.example/healthz");
+  it("F12g prewarms the configured server only, with GET /ws", () => {
+    expect(prewarmUrl("wss://sk-ws.example/ws")).toBe("https://sk-ws.example/ws");
     expect(prewarmUrl(undefined)).toBeNull();
+  });
+
+  it("F12g the prewarm is not caught by the EasyPrivacy rule that Brave applies (||onrender.com/health)", () => {
+    // La regla bloquea cualquier subdominio de onrender.com con una ruta que empieza por /health.
+    const blocked = (href: string) => {
+      const url = new URL(href);
+      return /(^|\.)onrender\.com$/.test(url.hostname) && url.pathname.startsWith("/health");
+    };
+    const warm = prewarmUrl("wss://sudoku-killer-lima-ws.onrender.com/ws");
+    expect(warm).toBe("https://sudoku-killer-lima-ws.onrender.com/ws");
+    expect(blocked(warm ?? "")).toBe(false);
+    // Verificación negativa: el precalentamiento anterior, `/healthz`, sí cae en la regla.
+    expect(blocked("https://sudoku-killer-lima-ws.onrender.com/healthz")).toBe(true);
   });
 });
