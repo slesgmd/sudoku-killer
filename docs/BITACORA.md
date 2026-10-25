@@ -792,3 +792,18 @@ Al aprobar, agregó:
 **Tiempo real:** de 09:42 a 09:52 (UTC−5), unas 0,2 h, con la carga del banco en paralelo.
 
 **Siguiente:** punto de control del usuario con el informe de carga.
+
+## 2026-10-25 — Punto de control de F11e y F11f: memoria en estrés
+
+**Punto de control del usuario:** revisó la primera medición de carga y pidió estudiar la memoria con un estrés de 5 min antes de optimizar nada, y completar `docs/carga.md` con el ritmo real del estrés, el cuello de botella, la limitación de E-17 y las versiones de Node y PostgreSQL.
+
+**Hecho:**
+- `load.ts` ganó `--memory`: el servidor corre con `--expose-gc` y el inspector de Node, y el script lee `process.memoryUsage()` por el protocolo del inspector (heap base, RSS y heap cada 10 s, y el heap tras cerrar los clientes, esperar 130 s a que se borren las salas y recolectar). `--heap-snapshots` guarda una instantánea al empezar y otra al final. Además, el informe suma la CPU del generador y el ritmo real por jugador y por tipo de mensaje.
+- **Estrés de 5 min:** el heap no crece de forma lineal (de 75 a 102 MB, sin tendencia) y el RSS se aplana en 260 MB. Pero, tras borrar las salas y recolectar, el heap quedó en 52,2 MB frente a 18,8 MB de base. Una corrida de 2 min (2 351 partidas) dejó el mismo exceso (53,2 MB) que la de 5 min (5 737): no depende de las partidas.
+- **Causa** (diferencia entre instantáneas): unos 500 puzzles retenidos, los medios del banco. El catálogo los guardaba en un `Map` sin tope, y el `WeakMap` del calificador del motor conservaba con ellos su contexto (unos 70–80 KB por puzzle): hasta unos 160 MB con el banco completo.
+- **Corrección:** la caché del catálogo es una LRU de 64 puzzles (`CATALOG_CACHE_ENTRIES`). Prueba `catalog.test.ts`; **verificación negativa:** sin la corrección falla («expected [ …(3) ] to deeply equal [ …(4) ]»: el puzzle menos usado nunca se volvía a leer).
+- **Medición repetida:** el heap tras recolectar queda en 21,7 MB (base, 18,8) y el RSS se aplana en 241 MB. Corridas normales de 60 s: estrés con p95 de 49,3 ms (antes, 74,2 ms) y pico de RSS de 295 MB (antes, 343 MB); realista, 15,2 ms. La corrida de 5 min con el inspector dio 102,3 ms en estrés (antes, 39,9 ms): la variación entre corridas de esta máquina es mayor, y queda anotada para medir en F12.
+- `docs/carga.md`: el ritmo real del estrés (12,5 comandos y 12,5 presencias por segundo por jugador: los tableros se resuelven en unos 3 s y cada partida tiene 1 s sin jugadas), el cuello de botella (el servidor, cerca de un núcleo; el generador, entre el 42 % y el 45 %), la limitación de E-17 (se fuerza el valor de bytes encolados; no se prueba un búfer lleno en una red real), las versiones (Node 22.22 y PostgreSQL 16.15) y la sección 6 con la memoria.
+- PostgreSQL estaba detenido al retomar (el contenedor se reinició): se volvió a levantar; la base y el banco seguían ahí.
+
+**Tiempo real:** de 09:59 a 10:20 (UTC−5), unas 0,35 h, con las corridas de carga en segundo plano mientras avanzaban F11g y F11h.
