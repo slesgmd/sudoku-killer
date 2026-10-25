@@ -1,0 +1,51 @@
+name: Respaldo de la base
+
+# Respaldo de la base de producción (F12i, ADR 0007), cada domingo y a mano. Vuelca la base de Neon,
+# lo restaura en un PostgreSQL efímero del runner, lo comprueba (recuentos y arranque del servidor con
+# la reconstrucción de las partidas) y sube solo el volcado cifrado con `age` (artefacto `db-backup`,
+# 90 días): el repositorio es público, y con él los logs y los artefactos. Cada paso corre con
+# `scripts/ci/quiet.ts`, que solo publica recuentos (docs/seguridad.md §3; tests/workflow-logs.test.ts).
+# Conectarse y leer la base cuenta como uso para Neon, que puede borrar proyectos con 90 días sin uso.
+
+on:
+  schedule:
+    - cron: "17 8 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: node scripts/ci/quiet.ts -- pnpm install --frozen-lockfile
+      - name: PostgreSQL 18, age and unzip
+        run: node scripts/ci/quiet.ts -- bash scripts/ci/install-postgres.sh
+      - name: Throwaway PostgreSQL for the restore
+        run: node scripts/ci/quiet.ts -- bash scripts/ci/pg-local.sh
+      - name: Dump, restore, check and encrypt
+        run: node scripts/ci/quiet.ts -- pnpm --filter @sudoku-killer/server backup
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+          BACKUP_OUT: ${{ runner.temp }}/sudoku-killer.dump.age
+          RESTORE_DATABASE_URL: postgres://postgres@127.0.0.1:54329/postgres
+          PG_BIN: /usr/lib/postgresql/18/bin
+      - uses: actions/upload-artifact@v5
+        with:
+          name: db-backup
+          path: ${{ runner.temp }}/sudoku-killer.dump.age
+          retention-days: 90
+          if-no-files-found: error

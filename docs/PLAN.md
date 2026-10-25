@@ -757,8 +757,8 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | F12f | Migraciones destructivas bloqueadas en producción salvo `MIGRATIONS_ALLOW` · verificación negativa | Hecha |
 | F12g | Despertar: precalentamiento, aviso y reintento · E2E con el servidor apagado al abrir | Hecha |
 | F12h | Logs y métricas cada 60 s, sin datos de las personas · prueba I | Hecha |
-| F12i | Respaldos cifrados (`backup.yml`), simulacro de restauración (`restore-drill.yml`) y `db-admin.yml` · pruebas de los scripts y de la guarda | Pendiente |
-| F12j | Primer despliegue (usuario) y `db-admin` · el servidor arranca con el banco | Pendiente |
+| F12i | Respaldos cifrados (`backup.yml`), simulacro de restauración (`restore-drill.yml`) y `db-admin.yml` · pruebas de los scripts y de la guarda | Hecha |
+| F12j | Primer despliegue (usuario, `docs/despliegue.md`) y `db-admin` · el servidor arranca con el banco; `smoke`, `backup` y `restore-drill` en verde; nombres y `TRUST_PROXY_HOPS` confirmados | Pendiente |
 | F12k | Carga en el hosting (1, 3 y 5 salas) · p95 < 150 ms desde Actions | Pendiente |
 | F12l | Partida real entre iPad, iPhone y PC | Pendiente |
 | F12m | Cierre y comparación de horas | Pendiente |

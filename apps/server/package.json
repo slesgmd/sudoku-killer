@@ -22,7 +22,10 @@
     "demo": "node --conditions=@sudoku-killer/source --env-file-if-exists=.env scripts/demo-match.ts",
     "load": "node --conditions=@sudoku-killer/source --env-file-if-exists=.env scripts/load/load.ts",
     "smoke": "node --conditions=@sudoku-killer/source scripts/smoke.ts",
-    "access:key": "node --conditions=@sudoku-killer/source scripts/access-key.ts"
+    "access:key": "node --conditions=@sudoku-killer/source scripts/access-key.ts",
+    "backup": "node --conditions=@sudoku-killer/source scripts/backup.ts",
+    "backup:restore-drill": "node --conditions=@sudoku-killer/source scripts/restore-drill.ts",
+    "db:admin": "node --conditions=@sudoku-killer/source scripts/db-admin.ts"
   },
   "dependencies": {
     "@sudoku-killer/bank": "workspace:*",

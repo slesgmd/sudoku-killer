@@ -93,7 +93,9 @@ export function violations(workflow: Workflow, text: string): string[] {
 describe("F12 public Actions logs (docs/seguridad.md §3)", () => {
   it("every workflow added since F12 follows the rules", () => {
     const checked = workflows().filter(([file]) => !BEFORE_F12.has(file));
-    expect(checked.map(([file]) => file)).toContain("smoke.yml");
+    expect(checked.map(([file]) => file)).toEqual(
+      expect.arrayContaining(["smoke.yml", "backup.yml", "restore-drill.yml", "db-admin.yml"]),
+    );
     for (const [file, workflow, text] of checked) {
       expect(violations(workflow, text), file).toEqual([]);
     }
