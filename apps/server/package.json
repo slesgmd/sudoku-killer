@@ -2,6 +2,7 @@
   "name": "@sudoku-killer/server",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "node --conditions=@sudoku-killer/source --env-file-if-exists=.env --watch src/index.ts",
