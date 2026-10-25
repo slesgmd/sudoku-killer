@@ -77,6 +77,9 @@ export const es = {
     "Te la pasan junto con el enlace de invitación. Da igual si la escribes en mayúsculas o minúsculas.",
   "access.invalid": "La clave tiene entre 12 y 64 caracteres, sin contar espacios ni guiones.",
   "access.submit": "Continuar",
+  "access.checking": "Comprobando la clave…",
+  "access.wrong": "Esa clave no vale. Revisa que esté completa o pide la vigente al grupo.",
+  "access.unreachable": "No se pudo comprobar la clave. Revisa tu conexión y vuelve a intentarlo.",
   "access.lockedTitle": "Demasiados intentos.",
   "access.lockedText":
     "Desde esta red se probaron demasiadas claves que no valen. Espera unos minutos (hasta 10) y vuelve a intentarlo; la clave guardada se conserva.",

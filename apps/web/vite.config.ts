@@ -14,13 +14,15 @@ export const devAliases = {
 };
 
 /**
- * El WebSocket del juego (`/ws`) se reenvía al servidor de salas, que sigue escuchando solo en
- * 127.0.0.1 (F10). El `Origin` del navegador llega tal cual: el servidor lo compara con su lista de
- * orígenes permitidos (con `pnpm dev:lan`, también las IP de la red local). `SK_WS_TARGET` cambia el
- * destino (las pruebas E2E usan otro puerto).
+ * El WebSocket del juego (`/ws`) y la comprobación de la clave (`/access`, T-39.12) se reenvían al
+ * servidor de salas, que sigue escuchando solo en 127.0.0.1 (F10). El `Origin` del navegador llega
+ * tal cual: el servidor lo compara con su lista de orígenes permitidos (con `pnpm dev:lan`, también
+ * las IP de la red local). `SK_WS_TARGET` cambia el destino (las pruebas E2E usan otro puerto).
  */
+const wsTarget = process.env["SK_WS_TARGET"] ?? "ws://127.0.0.1:8080";
 const wsProxy = {
-  "/ws": { target: process.env["SK_WS_TARGET"] ?? "ws://127.0.0.1:8080", ws: true },
+  "/ws": { target: wsTarget, ws: true },
+  "/access": { target: wsTarget.replace(/^ws/, "http") },
 };
 
 /** Escribe la lista de módulos de cada chunk del build para `check-dist` (T-31.2). */

@@ -8,7 +8,7 @@ import { accessProtocols } from "@sudoku-killer/protocol";
 import { browserSession } from "../game/session.ts";
 import type { Transport } from "./types.ts";
 import { serverUrl } from "./server-url.ts";
-import { createWsTransport, httpProbe } from "./ws.ts";
+import { createWsTransport, httpAccess, httpProbe } from "./ws.ts";
 
 export type { Transport, TransportStatus } from "./types.ts";
 
@@ -18,6 +18,9 @@ export function createServerTransport(): Transport {
     url,
     // La clave del grupo (R-39) se lee en cada intento: una recién escrita vale en el siguiente.
     protocols: () => accessProtocols(browserSession.accessKey()),
+    // Y antes de cada intento se comprueba por HTTP (T-39.13): el proxy de Render pierde el 4003.
+    access: httpAccess(url),
+    accessKey: () => browserSession.accessKey(),
     // Un handshake rechazado (429 o 403) no se confunde con el servidor dormido (T-39.10).
     probe: httpProbe(url),
     ...(import.meta.env.DEV

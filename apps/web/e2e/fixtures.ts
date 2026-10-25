@@ -1,13 +1,20 @@
 // Fixtures de E2E: el servidor de salas real (PGlite con el banco de pruebas, reloj del sistema) en
 // cada worker, y el inspector de filtración (SPEC §8.3) sobre el tráfico WS que captura Playwright:
 // cada mensaje que recibe cada página se revisa, y la prueba falla si hay alguna violación (T-31.1).
+// El servidor escucha detrás de un proxy TCP de prueba en `E2E_WS_PORT`, que no pierde nada salvo
+// que una prueba lo pida (`loseServerClose`: el cierre se pierde, como en el proxy de Render, T-39.16).
 import { test as base, expect, type BrowserContext, type Page } from "@playwright/test";
 import { createNormalMode, type MatchEvent } from "@sudoku-killer/game";
 import type { ServerEnvelope } from "@sudoku-killer/protocol";
 import { PARAMS_V1 } from "@sudoku-killer/scoring";
 import { systemClock } from "../../server/src/infra/clock.ts";
 import { systemIds, systemRandom } from "../../server/src/infra/random.ts";
-import { AccessGate, hashAccessKey } from "../../server/src/infra/access.ts";
+import {
+  ACCESS_FAILURE_WINDOW_MS,
+  AccessGate,
+  hashAccessKey,
+} from "../../server/src/infra/access.ts";
+import type { Clock } from "../../server/src/infra/clock.ts";
 import type { Link, LinkHandlers, Transport } from "../../server/src/infra/transport.ts";
 import { WsTransport } from "../../server/src/infra/ws-transport.ts";
 import { silentLogger } from "../../server/src/log/logger.ts";
@@ -15,8 +22,12 @@ import { createMatchRepository } from "../../server/src/match/repository.ts";
 import { EventWriter } from "../../server/src/match/sink.ts";
 import { RoomServer } from "../../server/src/rooms/server.ts";
 import { LeakInspector } from "../../server/test/helpers/inspector.ts";
+import { lossyProxy, type LossyProxy } from "../../server/test/helpers/lossy-proxy.ts";
 import { FaultyRepository, testBank } from "../../server/test/helpers/server.ts";
 import { E2E_ORIGIN, E2E_WS_PORT } from "../playwright.config.ts";
+
+/** El puerto del servidor de salas, detrás del proxy de prueba que escucha en `E2E_WS_PORT`. */
+const E2E_SERVER_PORT = E2E_WS_PORT + 1;
 
 export interface GameServer {
   /** El servidor vivo (otro tras `restart`). */
@@ -45,6 +56,13 @@ export interface GameServer {
   events(matchId: string): Promise<MatchEvent[]>;
   /** Pide (o deja de pedir, con `null`) la clave de acceso del grupo en el handshake (R-39). */
   requireAccessKey(key: string | null): void;
+  /**
+   * El proxy delante del servidor pierde (o deja de perder) el cierre del servidor en las
+   * conexiones nuevas: el 4003 no llega nunca, como detrás del proxy de Render (T-39.16).
+   */
+  loseServerClose(lose: boolean): void;
+  /** Olvida las claves que no valieron y las esperas por IP (pasa la ventana de `AccessGate`). */
+  forgetAccessFailures(): void;
   /** El servidor «se duerme» (F12g): deja de escuchar en su puerto hasta `wake`. */
   sleep(): Promise<void>;
   /** Vuelve a arrancar sobre la misma base y el mismo puerto (si estaba dormido). */
@@ -138,9 +156,20 @@ async function startGameServer(): Promise<GameServer> {
   await client.query("TRUNCATE match_events, matches");
   const repository = new FaultyRepository(createMatchRepository(db));
   let live: { server: RoomServer; transport: TappedTransport; sink: EventWriter } | null = null;
-  // Sin clave salvo en las pruebas de R-39; sobrevive a los reinicios.
-  const access = new AccessGate({ hash: null, clock: systemClock });
+  // Sin clave salvo en las pruebas de R-39; sobrevive a los reinicios. Su reloj se adelanta para
+  // olvidar las esperas por IP (en las E2E, todas las páginas llegan desde 127.0.0.1).
+  let skew = 0;
+  const accessClock: Clock = { ...systemClock, now: () => systemClock.now() + skew };
+  const access = new AccessGate({ hash: null, clock: accessClock });
   let asleep = false;
+  let losing = false;
+  let proxy: LossyProxy | null = null;
+  const openProxy = async () => {
+    proxy = await lossyProxy(E2E_SERVER_PORT, {
+      port: E2E_WS_PORT,
+      mode: losing ? "close" : "pass",
+    });
+  };
   const current = () => {
     if (!live) throw new Error("No server");
     return live;
@@ -150,7 +179,7 @@ async function startGameServer(): Promise<GameServer> {
     const transport = new TappedTransport(
       new WsTransport({
         host: "127.0.0.1",
-        port: E2E_WS_PORT,
+        port: E2E_SERVER_PORT,
         allowedOrigins: [E2E_ORIGIN],
         clock: systemClock,
         logger: silentLogger,
@@ -173,6 +202,7 @@ async function startGameServer(): Promise<GameServer> {
     return server.start();
   };
   await boot();
+  await openProxy();
   const newInspector = () =>
     new LeakInspector({
       solutions: () => solutions,
@@ -215,20 +245,34 @@ async function startGameServer(): Promise<GameServer> {
     requireAccessKey(key) {
       access.hash = key === null ? null : hashAccessKey(key);
     },
+    loseServerClose(lose) {
+      losing = lose;
+      if (proxy) proxy.mode = lose ? "close" : "pass";
+    },
+    forgetAccessFailures() {
+      skew += ACCESS_FAILURE_WINDOW_MS;
+    },
     async sleep() {
       if (asleep) return;
       const old = current();
       for (const room of [...old.server.rooms.values()]) room.deleted = true;
       await old.sink.drain();
       await old.transport.stop(1001, "sleeping");
+      // Nadie escucha en el puerto, como un servidor dormido.
+      await proxy?.close();
+      proxy = null;
       asleep = true;
     },
     async wake() {
       if (!asleep) return;
       asleep = false;
       await boot();
+      await openProxy();
     },
-    stop: () => current().transport.stop(1001, "e2e over"),
+    async stop() {
+      await proxy?.close();
+      await current().transport.stop(1001, "e2e over");
+    },
   };
 }
 
