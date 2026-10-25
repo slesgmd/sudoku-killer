@@ -1,13 +1,19 @@
 // Clave de acceso del grupo en el servidor (F12, `docs/seguridad.md` S-02, SPEC R-39). El servidor
 // guarda solo el hash (`ACCESS_KEY_HASH`, SHA-256 con un prefijo de dominio) y compara en tiempo
 // constante. Tras `MAX_ACCESS_FAILURES` claves que no valen desde una IP en `ACCESS_FAILURE_WINDOW_MS`,
-// esa IP recibe 429 en el handshake hasta que pase la ventana.
+// esa IP recibe 429 en el handshake y en `POST /access` hasta que pase la ventana. Los dos caminos
+// comparten los fallos, la espera y las métricas (T-39.12).
 // - Solo cuenta una clave ofrecida que no vale: un navegador que todavía no tiene clave no la está
-//   adivinando, recibe 4003 siempre y nunca queda bloqueado (T-39.7).
+//   adivinando, recibe 401 o 4003 siempre y nunca queda bloqueado (T-39.7).
 // - Sin dirección conocida (`null`, T-39.8), los fallos no se cuentan: si se contaran juntos, unos
 //   pocos bloquearían a todos.
 import { createHash, timingSafeEqual } from "node:crypto";
-import { KEY_PROTOCOL_PREFIX, keyFromProtocols, normalizeAccessKey } from "@sudoku-killer/protocol";
+import {
+  KEY_PROTOCOL_PREFIX,
+  decodeAccessKey,
+  keyFromProtocols,
+  normalizeAccessKey,
+} from "@sudoku-killer/protocol";
 import type { Clock } from "./clock.ts";
 
 export const MAX_ACCESS_FAILURES = 10;
@@ -81,13 +87,27 @@ export class AccessGate {
    * otra o una mal formada (`denied`, que cuenta un fallo para la IP).
    */
   admit(protocols: readonly string[], ip: string | null): AccessResult {
+    return this.verify(offersKey(protocols), () => keyFromProtocols(protocols), ip);
+  }
+
+  /** Lo mismo para la cabecera de `POST /access` (T-39.12): ausente o vacía es `missing`. */
+  check(header: string | undefined, ip: string | null): AccessResult {
+    const offered = header !== undefined && header.trim() !== "";
+    return this.verify(
+      offered,
+      () => (header === undefined ? null : decodeAccessKey(header.trim())),
+      ip,
+    );
+  }
+
+  private verify(offered: boolean, key: () => string | null, ip: string | null): AccessResult {
     if (this.hash === null) return "admitted";
-    if (!offersKey(protocols)) {
+    if (!offered) {
       this.missing++;
       return "missing";
     }
-    const key = keyFromProtocols(protocols);
-    if (key !== null && sameHash(hashAccessKey(key), this.hash)) return "admitted";
+    const found = key();
+    if (found !== null && sameHash(hashAccessKey(found), this.hash)) return "admitted";
     this.denied++;
     if (ip !== null) this.fail(ip);
     return "denied";
