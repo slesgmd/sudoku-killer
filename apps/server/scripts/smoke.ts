@@ -1,8 +1,9 @@
 // Prueba de humo del despliegue (F12b): se corre desde Actions (`smoke.yml`) contra la web y el
 // servidor publicados. Solo imprime `smoke.<prueba>: ok|fail` (docs/seguridad.md §3); nunca el
 // contenido de una respuesta. Variables: SMOKE_WEB_URL (https://…) y SMOKE_SERVER_URL (wss://…/ws).
+import { ACCESS_PROTOCOL, CLOSE_ACCESS_DENIED } from "@sudoku-killer/protocol";
 import WebSocket from "ws";
-import { securityHeaders } from "../../web/scripts/security-headers.ts";
+import { securityHeaders, type SecurityHeader } from "../../web/scripts/security-headers.ts";
 import { isMain } from "./is-main.ts";
 
 const WAKE_MS = 120_000;
@@ -13,7 +14,11 @@ function env(name: string): string {
   return value;
 }
 
-/** Abre un WebSocket y dice cómo terminó: abierto, rechazado con un estado HTTP o cerrado. */
+/**
+ * Abre un WebSocket y dice cómo terminó: abierto, rechazado con un estado HTTP o cerrado. Al abrir
+ * envía un `sys.ping`, como el navegador, que envía algo en cuanto abre: sin la clave, el servidor
+ * responde a ese primer mensaje con 4003 (T-39.11).
+ */
 export function tryWebSocket(
   url: string,
   origin: string,
@@ -24,7 +29,8 @@ export function tryWebSocket(
     let opened = false;
     ws.on("open", () => {
       opened = true;
-      // Se espera un momento: un rechazo de acceso llega como cierre justo después de abrir.
+      ws.send(JSON.stringify({ v: 1, id: "smoke-1", type: "sys.ping", payload: { t0: 0 } }));
+      // Se espera un momento: un rechazo de acceso llega como cierre justo después.
       setTimeout(() => {
         ws.close(1000);
       }, 1_000);
@@ -41,6 +47,33 @@ export function tryWebSocket(
     });
   });
 }
+
+/** El `max-age` de una cabecera `Strict-Transport-Security`, o `null` si no lo tiene. */
+function hstsMaxAge(value: string): number | null {
+  const match = /(?:^|;)\s*max-age=(\d+)\s*(?:;|$)/i.exec(value);
+  return match?.[1] === undefined ? null : Number(match[1]);
+}
+
+/**
+ * Si cada cabecera de seguridad llegó como se espera: igual, salvo `Strict-Transport-Security`, que
+ * puede ser más estricta. En `onrender.com`, Render la reemplaza por la suya (diez años, con
+ * `includeSubDomains` y `preload`, el dominio está en la lista de precarga de los navegadores).
+ */
+export function checkSecurityHeaders(
+  expected: readonly SecurityHeader[],
+  actual: { get(name: string): string | null },
+): [string, boolean][] {
+  return expected.map(({ name, value }) => {
+    const got = actual.get(name);
+    if (name.toLowerCase() !== "strict-transport-security") return [name, got === value];
+    const want = hstsMaxAge(value);
+    const have = got === null ? null : hstsMaxAge(got);
+    return [name, want !== null && have !== null && have >= want];
+  });
+}
+
+/** `Content-Security-Policy` → `content_security_policy` (el nombre de la línea del log). */
+const lineName = (header: string) => header.toLowerCase().replace(/-/g, "_");
 
 async function waitForHealth(url: string): Promise<boolean> {
   const deadline = Date.now() + WAKE_MS;
@@ -73,9 +106,11 @@ export async function smoke(): Promise<boolean> {
 
   const page = await fetch(web.href, { redirect: "manual" });
   record("web_status", page.status === 200);
+  const headers = checkSecurityHeaders(securityHeaders(server.href), page.headers);
+  for (const [name, ok] of headers) record(`web_header_${lineName(name)}`, ok);
   record(
     "web_security_headers",
-    securityHeaders(server.href).every(({ name, value }) => page.headers.get(name) === value),
+    headers.every(([, ok]) => ok),
   );
 
   const plain = new URL(web.href);
@@ -91,6 +126,10 @@ export async function smoke(): Promise<boolean> {
   record("ws_foreign_origin_403", foreign.status === 403);
   const allowed = await tryWebSocket(server.href, origin);
   record("ws_allowed_origin_opens", allowed.opened);
+  // Sin clave, el navegador tiene que recibir 4003 para mostrar «Clave del grupo» (T-39.11). Si el
+  // servidor no pide clave, el socket sigue abierto y la prueba lo dice.
+  const keyless = await tryWebSocket(server.href, origin, [ACCESS_PROTOCOL]);
+  record("ws_keyless_4003", keyless.closeCode === CLOSE_ACCESS_DENIED);
 
   return results.every(([, ok]) => ok);
 }
