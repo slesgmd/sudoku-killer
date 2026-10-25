@@ -1,6 +1,6 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.23
+Versión del plan: 1.24
 Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F5 hecha (2026-10-23) · F6 hecha (2026-10-24) · F7 hecha (2026-10-23) · F8 hecha (2026-10-24) · F9 hecha (2026-10-24) · F10 hecha (2026-10-25) · F11 hecha (2026-10-25)
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
@@ -122,9 +122,9 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 | F9 | Servidor de salas | 3–6 | F3, F5, F6 | Hecha | ~1,9 |
 | F10 | Integración en tiempo real | 5–10 | F8, F9 | Hecha | ~3,1 |
 | F11 | Pruebas integrales, carga y seguridad | 2–4 | F10 | Hecha | ~2,1 |
-| F12 | Despliegue privado | 2–4 | F11 | Pendiente | |
+| F12 | Despliegue privado | 3–5 (antes 2–4) | F11 | En curso | |
 | F13 | Beta cerrada y cierre de la v1 | 10 (+1–2 semanas de calendario) | F12 | Pendiente | |
-| **Total** | | **unas 33–37 h** (18,9 h reales de F0 a F10 más 14–18 h de F11 a F13; la estimación original era de 130–230 h). F10 pasó de 4–8 h a 5–10 h al cerrar F8 (plan 1.18), y F11 de 3–6 h a 2–4 h al cerrar F10 (plan 1.22). | | | |
+| **Total** | | **unas 34–36 h** (21,0 h reales de F0 a F11 más 13–15 h de F12 y F13; la estimación original era de 130–230 h). F10 pasó de 4–8 h a 5–10 h al cerrar F8 (plan 1.18), F11 de 3–6 h a 2–4 h al cerrar F10 (plan 1.22) y F12 de 2–4 h a 3–5 h al aprobar su plan (plan 1.24). | | | |
 
 Equivale a unas **2,5–4,5 semanas** dedicando 15–20 horas por semana, más las 1–2 semanas de calendario de la beta. Si otra persona trabaja F7 en paralelo, el total se reduce en unas 10 h.
 
@@ -721,7 +721,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
   - Para F12: la clave de acceso obligatoria (S-02), el tope por IP detrás del proxy (S-01), las cabeceras del sitio (S-05), los plazos del HTTP (S-06) y la medición de carga en el hosting.
   - Para F13: los apodos con caracteres invisibles (S-03), esbuild en drizzle-kit (S-04), la decisión sobre P con `scoring:report` y la de Dependabot (del usuario).
 
-### F12 — Despliegue privado (2–4 h; original 5–10 h)
+### F12 — Despliegue privado (3–5 h; antes 2–4 h; original 5–10 h)
 **Tareas:**
 - Hosting elegido por ADR.
 - HTTPS y WSS.
@@ -735,6 +735,33 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 **Criterios de aceptación:**
 - Una partida real entre dispositivos distintos funciona.
 - Restaurar un respaldo funciona.
+
+**Al aprobar el plan, el usuario decidió y pidió (2026-10-25):**
+- Hosting (ADR 0007): servidor y web estática en Render (Virginia), base en Neon (AWS us-east-1), 0 USD y subdominios del proveedor. Render despliega desde `main`, solo cuando pasan los checks del commit.
+- F12 sube de 2–4 h a 3–5 h.
+- Clave de acceso (S-02), opción B: una clave compartida que se escribe una vez y queda en el dispositivo, más un enlace de invitación aparte con la clave en `#k=`. El enlace «Compartir» de la sala sigue sin llevar la clave ni la ficha.
+- Servidor dormido, opción a: a los 3 s sin conexión, «Despertando el servidor… puede tardar hasta 1 min»; reintento cada 5 s durante 2 min y después «Reintentar».
+- Neon puede borrar proyectos con 90 días sin uso: el respaldo semanal tiene que contar como uso, documentado en el ADR 0007 y en `docs/seguridad.md` con la fuente y una forma de comprobarlo.
+- Los logs de Actions son públicos: ningún workflow imprime cadenas de conexión, claves, hashes, apodos ni contenido de la base, solo recuentos; cada workflow nuevo lleva esa comprobación.
+- Orden: F12a a F12i (código, `render.yaml` y workflows), con su cierre habitual, y un alto antes del primer despliegue (F12j). F12j a F12m van en una sesión nueva, después de que el usuario despliegue.
+
+**Subtareas** (unas 5,3 h estimadas):
+
+| Subtarea | Contenido · criterio verificable | Estado |
+|---|---|---|
+| F12a | ADR 0007, plan aprobado y registros · el ADR queda en el índice | Hecha |
+| F12b | HTTPS y WSS: `render.yaml`, URL del servidor en el build (solo `wss://`), `/healthz`; workflow `smoke` y guarda de los logs públicos · test de la URL y de la guarda | Pendiente |
+| F12c | Secretos solo en el panel; nunca en el log · prueba con los secretos definidos | Pendiente |
+| F12d | Clave de acceso (S-02): hash en el servidor, espera tras fallos por IP, pantalla de la clave y enlace de invitación; SPEC · pruebas I con verificación negativa y E2E | Pendiente |
+| F12e | S-05 (CSP y cabeceras del sitio), S-06 (plazos del HTTP) y S-01 (tope por IP) · E2E con la CSP del sitio; pruebas de los plazos y del tope | Pendiente |
+| F12f | Migraciones destructivas bloqueadas en producción salvo `MIGRATIONS_ALLOW` · verificación negativa | Pendiente |
+| F12g | Despertar: precalentamiento, aviso y reintento · E2E con el servidor apagado al abrir | Pendiente |
+| F12h | Logs y métricas cada 60 s, sin datos de las personas · prueba I | Pendiente |
+| F12i | Respaldos cifrados (`backup.yml`), simulacro de restauración (`restore-drill.yml`) y `db-admin.yml` · pruebas de los scripts y de la guarda | Pendiente |
+| F12j | Primer despliegue (usuario) y `db-admin` · el servidor arranca con el banco | Pendiente |
+| F12k | Carga en el hosting (1, 3 y 5 salas) · p95 < 150 ms desde Actions | Pendiente |
+| F12l | Partida real entre iPad, iPhone y PC | Pendiente |
+| F12m | Cierre y comparación de horas | Pendiente |
 
 ### F13 — Beta cerrada y cierre de la v1 (10 h, más 1–2 semanas de calendario; original 10–20 h)
 **Tareas:**
@@ -831,3 +858,4 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
   - Comparación de horas al cerrar F10 en la sección 5: de F5 a F10, unas 14,1 h frente a 26–43 h. Propuesta pendiente de aprobación: F11 de 3–6 h a 2–4 h; F12 y F13 sin cambios. La tabla no cambia hasta que se apruebe.
 - **1.22:** recalibración del cierre de F10 aprobada por el usuario (2026-10-25): F11 de 3–6 h a 2–4 h; F12 y F13 sin cambios; total de la v1 en unas 33–37 h. Plan de F11 aprobado, con las subtareas F11a a F11i y sus decisiones (cortes reales en el caos, dos escenarios de carga con PostgreSQL 18, política de los hallazgos de seguridad, `scoring:report` sin cambiar parámetros y T(L) fuera de la v1).
 - **1.23:** F11 hecha (~2,1 h reales frente a 2–4 h). E2E de casos límite y caos con semilla, equivalencia de la reconstrucción, prueba de carga (p95 de 15,3 ms realista y de 49–74 ms en estrés con 50 salas), memoria acotada (caché del catálogo), revisión de seguridad (topes de conexiones y de salas; SPEC 1.9) y `scoring:report`. Comparación de horas al cerrar F11 en la sección 5, sin cambios para F12 y F13. F12 suma lo que F11 le asignó.
+- **1.24:** plan de F12 aprobado por el usuario (2026-10-25), con las subtareas F12a a F12m y sus decisiones (Render y Neon, ADR 0007; clave de acceso con enlace de invitación; aviso al despertar; respaldos cifrados que cuentan como uso de Neon; logs de Actions sin datos). F12 sube de 2–4 h a 3–5 h; total de la v1 en unas 34–36 h.

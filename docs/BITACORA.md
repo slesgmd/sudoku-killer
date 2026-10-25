@@ -842,3 +842,13 @@ Al aprobar, agregó:
 **Tiempo real:** de 10:34 a 10:45 (UTC−5), unas 0,1 h. F11 suma unas 2,1 h.
 
 **Siguiente:** planificar F12 en plan mode.
+
+## 2026-10-25 — F12a: plan de F12 aprobado y ADR 0007
+
+**Hecho:**
+- Comparación de hosting gratuito con fuentes del 2026-10-25 (Render, Koyeb, Fly.io, Cloud Run, Oracle, Neon, Supabase y Aiven). Las páginas de los proveedores no se abren desde la red de la máquina de desarrollo: los datos salen de resultados de búsqueda sobre las páginas oficiales, y lo que solo aparece en terceros queda marcado.
+- ADR 0007: Render (servidor en Virginia y web estática) y Neon (AWS us-east-1), con despliegue desde `main` cuando pasan los checks. Incluye el riesgo de los 90 días sin uso de Neon (la nota está junto a las regiones de Azure retiradas; se toma como si aplicara), por qué el respaldo semanal cuenta como uso, cómo comprobarlo y el riesgo encadenado de los 60 días de GitHub.
+- `docs/seguridad.md`, sección 3 nueva: retención de la base y la regla de los logs públicos de Actions.
+- PLAN 1.24: plan de F12 aprobado (subtareas F12a a F12m, decisiones del usuario) y F12 de 2–4 h a 3–5 h.
+
+**Tiempo real:** planificación de 11:45 a 12:00 y F12a de 12:08 a 12:25 (UTC−5), unas 0,5 h.
