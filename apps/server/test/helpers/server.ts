@@ -230,7 +230,10 @@ export async function createTestServer({ seed = 1 }: TestServerOptions = {}) {
       return match.solution;
     },
     client(): TestClient {
-      return new TestClient(transport.connect(), settle, tokens);
+      // Tras un reinicio, el transporte nuevo vuelve a numerar las conexiones desde 1: la generación
+      // en el `id` evita repetir uno de antes, que la deduplicación (guardada en el registro) daría
+      // por ya aplicado. Los clientes reales usan `id` al azar.
+      return new TestClient(transport.connect(), settle, tokens, generation);
     },
   };
   return harness;
@@ -248,8 +251,16 @@ export class TestClient {
   private readonly tokens: Set<string>;
   private nextId = 1;
 
-  constructor(link: MemoryClient, settle: () => Promise<void>, tokens: Set<string>) {
+  private readonly generation: number;
+
+  constructor(
+    link: MemoryClient,
+    settle: () => Promise<void>,
+    tokens: Set<string>,
+    generation = 1,
+  ) {
     this.link = link;
+    this.generation = generation;
     this.settle = settle;
     this.tokens = tokens;
   }
@@ -286,7 +297,8 @@ export class TestClient {
 
   /** Envía un comando sin esperar. Devuelve su `id`. */
   post<T extends ClientMessageType>(type: T, payload: Payload<T>, id?: string): string {
-    const msgId = id ?? `${String(this.link.id)}-${String(this.nextId++)}`;
+    const prefix = this.generation === 1 ? "" : `g${String(this.generation)}.`;
+    const msgId = id ?? `${prefix}${String(this.link.id)}-${String(this.nextId++)}`;
     this.link.send(JSON.stringify({ v: 1, id: msgId, type, payload }));
     return msgId;
   }
