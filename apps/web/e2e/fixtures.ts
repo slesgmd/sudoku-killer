@@ -3,9 +3,11 @@
 // cada mensaje que recibe cada página se revisa, y la prueba falla si hay alguna violación (T-31.1).
 import { test as base, expect, type BrowserContext, type Page } from "@playwright/test";
 import { createNormalMode } from "@sudoku-killer/game";
+import type { ServerEnvelope } from "@sudoku-killer/protocol";
 import { PARAMS_V1 } from "@sudoku-killer/scoring";
 import { systemClock } from "../../server/src/infra/clock.ts";
 import { systemIds, systemRandom } from "../../server/src/infra/random.ts";
+import type { Link, LinkHandlers, Transport } from "../../server/src/infra/transport.ts";
 import { WsTransport } from "../../server/src/infra/ws-transport.ts";
 import { silentLogger } from "../../server/src/log/logger.ts";
 import { createMatchRepository } from "../../server/src/match/repository.ts";
@@ -18,22 +20,58 @@ import { E2E_ORIGIN, E2E_WS_PORT } from "../playwright.config.ts";
 export interface GameServer {
   readonly server: RoomServer;
   readonly inspector: LeakInspector;
+  /** Un inspector nuevo con las mismas fuentes (soluciones y celdas bloqueadas), para el control. */
+  newInspector(): LeakInspector;
+  /** Las conexiones abiertas en el servidor, por la que se puede enviar un mensaje de control. */
+  links(): readonly Link[];
   /** La solución de la partida de una sala (solo en las pruebas). */
   solution(code: string): readonly number[];
   stop(): Promise<void>;
+}
+
+/** El transporte `ws` real, con registro de las conexiones abiertas (para el control). */
+class TappedTransport implements Transport {
+  readonly open = new Set<Link>();
+  private readonly inner: Transport;
+
+  constructor(inner: Transport) {
+    this.inner = inner;
+  }
+
+  start(accept: (link: Link) => LinkHandlers): Promise<void> {
+    return this.inner.start((link) => {
+      this.open.add(link);
+      const handlers = accept(link);
+      return {
+        message: (text) => {
+          handlers.message(text);
+        },
+        closed: () => {
+          this.open.delete(link);
+          handlers.closed();
+        },
+      };
+    });
+  }
+
+  stop(code: number, reason: string): Promise<void> {
+    return this.inner.stop(code, reason);
+  }
 }
 
 async function startGameServer(): Promise<GameServer> {
   const { db, client, catalog, solutions } = await testBank();
   await client.query("TRUNCATE match_events, matches");
   const repository = createMatchRepository(db);
-  const transport = new WsTransport({
-    host: "127.0.0.1",
-    port: E2E_WS_PORT,
-    allowedOrigins: [E2E_ORIGIN],
-    clock: systemClock,
-    logger: silentLogger,
-  });
+  const transport = new TappedTransport(
+    new WsTransport({
+      host: "127.0.0.1",
+      port: E2E_WS_PORT,
+      allowedOrigins: [E2E_ORIGIN],
+      clock: systemClock,
+      logger: silentLogger,
+    }),
+  );
   const server = new RoomServer({
     transport,
     clock: systemClock,
@@ -46,20 +84,23 @@ async function startGameServer(): Promise<GameServer> {
     mode: createNormalMode(PARAMS_V1),
   });
   await server.start();
-  const inspector = new LeakInspector({
-    solutions: () => solutions,
-    lockedValue: (matchId, cell) => {
-      for (const room of server.rooms.values()) {
-        const state = room.match?.state;
-        const locked = state?.id === matchId ? state.cells[cell] : undefined;
-        if (locked?.status === "locked") return locked.value;
-      }
-      return undefined;
-    },
-  });
+  const newInspector = () =>
+    new LeakInspector({
+      solutions: () => solutions,
+      lockedValue: (matchId, cell) => {
+        for (const room of server.rooms.values()) {
+          const state = room.match?.state;
+          const locked = state?.id === matchId ? state.cells[cell] : undefined;
+          if (locked?.status === "locked") return locked.value;
+        }
+        return undefined;
+      },
+    });
   return {
     server,
-    inspector,
+    inspector: newInspector(),
+    newInspector,
+    links: () => [...transport.open],
     solution(code) {
       const match = server.rooms.get(code)?.match;
       if (!match) throw new Error(`No match in ${code}`);
@@ -81,9 +122,20 @@ export function inspect(page: Page, inspector: LeakInspector): void {
   });
 }
 
+/** La página del control del inspector (como el fixture de control de T-31.2). */
+export interface ControlPage {
+  readonly page: Page;
+  /** Un inspector propio, para no ensuciar el de las demás pruebas. */
+  readonly inspector: LeakInspector;
+  /** Envía un mensaje a la página desde el servidor, por su conexión real. */
+  readonly inject: (text: string) => void;
+}
+
 interface Fixtures {
   /** Abre una página nueva (un contexto propio, como otra persona) con el inspector. */
   player: (options?: { context?: BrowserContext }) => Promise<Page>;
+  /** Una página cuyo tráfico pasa por un inspector propio y a la que el servidor envía, a pedido, un mensaje de control. */
+  controlPage: ControlPage;
 }
 
 export const test = base.extend<Fixtures, { game: GameServer }>({
@@ -110,6 +162,24 @@ export const test = base.extend<Fixtures, { game: GameServer }>({
     for (const context of contexts) await context.close();
     expect(game.inspector.violations.slice(before), "leak inspector (SPEC §8.3)").toEqual([]);
     expect(game.inspector.inspected, "messages seen by the inspector").toBeGreaterThan(inspected);
+  },
+
+  controlPage: async ({ browser, game }, provide) => {
+    const context = await browser.newContext();
+    const before = new Set(game.links());
+    const page = await context.newPage();
+    const inspector = game.newInspector();
+    inspect(page, inspector);
+    await provide({
+      page,
+      inspector,
+      inject: (text) => {
+        const links = game.links().filter((link) => !before.has(link));
+        if (links.length === 0) throw new Error("The control page has no connection");
+        for (const link of links) link.send(text);
+      },
+    });
+    await context.close();
   },
 });
 
@@ -141,4 +211,28 @@ export function cell(page: Page, index: number) {
   return page.getByRole("button", {
     name: new RegExp(`^Fila ${String(row)}, columna ${String(col)},`),
   });
+}
+
+/** Guarda los mensajes que recibe la página por WebSocket, ya interpretados. */
+export function record(page: Page): ServerEnvelope[] {
+  const seen: ServerEnvelope[] = [];
+  page.on("websocket", (ws) => {
+    ws.on("framereceived", ({ payload }) => {
+      seen.push(
+        JSON.parse(
+          typeof payload === "string" ? payload : payload.toString("utf8"),
+        ) as ServerEnvelope,
+      );
+    });
+  });
+  return seen;
+}
+
+/** Los cambios de conexión de un jugador que llegaron (`room.player_connection`), en orden. */
+export function connections(seen: readonly ServerEnvelope[], playerId: string): string[] {
+  return seen.flatMap((m) =>
+    m.type === "room.player_connection" && m.payload.playerId === playerId
+      ? [m.payload.connection]
+      : [],
+  );
 }

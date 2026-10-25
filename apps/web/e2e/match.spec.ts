@@ -2,11 +2,21 @@
 // - seis pestañas juegan una partida completa, y seis clics simultáneos en la misma celda dan un
 //   solo acierto y ninguna penalización (T-05.4);
 // - con el reloj del cliente 10 minutos adelantado, el cronómetro coincide con el del servidor (T-07.2);
-// - una desconexión y la vuelta dentro del plazo no pierden nada (T-13.5);
+// - un corte real (la página se cierra con su WebSocket) y la vuelta dentro del plazo no pierden
+//   nada (T-13.5);
 // - la misma ficha en otra pestaña desplaza a la primera, y «Jugar en esta pestaña» la recupera (E-08).
 // El inspector de filtración revisa todo lo que reciben las páginas (fixtures.ts).
 import type { Page } from "@playwright/test";
-import { cell, createRoom, expect, joinRoom, test, type GameServer } from "./fixtures.ts";
+import {
+  cell,
+  connections,
+  createRoom,
+  expect,
+  joinRoom,
+  record,
+  test,
+  type GameServer,
+} from "./fixtures.ts";
 
 function matchOf(game: GameServer, code: string) {
   const match = game.server.rooms.get(code)?.match;
@@ -125,63 +135,79 @@ test("T-07.2 with the client clock 10 minutes ahead, the timer matches the serve
   }
 });
 
-test("T-13.5 disconnecting and coming back within the grace period loses nothing", async ({
+/**
+ * Verificación negativa: con `SK_E2E_FORGET_TOKEN=1` se borra la ficha antes de volver, y T-13.5
+ * tiene que fallar (sin ficha, el enlace de la sala abre Entrar en lugar de la partida).
+ */
+const FORGET_TOKEN = process.env["SK_E2E_FORGET_TOKEN"] === "1";
+
+test("T-13.5 a real disconnection (the page closes) and coming back within the grace period loses nothing", async ({
   player,
   game,
+  browser,
 }) => {
   const host = await player();
+  const seen = record(host);
   const code = await createRoom(host, "Inés");
-  const guest = await player();
-  await joinRoom(guest, code, "Tomás");
-  await start(host, [host, guest]);
-  const solution = matchOf(game, code).solution;
-  const [solved, noted, queued, wrong] = emptyCells(game, code);
-  if (solved === undefined || noted === undefined || queued === undefined || wrong === undefined)
-    throw new Error("Not enough empty cells");
+  // La persona que se corta tiene su propio contexto: su localStorage (y su ficha) sobrevive al
+  // cierre de la página, como en un navegador real.
+  const context = await browser.newContext();
+  try {
+    const guest = await player({ context });
+    await joinRoom(guest, code, "Tomás");
+    await start(host, [host, guest]);
+    const solution = matchOf(game, code).solution;
+    const [solved, noted, wrong] = emptyCells(game, code);
+    if (solved === undefined || noted === undefined || wrong === undefined)
+      throw new Error("Not enough empty cells");
 
-  // Un acierto, un error (pierde una vida) y una nota personal antes del corte.
-  await place(guest, solved, solution[solved] ?? 0);
-  await expect(cell(guest, solved)).toHaveAttribute("aria-label", /resuelta por ti/);
-  await place(guest, wrong, ((solution[wrong] ?? 0) % 9) + 1);
-  await expect(guest.getByText(/no va en/).first()).toBeVisible();
-  await cell(guest, noted).click();
-  await guest.keyboard.press("n");
-  await guest.keyboard.press("4");
-  await expect(cell(guest, noted)).toHaveAttribute("aria-label", /notas personales 4/);
-  const tomas = () =>
-    [...matchOf(game, code).state.players.values()].find((p) => p.nickname === "Tomás");
-  const before = tomas();
+    // Un acierto, un error (pierde una vida) y una nota personal antes del corte.
+    await place(guest, solved, solution[solved] ?? 0);
+    await expect(cell(guest, solved)).toHaveAttribute("aria-label", /resuelta por ti/);
+    await place(guest, wrong, ((solution[wrong] ?? 0) % 9) + 1);
+    await expect(guest.getByText(/no va en/).first()).toBeVisible();
+    await cell(guest, noted).click();
+    await guest.keyboard.press("n");
+    await guest.keyboard.press("4");
+    await expect(cell(guest, noted)).toHaveAttribute("aria-label", /notas personales 4/);
+    const tomas = () =>
+      [...matchOf(game, code).state.players.values()].find((p) => p.nickname === "Tomás");
+    const before = tomas();
+    if (!before) throw new Error("No Tomás");
+    expect(before.lives).toBe(2);
 
-  // Sin red: el banner aparece y la nota se encola.
-  await guest.context().setOffline(true);
-  await expect(guest.getByText("Reconectando…")).toBeVisible({ timeout: 30_000 });
-  // El servidor nota el silencio con su heartbeat (hasta 30 s, ADR 0002); la vuelta puede llegar
-  // antes y reemplazar la conexión vieja, así que aquí no se espera a que el anfitrión lo vea.
-  await cell(guest, queued).click();
-  await guest.keyboard.press("6");
-  await expect(guest.getByText(/\(1 en cola\)/)).toBeVisible();
+    // El corte: la página se cierra y su WebSocket con ella.
+    await guest.close();
+    await expect.poll(() => connections(seen, before.id)).toEqual(["disconnected"]);
+    expect(tomas()?.connection).toBe("disconnected");
 
-  await guest.context().setOffline(false);
-  await expect(guest.getByText("Reconectando…")).toBeHidden({ timeout: 30_000 });
-  await expect(guest.locator(".toasts").getByText(/Conexión recuperada/)).toBeVisible();
-  await expect(cell(guest, solved)).toHaveAttribute("aria-label", /resuelta por ti/);
-  await expect(cell(guest, noted)).toHaveAttribute("aria-label", /notas personales 4/);
-  await expect(cell(guest, queued)).toHaveAttribute("aria-label", /notas personales 6/);
-  const after = tomas();
-  expect(after?.connection).toBe("connected");
-  expect([after?.lives, after?.score, after?.mistakes]).toEqual([
-    before?.lives,
-    before?.score,
-    before?.mistakes,
-  ]);
-  expect(after?.lives).toBe(2);
-
-  // Al recargar con la ficha guardada, la sesión se reanuda sola.
-  await guest.reload();
-  await expect(guest.getByRole("grid", { name: "Tablero" })).toBeVisible();
-  await expect(cell(guest, noted)).toHaveAttribute("aria-label", /notas personales 4/);
-  await expect(cell(guest, queued)).toHaveAttribute("aria-label", /notas personales 6/);
-  expect(tomas()?.lives).toBe(2);
+    // La vuelta, dentro del plazo, en otra página del mismo navegador.
+    const back = await player({ context });
+    await back.goto("/#/");
+    if (FORGET_TOKEN)
+      await back.evaluate(() => {
+        for (const key of Object.keys(localStorage))
+          if (key.startsWith("sk:token:")) localStorage.removeItem(key);
+      });
+    await back.goto(`/#/sala/${code}`);
+    await expect(back.getByRole("grid", { name: "Tablero" })).toBeVisible();
+    await expect.poll(() => connections(seen, before.id)).toEqual(["disconnected", "connected"]);
+    await expect(cell(back, solved)).toHaveAttribute("aria-label", /resuelta por ti/);
+    await expect(cell(back, noted)).toHaveAttribute("aria-label", /notas personales 4/);
+    const after = tomas();
+    expect(after?.id).toBe(before.id);
+    expect(after?.connection).toBe("connected");
+    expect([after?.seat, after?.lives, after?.score, after?.mistakes]).toEqual([
+      before.seat,
+      before.lives,
+      before.score,
+      before.mistakes,
+    ]);
+    expect([...(after?.personalNotes ?? [])]).toEqual([...before.personalNotes]);
+    await expect(back.getByRole("button", { name: /^Número 5,/ })).toBeVisible();
+  } finally {
+    await context.close();
+  }
 });
 
 test("E-08 the same token in another tab takes over; «Jugar en esta pestaña» takes it back", async ({
