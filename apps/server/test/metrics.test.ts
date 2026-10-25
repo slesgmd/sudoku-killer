@@ -67,8 +67,12 @@ describe("F12h metrics", () => {
       const code = /"code":"([A-Z0-9]{6})"/.exec(JSON.stringify(welcome))?.[1] ?? "";
       expect(code).toHaveLength(6);
       await new Promise<void>((resolve) => {
+        // Sin clave: el servidor cierra con 4003 cuando el cliente envía algo (T-39.11).
         const denied = new WebSocket(`ws://127.0.0.1:${String(r.port)}/ws`, {
           origin: TEST_ORIGIN,
+        });
+        denied.on("open", () => {
+          denied.send("{}");
         });
         denied.on("close", () => {
           resolve();
@@ -91,7 +95,8 @@ describe("F12h metrics", () => {
         playersConnected: 1,
         rssMb: 200,
         heapUsedMb: 50,
-        accessDenied: 1,
+        accessDenied: 0,
+        accessMissing: 1,
         accessLocked: 0,
         addressUnknown: 0,
       });

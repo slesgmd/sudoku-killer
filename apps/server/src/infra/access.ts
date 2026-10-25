@@ -25,6 +25,8 @@ export function hashAccessKey(key: string): string {
   return `sha256:${digest}`;
 }
 
+export type AccessResult = "admitted" | "missing" | "denied";
+
 export interface AccessGateOptions {
   /** El hash de la clave, o `null` para no pedirla (desarrollo y pruebas). */
   readonly hash: string | null;
@@ -40,8 +42,10 @@ export class AccessGate {
   private readonly maxFailures: number;
   private readonly windowMs: number;
   private readonly failures = new Map<string, { count: number; resetAt: number }>();
-  /** Claves rechazadas desde que arrancó (métricas, F12h). */
+  /** Claves ofrecidas que no valen desde que arrancó (métricas, F12h). */
   denied = 0;
+  /** Conexiones sin clave desde que arrancó (métricas): un navegador nuevo, no un intento. */
+  missing = 0;
 
   constructor({
     hash,
@@ -73,16 +77,20 @@ export class AccessGate {
   }
 
   /**
-   * Si los subprotocolos ofrecidos traen la clave. Si traen otra (o una mal formada), cuenta un
-   * fallo para la IP; si no traen ninguna, no.
+   * Si los subprotocolos ofrecidos traen la clave (`admitted`), no traen ninguna (`missing`) o traen
+   * otra o una mal formada (`denied`, que cuenta un fallo para la IP).
    */
-  admit(protocols: readonly string[], ip: string | null): boolean {
-    if (this.hash === null) return true;
+  admit(protocols: readonly string[], ip: string | null): AccessResult {
+    if (this.hash === null) return "admitted";
+    if (!offersKey(protocols)) {
+      this.missing++;
+      return "missing";
+    }
     const key = keyFromProtocols(protocols);
-    if (key !== null && sameHash(hashAccessKey(key), this.hash)) return true;
+    if (key !== null && sameHash(hashAccessKey(key), this.hash)) return "admitted";
     this.denied++;
-    if (offersKey(protocols) && ip !== null) this.fail(ip);
-    return false;
+    if (ip !== null) this.fail(ip);
+    return "denied";
   }
 
   private fail(ip: string): void {

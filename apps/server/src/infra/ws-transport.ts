@@ -9,8 +9,9 @@
 //   la web. `GET /ws` sin upgrade dice qué recibiría el handshake (403, 429 o 204, T-39.9): el
 //   navegador no deja leer el estado de un handshake rechazado, y así la web lo distingue de un
 //   servidor dormido. Cualquier otra petición HTTP recibe 404.
-// - Clave de acceso del grupo (F12, R-39): llega como subprotocolo; si no vale, la conexión se abre
-//   y se cierra en el acto con 4003, sin llegar a las salas. Una IP con demasiadas claves que no
+// - Clave de acceso del grupo (F12, R-39): llega como subprotocolo; si falta o no vale, la conexión
+//   se abre y se cierra con 4003 en cuanto el cliente envía algo, sin llegar a las salas (`deny`,
+//   T-39.11). Una IP con demasiadas claves que no
 //   valen recibe 429 en el handshake, con `Retry-After`, cuando vuelve a ofrecer una clave. La clave
 //   nunca se registra.
 // - La IP del cliente sale de `X-Forwarded-For` (`clientAddress`). Si no se puede saber, la
@@ -43,6 +44,11 @@ export const MAX_CONNECTIONS = 2_000;
 export const MAX_CONNECTIONS_PER_IP = 40;
 /** Plazo para recibir las cabeceras y la petición HTTP (F12, S-06). */
 export const HTTP_TIMEOUT_MS = 10_000;
+/**
+ * Cuánto espera una conexión sin la clave el primer mensaje del cliente antes de cerrarse con 4003
+ * (T-39.11). El navegador envía la entrada en cuanto abre.
+ */
+export const DENY_GRACE_MS = 5_000;
 
 export interface WsTransportOptions {
   readonly host: string;
@@ -264,9 +270,11 @@ export class WsTransport implements Transport {
         return;
       }
       wss.handleUpgrade(request, socket, head, (ws) => {
-        if (access && !access.admit(offered, ip)) {
-          logger.warn("websocket access denied");
-          ws.close(CLOSE_ACCESS_DENIED, "access denied");
+        const result = access ? access.admit(offered, ip) : "admitted";
+        if (result !== "admitted") {
+          if (result === "denied") logger.warn("websocket access denied");
+          else logger.info("websocket access key missing");
+          this.deny(ws);
           return;
         }
         this.connected(ws, accept, ip);
@@ -313,6 +321,25 @@ export class WsTransport implements Transport {
     return wait > 0
       ? { status: 429, headers: { "retry-after": retryAfter(wait) } }
       : { status: 204, headers: {} };
+  }
+
+  /**
+   * Cierra con 4003 cuando llega el primer mensaje del cliente, o a los `DENY_GRACE_MS` si no envía
+   * nada. Detrás del proxy de Render, un cierre enviado junto con el 101 no llega nunca al cliente
+   * (lo ve como 1006, igual que un servidor dormido, T-39.11); uno que responde a un mensaje del
+   * cliente sí llega, como cualquier respuesta. El mensaje se descarta sin leerlo.
+   */
+  private deny(ws: WebSocket): void {
+    const close = () => {
+      cancel();
+      ws.close(CLOSE_ACCESS_DENIED, "access denied");
+    };
+    const cancel = this.options.clock.setTimeout(close, DENY_GRACE_MS);
+    ws.once("message", close);
+    ws.once("close", cancel);
+    ws.on("error", (error) => {
+      this.options.logger.debug("websocket error", { error: error.message });
+    });
   }
 
   private connected(ws: WebSocket, accept: (link: Link) => LinkHandlers, ip: string | null): void {

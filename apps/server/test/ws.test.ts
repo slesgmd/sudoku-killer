@@ -12,7 +12,7 @@ import {
 } from "@sudoku-killer/protocol";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { request as httpRequest } from "node:http";
-import { createConnection } from "node:net";
+import { createConnection, createServer as createTcpServer, type Server } from "node:net";
 import WebSocket from "ws";
 import {
   ACCESS_FAILURE_WINDOW_MS,
@@ -20,7 +20,7 @@ import {
   MAX_ACCESS_FAILURES,
   hashAccessKey,
 } from "../src/infra/access.ts";
-import { HEALTH_PATH, WS_PATH, WsTransport } from "../src/infra/ws-transport.ts";
+import { DENY_GRACE_MS, HEALTH_PATH, WS_PATH, WsTransport } from "../src/infra/ws-transport.ts";
 import { createLogger } from "../src/log/logger.ts";
 import { FakeClock } from "./helpers/clock.ts";
 import { testBank } from "./helpers/server.ts";
@@ -60,16 +60,19 @@ function connect(
     path = WS_PATH,
     protocols = [],
     forwardedFor,
+    port = r.port,
   }: {
     origin?: string | null;
     autoPong?: boolean;
     path?: string;
     protocols?: readonly string[];
     forwardedFor?: string;
+    /** Otro puerto delante del servidor (el proxy de T-39.11). */
+    port?: number;
   } = {},
 ) {
   const id = ++clientIds;
-  const ws = new WebSocket(`ws://127.0.0.1:${String(r.port)}${path}`, [...protocols], {
+  const ws = new WebSocket(`ws://127.0.0.1:${String(port)}${path}`, [...protocols], {
     autoPong,
     ...(origin === null ? {} : { origin }),
     ...(forwardedFor === undefined ? {} : { headers: { "x-forwarded-for": forwardedFor } }),
@@ -131,7 +134,8 @@ function connect(
 
 /**
  * Cómo termina un intento: `HTTP <status>` si el handshake no se acepta, `close <código>` si el
- * servidor cierra enseguida, u `open` si la conexión sigue abierta (y se cierra).
+ * servidor cierra tras el primer mensaje (el navegador lo envía en cuanto abre, T-39.11), u `open`
+ * si la conexión sigue abierta (y se cierra).
  */
 async function handshake(r: Running, options: Parameters<typeof connect>[1]): Promise<string> {
   const client = connect(r, options);
@@ -141,6 +145,7 @@ async function handshake(r: Running, options: Parameters<typeof connect>[1]): Pr
     client.ws.terminate();
     return (error as Error).message;
   }
+  client.send("sys.ping", { t0: 1 });
   return Promise.race([
     client.closed.then((code) => `close ${String(code)}`),
     new Promise<string>((resolve) =>
@@ -233,9 +238,9 @@ describe("F12 access key (R-39, S-02)", () => {
     const r = await start({ accessKey: KEY });
     const missing = connect(r);
     await missing.opened;
+    missing.send("room.create", { nickname: "Ana" });
     expect(await missing.closed).toBe(CLOSE_ACCESS_DENIED);
-    const withoutKey = connect(r, { protocols: accessProtocols(null) });
-    expect(await withoutKey.closed).toBe(CLOSE_ACCESS_DENIED);
+    expect(await handshake(r, { protocols: accessProtocols(null) })).toBe("close 4003");
     const wrong = connect(r, { protocols: accessProtocols("WXYZ-WXYZ-WXYZ-WXYZ") });
     await wrong.opened;
     wrong.send("room.create", { nickname: "Intrusa" });
@@ -254,10 +259,10 @@ describe("F12 access key (R-39, S-02)", () => {
   it("T-39.3 after 10 wrong keys an address gets 429 until the window passes; other addresses are not affected", async () => {
     const r = await start({ accessKey: KEY, trustProxyHops: 1 });
     const bad = accessProtocols("WXYZ-WXYZ-WXYZ-WXYZ");
-    for (let i = 0; i < MAX_ACCESS_FAILURES; i++) {
-      const attempt = connect(r, { protocols: bad, forwardedFor: "203.0.113.7" });
-      expect(await attempt.closed).toBe(CLOSE_ACCESS_DENIED);
-    }
+    for (let i = 0; i < MAX_ACCESS_FAILURES; i++)
+      expect(await handshake(r, { protocols: bad, forwardedFor: "203.0.113.7" })).toBe(
+        "close 4003",
+      );
     const good = accessProtocols(KEY);
     await expect(
       connect(r, { protocols: good, forwardedFor: "203.0.113.7" }).opened,
@@ -350,7 +355,9 @@ describe("F12 access behind the proxy (T-39.7, T-39.8, T-39.9)", () => {
       protocols: accessProtocols(KEY),
       forwardedFor: "198.51.100.99, 203.0.113.250",
     }).opened;
-    expect(r.access.denied).toBe(MAX_ACCESS_FAILURES + 2);
+    // Ninguno escribió una clave: cuentan como conexiones sin clave, no como claves rechazadas.
+    expect(r.access.missing).toBe(MAX_ACCESS_FAILURES + 2);
+    expect(r.access.denied).toBe(0);
   });
 
   it("T-39.8 an address that cannot be determined does not lock everyone together", async () => {
@@ -407,6 +414,109 @@ describe("F12 access behind the proxy (T-39.7, T-39.8, T-39.9)", () => {
       headers: { "x-forwarded-for": "203.0.113.7" },
     });
     expect(sameOrigin.status).toBe(429);
+  });
+});
+
+/**
+ * Un proxy TCP que se porta como el de Render en el primer despliegue (F12j): reenvía el handshake y
+ * su 101, pero pierde lo que el servidor envía detrás del 101 antes de que el cliente envíe algo.
+ * Así, un 4003 enviado junto con el 101 nunca llegaba, y el navegador lo veía como un 1006.
+ */
+async function earlyDropProxy(target: number): Promise<{ port: number; close(): Promise<void> }> {
+  const sockets = new Set<{ destroy(): void }>();
+  const server: Server = createTcpServer((client) => {
+    const upstream = createConnection({ host: "127.0.0.1", port: target });
+    sockets.add(client);
+    sockets.add(upstream);
+    let request = Buffer.alloc(0);
+    let requestDone = false;
+    let clientSpoke = false;
+    let response = Buffer.alloc(0);
+    let responseDone = false;
+    client.on("data", (chunk: Buffer) => {
+      if (requestDone) {
+        clientSpoke = true;
+      } else {
+        request = Buffer.concat([request, chunk]);
+        const end = request.indexOf("\r\n\r\n");
+        if (end >= 0) {
+          requestDone = true;
+          clientSpoke = end + 4 < request.length;
+        }
+      }
+      upstream.write(chunk);
+    });
+    upstream.on("data", (chunk: Buffer) => {
+      let rest = chunk;
+      if (!responseDone) {
+        response = Buffer.concat([response, chunk]);
+        const end = response.indexOf("\r\n\r\n");
+        if (end < 0) return;
+        responseDone = true;
+        client.write(response.subarray(0, end + 4));
+        rest = response.subarray(end + 4);
+      }
+      if (clientSpoke && rest.length > 0) client.write(rest);
+    });
+    const finish = () => {
+      client.destroy();
+      upstream.destroy();
+    };
+    client.on("close", finish);
+    upstream.on("close", finish);
+    client.on("error", finish);
+    upstream.on("error", finish);
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  return {
+    port: typeof address === "object" && address ? address.port : 0,
+    close: () =>
+      new Promise<void>((resolve) => {
+        for (const socket of sockets) socket.destroy();
+        server.close(() => {
+          resolve();
+        });
+      }),
+  };
+}
+
+describe("F12 the 4003 reaches the browser behind the proxy (T-39.11)", () => {
+  const KEY = "ABCD-EFGH-JKMN-PQRS";
+
+  it("T-39.11 behind a proxy that loses what follows the 101, without a key or with a wrong one the client still gets 4003; with the key it plays", async () => {
+    const r = await start({ accessKey: KEY });
+    const proxy = await earlyDropProxy(r.port);
+    try {
+      expect(await handshake(r, { port: proxy.port, protocols: accessProtocols(null) })).toBe(
+        "close 4003",
+      );
+      expect(
+        await handshake(r, { port: proxy.port, protocols: accessProtocols("WXYZ-WXYZ-WXYZ-WXYZ") }),
+      ).toBe("close 4003");
+      const ok = connect(r, { port: proxy.port, protocols: accessProtocols(KEY) });
+      await ok.opened;
+      ok.send("room.create", { nickname: "Ana" });
+      expect((await ok.next("room.welcome")).type).toBe("room.welcome");
+      ok.ws.close();
+      await ok.closed;
+    } finally {
+      await proxy.close();
+    }
+    expect(r.access.missing).toBe(1);
+    expect(r.access.denied).toBe(1);
+  });
+
+  it("T-39.11 a client without the key that never sends anything is closed with 4003 after the grace period", async () => {
+    const r = await start({ accessKey: KEY });
+    const silent = connect(r, { protocols: accessProtocols(null) });
+    await silent.opened;
+    const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 20));
+    await r.clock.advance(DENY_GRACE_MS - 1, settle);
+    expect(silent.ws.readyState).toBe(WebSocket.OPEN);
+    await r.clock.advance(1, settle);
+    expect(await silent.closed).toBe(CLOSE_ACCESS_DENIED);
+    expect(r.server.rooms.size).toBe(0);
   });
 });
 
