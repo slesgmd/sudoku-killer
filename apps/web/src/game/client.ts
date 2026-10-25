@@ -74,7 +74,13 @@ export interface GameClientOptions {
 /** La entrada pedida que todavía no tiene `room.welcome`. */
 type Entry =
   | { readonly kind: "create"; readonly nickname: string }
-  | { readonly kind: "join"; readonly code: string; readonly nickname: string };
+  | {
+      readonly kind: "join";
+      readonly code: string;
+      readonly nickname: string;
+      /** Vuelta con la ficha guardada: si la sala ya no existe o está llena, avisa Inicio. */
+      readonly resume: boolean;
+    };
 
 interface UndoGroup {
   /** Mensajes de la acción que todavía no tienen `opSeq`. */
@@ -89,6 +95,23 @@ interface UndoRun {
   done: number;
   readonly failures: { layer: NoteLayer; cell: number }[];
 }
+
+/** Lo de una partida, vacío: el lobby no tiene tablero, notas ni actividad. */
+const NO_MATCH = {
+  match: null,
+  locked: [],
+  groupNotes: new Uint16Array(0),
+  personalNotes: new Uint16Array(0),
+  pendingNotes: [],
+  pending: new Map(),
+  flashes: new Map(),
+  presence: new Map(),
+  activity: [],
+  selected: null,
+  mode: "number",
+  canUndo: false,
+  showResults: false,
+} as const satisfies Partial<ClientState>;
 
 /** «F2 C7». */
 export function cellName(cell: number, size: number): string {
@@ -110,6 +133,8 @@ export class GameClient {
   /** Mensajes del arranque (`room.create`, `room.set_difficulty` y `match.start`). */
   private readonly startIds = new Set<string>();
   private startTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Mensajes del lobby y de Resultados (`match.start` y `room.reset`) sin respuesta. */
+  private readonly lobbyIds = new Set<string>();
   private readonly undoStack: UndoGroup[] = [];
   private undoRun: UndoRun | null = null;
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
@@ -287,6 +312,16 @@ export class GameClient {
     if (status === "unavailable" && starting && !this.inRoom()) this.failStart();
   }
 
+  /** El apodo de la última entrada en este navegador. */
+  savedNickname(): string | null {
+    return this.session.nickname();
+  }
+
+  /** Si hay ficha guardada para la sala (la ficha nunca sale de la sesión). */
+  hasToken(code: string): boolean {
+    return this.session.token(code) !== null;
+  }
+
   /** Si ya se entró a la sala (hubo un `room.welcome`), aunque ahora falte la conexión. */
   private inRoom(): boolean {
     return this.state.room !== null && this.state.playerId !== null;
@@ -328,6 +363,12 @@ export class GameClient {
       notesEnabled: this.state.notesEnabled,
       connection: this.transport.status,
       lastStart: this.state.lastStart,
+      lastEntry: {
+        kind: entry.kind,
+        nickname: entry.nickname,
+        code: entry.kind === "join" ? entry.code : null,
+        resume: entry.kind === "join" && entry.resume,
+      },
     });
     this.resetRoomSession();
     this.entry = entry;
@@ -353,12 +394,26 @@ export class GameClient {
 
   /** Entra a una sala con su código; si hay ficha guardada para ella, vuelve con la ficha. */
   join(code: string, nickname: string): void {
-    this.enter({ kind: "join", code: code.toUpperCase(), nickname });
+    this.enter({ kind: "join", code: code.toUpperCase(), nickname, resume: false });
   }
 
   /** Vuelve a la sala de la ficha guardada (R-13, R-26). */
   resume(code: string): void {
-    this.join(code, this.session.nickname() ?? "");
+    this.enter({
+      kind: "join",
+      code: code.toUpperCase(),
+      nickname: this.session.nickname() ?? "",
+      resume: true,
+    });
+  }
+
+  /** «Reintentar» de Entrar: repite la última entrada con los mismos datos (T-37.1). */
+  retryEntry(): void {
+    const last = this.state.lastEntry;
+    if (!last) return;
+    if (last.kind === "create") this.create(last.nickname);
+    else if (last.code !== null)
+      this.enter({ kind: "join", code: last.code, nickname: last.nickname, resume: last.resume });
   }
 
   /** «Jugar en esta pestaña» (E-08): vuelve con la ficha y desplaza a la otra pestaña. */
@@ -375,13 +430,17 @@ export class GameClient {
     this.outbox.clear();
     this.staleBefore = null;
     this.startIds.clear();
+    this.lobbyIds.clear();
     this.undoStack.length = 0;
     this.undoRun = null;
   }
 
   // --- Acciones de la interfaz ---
 
-  /** Inicio mínimo de F8: crea la sala, elige la dificultad e inicia la partida. */
+  /**
+   * Arranque directo (el inicio mínimo de F8, que siguen usando las pruebas): crea la sala, elige la
+   * dificultad e inicia la partida, sin pasar por el lobby.
+   */
   start(nickname: string, difficulty: Difficulty): void {
     this.set({ lastStart: { nickname, difficulty } });
     this.create(nickname);
@@ -425,7 +484,69 @@ export class GameClient {
       settings: this.state.settings,
       notesEnabled: this.state.notesEnabled,
       lastStart: this.state.lastStart,
+      lastEntry: this.state.lastEntry,
       connection: this.transport.status,
+    });
+  }
+
+  // --- Lobby y resultados ---
+
+  /** Quien inicia elige la dificultad; los demás la ven al momento (R-11). */
+  setDifficulty(difficulty: Difficulty): void {
+    const room = this.state.room;
+    if (!room || this.state.phase !== "lobby" || room.starterId !== this.state.playerId) return;
+    if (!this.live()) return;
+    this.set({ room: { ...room, difficulty } });
+    this.send("room.set_difficulty", { difficulty });
+  }
+
+  /** «Iniciar partida» (R-11). Queda en espera hasta `match.started` o un error. */
+  startMatch(): void {
+    const room = this.state.room;
+    if (!room || this.state.phase !== "lobby" || this.state.starting) return;
+    if (room.starterId !== this.state.playerId || !this.live()) return;
+    this.lobbyIds.add(this.send("match.start", {}));
+    this.set({ starting: true });
+  }
+
+  /** «Ver resultados» (decisión del plan de F10: el paso a Resultados nunca es automático). */
+  viewResults(): void {
+    if (this.state.phase === "ended") this.set({ showResults: true });
+  }
+
+  /** «Volver al lobby» de quien inicia: la sala vuelve a `waiting` para todos (T-22.1). */
+  returnToLobby(): void {
+    const room = this.state.room;
+    if (!room || this.state.phase !== "ended" || room.starterId !== this.state.playerId) return;
+    if (!this.live()) return;
+    this.lobbyIds.add(this.send("room.reset", {}));
+  }
+
+  /** La sala volvió a `waiting`: se borra lo de la partida (SPEC §3.1) y se pasa al lobby. */
+  private toLobby(): void {
+    const room = this.state.room;
+    if (!room) return;
+    const starter = room.starterId;
+    this.undoStack.length = 0;
+    this.undoRun = null;
+    this.staleBefore = null;
+    this.set({
+      phase: "lobby",
+      room: { ...room, state: "waiting" },
+      players: this.state.players.map((p) => ({
+        ...p,
+        role: null,
+        lives: NORMAL_RULES.initialLives,
+        score: 0,
+        mistakes: 0,
+      })),
+      ...NO_MATCH,
+      toasts: [],
+      starting: false,
+      lobbyNotice:
+        starter !== null && starter !== this.state.playerId
+          ? { kind: "reset", by: playerName(this.state, starter) }
+          : null,
     });
   }
 
@@ -608,7 +729,10 @@ export class GameClient {
   private receive(message: ServerEnvelope): void {
     this.lastAlive = this.now();
     const mine = message.replyTo !== undefined;
-    if (message.replyTo !== undefined) this.outbox.delete(message.replyTo);
+    if (message.replyTo !== undefined) {
+      this.outbox.delete(message.replyTo);
+      if (message.type !== "error") this.lobbyIds.delete(message.replyTo);
+    }
     // Antes del `room.welcome` de esta conexión no llegan eventos (el servidor solo difunde a quien
     // ya lo recibió); si llegara uno, el snapshot que viene ya lo incluye.
     if (!this.welcomed && message.seq !== undefined) return;
@@ -638,15 +762,32 @@ export class GameClient {
         });
         return;
       }
-      case "room.starter_changed":
-        if (this.state.room)
-          this.set({ room: { ...this.state.room, starterId: message.payload.playerId } });
+      case "room.starter_changed": {
+        const room = this.state.room;
+        if (!room) return;
+        const from = room.starterId;
+        const to = message.payload.playerId;
+        this.set({ room: { ...room, starterId: to } });
+        // El aviso de traspaso del lobby (design/pantallas.md §1.3).
+        if (this.state.phase === "lobby" && from !== null && to !== null && from !== to) {
+          this.set({
+            lobbyNotice: { kind: "starter", from: playerName(this.state, from), to },
+          });
+        }
         return;
+      }
       case "room.difficulty_set":
         if (this.state.room)
           this.set({ room: { ...this.state.room, difficulty: message.payload.difficulty } });
         return;
       case "room.state_changed":
+        if (
+          message.payload.state === "waiting" &&
+          (this.state.room?.state === "finished" || this.state.phase === "ended")
+        ) {
+          this.toLobby();
+          return;
+        }
         if (this.state.room)
           this.set({ room: { ...this.state.room, state: message.payload.state } });
         return;
@@ -736,7 +877,15 @@ export class GameClient {
       },
       players: room.players,
       settings: you.settings,
-      phase: match ? (match.endedAt === null ? "playing" : "ended") : "loading",
+      phase: match
+        ? match.endedAt === null
+          ? "playing"
+          : "ended"
+        : this.startRequest
+          ? "loading"
+          : "lobby",
+      starting: false,
+      ...(match ? {} : NO_MATCH),
     });
     if (match) {
       const size = match.puzzle.size;
@@ -755,7 +904,7 @@ export class GameClient {
         personalNotes: notes(you.personalNotes),
       });
     }
-    if (match) this.stopStartTimer();
+    if (match || !this.startRequest) this.stopStartTimer();
     // Lo que quedó sin respuesta sale otra vez, con el mismo `id` (E-07).
     let queued = 0;
     for (const pending of this.outbox.values()) {
@@ -811,8 +960,12 @@ export class GameClient {
     this.stopStartTimer();
     this.startIds.clear();
     this.staleBefore = null;
+    this.lobbyIds.clear();
     this.set({
       phase: "playing",
+      starting: false,
+      lobbyNotice: null,
+      showResults: false,
       players: payload.players,
       match: {
         id: payload.matchId,
@@ -1013,10 +1166,25 @@ export class GameClient {
         code === "room.full")
     ) {
       const entry = this.entry;
-      if (code === "room.not_found" && entry?.kind === "join") this.session.forgetToken(entry.code);
+      if (code === "room.not_found" && entry?.kind === "join") {
+        this.session.forgetToken(entry.code);
+        if (this.session.lastRoom() === entry.code) this.session.saveLastRoom(null);
+      }
       this.stopStartTimer();
       this.resetRoomSession();
       this.transport.disconnect();
+      // Volver con la ficha a una sala borrada o llena se avisa en Inicio (design/pantallas.md §1.1).
+      if (
+        entry?.kind === "join" &&
+        entry.resume &&
+        (code === "room.not_found" || code === "room.full")
+      ) {
+        this.set({
+          phase: "home",
+          roomNotice: { kind: code === "room.full" ? "full" : "gone", code: entry.code },
+        });
+        return;
+      }
       this.set({ phase: "home", enterError: code });
       return;
     }
@@ -1026,6 +1194,12 @@ export class GameClient {
       return;
     }
     if (replyTo === undefined) return;
+    if (this.lobbyIds.delete(replyTo)) {
+      this.set({ starting: false });
+      if (code === "rate_limited") this.toast("status", t("state.rateLimited"));
+      else this.toast("alert", t("state.error", { code }));
+      return;
+    }
     if (this.undoRun?.awaiting.has(replyTo)) {
       this.undoResult(replyTo, false);
       return;
@@ -1074,6 +1248,7 @@ export class GameClient {
     if (!match) return;
     this.set({
       phase: "ended",
+      room: this.state.room ? { ...this.state.room, state: "finished" } : null,
       match: {
         ...match,
         endedAt: payload.endedAt,

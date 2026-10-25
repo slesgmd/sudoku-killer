@@ -17,7 +17,14 @@ import { visibleNotes, type PendingNote } from "./notes.ts";
 
 export type { PendingNote } from "./notes.ts";
 
-export type Phase = "home" | "entering" | "loading" | "playing" | "ended";
+/**
+ * - `home`: fuera de una sala (Inicio, Entrar o Ayuda).
+ * - `entering`: esperando el `room.welcome`.
+ * - `lobby`: en la sala, con la sala en `waiting` (F10).
+ * - `loading`: la partida está por empezar (el arranque directo de F8 y de las pruebas).
+ * - `playing` y `ended`: la partida en curso o terminada (`finished`).
+ */
+export type Phase = "home" | "entering" | "lobby" | "loading" | "playing" | "ended";
 export type InputMode = "number" | "notes";
 
 export interface Flash {
@@ -66,6 +73,23 @@ export interface RoomNotice {
   readonly code: string;
 }
 
+/** La última entrada pedida: Entrar la conserva para «Reintentar» y para los errores (T-37.1). */
+export interface EntryRequest {
+  readonly kind: "create" | "join";
+  readonly nickname: string;
+  /** Solo en `join`. */
+  readonly code: string | null;
+  /** Vuelta con la ficha guardada desde Inicio o desde el enlace de la sala. */
+  readonly resume: boolean;
+}
+
+/** Avisos integrados del lobby (design/pantallas.md §1.3 y §2.11). */
+export type LobbyNotice =
+  /** Quien iniciaba salió y el derecho pasó a `to` (puede ser uno mismo). */
+  | { readonly kind: "starter"; readonly from: string; readonly to: string }
+  /** Quien inicia volvió al lobby desde Resultados. */
+  | { readonly kind: "reset"; readonly by: string };
+
 export interface ClientState {
   readonly phase: Phase;
   /** Estado de la conexión con el servidor. */
@@ -109,6 +133,12 @@ export interface ClientState {
   readonly lastStart: { readonly nickname: string; readonly difficulty: Difficulty } | null;
   /** La entrada o la carga de la partida fallaron, o no terminaron a tiempo (T-37.1). */
   readonly startFailed: boolean;
+  readonly lastEntry: EntryRequest | null;
+  readonly lobbyNotice: LobbyNotice | null;
+  /** «Iniciar partida» enviado, sin respuesta todavía. */
+  readonly starting: boolean;
+  /** Con la partida terminada, si se pasó a Resultados con «Ver resultados». */
+  readonly showResults: boolean;
 }
 
 export const INITIAL_STATE: ClientState = {
@@ -139,6 +169,10 @@ export const INITIAL_STATE: ClientState = {
   enterError: null,
   lastStart: null,
   startFailed: false,
+  lastEntry: null,
+  lobbyNotice: null,
+  starting: false,
+  showResults: false,
 };
 
 /** Notas de una capa tal como se ven: lo confirmado más las pendientes, en orden (ADR 0005). */
