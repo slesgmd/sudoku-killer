@@ -6,13 +6,16 @@ import {
   CLOSE_ACCESS_DENIED,
   CLOSE_REPLACED,
   CLOSE_UNSUPPORTED,
+  ACCESS_KEY_HEADER,
+  ACCESS_PATH,
   KEY_PROTOCOL_PREFIX,
   accessProtocols,
+  encodeAccessKey,
   type ServerEnvelope,
 } from "@sudoku-killer/protocol";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { request as httpRequest } from "node:http";
-import { createConnection, createServer as createTcpServer, type Server } from "node:net";
+import { createConnection } from "node:net";
 import WebSocket from "ws";
 import {
   ACCESS_FAILURE_WINDOW_MS,
@@ -23,6 +26,7 @@ import {
 import { DENY_GRACE_MS, HEALTH_PATH, WS_PATH, WsTransport } from "../src/infra/ws-transport.ts";
 import { createLogger } from "../src/log/logger.ts";
 import { FakeClock } from "./helpers/clock.ts";
+import { lossyProxy } from "./helpers/lossy-proxy.ts";
 import { testBank } from "./helpers/server.ts";
 import { TEST_ORIGIN, startWsServer, type RunningWsServer } from "./helpers/ws-server.ts";
 
@@ -417,76 +421,13 @@ describe("F12 access behind the proxy (T-39.7, T-39.8, T-39.9)", () => {
   });
 });
 
-/**
- * Un proxy TCP que se porta como el de Render en el primer despliegue (F12j): reenvía el handshake y
- * su 101, pero pierde lo que el servidor envía detrás del 101 antes de que el cliente envíe algo.
- * Así, un 4003 enviado junto con el 101 nunca llegaba, y el navegador lo veía como un 1006.
- */
-async function earlyDropProxy(target: number): Promise<{ port: number; close(): Promise<void> }> {
-  const sockets = new Set<{ destroy(): void }>();
-  const server: Server = createTcpServer((client) => {
-    const upstream = createConnection({ host: "127.0.0.1", port: target });
-    sockets.add(client);
-    sockets.add(upstream);
-    let request = Buffer.alloc(0);
-    let requestDone = false;
-    let clientSpoke = false;
-    let response = Buffer.alloc(0);
-    let responseDone = false;
-    client.on("data", (chunk: Buffer) => {
-      if (requestDone) {
-        clientSpoke = true;
-      } else {
-        request = Buffer.concat([request, chunk]);
-        const end = request.indexOf("\r\n\r\n");
-        if (end >= 0) {
-          requestDone = true;
-          clientSpoke = end + 4 < request.length;
-        }
-      }
-      upstream.write(chunk);
-    });
-    upstream.on("data", (chunk: Buffer) => {
-      let rest = chunk;
-      if (!responseDone) {
-        response = Buffer.concat([response, chunk]);
-        const end = response.indexOf("\r\n\r\n");
-        if (end < 0) return;
-        responseDone = true;
-        client.write(response.subarray(0, end + 4));
-        rest = response.subarray(end + 4);
-      }
-      if (clientSpoke && rest.length > 0) client.write(rest);
-    });
-    const finish = () => {
-      client.destroy();
-      upstream.destroy();
-    };
-    client.on("close", finish);
-    upstream.on("close", finish);
-    client.on("error", finish);
-    upstream.on("error", finish);
-  });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const address = server.address();
-  return {
-    port: typeof address === "object" && address ? address.port : 0,
-    close: () =>
-      new Promise<void>((resolve) => {
-        for (const socket of sockets) socket.destroy();
-        server.close(() => {
-          resolve();
-        });
-      }),
-  };
-}
-
 describe("F12 the 4003 reaches the browser behind the proxy (T-39.11)", () => {
   const KEY = "ABCD-EFGH-JKMN-PQRS";
 
   it("T-39.11 behind a proxy that loses what follows the 101, without a key or with a wrong one the client still gets 4003; with the key it plays", async () => {
     const r = await start({ accessKey: KEY });
-    const proxy = await earlyDropProxy(r.port);
+    // El proxy del primer despliegue (F12j): pierde lo que sigue al 101 hasta que el cliente habla.
+    const proxy = await lossyProxy(r.port, { mode: "early" });
     try {
       expect(await handshake(r, { port: proxy.port, protocols: accessProtocols(null) })).toBe(
         "close 4003",
@@ -517,6 +458,177 @@ describe("F12 the 4003 reaches the browser behind the proxy (T-39.11)", () => {
     await r.clock.advance(1, settle);
     expect(await silent.closed).toBe(CLOSE_ACCESS_DENIED);
     expect(r.server.rooms.size).toBe(0);
+  });
+});
+
+/** `POST /access` (o `OPTIONS`) con la clave en la cabecera, como el navegador (T-39.12). */
+function postAccess(
+  port: number,
+  {
+    key,
+    header,
+    origin = ORIGIN,
+    forwardedFor,
+    method = "POST",
+  }: {
+    key?: string;
+    /** El valor crudo de la cabecera, para probar uno mal formado. */
+    header?: string;
+    origin?: string | null;
+    forwardedFor?: string;
+    method?: string;
+  } = {},
+) {
+  const value = header ?? (key === undefined ? undefined : encodeAccessKey(key));
+  return fetch(`http://127.0.0.1:${String(port)}${ACCESS_PATH}`, {
+    method,
+    headers: {
+      ...(origin === null ? {} : { origin }),
+      ...(value === undefined || value === null ? {} : { [ACCESS_KEY_HEADER]: value }),
+      ...(forwardedFor === undefined ? {} : { "x-forwarded-for": forwardedFor }),
+    },
+  });
+}
+
+describe("F12 POST /access checks the key before any WebSocket (T-39.12)", () => {
+  const KEY = "ABCD-EFGH-JKMN-PQRS";
+  const WRONG = "WXYZ-WXYZ-WXYZ-WXYZ";
+
+  it("T-39.12 answers 401 without a key or with a wrong or malformed one and 204 with it, with CORS only for the allowed origin", async () => {
+    const r = await start({ accessKey: KEY });
+    const missing = await postAccess(r.port);
+    expect(missing.status).toBe(401);
+    expect(missing.headers.get("access-control-allow-origin")).toBe(ORIGIN);
+    expect(missing.headers.get("cache-control")).toBe("no-store");
+    expect((await postAccess(r.port, { key: WRONG })).status).toBe(401);
+    expect((await postAccess(r.port, { header: "@@@" })).status).toBe(401);
+    // Escrita a mano (minúsculas, sin guiones) vale igual.
+    const ok = await postAccess(r.port, { key: "abcdefgh jkmnpqrs" });
+    expect(ok.status).toBe(204);
+    expect(await ok.text()).toBe("");
+    // Mismo conteo que el handshake: sin clave no es un intento; las otras dos, sí.
+    expect(r.access.missing).toBe(1);
+    expect(r.access.denied).toBe(2);
+    expect(r.server.rooms.size).toBe(0);
+
+    // Un origen ajeno o ausente: 403 y sin CORS, como el handshake.
+    for (const origin of ["https://otro-sitio.example", null]) {
+      const foreign = await postAccess(r.port, { key: KEY, origin });
+      expect(foreign.status).toBe(403);
+      expect(foreign.headers.get("access-control-allow-origin")).toBeNull();
+    }
+    // La consulta previa del navegador: solo POST y la cabecera de la clave, para el origen permitido.
+    const preflight = await postAccess(r.port, { method: "OPTIONS" });
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers.get("access-control-allow-origin")).toBe(ORIGIN);
+    expect(preflight.headers.get("access-control-allow-methods")).toBe("POST");
+    expect(preflight.headers.get("access-control-allow-headers")).toBe(ACCESS_KEY_HEADER);
+    expect(
+      (await postAccess(r.port, { method: "OPTIONS", origin: "https://otro-sitio.example" }))
+        .status,
+    ).toBe(403);
+    expect((await postAccess(r.port, { method: "GET" })).status).toBe(405);
+  });
+
+  it("T-39.12 shares the lockout with the handshake: wrong keys by either path lock both with 429 and Retry-After; a keyless check still gets 401", async () => {
+    const r = await start({ accessKey: KEY, trustProxyHops: 1 });
+    const ip = "203.0.113.7";
+    for (let i = 0; i < MAX_ACCESS_FAILURES / 2; i++)
+      expect((await postAccess(r.port, { key: WRONG, forwardedFor: ip })).status).toBe(401);
+    for (let i = 0; i < MAX_ACCESS_FAILURES / 2; i++)
+      expect(await handshake(r, { protocols: accessProtocols(WRONG), forwardedFor: ip })).toBe(
+        "close 4003",
+      );
+    const locked = await postAccess(r.port, { key: KEY, forwardedFor: ip });
+    expect(locked.status).toBe(429);
+    expect(Number(locked.headers.get("retry-after"))).toBeGreaterThan(0);
+    expect(locked.headers.get("access-control-expose-headers")).toMatch(/retry-after/i);
+    expect(await handshake(r, { protocols: accessProtocols(KEY), forwardedFor: ip })).toBe(
+      "HTTP 429",
+    );
+    // Sin clave no se espera (T-39.7): lleva a «Clave del grupo».
+    expect((await postAccess(r.port, { forwardedFor: ip })).status).toBe(401);
+    expect((await postAccess(r.port, { key: KEY, forwardedFor: "203.0.113.8" })).status).toBe(204);
+    expect(r.transport.locked).toBe(2);
+
+    // Al revés: diez claves que no valen por el handshake bloquean `POST /access`.
+    for (let i = 0; i < MAX_ACCESS_FAILURES; i++)
+      await handshake(r, { protocols: accessProtocols(WRONG), forwardedFor: "203.0.113.9" });
+    expect((await postAccess(r.port, { key: KEY, forwardedFor: "203.0.113.9" })).status).toBe(429);
+    await r.clock.advance(
+      ACCESS_FAILURE_WINDOW_MS,
+      () => new Promise<void>((resolve) => setImmediate(resolve)),
+    );
+    expect((await postAccess(r.port, { key: KEY, forwardedFor: ip })).status).toBe(204);
+  });
+
+  it("negative check: without a configured key every check gets 204", async () => {
+    const r = await start();
+    expect((await postAccess(r.port)).status).toBe(204);
+    expect((await postAccess(r.port, { key: WRONG })).status).toBe(204);
+  });
+
+  it("T-39.12 never logs the key, the header or its hash", async () => {
+    const lines: string[] = [];
+    const logger = createLogger({ level: "debug", write: (line) => lines.push(line) });
+    const transport = new WsTransport({
+      host: "127.0.0.1",
+      port: 0,
+      allowedOrigins: [ORIGIN],
+      clock: new FakeClock(),
+      logger,
+      access: new AccessGate({ hash: hashAccessKey(KEY), clock: new FakeClock() }),
+    });
+    await transport.start(() => ({ message: () => undefined, closed: () => undefined }));
+    try {
+      for (const key of [KEY, WRONG]) await postAccess(transport.port, { key });
+    } finally {
+      await transport.stop(1001, "test over");
+    }
+    const text = lines.join("\n");
+    expect(text).toContain("access check denied");
+    for (const secret of [
+      "ABCD",
+      "WXYZ",
+      encodeAccessKey(KEY) ?? "-",
+      encodeAccessKey(WRONG) ?? "-",
+      hashAccessKey(KEY).slice(7, 20),
+    ])
+      expect(text).not.toContain(secret);
+  });
+});
+
+// Lo que se midió en producción con el arreglo de T-39.11 ya desplegado: el proxy de Render pierde
+// el 4003 también cuando responde al primer mensaje del cliente. La conexión queda abierta y muda
+// hasta que el proxy la corta (1006). Por eso el cliente comprueba la clave por HTTP antes.
+describe("F12 behind a proxy that loses the close, the HTTP check still works (T-39.16)", () => {
+  const KEY = "ABCD-EFGH-JKMN-PQRS";
+
+  it("T-39.16 the 4003 never reaches the client, while POST /access through the same proxy answers 401 and 204", async () => {
+    const r = await start({ accessKey: KEY });
+    const proxy = await lossyProxy(r.port, { mode: "close" });
+    try {
+      // Verificación negativa: el 4003, aun enviando un mensaje, no llega.
+      expect(await handshake(r, { port: proxy.port, protocols: accessProtocols(null) })).toBe(
+        "open",
+      );
+      expect((await postAccess(proxy.port)).status).toBe(401);
+      expect((await postAccess(proxy.port, { key: "WXYZ-WXYZ-WXYZ-WXYZ" })).status).toBe(401);
+      expect((await postAccess(proxy.port, { key: KEY })).status).toBe(204);
+      // Con la clave, se juega igual detrás de ese proxy.
+      const ok = connect(r, { port: proxy.port, protocols: accessProtocols(KEY) });
+      await ok.opened;
+      ok.send("room.create", { nickname: "Ana" });
+      expect((await ok.next("room.welcome")).type).toBe("room.welcome");
+      ok.ws.close();
+    } finally {
+      await proxy.close();
+    }
+  });
+
+  it("negative check: without the proxy the same keyless connection gets the 4003", async () => {
+    const r = await start({ accessKey: KEY });
+    expect(await handshake(r, { protocols: accessProtocols(null) })).toBe("close 4003");
   });
 });
 

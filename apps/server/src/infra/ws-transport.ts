@@ -8,20 +8,27 @@
 // - `GET /healthz` responde 204 sin cuerpo (F12): el chequeo del hosting y el precalentamiento de
 //   la web. `GET /ws` sin upgrade dice qué recibiría el handshake (403, 429 o 204, T-39.9): el
 //   navegador no deja leer el estado de un handshake rechazado, y así la web lo distingue de un
-//   servidor dormido. Cualquier otra petición HTTP recibe 404.
-// - Clave de acceso del grupo (F12, R-39): llega como subprotocolo; si falta o no vale, la conexión
-//   se abre y se cierra con 4003 en cuanto el cliente envía algo, sin llegar a las salas (`deny`,
-//   T-39.11). Una IP con demasiadas claves que no
-//   valen recibe 429 en el handshake, con `Retry-After`, cuando vuelve a ofrecer una clave. La clave
-//   nunca se registra.
+//   servidor dormido. `POST /access` comprueba la clave antes de abrir el WebSocket (T-39.12).
+//   Cualquier otra petición HTTP recibe 404.
+// - Clave de acceso del grupo (F12, R-39): el cliente la comprueba con `POST /access` y la ofrece
+//   como subprotocolo en el handshake. Si en el handshake falta o no vale, la conexión se abre y se
+//   cierra con 4003 en cuanto el cliente envía algo, sin llegar a las salas (`deny`, T-39.11): es
+//   solo el respaldo, porque el proxy de Render pierde ese cierre. Una IP con demasiadas claves que
+//   no valen recibe 429, con `Retry-After`, cuando vuelve a ofrecer una clave por cualquiera de los
+//   dos caminos. La clave nunca se registra.
 // - La IP del cliente sale de `X-Forwarded-For` (`clientAddress`). Si no se puede saber, la
 //   conexión sigue sin tope por IP ni bloqueo, en lugar de compartir uno con todos (T-39.8).
 // - Plazos del HTTP (F12, S-06): 10 s para recibir las cabeceras y la petición entera (Node trae
 //   60 s y 300 s); no afectan a un WebSocket ya abierto. Tope de conexiones por IP (F12, S-01).
-import { createServer, type IncomingMessage, type Server } from "node:http";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { isIP } from "node:net";
 import type { Duplex } from "node:stream";
-import { ACCESS_PROTOCOL, CLOSE_ACCESS_DENIED } from "@sudoku-killer/protocol";
+import {
+  ACCESS_KEY_HEADER,
+  ACCESS_PATH,
+  ACCESS_PROTOCOL,
+  CLOSE_ACCESS_DENIED,
+} from "@sudoku-killer/protocol";
 import { WebSocketServer, type WebSocket } from "ws";
 import type { Logger } from "../log/logger.ts";
 import { offersKey, type AccessGate } from "./access.ts";
@@ -212,6 +219,10 @@ export class WsTransport implements Transport {
       (request, response) => {
         const path = new URL(request.url ?? "/", "http://localhost").pathname;
         const read = request.method === "GET" || request.method === "HEAD";
+        if (path === ACCESS_PATH) {
+          this.checkAccess(request, response);
+          return;
+        }
         if (path === WS_PATH && read) {
           const { status, headers } = this.probe(request);
           response.writeHead(status, {
@@ -324,10 +335,70 @@ export class WsTransport implements Transport {
   }
 
   /**
+   * `POST /access` (T-39.12): comprueba la clave de `X-Sk-Access-Key` con el mismo conteo, la misma
+   * espera y las mismas métricas que el handshake. 204 si vale (o si no se pide clave), 401 si falta
+   * o no vale, y 429 con `Retry-After` si la IP agotó sus intentos y ofrece otra. Un `Origin` ausente
+   * o fuera de `ALLOWED_ORIGINS` recibe 403 sin CORS, como el handshake; los permitidos, CORS solo
+   * para su origen. `OPTIONS` responde la consulta previa del navegador (la cabecera de la clave la
+   * pide). Ni la cabecera ni la clave llegan al log.
+   */
+  private checkAccess(request: IncomingMessage, response: ServerResponse): void {
+    // El cuerpo no se usa.
+    request.resume();
+    const origin = request.headers.origin;
+    const answer = (status: number, headers: Readonly<Record<string, string>> = {}) => {
+      response.writeHead(status, {
+        "content-length": "0",
+        "cache-control": "no-store",
+        vary: "Origin",
+        ...headers,
+      });
+      response.end();
+    };
+    if (origin === undefined || !this.allowed.has(normalizeOrigin(origin))) {
+      this.options.logger.warn("access check origin rejected", { hasOrigin: origin !== undefined });
+      answer(403);
+      return;
+    }
+    const cors = {
+      "access-control-allow-origin": origin,
+      "access-control-expose-headers": "Retry-After",
+    };
+    if (request.method === "OPTIONS") {
+      answer(204, {
+        ...cors,
+        "access-control-allow-methods": "POST",
+        "access-control-allow-headers": ACCESS_KEY_HEADER,
+        "access-control-max-age": "600",
+      });
+      return;
+    }
+    if (request.method !== "POST") {
+      answer(405, { ...cors, allow: "POST, OPTIONS" });
+      return;
+    }
+    const access = this.options.access;
+    const raw = request.headers[ACCESS_KEY_HEADER];
+    const header = Array.isArray(raw) ? raw.join(",") : raw;
+    const ip = this.address(request);
+    const offered = header !== undefined && header.trim() !== "";
+    const wait = access && offered ? access.lockedFor(ip) : 0;
+    if (wait > 0) {
+      this.locked++;
+      this.options.logger.warn("access check locked for an address");
+      answer(429, { ...cors, "retry-after": retryAfter(wait) });
+      return;
+    }
+    const result = access ? access.check(header, ip) : "admitted";
+    if (result === "denied") this.options.logger.warn("access check denied");
+    answer(result === "admitted" ? 204 : 401, cors);
+  }
+
+  /**
    * Cierra con 4003 cuando llega el primer mensaje del cliente, o a los `DENY_GRACE_MS` si no envía
-   * nada. Detrás del proxy de Render, un cierre enviado junto con el 101 no llega nunca al cliente
-   * (lo ve como 1006, igual que un servidor dormido, T-39.11); uno que responde a un mensaje del
-   * cliente sí llega, como cualquier respuesta. El mensaje se descarta sin leerlo.
+   * nada (T-39.11). El mensaje se descarta sin leerlo. Es el respaldo de `POST /access`: detrás del
+   * proxy de Render el cierre no llega nunca, ni junto con el 101 ni en respuesta a un mensaje; el
+   * cliente ve la conexión abierta y muda hasta que el proxy la corta con 1006 (T-39.16).
    */
   private deny(ws: WebSocket): void {
     const close = () => {
