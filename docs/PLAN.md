@@ -1,7 +1,7 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.20
-Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F5 hecha (2026-10-23) · F6 hecha (2026-10-24) · F7 hecha (2026-10-23) · F8 hecha (2026-10-24) · F9 hecha (2026-10-24)
+Versión del plan: 1.21
+Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F5 hecha (2026-10-23) · F6 hecha (2026-10-24) · F7 hecha (2026-10-23) · F8 hecha (2026-10-24) · F9 hecha (2026-10-24) · F10 hecha (2026-10-25)
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
 ---
@@ -120,7 +120,7 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 | F7 | Diseño visual propio | 10 | F2 (puede ir en paralelo con F4–F6) | Hecha | ~1,5 |
 | F8 | Cliente con servidor local simulado | 4–8 | F4, F7 | Hecha | ~3,4 |
 | F9 | Servidor de salas | 3–6 | F3, F5, F6 | Hecha | ~1,9 |
-| F10 | Integración en tiempo real | 5–10 | F8, F9 | En curso (F10a a F10g hechas; F10h pendiente) | |
+| F10 | Integración en tiempo real | 5–10 | F8, F9 | Hecha | ~3,1 |
 | F11 | Pruebas integrales, carga y seguridad | 3–6 | F10 | Pendiente | |
 | F12 | Despliegue privado | 2–4 | F11 | Pendiente | |
 | F13 | Beta cerrada y cierre de la v1 | 10 (+1–2 semanas de calendario) | F12 | Pendiente | |
@@ -155,6 +155,21 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, fre
 - La recalibración se mantiene sin cambios. F5 y F7 quedaron por debajo, pero las fases que vienen (F8 a F13) tienen la interfaz, la integración en tiempo real, el despliegue y la beta con personas, que se aceleran menos.
 - La prueba en papel de F5 la hizo el usuario fuera de las sesiones y no entra en estas horas. La segunda muestra se probó el 2026-10-24 (`docs/dificultad.md`, sección 6): las dificultades se distinguen y la equivalencia versión 2 se mantiene.
 - Próxima comparación: al cerrar F10.
+
+**Comparación al cerrar F10 (2026-10-25):**
+- F10 llevó unas **3,1 h** frente a 5–10 h (entre el 31 % y el 62 %; el plan aprobado de F10 estimaba unas 9 h). La entrada de la BITÁCORA dejó las horas para el cierre; se reconstruyeron con las horas de los commits de cada sesión (detalle en la BITÁCORA). No cuentan el punto de control del usuario ni sus revisiones.
+- De F5 a F10 van unas **14,1 h** frente a 26–43 h aprobadas (entre el 33 % y el 54 %): F5 2,0 (2–4), F6 2,2 (2–5), F7 1,5 (10), F8 3,4 (4–8), F9 1,9 (3–6) y F10 3,1 (5–10). De F0 a F10, unas **18,9 h**.
+- Las fases de interfaz e integración (F8 a F10), que la recalibración de F4 suponía más lentas, quedaron entre el 31 % y el 85 % de su rango: más cerca de lo estimado que F4, pero todas por debajo.
+- **Propuesta de recalibración (pendiente de aprobación del usuario, no aplicada):**
+
+  | Fase | Aprobada (h) | Propuesta (h) | Motivo |
+  |---|---|---|---|
+  | F11 | 3–6 | 2–4 | F10 ya dejó Playwright contra el servidor real, el inspector sobre el tráfico WS y el job `e2e` en la CI; la carga y el caos son automatizables. Las partidas internas para recalibrar la puntuación son tiempo de personas, fuera de estas horas. |
+  | F12 | 2–4 | 2–4 | Sin cambio: depende de cuentas, dominio y secretos del usuario. |
+  | F13 | 10 (+1–2 semanas) | 10 (+1–2 semanas) | Sin cambio: beta con personas. |
+
+  Con la propuesta, el total de la v1 quedaría en unas 33–37 h (18,9 h reales de F0 a F10 más 14–18 h de F11 a F13). Mientras no se apruebe, la tabla de arriba mantiene F11 en 3–6 h.
+- Próxima comparación: al cerrar F11.
 
 ---
 
@@ -630,8 +645,27 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | F10e | Inicio, Entrar o crear, Lobby, Resultados y Ayuda, con rutas por hash y Compartir. | Hecha |
 | F10f | Estados de red, transiciones y decisión 3. | Hecha |
 | F10g | E2E con Playwright (6 contextos, T-05.4, T-07.2, T-13.5 y E-08) e inspector sobre el tráfico WS; job `e2e` en la CI. | Hecha |
-| F10h | Punto de control del usuario y correcciones. | Pendiente |
-| F10i | Cierre y recalibración. | Pendiente |
+| F10h | Punto de control del usuario y correcciones. | Hecha |
+| F10i | Cierre y recalibración. | Hecha |
+
+**Punto de control (F10h, 2026-10-25):** el usuario probó con PC, iPhone y iPad a la vez (`pnpm dev:lan`): lobby, entrada por enlace, jugadas, notas personales y grupales, reconexión al bloquear el iPad, salir y volver con ficha, recarga, sesión en otra pestaña, caída y reinicio del servidor, «Compartir» (por http con IP cae al diálogo, como estaba decidido), Ayuda, y derrota y victoria con bots. Todo funcionó. Correcciones pedidas y hechas:
+- el Lobby muestra los números iniciales de cada dificultad desde una sola fuente (`DIFFICULTY_GIVENS`, equivalencia versión 2);
+- la derrota dice su causa en Resultados y en la franja del tablero, también al recargar: `defeatCause` opcional en `match.ended` y en el snapshot (SPEC 1.8, T-01.6 y T-01.7), porque la purga del final borra a quienes salieron o expiraron y el cliente ya no conoce sus vidas;
+- la actividad avisa que lo anterior a la reconexión no está disponible (R-38); la alternativa con las últimas 50 jugadas está en `docs/IDEAS_FUTURAS.md`, sección 7;
+- T-32.2 y T-07.3 siguen un error a través del reinicio hasta el ranking, con verificación negativa;
+- T-32.1 suma casos fijos del borrado de la sala, independientes de fast-check.
+
+**Criterios de aceptación, revisados al cerrar (F10i):**
+- **6 pestañas jugando una partida completa:** cumplido. E2E T-05.4 (seis contextos hasta la victoria), en verde en la CI de `main` (2e2c600) y tres veces seguidas en local al cerrar, sin reintentos.
+- **Clics simultáneos en la misma celda:** cumplido. La misma E2E T-05.4: seis clics simultáneos dan un solo acierto y ninguna penalización; en el servidor, T-05.1 y T-05.5.
+- **Desconexión y vuelta dentro del plazo sin pérdida de estado:** cumplido. E2E T-13.5 con un corte real (y su verificación negativa sin ficha), T-13.1 en el servidor y, en el punto de control, el iPad bloqueado, la recarga y la caída y el reinicio del servidor (con T-32.2 extendida).
+- **Pantallas y estados de red a 360 y a 1280 px, `entrega-f8.md` §4 y decisión 3:** cumplido. Pruebas de componentes de cada pantalla y estado de red, la decisión 3 en `network-states.test.tsx`, `entrega-f8.md` §4 resuelto en F10f, y el recorrido del usuario en PC, iPhone y iPad, que terminó sin correcciones de disposición (las cinco correcciones fueron de contenido y de pruebas).
+
+**Estado:** hecha el 2026-10-25, en unas 3,1 h, frente a 5–10 h (el plan aprobado estimaba unas 9 h). No incluye el punto de control del usuario.
+- **Desviaciones registradas:**
+  - `DIFFICULTY_GIVENS` vive en `packages/protocol`: el cliente de producción no puede importar `packages/bank` (T-31.2), y el banco arma sus reglas con esa constante.
+  - SPEC 1.8 con un campo opcional (`defeatCause`) y R-38; el protocolo sigue en la versión 1 y el registro de eventos no cambia de forma.
+  - El arnés de las pruebas del servidor pone la generación en los `id` de los comandos: tras un reinicio, el transporte en memoria numeraba las conexiones desde 1 y la deduplicación guardada tomaba los comandos nuevos por viejos. Los clientes reales usan `id` al azar.
 
 ### F11 — Pruebas integrales, carga y seguridad (3–6 h; original 10–16 h)
 **Tareas:**
@@ -748,3 +782,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
   - F12 suma la revisión de las migraciones automáticas al arrancar.
   - SPEC 1.7 y notas de F9 en los ADR 0002, 0003, 0004 y 0006.
 - **1.20:** plan de F10 aprobado por el usuario (2026-10-24), con las subtareas F10a a F10i y sus decisiones (sin fotos en la v1, Compartir, paso a Resultados, reanudación al recargar, reconexión inmediata en móvil y Playwright sin reintentos). F10a hecha. La segunda prueba en papel de F5 confirma la equivalencia versión 2 (`docs/dificultad.md`, sección 6). F12: la clave de acceso del grupo pasa a ser obligatoria con el juego en internet, porque la lista de orígenes no autentica.
+- **1.21:** F10 hecha (~3,1 h reales frente a 5–10 h).
+  - Punto de control del usuario con PC, iPhone y iPad (F10h): todo funcionó, con cinco correcciones: números iniciales de cada dificultad en el Lobby, la causa de la derrota (SPEC 1.8, `defeatCause` opcional), el aviso de la actividad tras una reconexión (R-38, con la alternativa en `IDEAS_FUTURAS.md`), T-32.2 con un error a través del reinicio y casos fijos de T-32.1.
+  - Criterios de aceptación revisados contra las E2E en la CI, el punto de control y las correcciones.
+  - Comparación de horas al cerrar F10 en la sección 5: de F5 a F10, unas 14,1 h frente a 26–43 h. Propuesta pendiente de aprobación: F11 de 3–6 h a 2–4 h; F12 y F13 sin cambios. La tabla no cambia hasta que se apruebe.
