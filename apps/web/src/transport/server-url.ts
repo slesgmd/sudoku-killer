@@ -1,7 +1,8 @@
 // Dónde está el servidor de salas (F12). En desarrollo y en las E2E, en el mismo origen que la página
 // (`/ws`, que Vite reenvía). En producción, la web estática y el servidor viven en subdominios
 // distintos (ADR 0007): el build recibe `VITE_SERVER_URL`, que solo puede ser `wss://` (TLS).
-import { ACCESS_PATH } from "@sudoku-killer/protocol";
+// Sin imports de paquetes del monorepo: `vite.config.ts` importa este archivo, y Vite carga la config
+// sin la condición `@sudoku-killer/source` (en la CI no hay `dist`).
 
 /** `ws(s)://<host>/ws` del mismo origen que la página. */
 export function sameOriginUrl(location: {
@@ -48,11 +49,6 @@ export function serverUrl(
 export function prewarmUrl(configured: string | undefined): string | null {
   const url = checkServerUrl(configured);
   return url === null ? null : probeUrl(url);
-}
-
-/** `POST /access` en el mismo servidor (T-39.12): `https://<host>/access` (o `http` sin TLS). */
-export function accessUrl(wsUrl: string): string {
-  return new URL(ACCESS_PATH, probeUrl(wsUrl)).href;
 }
 
 /** `GET /ws` por HTTP en el mismo servidor: `https://<host>/ws` (o `http` sin TLS). */

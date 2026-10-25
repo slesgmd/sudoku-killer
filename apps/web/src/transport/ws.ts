@@ -22,6 +22,7 @@
 // La implementación de WebSocket se inyecta: el navegador usa la suya y los bots Node, la de `ws`.
 import {
   ACCESS_KEY_HEADER,
+  ACCESS_PATH,
   CLOSE_ACCESS_DENIED,
   CLOSE_NO_ROOM,
   CLOSE_REPLACED,
@@ -30,7 +31,7 @@ import {
   parseServerEnvelope,
   type ServerEnvelope,
 } from "@sudoku-killer/protocol";
-import { accessUrl, probeUrl } from "./server-url.ts";
+import { probeUrl } from "./server-url.ts";
 import { Listeners, type Transport, type TransportStatus } from "./types.ts";
 
 /** Lo que el transporte usa de un WebSocket (el del navegador y el de `ws` lo cumplen). */
@@ -109,6 +110,11 @@ export function httpProbe(
       return null;
     }
   };
+}
+
+/** `POST /access` en el mismo servidor (T-39.12): `https://<host>/access` (o `http` sin TLS). */
+export function accessUrl(wsUrl: string): string {
+  return new URL(ACCESS_PATH, probeUrl(wsUrl)).href;
 }
 
 /**
