@@ -857,6 +857,12 @@ export class GameClient {
     if (token !== undefined) this.session.saveToken(room.code, token);
     this.session.saveLastRoom(room.code);
     const returning = this.reconnecting && this.state.playerId === playerId;
+    // R-38: el snapshot no trae el historial. Si la partida en curso ya tuvo jugadas, la actividad
+    // empieza con un aviso en lugar de «Todavía no hay jugadas».
+    const earlierPlays =
+      match?.endedAt === null &&
+      (match.locked.some((cell) => cell.source !== "given") ||
+        room.players.some((p) => p.mistakes > 0));
     if (this.state.playerId !== null && this.state.playerId !== playerId) {
       // La ficha ya no valía: es otra entrada, sin nada pendiente de la anterior.
       const entryId = this.entryId;
@@ -891,6 +897,7 @@ export class GameClient {
       // la misma sesión, se queda donde estaba.
       showResults: (match?.endedAt ?? null) !== null && (returning ? this.state.showResults : true),
       ...(match ? {} : NO_MATCH),
+      ...(earlierPlays ? { activity: [] } : {}),
     });
     if (match) {
       const size = match.puzzle.size;
@@ -928,6 +935,8 @@ export class GameClient {
         queued > 0 ? t("state.reconnectedQueued", { count: queued }) : t("state.reconnected"),
       );
     }
+    // Después de los avisos de la vuelta, para que la línea lo muestre hasta la próxima jugada.
+    if (earlierPlays) this.log("notice", playerId, null, t("activity.gap"));
     const request = this.startRequest;
     if (request && !match) {
       this.startRequest = null;

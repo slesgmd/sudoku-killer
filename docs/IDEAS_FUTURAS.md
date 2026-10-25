@@ -41,3 +41,14 @@ Formato de cada entrada: título, descripción breve, origen (fecha y contexto) 
 - **Descripción:** una paleta oscura con los mismos tokens (`tokens.css`), elegida por `prefers-color-scheme` o desde los ajustes.
 - **Origen:** 2026-10-24, cierre de F8 (pendiente de `design/entrega-f8.md` §4). El prototipo de F7 solo diseña el tema claro, y el usuario decidió dejarlo fuera de la v1.
 - **Notas:** hay que medir otra vez toda la matriz de contrastes (`docs/diseno.md` §2.5), incluidas las líneas de jaula y los colores de jugador, y revisar las sombras y la marca de GitHub del inicio, que pasaría a blanco.
+
+## 7. Historial de actividad en el snapshot
+
+- **Descripción:** sumar al snapshot (SPEC §4.5) las últimas 50 jugadas públicas de la partida en curso (aciertos, errores y pistas, con `seq`, autor, celda, dígito revelado o propuesto y hora), como campo opcional. Así, tras reconectar o recargar, la actividad muestra lo que pasó antes en lugar del aviso de R-38. **Nunca** las notas personales (R-29), ni tampoco las grupales.
+- **Origen:** 2026-10-25, punto de control de F10 (F10h). En la v1, el snapshot no trae el historial y la actividad empieza con «La actividad anterior a la reconexión no está disponible.» (R-38).
+- **Costo estimado:**
+  - Protocolo: un campo opcional (`recentActivity?`), sin subir la versión (§4.7). Unos 80 bytes por entrada en JSON, unos 4 KB por bienvenida con 50 entradas, dentro de los límites de §4.8.
+  - Servidor: derivar las entradas de la cola del registro (`cell.solved`, `cell.mistake`, `hint.used`), sin guardar nada nuevo, así también salen igual tras una reconstrucción. Una función pura en `packages/game`, al lado de `snapshotFor`.
+  - Cliente: reemplazar la actividad por esas entradas al recibir el snapshot, sin duplicar las que llegan después (por `seq`).
+  - Pruebas: el inspector de filtración sobre la bienvenida (sin notas personales ni dígitos no revelados en `value`), una prueba de integración tras un reinicio y una de componente. En total, unas 1–1,5 h.
+- **Notas:** los avisos locales (toasts) del historial anterior se pierden igual, porque son del cliente.

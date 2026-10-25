@@ -131,7 +131,6 @@ describe("reconnection (E-07, R-13)", () => {
     const place = transport.last("cell.place");
     if (!place) throw new Error("No cell.place");
     expect(client.getState().pending.has(10)).toBe(true);
-    const activity = client.getState().activity.length;
 
     // La conexión cae antes del veredicto; el servidor ya lo había aplicado (seq 8).
     const rejoin = dropAndReturn(transport);
@@ -167,7 +166,9 @@ describe("reconnection (E-07, R-13)", () => {
     expect(state.pending.has(10)).toBe(false);
     expect(state.players.find((p) => p.id === ME.id)?.mistakes).toBe(1);
     expect(state.flashes.size).toBe(0);
-    expect(state.activity.length).toBe(activity + 1); // solo el aviso «Conexión recuperada»
+    // Sin la jugada repetida: el snapshot ya tenía un error, así que la actividad vuelve a empezar
+    // con «Conexión recuperada» y el aviso de R-38.
+    expect(state.activity.map((entry) => entry.kind)).toEqual(["notice", "notice"]);
     // Un evento nuevo (seq 9) sí se aplica.
     transport.emit({
       type: "cell.solved",

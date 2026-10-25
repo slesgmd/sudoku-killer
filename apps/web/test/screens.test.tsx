@@ -598,6 +598,75 @@ describe("F10h a defeat says its cause, live and after reloading (SPEC 1.8)", ()
   });
 });
 
+describe("F10h R-38 activity after a reconnection", () => {
+  const GAP = "La actividad anterior a la reconexión no está disponible.";
+  const puzzle = testPuzzle();
+  const givens = new Set(puzzle.givens.map((g) => g.cell));
+  const free = [...Array(puzzle.size * puzzle.size).keys()].filter((cell) => !givens.has(cell));
+
+  function reload(
+    locked: NonNullable<Snapshot["match"]>["locked"],
+    me: PublicPlayer = ME,
+  ): FakeTransport {
+    const { transport } = mount({ hash: `#/sala/${CODE}`, session: withToken() });
+    welcome(transport, {
+      state: "running",
+      players: [me, TOMAS],
+      match: {
+        id: "m1",
+        puzzle,
+        startedAt: 1000,
+        endedAt: null,
+        result: null,
+        hintsLeft: 3,
+        locked,
+        groupNotes: [],
+        ranking: null,
+      },
+    });
+    return transport;
+  }
+
+  function history(): string[] {
+    fireEvent.click(screen.getByRole("button", { name: "Ver actividad" }));
+    const dialog = screen.getByRole("dialog", { name: "Actividad" });
+    const rows = within(dialog)
+      .getAllByRole("listitem")
+      .map((row) => row.querySelector(".atext")?.textContent ?? row.textContent);
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    return rows;
+  }
+
+  it("T-38.1 with earlier plays: the line and the dialog show the notice, and new plays come after it", () => {
+    const [solved = 0, next = 1] = free;
+    // Inés recarga después de haber sumado puntos: no es una llegada nueva.
+    const transport = reload([{ cell: solved, value: 4, source: "solved", by: ME.id }], {
+      ...ME,
+      score: 10,
+    });
+    expect(screen.queryByText("Todavía no hay jugadas.")).toBeNull();
+    expect(screen.getByText(GAP, { selector: ".stxt" })).toBeDefined();
+    expect(history()).toEqual([GAP]);
+    transport.emit({
+      type: "cell.solved",
+      seq: 20,
+      payload: { cell: next, value: 3, by: TOMAS.id, points: 10, score: 20, bonuses: [] },
+    });
+    const rows = history();
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatch(/^Tomás · acierto en /);
+    expect(rows[1]).toBe(GAP);
+  });
+
+  it("T-38.1 without plays: no notice; the history keeps what it had (here, only the arrival)", () => {
+    reload([]);
+    expect(screen.queryByText(GAP)).toBeNull();
+    expect(history()).toEqual([
+      "Entraste en una partida en curso: empiezas con 3 vidas y 0 puntos. Las notas grupales ya están a la vista.",
+    ]);
+  });
+});
+
 describe("F10e Ayuda (pantallas.md §1.6)", () => {
   it("from Inicio: no Ajustes; «Volver» goes back", () => {
     mount();
