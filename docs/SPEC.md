@@ -1,6 +1,6 @@
 # SPEC — Sudoku Killer Multijugador · v1
 
-- Versión del documento: 1.7 (F9, 2026-10-24). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2); R-20 suma el banco de puzzles (T-20.3 a T-20.5) y `PuzzleRecord` guarda `graderVersion` y `seed` (1.3); P2 y R-20 escalonan los números iniciales por dificultad y `givensReason` cambia `easy` por `difficulty` (1.4); F6 fija B, w, P, β y H, el nivel se calcula con los descartes públicos de los errores (§2.3 y §5), R-35 suma T-35.7 y T-35.8 y la nueva R-36 reúne las pruebas de la puntuación (1.5); F8 fija el destello en 1500 ms (§1.4 y T-04.3), el evento `cell.solved` guarda `level` y `graderVersion` (§5), T-31.2 describe su detector, las pruebas de esquema, T-15.1 y la base de T-32.1 se adelantan a F8, R-06 suma la preferencia local «Usar notas» (T-06.3) y la nueva R-37 cubre el arranque que falla (1.6); F9 fija las cubetas de presencia y de ping, los cierres 4002 y 1012, el 403 por origen, el apodo en grafemas, la persistencia de §2.5 y el registro de las desconexiones al reconstruir (1.7).
+- Versión del documento: 1.8 (F10, 2026-10-25). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2); R-20 suma el banco de puzzles (T-20.3 a T-20.5) y `PuzzleRecord` guarda `graderVersion` y `seed` (1.3); P2 y R-20 escalonan los números iniciales por dificultad y `givensReason` cambia `easy` por `difficulty` (1.4); F6 fija B, w, P, β y H, el nivel se calcula con los descartes públicos de los errores (§2.3 y §5), R-35 suma T-35.7 y T-35.8 y la nueva R-36 reúne las pruebas de la puntuación (1.5); F8 fija el destello en 1500 ms (§1.4 y T-04.3), el evento `cell.solved` guarda `level` y `graderVersion` (§5), T-31.2 describe su detector, las pruebas de esquema, T-15.1 y la base de T-32.1 se adelantan a F8, R-06 suma la preferencia local «Usar notas» (T-06.3) y la nueva R-37 cubre el arranque que falla (1.6); F9 fija las cubetas de presencia y de ping, los cierres 4002 y 1012, el 403 por origen, el apodo en grafemas, la persistencia de §2.5 y el registro de las desconexiones al reconstruir (1.7); F10 suma `defeatCause`, opcional, a `match.ended` y al snapshot (§4.3, §4.5, T-01.6 y T-01.7), y la nueva R-38 cubre la actividad tras una reconexión (1.8). El protocolo sigue en la versión 1: un campo opcional es un cambio compatible (§4.7).
 - Versión del protocolo: **1**
 - Fuente de las reglas: `docs/PLAN.md`, secciones 1 y 2, más las decisiones de producto de F2 (sección 1 de este documento).
 - Decisiones técnicas: `docs/adr/0001`–`0006`.
@@ -339,7 +339,7 @@ En `room.join`, si la `token` es válida para esa sala, se reanuda la sesión y 
 | `hint.used` | `{ cell, value, by, points, score, hintsLeft }` | Todos |
 | `note.applied` | `{ opSeq, layer, op: 'add'\|'remove', cell, digit, by, undoOf? }` | Grupal: todos. Personal: solo el dueño. |
 | `presence.updated` | `{ playerId, cell \| null }` | Los demás (agrupado, ver 4.8) |
-| `match.ended` | `{ result, endedAt, ranking: RankingEntry[] }` | Todos |
+| `match.ended` | `{ result, defeatCause?, endedAt, ranking: RankingEntry[] }` | Todos |
 | `ack` | `{ applied: boolean }` | Solo al autor, para comandos sin otra respuesta: una nota sin efecto, `settings.update`, `room.leave` |
 | `error` | `{ code: ErrorCode, reason? }` | Solo al autor |
 | `sys.pong` | `{ t0, serverNow }` | Solo a quien envió el ping |
@@ -351,6 +351,7 @@ interface RankingEntry { playerId; nickname; score; mistakes; scoreReachedAt; po
 ```
 
 - `points` es el cambio de puntaje de `by` en ese mensaje, bonus incluidos; `score` es su total nuevo.
+- `defeatCause` (1.8) va solo en una derrota y dice cómo terminaron los jugadores del ranking (todos los de la partida, también los que salieron o expiraron): `lives` si todos quedaron con 0 vidas, `gone` si ninguno (salieron o expiraron con vidas) y `mixed` si hay de los dos. Se deriva del estado final de la partida (`defeatCause` de `packages/game`): el evento `match.ended` del registro no cambia de forma y `replay` da la misma causa. Hace falta porque la purga del final (R-22) borra de la sala a quienes salieron o expiraron, y tras recargar el cliente ya no conoce sus vidas.
 - **Convención anti-filtración:** el campo `value` solo lleva dígitos **revelados por el servidor**, es decir, de celdas que ese mensaje bloquea o que ya estaban bloqueadas. Los dígitos que aporta un jugador viajan como `digit`. El inspector de la sección 8.3 se basa en esta convención.
 
 ### 4.4 Códigos de error
@@ -383,7 +384,7 @@ interface Snapshot {
   atSeq: number | null;                       // último seq de la partida incluido
   room: { code; state; starterId; difficulty; players: PublicPlayer[] };
   match: null | {
-    id; puzzle: PublicPuzzle; startedAt; endedAt; result; hintsLeft;
+    id; puzzle: PublicPuzzle; startedAt; endedAt; result; defeatCause?; hintsLeft;
     locked: Array<{ cell; value; source; by }>;     // value: solo celdas bloqueadas
     groupNotes: Array<{ cell; mask }>;              // solo celdas con candidatos
     ranking: RankingEntry[] | null;                 // si terminó
@@ -491,6 +492,8 @@ Entre corchetes va la fase en que se implementa cada prueba.
 - T-01.3 *Dado* un único activo desconectado, *cuando* el reloj falso avanza 120 s, *entonces* expira y se emite `match.ended{defeat}`. [I, F9]
 - T-01.4 *Dado* un único activo desconectado durante 60 s y espectadores conectados, *entonces* la partida sigue en `running`. [I, F9]
 - T-01.5 *Dado* una sola celda vacía, *cuando* se usa una pista sobre ella, *entonces* el resultado es `victory`. [I, F9]
+- T-01.6 La derrota lleva su causa (§4.3): `lives` si todos terminaron con 0 vidas (T-01.2), `mixed` si uno quedó sin vidas y otro expiró (T-01.3) y `gone` si todos expiraron (T-14.3). El snapshot de quien vuelve después de la purga trae la misma causa, y `replay` del registro también. [I, F10]
+- T-01.7 Resultados y la franja del tablero muestran el titular y la bajada de la causa: «Se acabaron las vidas.», «La partida quedó sin jugadores.» o «La partida quedó sin jugadores activos.», igual al llegar en vivo y al recargar. Sin causa (un servidor anterior), los de la mezcla. [C, F10]
 
 **R-02 Ranking individual.**
 - T-02.1 El ranking ordena por puntaje descendente. [U, F6]
@@ -696,6 +699,9 @@ Entre corchetes va la fase en que se implementa cada prueba.
 **R-37 Arranque que falla (F8, prueba en la red local).** Si la entrada a la sala o la carga de la partida fallan (un `error` del arranque o del servidor) o no terminan en 15 s, el cliente sale de la sala si llegó a entrar y vuelve al inicio con un aviso de error y «Reintentar», conservando el apodo y la dificultad. Nunca se queda en «Entrando…» para siempre.
 - T-37.1 Sin respuesta, a los 15 s aparece el aviso con «Reintentar», que vuelve a enviar `room.create` con el mismo apodo y la misma dificultad. Un `error` a `match.start` durante la carga, o un `error` del servidor sin `replyTo`, lo muestra en el acto. Un apodo en uso sigue siendo un error de campo, y una partida que empieza a tiempo cancela el plazo. [C, F8]
 
+**R-38 Actividad tras una reconexión (F10).** El snapshot no trae el historial de jugadas. Si llega con una partida en curso que ya tiene jugadas (alguna celda bloqueada que no es un número inicial), la línea de actividad y el diálogo «Ver actividad» muestran «La actividad anterior a la reconexión no está disponible.» y las jugadas nuevas se agregan después. Con una partida sin jugadas sigue «Todavía no hay jugadas». La alternativa (las últimas 50 jugadas públicas en el snapshot) está en `docs/IDEAS_FUTURAS.md`.
+- T-38.1 Al reconectar o recargar con jugadas previas aparece el aviso en la línea y en el diálogo, y una jugada nueva queda antes que él; sin jugadas, «Todavía no hay jugadas». [C, F10]
+
 ---
 
 ## 7. Casos límite
@@ -779,4 +785,4 @@ El inspector está activo por defecto en todas las pruebas I. Las pruebas E2E us
 | Limpieza automática | R-17 | T-17.1–5 |
 | Diseño visual | R-18 | T-18.1 |
 
-Todas las reglas de la visión (R-01 a R-07), las decisiones de F2 (R-19 a R-34), el motor (R-35), la puntuación (R-36) y el arranque del cliente (R-37) tienen también sus pruebas en la sección 6.
+Todas las reglas de la visión (R-01 a R-07), las decisiones de F2 (R-19 a R-34), el motor (R-35), la puntuación (R-36) y el arranque del cliente (R-37) y la actividad tras una reconexión (R-38) tienen también sus pruebas en la sección 6.
