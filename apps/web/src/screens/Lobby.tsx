@@ -3,7 +3,12 @@
 // En móvil, la acción principal queda fija al pie.
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { NORMAL_RULES } from "@sudoku-killer/game/client";
-import { DIFFICULTIES, type PublicPlayer } from "@sudoku-killer/protocol";
+import {
+  DIFFICULTIES,
+  DIFFICULTY_GIVENS,
+  type Difficulty,
+  type PublicPlayer,
+} from "@sudoku-killer/protocol";
 import { AppHeader } from "../components/AppHeader.tsx";
 import { NetworkBanner } from "../components/Network.tsx";
 import { CopyDialog, LeaveDialog, SettingsDialog, nextStarter } from "../components/Dialogs.tsx";
@@ -31,6 +36,12 @@ export interface LobbyProps {
 /** «H P Q 6 N Z»: el lector de pantalla lee el código letra por letra. */
 function spelled(code: string): string {
   return code.replace(/(.)(?=.)/g, "$1 ");
+}
+
+/** «30 números iniciales» o «Sin números iniciales», con la cantidad de la equivalencia versión 2. */
+export function givensNote(difficulty: Difficulty): string {
+  const count = DIFFICULTY_GIVENS[difficulty];
+  return count === 0 ? t("difficulty.noGivens") : t("difficulty.givensNote", { count });
 }
 
 export function Lobby({ client, state, share, link, onLeave }: LobbyProps) {
@@ -233,9 +244,7 @@ export function Lobby({ client, state, share, link, onLeave }: LobbyProps) {
                       />
                       <span>
                         <span className="rname">{t(`difficulty.${d}`)}</span>
-                        {d === "easy" ? (
-                          <span className="rnote">{t("difficulty.easyNote")}</span>
-                        ) : null}
+                        <span className="rnote">{givensNote(d)}</span>
                       </span>
                     </label>
                   ))}

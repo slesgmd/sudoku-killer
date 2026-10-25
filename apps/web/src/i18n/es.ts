@@ -188,7 +188,8 @@ export const es = {
   "difficulty.medium": "Media",
   "difficulty.hard": "Difícil",
   "difficulty.expert": "Experto",
-  "difficulty.easyNote": "Incluye algunos números iniciales",
+  "difficulty.givensNote": "{count} números iniciales",
+  "difficulty.noGivens": "Sin números iniciales",
 
   // Cabecera
   "head.room": "Sala",

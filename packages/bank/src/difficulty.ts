@@ -2,7 +2,7 @@
 // guarda con que se agregan y la banda de niveles que tiene que cumplir el puzzle, calificado con
 // sus números. Las bandas no se solapan: cada dificultad sube un nivel de técnica.
 import type { GradeResult } from "@sudoku-killer/engine";
-import { DIFFICULTIES, type Difficulty } from "@sudoku-killer/protocol";
+import { DIFFICULTIES, DIFFICULTY_GIVENS, type Difficulty } from "@sudoku-killer/protocol";
 
 /** Cambia cuando cambian las reglas de abajo: el banco guardado deja de corresponder. */
 export const DIFFICULTY_MAPPING_VERSION = "2";
@@ -23,7 +23,8 @@ const solved = (result: GradeResult): boolean => result.status === "solved";
 const stepsAt = (result: GradeResult, level: number): number => result.stepsByLevel[level] ?? 0;
 
 /**
- * Versión 2 (aprobada el 2026-10-23, tras la prueba en papel):
+ * Versión 2 (aprobada el 2026-10-23, tras la prueba en papel); las cantidades salen de
+ * `DIFFICULTY_GIVENS` (protocolo), que el Lobby también muestra:
  * - Fácil: 30 números, nivel máximo 1.
  * - Media: 22 números, nivel máximo 2 (con algún paso de nivel 2).
  * - Difícil: 10 números, nivel máximo 3 o 4, con algún paso de nivel 3.
@@ -31,22 +32,22 @@ const stepsAt = (result: GradeResult, level: number): number => result.stepsByLe
  */
 export const DIFFICULTY_RULES: Readonly<Record<Difficulty, DifficultyRule>> = {
   easy: {
-    givens: 30,
+    givens: DIFFICULTY_GIVENS.easy,
     floor: () => true,
     accepts: (r) => solved(r) && r.maxLevel === 1,
   },
   medium: {
-    givens: 22,
+    givens: DIFFICULTY_GIVENS.medium,
     floor: (r) => !solved(r) || stepsAt(r, 2) > 0,
     accepts: (r) => solved(r) && r.maxLevel === 2,
   },
   hard: {
-    givens: 10,
+    givens: DIFFICULTY_GIVENS.hard,
     floor: (r) => !solved(r) || stepsAt(r, 3) > 0,
     accepts: (r) => solved(r) && (r.maxLevel === 3 || r.maxLevel === 4) && stepsAt(r, 3) > 0,
   },
   expert: {
-    givens: 0,
+    givens: DIFFICULTY_GIVENS.expert,
     floor: () => true,
     accepts: (r) => solved(r) && r.maxLevel === 5,
   },

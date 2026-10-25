@@ -294,6 +294,17 @@ describe("F10e Lobby (pantallas.md §1.3)", () => {
     expect(window.location.hash).toBe(`#/sala/${CODE}`);
   });
 
+  it("each difficulty says how many initial numbers it has, from the version 2 equivalence", () => {
+    inLobby({ players: [waiting(ME)] });
+    const note = (name: RegExp): string | null =>
+      screen.getByRole("radio", { name }).closest("label")?.querySelector(".rnote")?.textContent ??
+      null;
+    expect(note(/Fácil/)).toBe("30 números iniciales");
+    expect(note(/Media/)).toBe("22 números iniciales");
+    expect(note(/Difícil/)).toBe("10 números iniciales");
+    expect(note(/Experto/)).toBe("Sin números iniciales");
+  });
+
   it("the others see the difficulty and wait; they follow it live and see the handover", () => {
     const tomas = waiting(TOMAS);
     const { transport } = inLobby({
