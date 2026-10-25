@@ -82,9 +82,11 @@ test("E-15 T-32.2 the server restarts mid-match: the pages reconnect on their ow
   await expect(cell(host, solved)).toHaveAttribute("aria-label", /resuelta por Tomás/);
   await expect.poll(() => playerOf(game, code, "Tomás").lives).toBe(2);
   const before = playerOf(game, code, "Tomás");
-  const startedAt = matchOf(game, code).state.startedAt;
+  const { startedAt, id: matchId } = matchOf(game, code).state;
 
-  expect(await game.restart()).toBe(1);
+  // El servidor del worker es compartido: puede reconstruir también partidas de otras pruebas.
+  expect(await game.restart()).toBeGreaterThanOrEqual(1);
+  expect(matchOf(game, code).state.id).toBe(matchId);
 
   // Sin tocar nada, las dos páginas vuelven a la partida reconstruida.
   await expect
