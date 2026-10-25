@@ -38,6 +38,15 @@ export function serverUrl(
   return checkServerUrl(configured) ?? sameOriginUrl(location);
 }
 
+/**
+ * El `/healthz` que la página pide al abrirse para que el servidor dormido empiece a despertar
+ * (F12g), o `null` si el servidor está en el mismo origen (desarrollo y E2E).
+ */
+export function prewarmUrl(configured: string | undefined): string | null {
+  const url = checkServerUrl(configured);
+  return url === null ? null : healthUrl(url);
+}
+
 /** El chequeo de salud del mismo servidor: `https://<host>/healthz` (o `http` sin TLS). */
 export function healthUrl(wsUrl: string): string {
   const url = new URL(wsUrl);

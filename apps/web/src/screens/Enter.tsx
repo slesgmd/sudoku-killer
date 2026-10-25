@@ -125,6 +125,16 @@ export function Enter({ state, code, savedNickname, onJoin, onCreate, onRetry }:
               if (valid !== null) onJoin(roomCode, valid);
             }}
           >
+            {entering && state.waking ? (
+              <div className="toast formerr" role="status">
+                <Icon name="info" />
+                <span className="formerr-body">
+                  <span>
+                    <span className="tkind">{t("enter.wakingTitle")}</span> {t("enter.wakingText")}
+                  </span>
+                </span>
+              </div>
+            ) : null}
             {full || offline ? (
               <div className="toast err formerr" role="alert">
                 <Icon name="alert" />

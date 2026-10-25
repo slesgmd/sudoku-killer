@@ -46,6 +46,13 @@ const CLOCK_SAMPLES = 8;
  * 300 ms (docs/dificultad.md §5.1): el margen cubre un celular lento o un servidor con demora.
  */
 export const START_TIMEOUT_MS = 15_000;
+/**
+ * Servidor dormido (F12g, ADR 0007): si la conexión no abre en 3 s al entrar, se avisa
+ * «Despertando el servidor…» y se sigue intentando hasta 2 min (el hosting gratuito tarda alrededor
+ * de un minuto en despertar). Después, el aviso de error con «Reintentar» (T-37.1).
+ */
+export const WAKE_NOTICE_MS = 3_000;
+export const WAKE_TIMEOUT_MS = 120_000;
 /** Grupos de deshacer guardados (ADR 0005). */
 const UNDO_LIMIT = 50;
 /**
@@ -134,6 +141,9 @@ export class GameClient {
   /** Mensajes del arranque (`room.create`, `room.set_difficulty` y `match.start`). */
   private readonly startIds = new Set<string>();
   private startTimer: ReturnType<typeof setTimeout> | null = null;
+  private wakeTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Si la conexión llegó a abrir desde que empezó la entrada actual (F12g). */
+  private openedSinceEntry = false;
   /** Mensajes del lobby y de Resultados (`match.start` y `room.reset`) sin respuesta. */
   private readonly lobbyIds = new Set<string>();
   private readonly undoStack: UndoGroup[] = [];
@@ -322,12 +332,15 @@ export class GameClient {
     this.set({ connection: status });
     if (status === "open") {
       this.lastAlive = this.now();
+      if (!this.openedSinceEntry && this.state.phase === "entering") this.awake();
       this.sendEntry();
       this.startPing();
       return;
     }
     const starting = this.state.phase === "entering" || this.state.phase === "loading";
-    if (status === "unavailable" && starting && !this.inRoom()) this.failStart();
+    // Mientras el servidor despierta (F12g), `unavailable` no corta la entrada: el plazo es otro.
+    if (status === "unavailable" && starting && !this.inRoom() && this.openedSinceEntry)
+      this.failStart();
   }
 
   /** El apodo de la última entrada en este navegador. */
@@ -392,10 +405,15 @@ export class GameClient {
     this.entry = entry;
     this.session.saveNickname(entry.nickname);
     this.stopStartTimer();
-    this.startTimer = setTimeout(() => {
-      this.startTimer = null;
-      if (this.state.phase === "entering" || this.state.phase === "loading") this.failStart();
-    }, START_TIMEOUT_MS);
+    this.openedSinceEntry = this.transport.status === "open";
+    // Sin conexión abierta, puede que el servidor esté dormido: más plazo y, a los 3 s, el aviso.
+    this.armStartTimer(this.openedSinceEntry ? START_TIMEOUT_MS : WAKE_TIMEOUT_MS);
+    if (!this.openedSinceEntry) {
+      this.wakeTimer = setTimeout(() => {
+        this.wakeTimer = null;
+        if (this.state.phase === "entering" && !this.openedSinceEntry) this.set({ waking: true });
+      }, WAKE_NOTICE_MS);
+    }
     if (this.transport.status === "open") {
       this.lastAlive = this.now();
       this.sendEntry();
@@ -511,6 +529,25 @@ export class GameClient {
   private stopStartTimer(): void {
     if (this.startTimer !== null) clearTimeout(this.startTimer);
     this.startTimer = null;
+    if (this.wakeTimer !== null) clearTimeout(this.wakeTimer);
+    this.wakeTimer = null;
+  }
+
+  private armStartTimer(ms: number): void {
+    if (this.startTimer !== null) clearTimeout(this.startTimer);
+    this.startTimer = setTimeout(() => {
+      this.startTimer = null;
+      if (this.state.phase === "entering" || this.state.phase === "loading") this.failStart();
+    }, ms);
+  }
+
+  /** La conexión abrió por primera vez en esta entrada: el servidor está despierto (F12g). */
+  private awake(): void {
+    this.openedSinceEntry = true;
+    if (this.wakeTimer !== null) clearTimeout(this.wakeTimer);
+    this.wakeTimer = null;
+    this.armStartTimer(START_TIMEOUT_MS);
+    if (this.state.waking) this.set({ waking: false });
   }
 
   backHome(): void {

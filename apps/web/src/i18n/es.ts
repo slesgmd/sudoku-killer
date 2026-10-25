@@ -62,6 +62,9 @@ export const es = {
   "enter.retry": "Reintentar",
   "enter.statusJoin": "Entrando en la sala {code}…",
   "enter.statusCreate": "Creando la sala…",
+  "enter.wakingTitle": "Despertando el servidor…",
+  "enter.wakingText":
+    "La primera vez del día puede tardar hasta 1 minuto. Se sigue intentando solo.",
 
   // Clave de acceso del grupo (F12, R-39)
   "access.title": "Clave del grupo",

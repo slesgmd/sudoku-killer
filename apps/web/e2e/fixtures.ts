@@ -45,6 +45,10 @@ export interface GameServer {
   events(matchId: string): Promise<MatchEvent[]>;
   /** Pide (o deja de pedir, con `null`) la clave de acceso del grupo en el handshake (R-39). */
   requireAccessKey(key: string | null): void;
+  /** El servidor «se duerme» (F12g): deja de escuchar en su puerto hasta `wake`. */
+  sleep(): Promise<void>;
+  /** Vuelve a arrancar sobre la misma base y el mismo puerto (si estaba dormido). */
+  wake(): Promise<void>;
   stop(): Promise<void>;
 }
 
@@ -136,6 +140,7 @@ async function startGameServer(): Promise<GameServer> {
   let live: { server: RoomServer; transport: TappedTransport; sink: EventWriter } | null = null;
   // Sin clave salvo en las pruebas de R-39; sobrevive a los reinicios.
   const access = new AccessGate({ hash: null, clock: systemClock });
+  let asleep = false;
   const current = () => {
     if (!live) throw new Error("No server");
     return live;
@@ -209,6 +214,19 @@ async function startGameServer(): Promise<GameServer> {
     events: (matchId) => repository.events(matchId),
     requireAccessKey(key) {
       access.hash = key === null ? null : hashAccessKey(key);
+    },
+    async sleep() {
+      if (asleep) return;
+      const old = current();
+      for (const room of [...old.server.rooms.values()]) room.deleted = true;
+      await old.sink.drain();
+      await old.transport.stop(1001, "sleeping");
+      asleep = true;
+    },
+    async wake() {
+      if (!asleep) return;
+      asleep = false;
+      await boot();
     },
     stop: () => current().transport.stop(1001, "e2e over"),
   };
