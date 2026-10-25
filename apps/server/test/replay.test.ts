@@ -6,6 +6,7 @@
 // y pasan 120 s, la sala se borra (R-14): la propiedad lo comprueba y termina esa ejecución.
 import fc from "fast-check";
 import { replay } from "@sudoku-killer/game";
+import type { PublicPuzzle } from "@sudoku-killer/protocol";
 import { beforeAll, describe, expect, it } from "vitest";
 import { answer, emptyCells, started, wrong } from "./helpers/play.ts";
 import { assertAsyncProperty } from "./helpers/property.ts";
@@ -82,6 +83,78 @@ beforeAll(async () => {
   await testBank();
 }, 60_000);
 
+type Harness = Awaited<ReturnType<typeof createTestServer>>;
+
+/**
+ * La sala se borró (R-14): nadie puede volver con su ficha (`room.not_found`) y el registro,
+ * reproducido, termina en derrota con todos fuera.
+ */
+async function expectDeleted(
+  h: Harness,
+  code: string,
+  matchId: string,
+  puzzle: PublicPuzzle,
+  back: { readonly nickname: string; readonly token: string },
+): Promise<void> {
+  expect(h.server.rooms.has(code)).toBe(false);
+  expect(errorOf(await h.client().join(code, back.nickname, back.token))).toBe("room.not_found");
+  const events = await h.repository.events(matchId);
+  expect(events.map((e) => e.seq)).toEqual(events.map((_, i) => i + 1));
+  const replayed = replay(events, { mode, puzzle });
+  expect(replayed.result).toBe("defeat");
+  for (const p of replayed.players.values()) expect(["left", "expired"]).toContain(p.connection);
+}
+
+/** El registro reproducido da el estado en vivo y el mismo ranking. */
+async function expectReplayEqualsLive(h: Harness, code: string, matchId: string): Promise<void> {
+  const match = h.room(code).match;
+  if (!match) throw new Error("No match");
+  const events = await h.repository.events(matchId);
+  expect(events.map((e) => e.seq)).toEqual(events.map((_, i) => i + 1));
+  const replayed = replay(events, { mode, puzzle: match.puzzle });
+  expect(replayed).toEqual(match.state);
+  expect(mode.ranking(replayed)).toEqual(mode.ranking(match.state));
+}
+
+// Casos fijos, independientes de fast-check (docs/motor.md, «Pruebas aleatorias y semillas»): la
+// regresión de la semilla -1802840427 deja de depender de `seed` y `path` si cambian los arbitrarios.
+describe("R-32 reproducible log: fixed cases", () => {
+  it("T-32.1 players 1, 2 and 0 drop and 120 s pass: the room is deleted, room.not_found and defeat in the log", async () => {
+    const h = await createTestServer();
+    const { code, clients } = await started(h, ["Jugador 0", "Jugador 1", "Jugador 2"]);
+    const [p0, p1, p2] = clients;
+    if (!p0?.token || !p1 || !p2) throw new Error();
+    const match = h.room(code).match;
+    if (!match) throw new Error();
+    for (const client of [p1, p2, p0]) await client.drop();
+    await h.advance(GRACE_MS - 1);
+    expect(h.server.rooms.has(code)).toBe(true);
+    await h.advance(1);
+    await h.settle();
+    await expectDeleted(h, code, match.state.id, match.puzzle, {
+      nickname: "Jugador 0",
+      token: p0.token,
+    });
+  });
+
+  it("T-32.1 players 1 and 2 drop and 130 s pass with player 0 connected: the room stays and replay equals live", async () => {
+    const h = await createTestServer();
+    const { code, clients } = await started(h, ["Jugador 0", "Jugador 1", "Jugador 2"]);
+    const [p0, p1, p2] = clients;
+    if (!p0 || !p1 || !p2) throw new Error();
+    const matchId = h.room(code).match?.state.id ?? "";
+    for (const client of [p1, p2]) await client.drop();
+    await h.advance(130_000);
+    await h.settle();
+    expect(h.server.rooms.has(code)).toBe(true);
+    expect(h.room(code).state).toBe("running");
+    await expectReplayEqualsLive(h, code, matchId);
+    const players = h.room(code).match?.state.players;
+    expect(players?.get(p0.playerId ?? "")?.connection).toBe("connected");
+    expect(players?.get(p1.playerId ?? "")?.connection).toBe("expired");
+  });
+});
+
 describe("R-32 reproducible log", () => {
   it("T-32.1 replay(log) equals the live server state", { timeout: 180_000 }, async () => {
     await assertAsyncProperty(
@@ -106,17 +179,12 @@ describe("R-32 reproducible log", () => {
           let emptySince: number | null = null;
           /** La sala se borró (R-14): nadie puede volver y el registro termina en derrota. */
           const deleted = async () => {
-            expect(h.server.rooms.has(code)).toBe(false);
             const back = seats.find((s) => s.token !== null);
             if (!back?.token) throw new Error("No token");
-            const replies = await h.client().join(code, back.nickname, back.token);
-            expect(errorOf(replies)).toBe("room.not_found");
-            const events = await h.repository.events(matchId);
-            expect(events.map((e) => e.seq)).toEqual(events.map((_, i) => i + 1));
-            const replayed = replay(events, { mode, puzzle });
-            expect(replayed.result).toBe("defeat");
-            for (const p of replayed.players.values())
-              expect(["left", "expired"]).toContain(p.connection);
+            await expectDeleted(h, code, matchId, puzzle, {
+              nickname: back.nickname,
+              token: back.token,
+            });
           };
           const cellOf = (pick: number, onlyEmpty: boolean) => {
             const pool = onlyEmpty ? emptyCells(h, code) : Array.from({ length: 81 }, (_, i) => i);
@@ -212,20 +280,14 @@ describe("R-32 reproducible log", () => {
             }
           }
           await h.settle();
-
-          const match = h.room(code).match;
-          if (!match) throw new Error("No match");
-          const events = await h.repository.events(matchId);
-          expect(events.map((e) => e.seq)).toEqual(events.map((_, i) => i + 1));
-          const replayed = replay(events, { mode, puzzle: match.puzzle });
-          expect(replayed).toEqual(match.state);
-          expect(mode.ranking(replayed)).toEqual(mode.ranking(match.state));
+          await expectReplayEqualsLive(h, code, matchId);
         },
       ),
       {
         numRuns: 40,
         // Los jugadores 1, 2 y 0 se caen y pasan 120 s: la sala se borra (R-14). Antes el arnés
-        // lo tomaba por un fallo; el `path` reproduce ese contraejemplo reducido.
+        // lo tomaba por un fallo; el `path` reproduce ese contraejemplo reducido. El mismo caso, sin
+        // fast-check, está en «fixed cases».
         regressions: [
           {
             seed: -1802840427,
