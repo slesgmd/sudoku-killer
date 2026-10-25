@@ -13,6 +13,7 @@
     "bank:sample": "node --conditions=@sudoku-killer/source scripts/print-sample.ts",
     "db:generate": "drizzle-kit generate",
     "scoring:simulate": "node --conditions=@sudoku-killer/source scripts/simulate-scoring.ts",
+    "scoring:report": "node --conditions=@sudoku-killer/source --env-file-if-exists=.env scripts/scoring-report/report.ts",
     "scoring:calibrate": "node --conditions=@sudoku-killer/source scripts/calibrate-scoring.ts",
     "db:setup-local": "node --conditions=@sudoku-killer/source scripts/setup-local-db.ts",
     "db:check-local": "node --env-file-if-exists=.env scripts/check-local-db.ts",

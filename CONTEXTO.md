@@ -7,7 +7,7 @@ La fuente de verdad es `docs/PLAN.md`. Al iniciar una sesión, lee este archivo 
 
 - **Plan:** versión 1.22. **SPEC:** versión 1.9.
 - **Fase actual:** F11, pruebas integrales, carga y seguridad (2–4 h, recalibración aprobada; plan aprobado con las subtareas F11a a F11i y sus decisiones en `docs/PLAN.md`, F11). F10 se cerró el 2026-10-25 con unas 3,1 h. De F0 a F10 van unas 18,9 h.
-- **Próxima tarea exacta:** F11h (`scoring:report`) y F11i. F11a a F11g hechas (`docs/seguridad.md`). Las ramas de trabajo no corren la CI sin PR: verificar `check`, `test`, `build` y `e2e` en local.
+- **Próxima tarea exacta:** F11i (cierre de F11). F11a a F11h hechas. Las ramas de trabajo no corren la CI sin PR: verificar `check`, `test`, `build` y `e2e` en local.
 - **Servidor (F9):**
   - `apps/server/src/`: `rooms/` (actor por sala con cola y bandeja de salida ordenada), `match/` (repositorio y group commit), `infra/` (`Transport` en memoria y `ws`, reloj, azar y fichas), `config/` y `app.ts`.
   - Esquema en SPEC §2.5. El registro se confirma antes de difundir, las partidas se reconstruyen al arrancar y E-16 cierra con 1012.
