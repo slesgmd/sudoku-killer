@@ -1,10 +1,12 @@
 // La prueba de humo del despliegue (F12b, `scripts/smoke.ts`) contra el servidor real en 127.0.0.1:
-// el handshake con un origen ajeno da 403, con el permitido abre y, sin la clave, recibe 4003. Y la
-// comparación de las cabeceras de seguridad con las que sirve Render.
+// el handshake con un origen ajeno da 403 y con el permitido abre; `POST /access` sin clave y con una
+// inválida da 401 también detrás de un proxy que pierde el 4003 (T-39.17). Y la comparación de las
+// cabeceras de seguridad con las que sirve Render.
 import { ACCESS_PROTOCOL, CLOSE_ACCESS_DENIED, accessProtocols } from "@sudoku-killer/protocol";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { securityHeaders } from "../../web/scripts/security-headers.ts";
-import { checkSecurityHeaders, tryWebSocket } from "../scripts/smoke.ts";
+import { checkAccess, checkSecurityHeaders, tryWebSocket } from "../scripts/smoke.ts";
+import { lossyProxy } from "./helpers/lossy-proxy.ts";
 import { testBank } from "./helpers/server.ts";
 import { TEST_ORIGIN, startWsServer, type RunningWsServer } from "./helpers/ws-server.ts";
 
@@ -30,18 +32,42 @@ describe("F12 smoke test", () => {
     expect((await tryWebSocket(url, TEST_ORIGIN)).opened).toBe(true);
   });
 
-  it("T-39.11 sees 4003 without the key, the way the browser gets it, and an open socket with it", async () => {
+  it("T-39.17 POST /access gives 401 without a key and with a random one, also behind a proxy that loses the 4003", async () => {
     const KEY = "ABCD-EFGH-JKMN-PQRS";
     running = await startWsServer({ accessKey: KEY });
-    const url = `ws://127.0.0.1:${String(running.port)}/ws`;
-    expect(await tryWebSocket(url, TEST_ORIGIN, [ACCESS_PROTOCOL])).toEqual({
-      opened: true,
-      closeCode: CLOSE_ACCESS_DENIED,
-    });
-    expect(await tryWebSocket(url, TEST_ORIGIN, accessProtocols(KEY))).toEqual({
+    const proxy = await lossyProxy(running.port, { mode: "close" });
+    try {
+      const url = `ws://127.0.0.1:${String(proxy.port)}/ws`;
+      expect(await checkAccess(url, TEST_ORIGIN)).toEqual([
+        ["access_keyless_401", true],
+        ["access_wrong_key_401", true],
+        ["access_foreign_origin_403", true],
+      ]);
+    } finally {
+      await proxy.close();
+    }
+    // Sin el proxy, la clave abre el WebSocket; sin clave, el 4003 sigue de respaldo.
+    const direct = `ws://127.0.0.1:${String(running.port)}/ws`;
+    expect(await tryWebSocket(direct, TEST_ORIGIN, accessProtocols(KEY))).toEqual({
       opened: true,
       closeCode: 1000,
     });
+    expect((await tryWebSocket(direct, TEST_ORIGIN, [ACCESS_PROTOCOL])).closeCode).toBe(
+      CLOSE_ACCESS_DENIED,
+    );
+    // Una sola clave rechazada por corrida (la inventada); sin clave no es un intento.
+    expect(running.access.denied).toBe(1);
+    expect(running.access.missing).toBe(2);
+  });
+
+  it("negative check: against a server that asks for no key the access checks fail", async () => {
+    running = await startWsServer();
+    const url = `ws://127.0.0.1:${String(running.port)}/ws`;
+    expect(await checkAccess(url, TEST_ORIGIN)).toEqual([
+      ["access_keyless_401", false],
+      ["access_wrong_key_401", false],
+      ["access_foreign_origin_403", true],
+    ]);
   });
 });
 
