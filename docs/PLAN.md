@@ -629,7 +629,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | F10d | Desarrollo: proxy de `/ws`, orígenes de `dev:lan`, simulador solo con `?sim=1` y bots como clientes Node. | Hecha |
 | F10e | Inicio, Entrar o crear, Lobby, Resultados y Ayuda, con rutas por hash y Compartir. | Hecha |
 | F10f | Estados de red, transiciones y decisión 3. | Hecha |
-| F10g | E2E con Playwright (6 contextos, T-05.4, T-07.2, T-13.5 y E-08) e inspector sobre el tráfico WS; job `e2e` en la CI. | Pendiente |
+| F10g | E2E con Playwright (6 contextos, T-05.4, T-07.2, T-13.5 y E-08) e inspector sobre el tráfico WS; job `e2e` en la CI. | Hecha |
 | F10h | Punto de control del usuario y correcciones. | Pendiente |
 | F10i | Cierre y recalibración. | Pendiente |
 

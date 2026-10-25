@@ -28,6 +28,24 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
+  # E2E con Playwright contra el servidor real (F10g). Sin reintentos: un fallo intermitente se
+  # investiga (plan de F10).
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @sudoku-killer/web exec playwright install --with-deps chromium
+      - run: pnpm e2e
+        env:
+          CI: "true"
+
   attribution-guard:
     runs-on: ubuntu-latest
     timeout-minutes: 5

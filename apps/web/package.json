@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "sim:measure": "node --conditions=@sudoku-killer/source scripts/measure-sim-load.ts",
-    "bots": "node --conditions=@sudoku-killer/source scripts/bots.ts"
+    "bots": "node --conditions=@sudoku-killer/source scripts/bots.ts",
+    "e2e": "NODE_OPTIONS=--conditions=@sudoku-killer/source playwright test"
   },
   "dependencies": {
     "@sudoku-killer/engine": "workspace:*",
@@ -21,6 +22,7 @@
     "react-dom": "19.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@sudoku-killer/bank": "workspace:*",
     "@testing-library/dom": "10.4.2",
     "@testing-library/react": "16.3.3",
