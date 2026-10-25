@@ -8,10 +8,16 @@ export interface RoomStore {
   add(room: Room): void;
   delete(code: string): void;
   values(): Iterable<Room>;
+  /** Cuántas salas hay (para el tope de salas, F11). */
+  readonly size: number;
 }
 
 export class MemoryRoomStore implements RoomStore {
   private readonly rooms = new Map<string, Room>();
+
+  get size(): number {
+    return this.rooms.size;
+  }
 
   get(code: string): Room | undefined {
     return this.rooms.get(code);

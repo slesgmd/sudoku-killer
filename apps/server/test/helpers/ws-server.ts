@@ -19,12 +19,22 @@ export interface RunningWsServer {
   readonly clock: FakeClock;
   readonly server: RoomServer;
   readonly inspector: LeakInspector;
+  readonly transport: WsTransport;
   /** Las soluciones de los puzzles del banco de pruebas (para jugar y para el inspector). */
   readonly solutions: readonly (readonly number[])[];
   stop(): Promise<void>;
 }
 
-export async function startWsServer(): Promise<RunningWsServer> {
+export interface WsServerOptions {
+  /** Topes más bajos que los de producción, para probarlos (S-01). */
+  readonly maxConnections?: number;
+  readonly maxRooms?: number;
+}
+
+export async function startWsServer({
+  maxConnections,
+  maxRooms,
+}: WsServerOptions = {}): Promise<RunningWsServer> {
   const { db, client, catalog, solutions } = await testBank();
   await client.query("TRUNCATE match_events, matches");
   const clock = new FakeClock();
@@ -35,6 +45,7 @@ export async function startWsServer(): Promise<RunningWsServer> {
     allowedOrigins: [TEST_ORIGIN],
     clock,
     logger: silentLogger,
+    ...(maxConnections === undefined ? {} : { maxConnections }),
   });
   const server = new RoomServer({
     transport,
@@ -53,6 +64,7 @@ export async function startWsServer(): Promise<RunningWsServer> {
     repository,
     logger: silentLogger,
     mode,
+    ...(maxRooms === undefined ? {} : { maxRooms }),
   });
   await server.start();
   const inspector = new LeakInspector({
@@ -71,6 +83,7 @@ export async function startWsServer(): Promise<RunningWsServer> {
     clock,
     server,
     inspector,
+    transport,
     solutions,
     stop: () => transport.stop(1001, "test over"),
   };
