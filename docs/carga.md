@@ -108,7 +108,8 @@ El servidor escribe una línea JSON por entrada en la salida estándar, que el p
 | `commits` / `events` / `commitP95Ms` / `commitMaxMs` | Escrituras en la base del período, eventos escritos y su duración (la espera que suma cada jugada, ADR 0004). |
 | `eventLoopP95Ms` | Retraso del bucle de eventos en el p95 (con 0,1 CPU, la primera señal de saturación). |
 | `rssMb` / `heapUsedMb` | Memoria del proceso (el plan gratuito tiene 512 MB). |
-| `accessDenied` | Conexiones cerradas con 4003 en el período (R-39), sin clave o con una que no vale: un número alto es alguien probando claves. |
+| `accessDenied` | Claves ofrecidas que no valen en el período (4003, R-39): un número alto es alguien probando claves. |
+| `accessMissing` | Conexiones sin clave en el período (4003, R-39): navegadores que todavía no la tienen; no cuentan para la espera por IP (T-39.7, T-39.11). En el log, cada una deja `websocket access key missing` (nivel info), y cada clave que no vale, `websocket access denied` (warn). |
 | `accessLocked` | Handshakes con 429 en el período: una red que agotó sus 10 intentos y vuelve a ofrecer una clave (T-39.3). |
 | `addressUnknown` | Handshakes en el período cuya IP no se pudo saber (T-39.8): si no es 0, `TRUST_PROXY_HOPS` no coincide con lo que manda el proxy (el primer caso deja en el log `client address unknown` con el número de entradas de `X-Forwarded-For`, nunca su contenido). |
 

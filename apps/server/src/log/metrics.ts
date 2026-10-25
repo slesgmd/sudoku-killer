@@ -22,7 +22,7 @@ export interface MetricsSources {
   };
   readonly rooms: RoomStore;
   readonly writer: { takeStats(): CommitStats };
-  readonly access: Pick<AccessGate, "denied">;
+  readonly access: Pick<AccessGate, "denied" | "missing">;
 }
 
 export interface MetricsOptions {
@@ -48,6 +48,7 @@ export function startMetrics({
   loop.enable();
   const startedAt = clock.now();
   let denied = sources.access.denied;
+  let missing = sources.access.missing;
   let locked = sources.transport.locked;
   let unknown = sources.transport.unknownAddresses;
   let cancel: (() => void) | null = null;
@@ -80,10 +81,12 @@ export function startMetrics({
       rssMb: round(rss / MB),
       heapUsedMb: round(heapUsed / MB),
       accessDenied: sources.access.denied - denied,
+      accessMissing: sources.access.missing - missing,
       accessLocked: sources.transport.locked - locked,
       addressUnknown: sources.transport.unknownAddresses - unknown,
     });
     denied = sources.access.denied;
+    missing = sources.access.missing;
     locked = sources.transport.locked;
     unknown = sources.transport.unknownAddresses;
   };
