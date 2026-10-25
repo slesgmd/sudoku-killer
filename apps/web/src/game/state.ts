@@ -2,6 +2,7 @@
 // el servidor confirmó, más lo pendiente: las jugadas de números no son optimistas (quedan
 // pendientes hasta el veredicto) y las notas sí (confirmado + pendientes en orden, ADR 0005).
 import type {
+  DefeatCause,
   Difficulty,
   LockedCell,
   MatchResult,
@@ -62,6 +63,8 @@ export interface MatchView {
   readonly startedAt: number;
   readonly endedAt: number | null;
   readonly result: MatchResult | null;
+  /** Causa de la derrota (SPEC 1.8). Llega en `match.ended` y en el snapshot, también tras recargar. */
+  readonly defeatCause?: DefeatCause | undefined;
   readonly hintsLeft: number;
   readonly hintsTotal: number;
   readonly ranking: readonly RankingEntry[] | null;

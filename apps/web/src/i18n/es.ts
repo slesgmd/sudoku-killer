@@ -106,8 +106,16 @@ export const es = {
   "results.kicker": "Partida terminada · {difficulty}",
   "results.victory": "Tablero resuelto.",
   "results.victoryLead": "El equipo completó las {cells} celdas.",
-  "results.defeat": "Partida sin terminar.",
-  "results.defeatLead": "Ningún jugador activo seguía en la partida, así que terminó en derrota.",
+  // Derrota según su causa (SPEC 1.8): todos sin vidas, todos fuera o una mezcla.
+  "results.defeat.lives": "Se acabaron las vidas.",
+  "results.defeatLead.lives":
+    "Todos los jugadores perdieron sus 3 vidas antes de completar el tablero.",
+  "results.defeat.gone": "La partida quedó sin jugadores.",
+  "results.defeatLead.gone":
+    "Todos los jugadores salieron o estuvieron desconectados más de 2 minutos.",
+  "results.defeat.mixed": "La partida quedó sin jugadores activos.",
+  "results.defeatLead.mixed":
+    "Los jugadores que quedaban perdieron sus vidas o salieron de la partida.",
   "results.time": "Tiempo total",
   "results.hints": "Pistas usadas por el equipo",
   "results.hintsValue": "{used} de {total}",
@@ -325,7 +333,7 @@ export const es = {
   "state.joinedRunning":
     "Entraste en una partida en curso: empiezas con 3 vidas y 0 puntos. Las notas grupales ya están a la vista.",
   "ended.victory": "La partida terminó. El equipo completó el tablero en {time}.",
-  "ended.defeat": "La partida terminó. Ningún jugador activo seguía en la partida.",
+  "ended.defeat": "La partida terminó. {reason}",
   "ended.results": "Ver resultados",
 
   // Diálogos

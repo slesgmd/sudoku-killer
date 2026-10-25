@@ -6,6 +6,7 @@ import { z } from "zod";
 import {
   cellSchema,
   connectionSchema,
+  defeatCauseSchema,
   difficultySchema,
   digitSchema,
   lockSourceSchema,
@@ -84,6 +85,8 @@ export const snapshotSchema = z.object({
       startedAt: timeSchema,
       endedAt: timeSchema.nullable(),
       result: matchResultSchema.nullable(),
+      /** Solo en una derrota (SPEC 1.8, opcional en v1). */
+      defeatCause: defeatCauseSchema.optional(),
       hintsLeft: z.int().nonnegative(),
       /** Solo celdas bloqueadas: `value` es un dígito revelado. */
       locked: z.array(lockedCellSchema),
@@ -162,6 +165,8 @@ export const serverPayloadSchemas = {
   "presence.updated": z.object({ playerId: playerIdSchema, cell: cellSchema.nullable() }),
   "match.ended": z.object({
     result: matchResultSchema,
+    /** Solo en una derrota (SPEC 1.8, opcional en v1). */
+    defeatCause: defeatCauseSchema.optional(),
     endedAt: timeSchema,
     ranking: z.array(rankingEntrySchema),
   }),

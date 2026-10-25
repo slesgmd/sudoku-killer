@@ -2,7 +2,7 @@
 // de aporte con empates y «Salió». Quien inicia vuelve al lobby; los demás esperan. Sin foto de
 // fondo en la v1: el panel va sobre el lienzo (plan de F10).
 import { useState, type CSSProperties } from "react";
-import type { RankingEntry } from "@sudoku-killer/protocol";
+import type { DefeatCause, RankingEntry } from "@sudoku-killer/protocol";
 import { AppHeader } from "../components/AppHeader.tsx";
 import { NetworkBanner } from "../components/Network.tsx";
 import { LeaveDialog, SettingsDialog, nextStarter } from "../components/Dialogs.tsx";
@@ -25,12 +25,25 @@ export function ties(ranking: readonly RankingEntry[]): RankingEntry[][] {
   return [...groups.values()].filter((group) => group.length > 1);
 }
 
+/**
+ * Titular y bajada de una derrota según su causa (SPEC 1.8). Sin causa (un servidor anterior), la
+ * mezcla, que es cierta en los tres casos.
+ */
+export function defeatTexts(cause: DefeatCause | undefined): {
+  readonly title: string;
+  readonly lead: string;
+} {
+  const key = cause ?? "mixed";
+  return { title: t(`results.defeat.${key}`), lead: t(`results.defeatLead.${key}`) };
+}
+
 export function Results({ client, state, onLeave }: ResultsProps) {
   const [dialog, setDialog] = useState<"leave" | "settings" | null>(null);
   const match = state.match;
   const room = state.room;
   if (!match || !room) return null;
   const victory = match.result === "victory";
+  const defeat = defeatTexts(match.defeatCause);
   const ranking = match.ranking ?? [];
   const tied = ties(ranking);
   const tiedIds = new Set(tied.flat().map((e) => e.playerId));
@@ -57,11 +70,9 @@ export function Results({ client, state, onLeave }: ResultsProps) {
               {t("results.kicker", { difficulty: t(`difficulty.${match.puzzle.difficulty}`) })}
             </p>
             <h1 id="results-title" className="h-xl">
-              {victory ? t("results.victory") : t("results.defeat")}
+              {victory ? t("results.victory") : defeat.title}
             </h1>
-            <p className="lead">
-              {victory ? t("results.victoryLead", { cells }) : t("results.defeatLead")}
-            </p>
+            <p className="lead">{victory ? t("results.victoryLead", { cells }) : defeat.lead}</p>
           </div>
           <dl className="stats">
             <div>

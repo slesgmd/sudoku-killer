@@ -1,6 +1,7 @@
 // Salas: acceso, capacidad, derecho de iniciar, salir y volver, plazos y borrado (SPEC §3, R-08 a
 // R-14, R-22 a R-27 y R-30; E-08 y E-19). Servidor real con transporte en memoria, reloj falso,
 // PGlite y el inspector de filtración activo (T-31.1).
+import { defeatCause, replay } from "@sudoku-killer/game";
 import { CLOSE_NO_ROOM, CLOSE_REPLACED, CLOSE_UNSUPPORTED } from "@sudoku-killer/protocol";
 import { beforeAll, describe, expect, it } from "vitest";
 import { hashToken } from "../src/infra/tokens.ts";
@@ -13,7 +14,7 @@ import {
   started,
   table,
 } from "./helpers/play.ts";
-import { createTestServer, errorOf, testBank, welcomeOf } from "./helpers/server.ts";
+import { createTestServer, errorOf, mode, testBank, welcomeOf } from "./helpers/server.ts";
 
 const GRACE = 120_000;
 
@@ -298,7 +299,9 @@ describe("R-14 deleting the room", () => {
   it("T-14.3 with a running match, match.ended{defeat} is in the log before the deletion", async () => {
     const h = await createTestServer();
     const { code, clients } = await started(h, ["Ana", "Bea"]);
-    const matchId = h.room(code).match?.state.id ?? "";
+    const match = h.room(code).match;
+    if (!match) throw new Error();
+    const matchId = match.state.id;
     for (const client of clients) await client.drop();
     await h.advance(GRACE);
     expect(h.server.rooms.has(code)).toBe(false);
@@ -307,6 +310,9 @@ describe("R-14 deleting the room", () => {
     expect(
       events.filter((e) => e.type === "player.connection").map((e) => e.payload.connection),
     ).toEqual(["disconnected", "disconnected", "expired", "expired"]);
+    // SPEC 1.8: todos expiraron con sus vidas. El evento del registro no cambia de forma.
+    expect(Object.keys(events.at(-1)?.payload ?? {})).toEqual(["result"]);
+    expect(defeatCause(replay(events, { mode, puzzle: match.puzzle }))).toBe("gone");
   });
 });
 

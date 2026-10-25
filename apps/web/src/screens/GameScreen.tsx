@@ -19,6 +19,7 @@ import { NetworkBanner } from "../components/Network.tsx";
 import { Toasts } from "../components/Toasts.tsx";
 import { useLayout } from "../components/useLayout.ts";
 import { cellName, type GameClient } from "../game/client.ts";
+import { defeatTexts } from "./Results.tsx";
 import { elapsedMs, formatClock, me, type ClientState } from "../game/state.ts";
 import { t } from "../i18n/index.ts";
 
@@ -326,7 +327,7 @@ export function GameScreen({
                     ? t("ended.victory", {
                         time: formatClock(elapsedMs(state, client.clientNow())),
                       })
-                    : t("ended.defeat")}
+                    : t("ended.defeat", { reason: defeatTexts(match.defeatCause).title })}
                 </span>
                 <button
                   className="btn secondary"

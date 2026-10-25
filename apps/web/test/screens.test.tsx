@@ -520,6 +520,84 @@ describe("F10e Resultados (pantallas.md §1.5)", () => {
   });
 });
 
+describe("F10h a defeat says its cause, live and after reloading (SPEC 1.8)", () => {
+  const ranking = [
+    { playerId: ME.id, nickname: "Inés", score: 120, mistakes: 3, scoreReachedAt: 7, position: 1 },
+    {
+      playerId: TOMAS.id,
+      nickname: "Tomás",
+      score: 40,
+      mistakes: 1,
+      scoreReachedAt: 4,
+      position: 2,
+    },
+  ];
+  const texts = {
+    lives: [
+      "Se acabaron las vidas.",
+      "Todos los jugadores perdieron sus 3 vidas antes de completar el tablero.",
+    ],
+    gone: [
+      "La partida quedó sin jugadores.",
+      "Todos los jugadores salieron o estuvieron desconectados más de 2 minutos.",
+    ],
+    mixed: [
+      "La partida quedó sin jugadores activos.",
+      "Los jugadores que quedaban perdieron sus vidas o salieron de la partida.",
+    ],
+  } as const;
+
+  function expectResults(cause: keyof typeof texts): void {
+    const [title, lead] = texts[cause];
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(title);
+    expect(screen.getByText(lead)).toBeDefined();
+    expect(screen.queryByText("Partida sin terminar.")).toBeNull();
+  }
+
+  for (const cause of ["lives", "gone", "mixed"] as const) {
+    it(`live: ${cause}`, () => {
+      const { transport } = inLobby({ players: [waiting(ME), waiting(TOMAS)] });
+      started(transport, [ME, TOMAS]);
+      transport.emit({
+        type: "match.ended",
+        seq: 10,
+        payload: { result: "defeat", defeatCause: cause, endedAt: 1000 + 60_000, ranking },
+      });
+      // La franja del tablero ya dice la causa, con el mismo titular que Resultados.
+      expect(screen.getByText(`La partida terminó. ${texts[cause][0]}`)).toBeDefined();
+      fireEvent.click(screen.getByRole("button", { name: "Ver resultados" }));
+      expectResults(cause);
+    });
+  }
+
+  it("after reloading: the snapshot brings the cause, though those who left were purged", () => {
+    // Tomás salió y la sala lo purgó al terminar: el snapshot solo trae a Inés (0 vidas), pero el
+    // ranking lo sigue mostrando, y la causa no se puede deducir de lo que queda (mezcla).
+    const { transport } = mount({ hash: `#/sala/${CODE}`, session: withToken() });
+    welcome(transport, {
+      state: "finished",
+      players: [{ ...ME, lives: 0, role: "spectator" }],
+      match: {
+        id: "m1",
+        puzzle: testPuzzle(),
+        startedAt: 1000,
+        endedAt: 1000 + 60_000,
+        result: "defeat",
+        defeatCause: "mixed",
+        hintsLeft: 3,
+        locked: [],
+        groupNotes: [],
+        ranking,
+      },
+    });
+    expectResults("mixed");
+    const rows = within(screen.getByRole("table", { name: "Ranking de la partida" })).getAllByRole(
+      "row",
+    );
+    expect(rows[2]?.textContent).toContain("Salió");
+  });
+});
+
 describe("F10e Ayuda (pantallas.md §1.6)", () => {
   it("from Inicio: no Ajustes; «Volver» goes back", () => {
     mount();

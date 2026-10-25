@@ -71,6 +71,15 @@ export const MATCH_RESULTS = ["victory", "defeat"] as const;
 export const matchResultSchema = z.enum(MATCH_RESULTS);
 export type MatchResult = z.infer<typeof matchResultSchema>;
 
+/**
+ * Causa de una derrota (SPEC §4.3), según cómo terminaron los jugadores del ranking:
+ * `lives` si todos quedaron con 0 vidas, `gone` si ninguno (salieron o expiraron) y `mixed` si hay
+ * de los dos. Se deriva del estado final: el registro de eventos no la guarda.
+ */
+export const DEFEAT_CAUSES = ["lives", "gone", "mixed"] as const;
+export const defeatCauseSchema = z.enum(DEFEAT_CAUSES);
+export type DefeatCause = z.infer<typeof defeatCauseSchema>;
+
 export const UNIT_KINDS = ["row", "col", "box", "cage"] as const;
 export const unitKindSchema = z.enum(UNIT_KINDS);
 
