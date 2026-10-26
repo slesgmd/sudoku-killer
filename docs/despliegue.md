@@ -1,6 +1,6 @@
 # Despliegue (F12)
 
-Pasos del usuario para el primer despliegue (F12j), en orden. Hosting en el ADR 0007; seguridad en `docs/seguridad.md` (S-02, §3). Nada de esto se escribe en el repositorio: los secretos van solo en los paneles.
+Pasos del autor para el primer despliegue (F12j), en orden. Hosting en el ADR 0007; seguridad en `docs/seguridad.md` (S-02, §3). Nada de esto se escribe en el repositorio: los secretos van solo en los paneles.
 
 1. **Clave del grupo y respaldos, en tu PC** (con el repositorio clonado y `pnpm install`):
    - `pnpm --filter @sudoku-killer/server access:key`: anota la clave, el enlace de invitación y el valor `sha256:…` (o `access:key --own` para elegir tu clave sin que se vea).

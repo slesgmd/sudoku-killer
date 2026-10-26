@@ -4,7 +4,7 @@
 - Fecha: 2026-10-25
 
 ## Contexto
-F12 publica el juego para un grupo cerrado de unas 6 personas en Lima (iPad, iPhone y PC). Restricciones del usuario: **0 USD** por ahora, el subdominio gratuito del proveedor, un servidor con **WebSocket persistente** (no sirve un modelo serverless sin conexiones largas) y un PostgreSQL que **no se borre**. Cada jugada espera su confirmación en la base antes de difundirse (ADR 0004), así que la distancia entre el servidor y la base pesa más que la distancia entre Lima y el servidor.
+F12 publica el juego para un grupo cerrado de unas 6 personas en Lima (iPad, iPhone y PC). Restricciones del autor: **0 USD** por ahora, el subdominio gratuito del proveedor, un servidor con **WebSocket persistente** (no sirve un modelo serverless sin conexiones largas) y un PostgreSQL que **no se borre**. Cada jugada espera su confirmación en la base antes de difundirse (ADR 0004), así que la distancia entre el servidor y la base pesa más que la distancia entre Lima y el servidor.
 
 Fuentes consultadas el 2026-10-25 (resultados de búsqueda sobre las páginas oficiales; la red de la máquina de desarrollo no abre esos dominios directamente). Con * los datos que solo aparecen en fuentes de terceros.
 
@@ -32,7 +32,7 @@ Fuentes consultadas el 2026-10-25 (resultados de búsqueda sobre las páginas of
 
 ## Alternativas consideradas
 - **Fly.io y Cloud Run:** piden tarjeta; Cloud Run además corta cada WebSocket a los 60 min.
-- **Oracle Always Free:** no duerme, pero reclama una VM casi ociosa (nuestro caso) y deja el sistema operativo, el TLS, PostgreSQL y los respaldos a cargo del usuario.
+- **Oracle Always Free:** no duerme, pero reclama una VM casi ociosa (nuestro caso) y deja el sistema operativo, el TLS, PostgreSQL y los respaldos a cargo del autor.
 - **Koyeb:** su base gratuita tiene 5 h de cómputo al mes, y las fuentes no coinciden sobre la tarjeta.
 - **Supabase:** se pausa tras una semana sin uso y no trae respaldos en el plan gratuito.
 - **Render Postgres:** caduca a los 30 días.

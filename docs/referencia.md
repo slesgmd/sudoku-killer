@@ -11,7 +11,7 @@ Cada punto lleva una marca:
 | **[Observado]** | Visto en ejecución con REA (página real, en un navegador controlado), con evidencia citada. |
 | **[Visto en el código]** | Leído en el código JavaScript que la página entrega al navegador. Describe lo que el código hace, pero no se vio ejecutarse. |
 | **[Inferido]** | Deducción razonable a partir de lo anterior; no está demostrado. |
-| **[Observado manualmente por el usuario]** | Observación hecha a mano por el usuario, sin evidencia de REA. |
+| **[Observado manualmente por el autor]** | Observación hecha a mano por el autor, sin evidencia de REA. |
 
 ## Evidencia
 
@@ -24,7 +24,7 @@ Toda la evidencia de REA (versión 6.7.0) está en `evidence/f1-referencia.json`
 | **E3** | `ev_f1c983e3be4c1382cb4c1480dd95563dfcffbf3066eac331d3db4ba98a3d3139` | `capture_browser_scenario` | Escenario A: carga en frío de `/es/killer` con red registrada. La navegación posterior a `/es/killer/experto/` superó el límite de 45 s y no se completó. |
 | **E4** | `ev_5ca3960657340532e6cd4daa1e9a63be49bcb2956eeece08a1350bbaa2423269` | `capture_browser_scenario` | Escenario B: 29 pasos sobre el nivel fácil inicial (selección, aciertos, dígito completo, tres errores). DOM y almacenamiento capturados tras cada paso. |
 
-Dos intentos posteriores de cargar la página (para ver un nivel servido por la API) fallaron al navegar y no generaron evidencia. Por decisión del usuario no se hicieron más cargas automáticas; lo que faltaba quedó marcado como visto en el código o inferido, y se lista en [Preguntas abiertas](#preguntas-abiertas).
+Dos intentos posteriores de cargar la página (para ver un nivel servido por la API) fallaron al navegar y no generaron evidencia. Por decisión del autor no se hicieron más cargas automáticas; lo que faltaba quedó marcado como visto en el código o inferido, y se lista en [Preguntas abiertas](#preguntas-abiertas).
 
 ---
 
@@ -141,9 +141,9 @@ Dos intentos posteriores de cargar la página (para ver un nivel servido por la 
 - **[Visto en el código, E2]** Al volver a la página se recupera la partida guardada si es del mismo modo y dificultad y no estaba terminada.
 - **[Inferido]** El progreso vive solo en el navegador; el servidor solo recibe la estadística de fin de nivel.
 
-## 15. Observaciones manuales del usuario
+## 15. Observaciones manuales del autor
 
-> **Descartada: las reglas propias ya cubren estos puntos** (decisión del usuario, 2026-10-22). Las reglas del proyecto están en `docs/PLAN.md` (sección 2) y `docs/SPEC.md`.
+> **Descartada: las reglas propias ya cubren estos puntos** (decisión del autor, 2026-10-22). Las reglas del proyecto están en `docs/PLAN.md` (sección 2) y `docs/SPEC.md`.
 
 ---
 

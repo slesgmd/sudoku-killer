@@ -1,6 +1,6 @@
 # Revisión de seguridad (F11g)
 
-Revisión del servidor de salas, del cliente y de las dependencias al cerrar F11 (2026-10-25). Política aprobada por el usuario: los hallazgos críticos, altos y medios se corrigen en F11, salvo que toquen el protocolo o lleven más de 30 minutos (entonces se pregunta); los bajos se documentan con su fase (F12 o F13).
+Revisión del servidor de salas, del cliente y de las dependencias al cerrar F11 (2026-10-25). Política aprobada por el autor: los hallazgos críticos, altos y medios se corrigen en F11, salvo que toquen el protocolo o lleven más de 30 minutos (entonces se pregunta); los bajos se documentan con su fase (F12 o F13).
 
 **Severidad:** crítica (compromete datos o el servidor sin condiciones), alta (explotable desde internet con impacto serio), media (explotable con condiciones o con impacto acotado, como la disponibilidad), baja (impacto menor o que requiere otra falla), informativa (sin riesgo; se deja constancia).
 
@@ -50,7 +50,7 @@ Revisión del servidor de salas, del cliente y de las dependencias al cerrar F11
 - **`backup.yml`** (domingos a las 03:17 de Lima y a mano): `pg_dump` de la base de Neon, restauración en un PostgreSQL 18 efímero del runner (no en un contenedor de servicio, que publicaría su log), comprobación (recuentos y arranque del servidor con la reconstrucción de las partidas) y cifrado con `age` para la clave pública `BACKUP_AGE_RECIPIENT` (variable del repositorio). La cadena de Neon lleva `sslmode=verify-full`, que node-postgres y libpq entienden igual (certificado y nombre verificados); `pg_dump` recibe además `sslrootcert=system` (libpq 16 o posterior), porque sin él buscaría un archivo de raíces que el runner no tiene (prueba `apps/server/test/pg-tools.test.ts`). Solo se sube el archivo cifrado (artefacto `db-backup`, 90 días); el volcado sin cifrar se borra del runner.
 - **`restore-drill.yml`** (a mano): baja el último `db-backup`, lo descifra con `BACKUP_AGE_KEY` (secreto de Actions), lo restaura en un PostgreSQL efímero y lo comprueba de la misma forma. No toca producción. Es el criterio de F12 «restaurar un respaldo funciona».
 - **`db-admin.yml`** (a mano): `status`, `migrate` (con la guarda de F12f) y `bank-load`.
-- **Claves:** la privada de `age` vive en el secreto `BACKUP_AGE_KEY` y en una copia fuera de línea del usuario (por ejemplo, en un gestor de contraseñas). Sin ella, los respaldos no se pueden leer. Ningún paso imprime la cadena de conexión, la clave, apodos ni filas: solo recuentos (`backup.*`, `restore.*`, `db.*`).
+- **Claves:** la privada de `age` vive en el secreto `BACKUP_AGE_KEY` y en una copia fuera de línea del autor (por ejemplo, en un gestor de contraseñas). Sin ella, los respaldos no se pueden leer. Ningún paso imprime la cadena de conexión, la clave, apodos ni filas: solo recuentos (`backup.*`, `restore.*`, `db.*`).
 - **Restaurar en producción (emergencia, a mano):** bajar el artefacto `db-backup` de la pestaña Actions; `age --decrypt --identity clave.txt --output sk.dump sudoku-killer.dump.age`; crear en Neon una rama o un proyecto nuevo y `pg_restore --no-owner --no-privileges --dbname="<cadena de la base nueva>" sk.dump`; cambiar `DATABASE_URL` en Render y redesplegar. El volcado sin cifrar se borra al terminar.
 
 ## 4. Actualizaciones de Dependabot (recomendación; no activadas)
@@ -65,4 +65,4 @@ Hoy solo están activas las **alertas** de Dependabot. Las **actualizaciones aut
   - Los commits de Dependabot tienen su propia identidad: hay que confirmar que el job `commit-policy` los acepta.
 - **Sin activarlas**, el costo es depender de `pnpm audit` a mano o de las alertas; en un proyecto de un grupo cerrado y con pocas dependencias de ejecución (`ws`, `pg`, `drizzle-orm`, `zod` y React), también es una opción razonable hasta F13.
 
-La decisión es del usuario.
+La decisión es del autor.

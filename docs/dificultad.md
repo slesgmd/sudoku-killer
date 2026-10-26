@@ -29,7 +29,7 @@ Cómo se arma cada dificultad del juego a partir de la calificación de un puzzl
 
 - **Muestra:** 12 puzzles de la equivalencia versión 1, generada el 2026-10-23 con la semilla 2026. Esos puzzles no tenían números iniciales, salvo los de unicidad.
 - **Conclusión:** sin números iniciales, los puzzles resultan difíciles, incluido el fácil.
-- **Decisión** (aprobada por el usuario el 2026-10-23):
+- **Decisión** (aprobada por el autor el 2026-10-23):
   - números iniciales escalonados por dificultad (30, 22, 10 y 0), con las bandas de la sección 1;
   - celdas con guarda, repartidas por cajas y con semilla;
   - semillas separadas por dificultad;
@@ -122,7 +122,7 @@ El experto es el más rápido porque no lleva números iniciales: `addGivens` ca
 
 | Puzzle | Persona | Tiempo | ¿Terminado? | Dificultad percibida (1 a 5) | Comentarios |
 |---|---|---|---|---|---|
-| Un medio y un difícil de la muestra versión 2 | Usuario | No anotado | Sí, los dos | No anotada en números | La diferencia entre el medio y el difícil se nota, y el fácil se siente fácil. |
+| Un medio y un difícil de la muestra versión 2 | Autor | No anotado | Sí, los dos | No anotada en números | La diferencia entre el medio y el difícil se nota, y el fácil se siente fácil. |
 
 **Resultado de la segunda prueba (2026-10-24):** las dificultades se distinguen en el orden esperado. Una sola persona resolvió dos puzzles, así que es una señal y no una medición; la calibración sigue con partidas reales en F13.
 - La equivalencia versión 2 se mantiene, incluida la guarda que deja un solo paso de nivel 2 en las medias y uno de nivel 3 en las difíciles (sección 1).

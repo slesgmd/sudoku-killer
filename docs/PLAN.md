@@ -128,23 +128,23 @@ Las horas son de trabajo efectivo de una persona, incluyendo revisión y pruebas
 
 Equivale a unas **2,5–4,5 semanas** dedicando 15–20 horas por semana, más las 1–2 semanas de calendario de la beta. Si otra persona trabaja F7 en paralelo, el total se reduce en unas 10 h.
 
-### Recalibración al cerrar F4 (aprobada por el usuario el 2026-10-23, con F7 y F13 en 10 h)
+### Recalibración al cerrar F4 (aprobada por el autor el 2026-10-23, con F7 y F13 en 10 h)
 
-**Evidencia.** F4 llevó unas **3,4 h reales** frente a las 20–35 h estimadas: entre el 10 % y el 17 % de la estimación. Cada subfase quedó por debajo de su rango (la más larga, F4c, con 1,1 h frente a 3–5 h). De F0 a F4 se usaron unas **4,8 h** frente a 34–60 h: entre el 8 % y el 14 %. Las horas reales son las de las sesiones de trabajo anotadas en la BITÁCORA, y no cuentan el tiempo que el usuario dedica a revisar fuera de ellas.
+**Evidencia.** F4 llevó unas **3,4 h reales** frente a las 20–35 h estimadas: entre el 10 % y el 17 % de la estimación. Cada subfase quedó por debajo de su rango (la más larga, F4c, con 1,1 h frente a 3–5 h). De F0 a F4 se usaron unas **4,8 h** frente a 34–60 h: entre el 8 % y el 14 %. Las horas reales son las de las sesiones de trabajo anotadas en la BITÁCORA, y no cuentan el tiempo que el autor dedica a revisar fuera de ellas.
 
-**Por qué no aplicar el mismo factor a todo.** F4 era código puro con oráculos automáticos (dos solvers, fuerza bruta, corpus), el caso más favorable. Las fases siguientes tienen partes que no se aceleran igual: interfaz que hay que mirar en el navegador (F7, F8), integración en tiempo real con más ciclos de depuración (F10), cuentas, dominio y secretos del usuario (F12), y pruebas con personas (F5, F13). La propuesta usaba entre el 25 % y el 35 % de la estimación original, el doble de lo observado, como margen. El usuario la aprobó con un cambio: F7 y F13 quedan en 10 h cada una.
+**Por qué no aplicar el mismo factor a todo.** F4 era código puro con oráculos automáticos (dos solvers, fuerza bruta, corpus), el caso más favorable. Las fases siguientes tienen partes que no se aceleran igual: interfaz que hay que mirar en el navegador (F7, F8), integración en tiempo real con más ciclos de depuración (F10), cuentas, dominio y secretos del autor (F12), y pruebas con personas (F5, F13). La propuesta usaba entre el 25 % y el 35 % de la estimación original, el doble de lo observado, como margen. El autor la aprobó con un cambio: F7 y F13 quedan en 10 h cada una.
 
 | Fase | Estimación original (h) | Aprobada (h) | Motivo |
 |---|---|---|---|
 | F5 | 6–12 | 2–4 | El lote y los histogramas son automáticos; la prueba manual con jugadores es tiempo de personas. |
 | F6 | 10–18 | 2–5 | Paquete puro con simulación Monte Carlo, parecido a F4. |
-| F7 | 10–20 | 10 | Las iteraciones de diseño dependen de la revisión del usuario. Se propusieron 4–8 h; el usuario la fijó en 10 h. |
+| F7 | 10–20 | 10 | Las iteraciones de diseño dependen de la revisión del autor. Se propusieron 4–8 h; el autor la fijó en 10 h. |
 | F8 | 15–25 | 4–8 | Interfaz en React; se verifica en el navegador. |
 | F9 | 15–25 | 3–6 | El protocolo y las reglas ya están en la SPEC; pruebas con PGlite. |
 | F10 | 15–25 | 4–8 | Mayor riesgo de integración (reconexión, concurrencia). |
 | F11 | 10–16 | 3–6 | Playwright, carga y seguridad, automatizables. |
-| F12 | 5–10 | 2–4 | Requiere cuentas, dominio y secretos del usuario. |
-| F13 | 10–20 (+1–2 semanas) | 10 (+1–2 semanas) | Beta con personas: el calendario no se acorta. Se propusieron 4–8 h; el usuario la fijó en 10 h. |
+| F12 | 5–10 | 2–4 | Requiere cuentas, dominio y secretos del autor. |
+| F13 | 10–20 (+1–2 semanas) | 10 (+1–2 semanas) | Beta con personas: el calendario no se acorta. Se propusieron 4–8 h; el autor la fijó en 10 h. |
 | **F5–F13** | **96–171** | **40–61** | |
 
 Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, frente a 130–230 h. La columna «Horas estimadas» de la tabla de arriba ya usa estos valores. Se vuelve a comparar al cerrar F5 y F10. Desde el plan 1.18, con F10 en 5–10 h, el total es de unas 46–68 h.
@@ -153,32 +153,32 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, fre
 - F5 llevó unas 2,0 h frente a 2–4 h (entre el 50 % y el 100 %), con los números iniciales por dificultad incluidos, y F7, unas 1,5 h frente a 10 h (15 %).
 - De F0 a F7 van unas 8,3 h reales.
 - La recalibración se mantiene sin cambios. F5 y F7 quedaron por debajo, pero las fases que vienen (F8 a F13) tienen la interfaz, la integración en tiempo real, el despliegue y la beta con personas, que se aceleran menos.
-- La prueba en papel de F5 la hizo el usuario fuera de las sesiones y no entra en estas horas. La segunda muestra se probó el 2026-10-24 (`docs/dificultad.md`, sección 6): las dificultades se distinguen y la equivalencia versión 2 se mantiene.
+- La prueba en papel de F5 la hizo el autor fuera de las sesiones y no entra en estas horas. La segunda muestra se probó el 2026-10-24 (`docs/dificultad.md`, sección 6): las dificultades se distinguen y la equivalencia versión 2 se mantiene.
 - Próxima comparación: al cerrar F10.
 
 **Comparación al cerrar F10 (2026-10-25):**
-- F10 llevó unas **3,1 h** frente a 5–10 h (entre el 31 % y el 62 %; el plan aprobado de F10 estimaba unas 9 h). La entrada de la BITÁCORA dejó las horas para el cierre; se reconstruyeron con las horas de los commits de cada sesión (detalle en la BITÁCORA). No cuentan el punto de control del usuario ni sus revisiones.
+- F10 llevó unas **3,1 h** frente a 5–10 h (entre el 31 % y el 62 %; el plan aprobado de F10 estimaba unas 9 h). La entrada de la BITÁCORA dejó las horas para el cierre; se reconstruyeron con las horas de los commits de cada sesión (detalle en la BITÁCORA). No cuentan el punto de control del autor ni sus revisiones.
 - De F5 a F10 van unas **14,1 h** frente a 26–43 h aprobadas (entre el 33 % y el 54 %): F5 2,0 (2–4), F6 2,2 (2–5), F7 1,5 (10), F8 3,4 (4–8), F9 1,9 (3–6) y F10 3,1 (5–10). De F0 a F10, unas **18,9 h**.
 - Las fases de interfaz e integración (F8 a F10), que la recalibración de F4 suponía más lentas, quedaron entre el 31 % y el 85 % de su rango: más cerca de lo estimado que F4, pero todas por debajo.
-- **Recalibración (aprobada por el usuario el 2026-10-25, plan 1.22):**
+- **Recalibración (aprobada por el autor el 2026-10-25, plan 1.22):**
 
   | Fase | Aprobada (h) | Propuesta (h) | Motivo |
   |---|---|---|---|
   | F11 | 3–6 | 2–4 | F10 ya dejó Playwright contra el servidor real, el inspector sobre el tráfico WS y el job `e2e` en la CI; la carga y el caos son automatizables. Las partidas internas para recalibrar la puntuación son tiempo de personas, fuera de estas horas. |
-  | F12 | 2–4 | 2–4 | Sin cambio: depende de cuentas, dominio y secretos del usuario. |
+  | F12 | 2–4 | 2–4 | Sin cambio: depende de cuentas, dominio y secretos del autor. |
   | F13 | 10 (+1–2 semanas) | 10 (+1–2 semanas) | Sin cambio: beta con personas. |
 
   Con la recalibración, el total de la v1 queda en unas 33–37 h (18,9 h reales de F0 a F10 más 14–18 h de F11 a F13). La tabla de arriba ya la usa.
 - Próxima comparación: al cerrar F11.
 
 **Comparación al cerrar F11 (2026-10-25):**
-- F11 llevó unas **2,1 h** frente a 2–4 h (entre el 52 % y el 105 %; el plan aprobado estimaba unas 3,3 h), con las mediciones de carga y de memoria corriendo en segundo plano. No cuenta el punto de control del usuario.
+- F11 llevó unas **2,1 h** frente a 2–4 h (entre el 52 % y el 105 %; el plan aprobado estimaba unas 3,3 h), con las mediciones de carga y de memoria corriendo en segundo plano. No cuenta el punto de control del autor.
 - De F0 a F11 van unas **21,0 h**. De F5 a F11, unas 16,2 h frente a 28–47 h aprobadas.
-- **Sin propuesta de cambio:** F12 (2–4 h) depende de cuentas, dominio y secretos del usuario, y suma lo que F11 le asignó (clave de acceso obligatoria por S-02, tope por IP detrás del proxy, cabeceras del sitio y la medición de carga en el hosting); F13 sigue en 10 h más la beta. El total de la v1 queda en unas 33–35 h (21,0 h reales más 12–14 h de F12 y F13).
+- **Sin propuesta de cambio:** F12 (2–4 h) depende de cuentas, dominio y secretos del autor, y suma lo que F11 le asignó (clave de acceso obligatoria por S-02, tope por IP detrás del proxy, cabeceras del sitio y la medición de carga en el hosting); F13 sigue en 10 h más la beta. El total de la v1 queda en unas 33–35 h (21,0 h reales más 12–14 h de F12 y F13).
 - Próxima comparación: al cerrar F12.
 
 **Comparación al cerrar F12 (2026-10-25):**
-- F12 llevó unas **2,85 h** frente a 3–5 h (entre el 57 % y el 95 %; el plan aprobado estimaba unas 5,3 h): F12a a F12i, 1,35 h; la corrección del primer despliegue, 0,65 h; las correcciones del cierre, 0,6 h; Brave, F12k y el cierre, 0,25 h. No cuenta el tiempo del usuario en las cuentas, el despliegue y la partida real.
+- F12 llevó unas **2,85 h** frente a 3–5 h (entre el 57 % y el 95 %; el plan aprobado estimaba unas 5,3 h): F12a a F12i, 1,35 h; la corrección del primer despliegue, 0,65 h; las correcciones del cierre, 0,6 h; Brave, F12k y el cierre, 0,25 h. No cuenta el tiempo del autor en las cuentas, el despliegue y la partida real.
 - De F0 a F12 van unas **23,9 h**. De F5 a F12, unas 19,1 h frente a 31–52 h aprobadas.
 - **Sin propuesta de cambio:** F13 sigue en 10 h más 1–2 semanas de calendario: es la beta con personas y la recalibración de la puntuación, que no se aceleran como el código. El total de la v1 queda en unas 34 h.
 - Próxima comparación: al cerrar la v1 (F13).
@@ -217,7 +217,7 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, fre
 - Cada comportamiento documentado está marcado como observado o inferido.
 - Las preguntas sin resolver quedan listadas.
 
-**Estado:** hecha el 2026-10-22. `docs/referencia.md` marca cada punto como observado, visto en el código o inferido, cita la evidencia de `evidence/f1-referencia.json` y lista 14 preguntas abiertas. Las notas, deshacer, pistas y pausa no se vieron en ejecución: tras dos cargas fallidas, el usuario decidió no hacer más cargas automáticas de la página. La sección 15 de `referencia.md` (observaciones manuales) se descartó en F2 porque las reglas propias ya cubren esos puntos.
+**Estado:** hecha el 2026-10-22. `docs/referencia.md` marca cada punto como observado, visto en el código o inferido, cita la evidencia de `evidence/f1-referencia.json` y lista 14 preguntas abiertas. Las notas, deshacer, pistas y pausa no se vieron en ejecución: tras dos cargas fallidas, se decidió no hacer más cargas automáticas de la página. La sección 15 de `referencia.md` (observaciones manuales) se descartó en F2 porque las reglas propias ya cubren esos puntos.
 
 ### F2 — Especificación y arquitectura (6–10 h)
 **Entregables:**
@@ -240,7 +240,7 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, fre
 
 **Estado:** hecha el 2026-10-22.
 - Entregables: `docs/SPEC.md` (34 reglas R-xx con sus casos T-xx, 24 casos límite y la matriz de cobertura de la sección 2 en SPEC §8.5) y los ADR 0001–0005.
-- Las decisiones de producto se tomaron en una sola ronda con el usuario (SPEC §1.2).
+- Las decisiones de producto se tomaron en una sola ronda con el autor (SPEC §1.2).
 - Las 14 preguntas de `referencia.md` y la de pistas tienen su resolución o su dueño (SPEC §1.4).
 
 ### F3 — Monorepo y calidad (3–5 h)
@@ -260,7 +260,7 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, fre
 - Monorepo pnpm con `packages/{engine,protocol,scoring,game}` y `apps/{server,web}`. TypeScript 6.0 estricto (ver la nota de F3 en el ADR 0001), ESLint con reglas con tipos, Prettier, Vitest, Husky con lint-staged y CI en GitHub Actions (`check`, `test` y `build` en Linux).
 - Paquete de ejemplo: `cellIndex` en `engine`, con una prueba de propiedades.
 - Pruebas: T-31.3 (`protocol` no exporta ningún tipo con `solution`, con un fixture de control) y la regla de lint contra `Date.now()` y `Math.random()` en los paquetes puros.
-- `pnpm check`, `pnpm test` y `pnpm build` pasan en local y la CI está en verde (run 39851785929). El repositorio remoto es público por decisión del usuario.
+- `pnpm check`, `pnpm test` y `pnpm build` pasan en local y la CI está en verde (run 39851785929). El repositorio remoto es público por decisión del autor.
 - Antes de F3 se precisó R-05 en la SPEC (versión 1.1): jugadas simultáneas y el nuevo T-05.5.
 
 ### F4 — Motor del puzzle (20–35 h)
@@ -303,12 +303,12 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, fre
 - La prueba de 1000 puzzles no corre en la CI de cada push: la CI ejecuta una versión reducida y el corpus completo corre en local y en un workflow programado.
 - Si no hay una fuente pública legible por máquina para los puzzles de referencia, se usan casos con resultado conocido por construcción, y se registra la desviación.
 - **Desviación registrada en F4c:** no se usó ninguna fuente pública (no se hacen más cargas de sudoku.com y no hay otra legible por máquina a mano). Los 13 puzzles de referencia (`packages/engine/test/fixtures/reference-puzzles.ts`) se construyeron sobre cuadrículas válidas, con 0, 1 y de 2 a 4 soluciones en 4×4, 6×6 y 9×9. Su resultado lo calcularon A y B con `limit: Infinity` y lo confirmó el validador.
-- **Refuerzo de F4c (pedido por el usuario, 2026-10-23):** `solveB` tiene la opción `prune: false` (Dancing Links puro), y B con poda y sin ella coinciden en 4×4, 6×6 y 9×9 con números iniciales (prueba en la CI y 4307 puzzles medidos, 0 diferencias). Las pruebas aleatorias imprimen la semilla en todo fallo, y cada semilla que falle se agrega como regresión fija (`docs/motor.md`).
-- **Nota para F4d (pedida por el usuario, 2026-10-22):** el generador usa `solveA` con un presupuesto de nodos o de tiempo (hoy `solveA` no tiene presupuesto: se agrega en F4d). Si un candidato lo excede, se descarta y se genera otro. Se mide y documenta cuántos candidatos se descartan. B verifica después cada puzzle aceptado; su coste en puzzles únicos está medido en `docs/motor.md` (media 13 ms y máximo 0,7 s en 9×9).
+- **Refuerzo de F4c (pedido por el autor, 2026-10-23):** `solveB` tiene la opción `prune: false` (Dancing Links puro), y B con poda y sin ella coinciden en 4×4, 6×6 y 9×9 con números iniciales (prueba en la CI y 4307 puzzles medidos, 0 diferencias). Las pruebas aleatorias imprimen la semilla en todo fallo, y cada semilla que falle se agrega como regresión fija (`docs/motor.md`).
+- **Nota para F4d (pedida por el autor, 2026-10-22):** el generador usa `solveA` con un presupuesto de nodos o de tiempo (hoy `solveA` no tiene presupuesto: se agrega en F4d). Si un candidato lo excede, se descarta y se genera otro. Se mide y documenta cuántos candidatos se descartan. B verifica después cada puzzle aceptado; su coste en puzzles únicos está medido en `docs/motor.md` (media 13 ms y máximo 0,7 s en 9×9).
 - **Hecho en F4d (2026-10-23):** el presupuesto es de nodos (`solveA` con `maxNodes`), porque el motor no lee el reloj. Con el valor por defecto (1000 nodos), el corpus de 1000 puzzles 9×9 descartó 1 de 1001 candidatos; la tabla con otros presupuestos está en `docs/motor.md`. Tiempo medio de generación en 9×9: 39 ms, con la verificación de B incluida. 0 discrepancias entre A y B; el 0,7 % de los puzzles necesita números iniciales para la unicidad.
-- **Pedido del usuario para el calificador (2026-10-23):** cada técnica es una función aislada que devuelve sus deducciones (colocar un dígito o quitar un candidato) con su nivel; se aplica siempre el nivel más bajo con deducciones. Una prueba de propiedades sobre el corpus comprueba que ninguna deducción contradice la solución única, y cualquier fallo bloquea la subfase. Si las técnicas no alcanzan, el puzzle queda como «excede las técnicas»: nunca se adivina. `levelToDeduce` usa solo los dígitos colocados, no las notas, es determinista y su tiempo en 9×9 (media y p95) se documenta en `docs/motor.md`. Al cerrar F4f se informa la distribución de niveles del corpus para F5.
+- **Pedido del autor para el calificador (2026-10-23):** cada técnica es una función aislada que devuelve sus deducciones (colocar un dígito o quitar un candidato) con su nivel; se aplica siempre el nivel más bajo con deducciones. Una prueba de propiedades sobre el corpus comprueba que ninguna deducción contradice la solución única, y cualquier fallo bloquea la subfase. Si las técnicas no alcanzan, el puzzle queda como «excede las técnicas»: nunca se adivina. `levelToDeduce` usa solo los dígitos colocados, no las notas, es determinista y su tiempo en 9×9 (media y p95) se documenta en `docs/motor.md`. Al cerrar F4f se informa la distribución de niveles del corpus para F5.
 - **Hecho en F4e (2026-10-23):** niveles 1 (singles y última celda de jaula), 2 (combinaciones y dígitos obligatorios de jaula) y 3 (innies y outies), `grade` y `levelToDeduce`. Corpus de 1000 puzzles 9×9: 365 264 deducciones, 0 contra la solución. Nivel máximo: 0 puzzles de nivel 1, 100 de nivel 2, 668 de nivel 3 y 232 que exceden las técnicas. `levelToDeduce` en partidas simuladas: media 0,77 ms y p95 4,7 ms (`docs/motor.md`).
-- **Pedido del usuario para F4f (2026-10-23):** los mismos requisitos de F4e (técnicas aisladas, prueba de corrección contra la solución en el corpus y nunca adivinar); volver a medir `levelToDeduce` con los niveles 4 y 5, con un p95 en 9×9 por debajo de 50 ms; informar la distribución final del corpus; registrar dos decisiones pendientes en F5 y cerrar F4 con la comparación de horas y una recalibración propuesta (sección 5).
+- **Pedido del autor para F4f (2026-10-23):** los mismos requisitos de F4e (técnicas aisladas, prueba de corrección contra la solución en el corpus y nunca adivinar); volver a medir `levelToDeduce` con los niveles 4 y 5, con un p95 en 9×9 por debajo de 50 ms; informar la distribución final del corpus; registrar dos decisiones pendientes en F5 y cerrar F4 con la comparación de horas y una recalibración propuesta (sección 5).
 - **Hecho en F4f (2026-10-23):** nivel 4 (`lockedCandidates`, `nakedPair`, `hiddenPair`, `cageUnitLock`, `nakedTriple` y `hiddenTriple`) y nivel 5 (`xWing`, `yWing`, `swordfish` y `unitCombination`), cada una contra un oráculo por fuerza bruta. Corpus de 1000 puzzles 9×9: 401 109 deducciones, 0 contra la solución. Nivel máximo: 0 de nivel 1, 100 de nivel 2, 668 de nivel 3, 77 de nivel 4, 85 de nivel 5 y **70 (7,0 %) que exceden todas las técnicas** (eran 232). `levelToDeduce` en 100 partidas simuladas: media 1,5 ms y **p95 9,2 ms**, dentro del límite de 50 ms. `grade`: media 25 ms (`docs/motor.md`).
 - **Cierre de F4 (2026-10-23):** unas 3,4 h reales frente a 20–35 h estimadas (entre el 10 % y el 17 %). Recalibración propuesta de F5 a F13 en la sección 5.
 
@@ -334,14 +334,14 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, fre
 
 **Datos de partida (corpus de F4f, 1000 puzzles 9×9 sin números iniciales, `docs/motor.md`):** nivel máximo 2 en 100, 3 en 668, 4 en 77, 5 en 85, y 70 que exceden todas las técnicas. Ninguno es de nivel 1. Pasos por puzzle: mediana 51.
 
-**Decisiones** (registradas al cerrar F4 como pendientes y aprobadas por el usuario el 2026-10-23):
+**Decisiones** (registradas al cerrar F4 como pendientes y aprobadas por el autor el 2026-10-23):
 - **a) Puzzles que exceden todas las técnicas: se excluyen del banco de la v1.** Son el 7,0 % del corpus. El script de lotes los descarta y registra cuántos. Así, todo puzzle del banco tiene `graderMaxLevel` entre 1 y 5, y como agregar celdas correctas no sube el nivel (T-35.5), `levelToDeduce` nunca devuelve `UNRATED` en una partida, porque el servidor solo coloca dígitos correctos. F6 puede contar con eso.
 - **b) Nivel fácil: se obtiene generando más puzzles y filtrando.** Solo el 10 % de los puzzles generados se resuelve con técnicas de nivel 2 o menos (ninguno con nivel 1): para 500 fáciles hacen falta unos 5000 candidatos, unos 6 minutos a unos 70 ms cada uno (generación y calificación). Los números iniciales del nivel fácil (`easyGivens`, que permite la decisión P2 de la SPEC) se usan solo si la prueba manual muestra que el fácil resulta difícil. Ajustar `cageSizeWeights` hacia jaulas más chicas queda descartado.
   - **Reemplazada el 2026-10-23** tras la prueba en papel, en la que los puzzles sin números iniciales resultaron difíciles, incluido el fácil.
   - Ahora los números iniciales se escalonan por dificultad: 30, 22, 10 y 0, con bandas de niveles que no se solapan (`docs/dificultad.md`, versión 2).
 - **c) La equivalencia entre los niveles del calificador y las dificultades del juego se decide en F5**, con el informe para F5 del calificador (`docs/motor.md`, «Informe para F5»): uso de cada técnica y peso de `unitCombination` en el nivel 5.
 
-**Pedido del usuario al planificar (2026-10-23):**
+**Pedido del autor al planificar (2026-10-23):**
 - acotar `unitCombination` y medir las cotas 4/8, 5/16 y 5/32, con las mismas pruebas de F4e y F4f;
 - proponer la equivalencia con histogramas;
 - script de lotes con descartes y tiempos;
@@ -349,7 +349,7 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, fre
 - escribir `docs/dificultad.md`;
 - proponer cómo tratar la prueba manual sin cliente.
 
-Al aprobar el plan, el usuario pidió además:
+Al aprobar el plan, el autor pidió además:
 - una prueba de que `levelToDeduce` nunca devuelve `UNRATED` en partidas sobre puzzles del banco (T-20.5);
 - justificar el `id` opaco por la enumeración del banco y no por la solución;
 - documentos en español neutro;
@@ -359,7 +359,7 @@ Al aprobar el plan, el usuario pidió además:
 
 | Subtarea | Contenido | Estado |
 |---|---|---|
-| F5a | `unitCombination` acotada (`unitCombinationWithin`, `GRADER_VERSION` "2"), oráculo con cota y medición de las cotas en el corpus. Punto de control: cota y equivalencia aprobadas por el usuario. | Hecha |
+| F5a | `unitCombination` acotada (`unitCombinationWithin`, `GRADER_VERSION` "2"), oráculo con cota y medición de las cotas en el corpus. Punto de control: cota y equivalencia aprobadas por el autor. | Hecha |
 | F5b | `difficultyOf` (equivalencia versión 1), `Difficulty` y `PublicPuzzle` en el protocolo, `buildBank` y el script `bank:generate`, manifiesto versionado y `docs/dificultad.md`. | Hecha |
 | F5c | Drizzle: tabla `puzzles` con su migración, `PuzzleRepository`, `loadBank` idempotente y pruebas con PGlite. SPEC 1.3 (T-20.3 a T-20.5) y ADR 0006. | Hecha |
 | F5d | Muestra imprimible (`bank:sample`, `design/muestra-f5/muestra.html`) y cierre. | Hecha |
@@ -398,7 +398,7 @@ Al aprobar el plan, el usuario pidió además:
 - **Medición previa a la decisión:**
   - con números al azar, el nivel cae demasiado rápido: con 10 números, el 99 % queda en nivel 2;
   - con números agregados con guarda (cada uno solo si mantiene el piso de la banda), las cantidades pedidas salen en el 87 % al 100 % de los candidatos.
-- **Decisión del usuario:**
+- **Decisión del autor:**
   - fácil, 30 números y nivel máximo 1;
   - media, 22 y nivel máximo 2;
   - difícil, 10 y nivel 3 o 4 con algún paso de nivel 3;
@@ -449,7 +449,7 @@ Al aprobar el plan, el usuario pidió además:
 - Se cumplen todas las métricas objetivo.
 - **Revisión constante:** el modelo se recalibra en F11 y en F13 usando registros de partidas reales.
 
-**Pedido del usuario al planificar (2026-10-23):**
+**Pedido del autor al planificar (2026-10-23):**
 - modelo puro con las firmas de `GameMode`, nivel calculado sobre el estado anterior;
 - una métrica de aporte real independiente de la fórmula;
 - la condición sobre P para k = 2;
@@ -458,7 +458,7 @@ Al aprobar el plan, el usuario pidió además:
 - propiedades en la CI y la simulación completa fuera de ella;
 - un punto de control después de la primera simulación.
 
-**Al aprobar el plan, el usuario agregó:**
+**Al aprobar el plan, el autor agregó:**
 - el nivel se calcula con los descartes públicos de los errores;
 - vidas y derrotas en el simulador, con la tasa por dificultad y por tipo de bot;
 - robustez con dos perfiles alternativos de T(L);
@@ -480,11 +480,11 @@ Al aprobar el plan, el usuario pidió además:
 - **Nivel con descartes públicos:** el dígito de un error se descarta para `levelToDeduce`, y así adivinar «hasta acertar» no cobra el nivel alto.
 - **Condición corregida:** P > B·(w(L) + w(s)), con s el nivel del adivinador.
 - **Aporte real:** el tiempo que el equipo pierde sin el jugador, medido con réplicas. No usa la fórmula de puntuación.
-- **Cambio de metas en el punto de control** (decisión del usuario):
+- **Cambio de metas en el punto de control** (decisión del autor):
   - el aporte independiente muestra que el veloz y el lógico aportan lo mismo (el veloz aporta más en el 49 % de los duelos), así que la meta del 55 % se reemplazó por una de equidad entre cuotas de puntaje y de aporte;
   - el Spearman se mide contra el techo de confiabilidad del aporte;
   - el adivinador queda fuera de la equidad a propósito: que adivinar no se premie es lo buscado.
-- **Calibración:** ninguna de las 81 combinaciones de la grilla cumplió la equidad. El usuario eligió la más cercana, con P = 90.
+- **Calibración:** ninguna de las 81 combinaciones de la grilla cumplió la equidad. El autor eligió la más cercana, con P = 90.
 - **Validación** (semilla 2, 10 000 partidas, 8 réplicas, tres perfiles de T(L)):
   - Se cumplen las metas exigidas: P y H con sus reglas, adivinar con EV negativo frente a deducir (nivel 2 con su intervalo de confianza y nivel 3 en media), pista y robo con efecto neto negativo frente al placebo, y β con p95 de 9,9 %.
   - **Limitaciones conocidas:** el veloz gana alrededor del 57 % de los duelos (49 % por aporte), el Spearman agrupado es de 0,78 y los estratos de experto quedan por debajo del techo. Los resultados dependen del modelo del mundo.
@@ -525,7 +525,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - Pruebas de componentes en verde.
 - La versión de producción no incluye el servidor simulado (verificado en el build).
 
-**Al aprobar el plan, el usuario pidió:**
+**Al aprobar el plan, el autor pidió:**
 - push y CI en verde en cada subtarea;
 - en el cliente de producción, solo el protocolo, i18n, React, la geometría y las máscaras del motor y `@sudoku-killer/game/client`, verificado por `check-dist` (ante un falso positivo se corrigen los imports, nunca el detector);
 - el hash con `crypto.subtle` igual al de `node:crypto`;
@@ -545,8 +545,8 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | F8f | Bot compañero (`?bot=N&pace=&errors=&seed=`), que juega por el protocolo sin ver la solución. | Hecha |
 | F8g | Correcciones de la prueba con el bot y cierre. | Hecha |
 
-**Estado:** hecha el 2026-10-24, en unas 3,4 h, frente a 4–8 h. El plan de F8 estimaba 6–10 h porque el protocolo y `packages/game` estaban vacíos. Las horas no incluyen las pruebas del usuario en PC, celular y tablet.
-- **Decisiones de las pruebas del usuario** (en `docs/diseno.md` y en la SPEC):
+**Estado:** hecha el 2026-10-24, en unas 3,4 h, frente a 4–8 h. El plan de F8 estimaba 6–10 h porque el protocolo y `packages/game` estaban vacíos. Las horas no incluyen las pruebas del autor en PC, celular y tablet.
+- **Decisiones de las pruebas del autor** (en `docs/diseno.md` y en la SPEC):
   - «Usar notas» es una preferencia local (`localStorage`), sin cambio de protocolo (R-06, T-06.3);
   - la actividad ocupa una línea, con el historial a pedido en «Ver actividad»;
   - las jaulas pasan a 2 px y la seleccionada a 3 px, porque Chromium dibuja los grosores fraccionarios redondeados hacia abajo;
@@ -585,8 +585,8 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - Pruebas de cada transición de estado y de cada caso límite de la SPEC.
 - El test de "la solución nunca sale del servidor" está en verde.
 
-**Al aprobar el plan, el usuario pidió:**
-- PostgreSQL 18 local en desarrollo, con un rol propio sin privilegios, dueño solo de la base `sudoku_killer` (nunca `postgres`). El usuario ejecuta el SQL en «SQL Shell (psql)», elige la contraseña y escribe `apps/server/.env`. Ningún script ni log muestra `DATABASE_URL`, y las pruebas siguen con PGlite en memoria.
+**Al aprobar el plan, el autor pidió:**
+- PostgreSQL 18 local en desarrollo, con un rol propio sin privilegios, dueño solo de la base `sudoku_killer` (nunca `postgres`). El autor ejecuta el SQL en «SQL Shell (psql)», elige la contraseña y escribe `apps/server/.env`. Ningún script ni log muestra `DATABASE_URL`, y las pruebas siguen con PGlite en memoria.
 - Los puzzles que salen del manifiesto se retiran, no se borran, y las partidas viejas conservan su clave foránea.
 - Un punto de control del esquema de `matches` y `match_events` antes de implementar la persistencia.
 - Fichas de 128 bits con `node:crypto`, de las que solo se guarda el SHA-256; secretos solo por variables de entorno; Zod en todo mensaje entrante; errores sin detalles internos; lista de orígenes permitidos.
@@ -599,11 +599,11 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | F9a | Piezas puras en sus paquetes: apodo y código de sala en `packages/protocol` (T-09.3); código, asientos, traspaso y snapshot del lobby en `packages/game` (T-09.4); esquema Zod de los eventos; `pickPuzzle` en `packages/bank` (T-21.2). El simulador y el Inicio las usan. | Hecha |
 | F9b | Núcleo del servidor: interfaces de §8.2, `RoomStore`, cola por sala, lobby, ciclo de vida, fichas, plazos, E-08, inspector de filtración y logger. | Hecha |
 | F9c | Partida en vivo, presencia, idempotencia, límites de velocidad y T-32.1 contra el servidor. | Hecha |
-| F9d | Punto de control (esquema aprobado por el usuario) y después persistencia: `matches` y `match_events`, group commit, reconstrucción, E-16 y retiro de puzzles. | Hecha |
-| F9e | Base local configurada con el script aprobado por el usuario (`db:setup-local`) y producción: `ws`, `pg`, configuración, `db:migrate` y `bank:load`. | Hecha |
+| F9d | Punto de control (esquema aprobado por el autor) y después persistencia: `matches` y `match_events`, group commit, reconstrucción, E-16 y retiro de puzzles. | Hecha |
+| F9e | Base local configurada con el script aprobado por el autor (`db:setup-local`) y producción: `ws`, `pg`, configuración, `db:migrate` y `bank:load`. | Hecha |
 | F9f | Demostración (`demo`: dos clientes Node por `ws` hasta la victoria) y cierre. | Hecha |
 
-**Estado:** hecha el 2026-10-24, en unas 1,9 h, frente a 3–6 h. El plan aprobado estimaba 6–7 h por la persistencia, la reconstrucción, el adaptador `ws` y la demostración. Las horas no incluyen la revisión del usuario ni las ventanas de la configuración de la base.
+**Estado:** hecha el 2026-10-24, en unas 1,9 h, frente a 3–6 h. El plan aprobado estimaba 6–7 h por la persistencia, la reconstrucción, el adaptador `ws` y la demostración. Las horas no incluyen la revisión del autor ni las ventanas de la configuración de la base.
 - **Desviaciones registradas:**
   - Las reglas puras de la sala (apodo, código, asientos, traspaso y snapshot del lobby) quedaron en `packages/protocol` y `packages/game`, y el simulador de F8 y el Inicio las usan. El apodo se mide en grafemas (SPEC 1.7).
   - El esquema Zod del registro está en `packages/game`.
@@ -634,9 +634,9 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - 6 pestañas jugando una partida completa.
 - Clics simultáneos en la misma celda resueltos según la regla.
 - Desconexión y vuelta dentro del plazo sin pérdida de estado.
-- Cada pantalla de la prioridad 3 y cada estado de red se ven con sus estados a 360 y a 1280 px, sin desplazamiento horizontal, y los pendientes de `entrega-f8.md` §4 quedan resueltos o decididos por el usuario. «Volver a la sala» cumple la decisión 3.
+- Cada pantalla de la prioridad 3 y cada estado de red se ven con sus estados a 360 y a 1280 px, sin desplazamiento horizontal, y los pendientes de `entrega-f8.md` §4 quedan resueltos o decididos por el autor. «Volver a la sala» cumple la decisión 3.
 
-**Al aprobar el plan, el usuario decidió y pidió (2026-10-24):**
+**Al aprobar el plan, el autor decidió y pidió (2026-10-24):**
 - sin fotos en la v1 (pantallas en una columna centrada);
 - «Compartir» con la hoja del sistema y el enlace `…/#/sala/CODIGO` (nunca con la ficha); sin hoja, se copia el enlace, y sin portapapeles, un diálogo con el enlace seleccionado;
 - Resultados solo con «Ver resultados»; si quien inicia vuelve al lobby antes, todos pasan al lobby con un aviso;
@@ -657,10 +657,10 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | F10e | Inicio, Entrar o crear, Lobby, Resultados y Ayuda, con rutas por hash y Compartir. | Hecha |
 | F10f | Estados de red, transiciones y decisión 3. | Hecha |
 | F10g | E2E con Playwright (6 contextos, T-05.4, T-07.2, T-13.5 y E-08) e inspector sobre el tráfico WS; job `e2e` en la CI. | Hecha |
-| F10h | Punto de control del usuario y correcciones. | Hecha |
+| F10h | Punto de control del autor y correcciones. | Hecha |
 | F10i | Cierre y recalibración. | Hecha |
 
-**Punto de control (F10h, 2026-10-25):** el usuario probó con PC, iPhone y iPad a la vez (`pnpm dev:lan`): lobby, entrada por enlace, jugadas, notas personales y grupales, reconexión al bloquear el iPad, salir y volver con ficha, recarga, sesión en otra pestaña, caída y reinicio del servidor, «Compartir» (por http con IP cae al diálogo, como estaba decidido), Ayuda, y derrota y victoria con bots. Todo funcionó. Correcciones pedidas y hechas:
+**Punto de control (F10h, 2026-10-25):** el autor probó con PC, iPhone y iPad a la vez (`pnpm dev:lan`): lobby, entrada por enlace, jugadas, notas personales y grupales, reconexión al bloquear el iPad, salir y volver con ficha, recarga, sesión en otra pestaña, caída y reinicio del servidor, «Compartir» (por http con IP cae al diálogo, como estaba decidido), Ayuda, y derrota y victoria con bots. Todo funcionó. Correcciones pedidas y hechas:
 - el Lobby muestra los números iniciales de cada dificultad desde una sola fuente (`DIFFICULTY_GIVENS`, equivalencia versión 2);
 - la derrota dice su causa en Resultados y en la franja del tablero, también al recargar: `defeatCause` opcional en `match.ended` y en el snapshot (SPEC 1.8, T-01.6 y T-01.7), porque la purga del final borra a quienes salieron o expiraron y el cliente ya no conoce sus vidas;
 - la actividad avisa que lo anterior a la reconexión no está disponible (R-38); la alternativa con las últimas 50 jugadas está en `docs/IDEAS_FUTURAS.md`, sección 7;
@@ -671,9 +671,9 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - **6 pestañas jugando una partida completa:** cumplido. E2E T-05.4 (seis contextos hasta la victoria), en verde en la CI de `main` (2e2c600) y tres veces seguidas en local al cerrar, sin reintentos.
 - **Clics simultáneos en la misma celda:** cumplido. La misma E2E T-05.4: seis clics simultáneos dan un solo acierto y ninguna penalización; en el servidor, T-05.1 y T-05.5.
 - **Desconexión y vuelta dentro del plazo sin pérdida de estado:** cumplido. E2E T-13.5 con un corte real (y su verificación negativa sin ficha), T-13.1 en el servidor y, en el punto de control, el iPad bloqueado, la recarga y la caída y el reinicio del servidor (con T-32.2 extendida).
-- **Pantallas y estados de red a 360 y a 1280 px, `entrega-f8.md` §4 y decisión 3:** cumplido. Pruebas de componentes de cada pantalla y estado de red, la decisión 3 en `network-states.test.tsx`, `entrega-f8.md` §4 resuelto en F10f, y el recorrido del usuario en PC, iPhone y iPad, que terminó sin correcciones de disposición (las cinco correcciones fueron de contenido y de pruebas).
+- **Pantallas y estados de red a 360 y a 1280 px, `entrega-f8.md` §4 y decisión 3:** cumplido. Pruebas de componentes de cada pantalla y estado de red, la decisión 3 en `network-states.test.tsx`, `entrega-f8.md` §4 resuelto en F10f, y el recorrido del autor en PC, iPhone y iPad, que terminó sin correcciones de disposición (las cinco correcciones fueron de contenido y de pruebas).
 
-**Estado:** hecha el 2026-10-25, en unas 3,1 h, frente a 5–10 h (el plan aprobado estimaba unas 9 h). No incluye el punto de control del usuario.
+**Estado:** hecha el 2026-10-25, en unas 3,1 h, frente a 5–10 h (el plan aprobado estimaba unas 9 h). No incluye el punto de control del autor.
 - **Desviaciones registradas:**
   - `DIFFICULTY_GIVENS` vive en `packages/protocol`: el cliente de producción no puede importar `packages/bank` (T-31.2), y el banco arma sus reglas con esa constante.
   - SPEC 1.8 con un campo opcional (`defeatCause`) y R-38; el protocolo sigue en la versión 1 y el registro de eventos no cambia de forma.
@@ -692,11 +692,11 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - 0 fallos E2E.
 - Hallazgos documentados.
 
-**Al aprobar el plan, el usuario decidió y pidió (2026-10-25):**
+**Al aprobar el plan, el autor decidió y pidió (2026-10-25):**
 - F11 baja de 3–6 h a 2–4 h (recalibración del cierre de F10).
 - E2E nuevas solo donde el cliente hace algo que las pruebas de integración no ven; toda prueba nueva cita su T-xx o E-xx; un fallo por tiempo o intermitente se investiga, sin subir límites ni agregar reintentos.
 - Caos: cada corte cierra el socket de verdad (nunca el modo sin conexión de Chromium, que no cierra los WebSocket abiertos) y la prueba comprueba que el servidor registró cada desconexión. En cada push corre una semilla fija; las semillas nuevas van en un workflow programado semanal, y cada semilla que falle queda como regresión fija.
-- Carga con PostgreSQL 18 real (PGDG; si la red lo bloquea, la 16, con la diferencia anotada en `docs/carga.md`). Dos escenarios con los mismos parámetros versionados: realista (una jugada cada 2–5 s por jugador, con errores y notas) y estrés (el ritmo máximo de los límites de velocidad). Script reproducible con parámetros y semilla; se corre a mano o con un workflow programado, no en cada push. El informe dice que los clientes corren en la misma máquina que el servidor; la cifra de producción se mide en F12. Punto de control del usuario tras la primera medición, antes de optimizar.
+- Carga con PostgreSQL 18 real (PGDG; si la red lo bloquea, la 16, con la diferencia anotada en `docs/carga.md`). Dos escenarios con los mismos parámetros versionados: realista (una jugada cada 2–5 s por jugador, con errores y notas) y estrés (el ritmo máximo de los límites de velocidad). Script reproducible con parámetros y semilla; se corre a mano o con un workflow programado, no en cada push. El informe dice que los clientes corren en la misma máquina que el servidor; la cifra de producción se mide en F12. Punto de control del autor tras la primera medición, antes de optimizar.
 - Seguridad en `docs/seguridad.md`, con severidad y estado de cada hallazgo. Se corrigen en F11 los críticos, altos y medios; si uno toca el protocolo o lleva más de 30 min, se pregunta. Los bajos se documentan con su fase (F12 o F13). Recomendación sobre las actualizaciones de Dependabot, sin activarlas.
 - Puntuación: `scoring:report` sobre `match_events`, sin cambiar los parámetros. La decisión sobre P y la versión nueva de los parámetros pasan a F13. T(L) queda fuera de la v1 (sin evento de selección), registrado en `docs/IDEAS_FUTURAS.md`.
 
@@ -708,7 +708,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | F11b | E2E nuevas: derrota y Resultados (E-10, T-01.6, decisión 3), reinicio del servidor (E-15, T-32.2), fallo de la base (E-16, T-32.3) y vuelta con ficha a una sala llena (E-02, E-23, T-26.4). Corrige «Volver a la sala» con el aviso de sala llena a la vista. | Hecha |
 | F11c | Caos con semilla (E-01, E-07 y E-17 en Playwright, `e2e/chaos.spec.ts`), cortes reales comprobados en el registro, verificación negativa y workflow semanal (`chaos.yml`). E-17 se provoca declarando más bytes encolados en el fixture, no con clientes Node que dejan de leer (desviación en la BITÁCORA). | Hecha |
 | F11d | Equivalencia de la reconstrucción (T-32.1, E-07, E-15): partida aleatoria con un reinicio, `replay(registro)` y la caché de idempotencia, con verificación negativa (`apps/server/test/rebuild.test.ts`). | Hecha |
-| F11e | Carga: PostgreSQL real, script con escenarios realista y estrés, workflow programado e informe en `docs/carga.md`. Punto de control del usuario. | Hecha (p95 de 15,3 ms realista y 74,2 ms en estrés, PostgreSQL 16; punto de control del usuario hecho) |
+| F11e | Carga: PostgreSQL real, script con escenarios realista y estrés, workflow programado e informe en `docs/carga.md`. Punto de control del autor. | Hecha (p95 de 15,3 ms realista y 74,2 ms en estrés, PostgreSQL 16; punto de control del autor hecho) |
 | F11f | Memoria en estrés de 5 min (pedida en el punto de control): la caché del catálogo retenía cada puzzle jugado con el contexto del calificador; ahora es una LRU de 64 (`docs/carga.md` §6). Los límites de SPEC §4.8 quedan confirmados. | Hecha |
 | F11g | Seguridad: `docs/seguridad.md` (S-01 medio corregido con topes de conexiones y de salas, SPEC 1.9; S-02 a F12 con la clave de acceso; bajos con su fase), `pnpm audit` y recomendación sobre Dependabot. | Hecha |
 | F11h | `scoring:report` (`docs/puntuacion.md` §11), sin cambiar los parámetros. | Hecha |
@@ -719,13 +719,13 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - **0 fallos E2E:** cumplido. 10 E2E (las 5 de F10, 4 de casos límite y la de caos con su semilla fija), sin reintentos, en verde en cada subtarea y dos o tres veces seguidas al cerrar cada una.
 - **Hallazgos documentados:** cumplido. `docs/seguridad.md` (S-01 medio corregido; S-02 asignado a F12; bajos con su fase), `docs/carga.md` (memoria, cuello de botella y límites) y la recomendación sobre Dependabot.
 
-**Estado:** hecha el 2026-10-25, en unas 2,1 h, frente a 2–4 h (el plan aprobado estimaba unas 3,3 h). No incluye el punto de control del usuario.
+**Estado:** hecha el 2026-10-25, en unas 2,1 h, frente a 2–4 h (el plan aprobado estimaba unas 3,3 h). No incluye el punto de control del autor.
 - **Desviaciones registradas:**
   - PostgreSQL 16.15 en lugar de 18 (la red bloquea PGDG) y Node 22.22 en lugar de 24 en esta máquina; el workflow `load.yml` usa PostgreSQL 18.
   - E-17 se provoca forzando el valor de bytes encolados, no con clientes que dejan de leer (`docs/carga.md`, sección 4).
   - Corrección del cliente en F11b: «Volver a la sala» con el aviso de sala llena a la vista. Corrección del servidor en F11f: la caché del catálogo de puzzles, acotada. Corrección de seguridad en F11g: topes de conexiones y de salas (SPEC 1.9).
   - Para F12: la clave de acceso obligatoria (S-02), el tope por IP detrás del proxy (S-01), las cabeceras del sitio (S-05), los plazos del HTTP (S-06) y la medición de carga en el hosting.
-  - Para F13: los apodos con caracteres invisibles (S-03), esbuild en drizzle-kit (S-04), la decisión sobre P con `scoring:report` y la de Dependabot (del usuario).
+  - Para F13: los apodos con caracteres invisibles (S-03), esbuild en drizzle-kit (S-04), la decisión sobre P con `scoring:report` y la de Dependabot (del autor).
 
 ### F12 — Despliegue privado (3–5 h; antes 2–4 h; original 5–10 h)
 **Tareas:**
@@ -742,14 +742,14 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - Una partida real entre dispositivos distintos funciona.
 - Restaurar un respaldo funciona.
 
-**Al aprobar el plan, el usuario decidió y pidió (2026-10-25):**
+**Al aprobar el plan, el autor decidió y pidió (2026-10-25):**
 - Hosting (ADR 0007): servidor y web estática en Render (Virginia), base en Neon (AWS us-east-1), 0 USD y subdominios del proveedor. Render despliega desde `main`, solo cuando pasan los checks del commit.
 - F12 sube de 2–4 h a 3–5 h.
 - Clave de acceso (S-02), opción B: una clave compartida que se escribe una vez y queda en el dispositivo, más un enlace de invitación aparte con la clave en `#k=`. El enlace «Compartir» de la sala sigue sin llevar la clave ni la ficha.
 - Servidor dormido, opción a: a los 3 s sin conexión, «Despertando el servidor… puede tardar hasta 1 min»; reintento cada 5 s durante 2 min y después «Reintentar».
 - Neon puede borrar proyectos con 90 días sin uso: el respaldo semanal tiene que contar como uso, documentado en el ADR 0007 y en `docs/seguridad.md` con la fuente y una forma de comprobarlo.
 - Los logs de Actions son públicos: ningún workflow imprime cadenas de conexión, claves, hashes, apodos ni contenido de la base, solo recuentos; cada workflow nuevo lleva esa comprobación.
-- Orden: F12a a F12i (código, `render.yaml` y workflows), con su cierre habitual, y un alto antes del primer despliegue (F12j). F12j a F12m van en una sesión nueva, después de que el usuario despliegue.
+- Orden: F12a a F12i (código, `render.yaml` y workflows), con su cierre habitual, y un alto antes del primer despliegue (F12j). F12j a F12m van en una sesión nueva, después de que el autor despliegue.
 
 **Subtareas** (unas 5,3 h estimadas):
 
@@ -764,19 +764,19 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | F12g | Despertar: precalentamiento, aviso y reintento · E2E con el servidor apagado al abrir | Hecha |
 | F12h | Logs y métricas cada 60 s, sin datos de las personas · prueba I | Hecha |
 | F12i | Respaldos cifrados (`backup.yml`), simulacro de restauración (`restore-drill.yml`) y `db-admin.yml` · pruebas de los scripts y de la guarda | Hecha |
-| F12j | Primer despliegue (usuario, `docs/despliegue.md`) y `db-admin` · el servidor arranca con el banco; `smoke`, `backup` y `restore-drill` en verde; nombres y `TRUST_PROXY_HOPS` confirmados | Hecha (2026-10-25): servicios con 0958857, 2000 puzzles, respaldo y simulacro en verde; el humo falló solo en la HSTS (corregido en `fix-f12-cierre`, que también corrige el 4003 perdido tras el proxy) |
-| F12k | Carga en el hosting (1, 3 y 5 salas) · p95 < 150 ms desde Actions | Reemplazada (desviación aprobada por el usuario el 2026-10-25): sin bots; la línea `metrics` de producción durante la beta de F13 (`docs/carga.md` §8) |
+| F12j | Primer despliegue (autor, `docs/despliegue.md`) y `db-admin` · el servidor arranca con el banco; `smoke`, `backup` y `restore-drill` en verde; nombres y `TRUST_PROXY_HOPS` confirmados | Hecha (2026-10-25): servicios con 0958857, 2000 puzzles, respaldo y simulacro en verde; el humo falló solo en la HSTS (corregido en `fix-f12-cierre`, que también corrige el 4003 perdido tras el proxy) |
+| F12k | Carga en el hosting (1, 3 y 5 salas) · p95 < 150 ms desde Actions | Reemplazada (desviación aprobada por el autor el 2026-10-25): sin bots; la línea `metrics` de producción durante la beta de F13 (`docs/carga.md` §8) |
 | F12l | Partida real entre iPad, iPhone y PC | Hecha (2026-10-25): por internet, con el enlace de invitación, todo sincronizado |
 | F12m | Cierre y comparación de horas | Hecha |
 
 **Desviación aprobada (F12k, 2026-10-25):** la carga en el hosting no se mide con bots. La reemplaza la línea `metrics` de producción (`commitP95Ms`, `eventLoopP95Ms`, `rssMb` y `heapUsedMb`) durante la beta de F13 (`docs/carga.md` §8). Motivos: el plan gratuito (0,1 CPU y 512 MB compartidos con las partidas reales), no exponer la clave del grupo en un secreto de un repositorio público y no mezclar partidas de bots con las reales que analiza `scoring:report`.
 
-**Brave (decisión del usuario, 2026-10-25):** opción A. La página precalienta el servidor con `GET /ws`; `/healthz`, que la regla `||onrender.com/health` de EasyPrivacy bloquea en Brave, queda para el chequeo de Render y la prueba de humo (SPEC 1.13, R-37).
+**Brave (decisión del autor, 2026-10-25):** opción A. La página precalienta el servidor con `GET /ws`; `/healthz`, que la regla `||onrender.com/health` de EasyPrivacy bloquea en Brave, queda para el chequeo de Render y la prueba de humo (SPEC 1.13, R-37).
 
-**Estado:** hecha el 2026-10-25, en unas 2,85 h frente a 3–5 h (el plan aprobado estimaba unas 5,3 h). No incluye el tiempo del usuario en las cuentas, el despliegue y la partida real. Criterios de aceptación:
-- *Una partida real entre dispositivos distintos funciona:* cumplido (F12l). Partida por internet entre PC, iPhone e iPad con el enlace de invitación, todo sincronizado (evidencia del usuario, BITÁCORA).
+**Estado:** hecha el 2026-10-25, en unas 2,85 h frente a 3–5 h (el plan aprobado estimaba unas 5,3 h). No incluye el tiempo del autor en las cuentas, el despliegue y la partida real. Criterios de aceptación:
+- *Una partida real entre dispositivos distintos funciona:* cumplido (F12l). Partida por internet entre PC, iPhone e iPad con el enlace de invitación, todo sincronizado (evidencia del autor, BITÁCORA).
 - *Restaurar un respaldo funciona:* cumplido (F12j). `backup` en verde (volcado de Neon restaurado y comprobado en un PostgreSQL efímero, un artefacto cifrado) y `restore-drill` en verde desde ese artefacto cifrado.
-- Además: los dos servicios en Render con 0958857, 2000 puzzles activos, `smoke` en verde salvo la HSTS (la prueba se corrigió). Las correcciones del cierre (4003 tras el primer mensaje, HSTS, `sslmode`, Node 24 y precalentamiento) están en la rama `fix-f12-cierre`; el usuario las lleva a `main` y vuelve a correr `smoke` y `backup`.
+- Además: los dos servicios en Render con 0958857, 2000 puzzles activos, `smoke` en verde salvo la HSTS (la prueba se corrigió). Las correcciones del cierre (4003 tras el primer mensaje, HSTS, `sslmode`, Node 24 y precalentamiento) están en la rama `fix-f12-cierre`; el autor las lleva a `main` y vuelve a correr `smoke` y `backup`.
 
 ### F13 — Beta cerrada y cierre de la v1 (10 h, más 1–2 semanas de calendario; original 10–20 h)
 **Tareas:**
@@ -784,7 +784,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - Formulario de retroalimentación.
 - Análisis de registros de partidas.
 - Recalibración final de la puntuación y de la dificultad, con `scoring:report` (F11h) sobre las partidas de la beta; la decisión sobre P.
-- Heredado de F11: apodos con caracteres invisibles (S-03), esbuild en drizzle-kit (S-04) y la decisión del usuario sobre Dependabot (`docs/seguridad.md`).
+- Heredado de F11: apodos con caracteres invisibles (S-03), esbuild en drizzle-kit (S-04) y la decisión del autor sobre Dependabot (`docs/seguridad.md`).
 - Heredado de F12: leer la línea `metrics` de producción durante la beta, en lugar de la carga con bots (`docs/carga.md` §8); `apps/server/test/migration-guard.test.ts` falla por plazo en la suite completa local y pasa sola (4 de 4).
 - Corrección de errores.
 - Etiqueta `v1.0.0`.
@@ -822,21 +822,21 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
   - F6 agrega el parámetro H (costo de una pista) y las pistas en la simulación.
   - F9 suma pistas, deshacer con comprobación, presencia, vuelta con ficha, heartbeat y saturación, y la reconstrucción tras un reinicio.
 - **1.05:** F3 marcada como hecha (~0,3 h reales). La SPEC pasa a la versión 1.1: R-05 explica las jugadas simultáneas (gana la primera que procesa la cola; si la primera es un error, la celda no se bloquea) y suma T-05.5. TypeScript se fija en 6.0.x por compatibilidad con `typescript-eslint` (ADR 0001).
-- **1.06:** F4 se divide en las subfases F4a–F4f (aprobadas por el usuario). La SPEC pasa a la versión 1.2 con R-35 (pruebas del motor). F4a hecha (~0,3 h, incluida la planificación de F4).
-- **1.07:** F4b (~0,6 h) y F4c (~1,1 h) hechas. F4 registra la desviación de los puzzles de referencia (construidos, sin fuente pública) y una nota para F4d pedida por el usuario: presupuesto de nodos o de tiempo para `solveA` en el generador, con descarte de candidatos y medición de cuántos se descartan.
-- **1.08:** refuerzo de F4c pedido por el usuario antes de F4d: B con poda contra Dancing Links puro (0 diferencias) y semillas visibles en las pruebas aleatorias, con regresiones fijas (`docs/motor.md`).
+- **1.06:** F4 se divide en las subfases F4a–F4f (aprobadas por el autor). La SPEC pasa a la versión 1.2 con R-35 (pruebas del motor). F4a hecha (~0,3 h, incluida la planificación de F4).
+- **1.07:** F4b (~0,6 h) y F4c (~1,1 h) hechas. F4 registra la desviación de los puzzles de referencia (construidos, sin fuente pública) y una nota para F4d pedida por el autor: presupuesto de nodos o de tiempo para `solveA` en el generador, con descarte de candidatos y medición de cuántos se descartan.
+- **1.08:** refuerzo de F4c pedido por el autor antes de F4d: B con poda contra Dancing Links puro (0 diferencias) y semillas visibles en las pruebas aleatorias, con regresiones fijas (`docs/motor.md`).
 - **1.09:** F4d hecha (~0,4 h): generador, presupuesto de nodos en `solveA`, corpus de 1000 puzzles (0 discrepancias) y workflow programado.
-- **1.10:** F4e hecha (~0,4 h): calificador de niveles 1 a 3 y `levelToDeduce`, con los requisitos del usuario registrados en F4. Corpus: 0 deducciones erróneas; el 23 % de los puzzles excede los niveles 1 a 3.
+- **1.10:** F4e hecha (~0,4 h): calificador de niveles 1 a 3 y `levelToDeduce`, con los requisitos del autor registrados en F4. Corpus: 0 deducciones erróneas; el 23 % de los puzzles excede los niveles 1 a 3.
 - **1.11:** F4f hecha (~0,5 h) y **F4 cerrada** (~3,4 h reales frente a 20–35 h estimadas). Cambios:
-  - Calificador de niveles 4 y 5 con el pedido del usuario registrado en F4. Corpus: 0 deducciones erróneas y el 7 % de los puzzles excede todas las técnicas. `levelToDeduce`: p95 de 9,2 ms.
+  - Calificador de niveles 4 y 5 con el pedido del autor registrado en F4. Corpus: 0 deducciones erróneas y el 7 % de los puzzles excede todas las técnicas. `levelToDeduce`: p95 de 9,2 ms.
   - F5 suma los datos de partida del corpus y dos decisiones pendientes: excluir del banco los puzzles que exceden las técnicas, y cómo compensar el rendimiento bajo del nivel fácil (decisión P2).
   - La sección 5 suma una recalibración propuesta de F5 a F13 (de 96–171 h a 28–57 h), pendiente de aprobación. La tabla mantiene las estimaciones originales hasta entonces.
-  - Después del cierre, aprobado por el usuario (2026-10-23): la recalibración, con un cambio (F7 y F13 en 10 h cada una). F5 a F13 pasan de 96–171 h a 40–61 h y el total de la v1 queda en unas 45–66 h. Se actualizaron la tabla de la sección 5 y los encabezados de F5 a F13.
+  - Después del cierre, aprobado por el autor (2026-10-23): la recalibración, con un cambio (F7 y F13 en 10 h cada una). F5 a F13 pasan de 96–171 h a 40–61 h y el total de la v1 queda en unas 45–66 h. Se actualizaron la tabla de la sección 5 y los encabezados de F5 a F13.
   - Decisiones de F5 aprobadas: los puzzles que exceden todas las técnicas se excluyen del banco; el fácil se obtiene generando más y filtrando (`easyGivens` solo si la prueba manual muestra que resulta difícil; las jaulas más chicas quedan descartadas); la equivalencia entre niveles y dificultades se decide en F5 con el informe del calificador (`docs/motor.md`).
   - Sección 1: la frase de jugadas simultáneas coincide con R-05 (si la primera jugada es un error, la celda sigue libre).
 - **1.12:** F7 hecha (~1,5 h reales frente a 10 h aprobadas). Prototipo importado en `design/prototipo/` (4 páginas, 51 artboards), guía de estilo con la revisión de originalidad (T-18.1) en `docs/diseno.md` y documentos de entrega en `design/`. Siete correcciones al prototipo quedan decididas para F8 (`design/entrega-f8.md`). La tabla de la sección 5 conserva la estimación aprobada; la diferencia de F7 entra en la próxima comparación, al cerrar F5.
 - **1.13:** F5 hecha (~1,2 h reales frente a 2–4 h).
-  - `unitCombination` acotada a 4/8 (`GRADER_VERSION` "2") y equivalencia de dificultades versión 1, las dos aprobadas por el usuario en el punto de control de F5a.
+  - `unitCombination` acotada a 4/8 (`GRADER_VERSION` "2") y equivalencia de dificultades versión 1, las dos aprobadas por el autor en el punto de control de F5a.
   - Banco de 2000 puzzles versionado como manifiesto de semillas (ADR 0006).
   - Tabla `puzzles` con Drizzle, `PuzzleRepository` y `loadBank`, con pruebas con PGlite.
   - SPEC 1.3: T-20.3 a T-20.5 y `PuzzleRecord` con `graderVersion` y `seed`.
@@ -849,14 +849,14 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
   - Manifiesto regenerado; SPEC 1.4; F5 suma unas 0,8 h (unas 2,0 h en total).
 - **1.15:** F6 hecha (~2,2 h reales frente a 2–5 h).
   - Parámetros v1: B = 10, w = 1/2/3/4/5, P = 90, β = 1 y H = 60, con el nivel calculado con los descartes públicos de los errores.
-  - Las metas de F6 se cambiaron en el punto de control, por decisión del usuario. La de equidad (cuota de puntaje frente a cuota de aporte, entre veloz y lógico) reemplaza a la del 55 %, y el Spearman se mide contra el techo de confiabilidad.
+  - Las metas de F6 se cambiaron en el punto de control, por decisión del autor. La de equidad (cuota de puntaje frente a cuota de aporte, entre veloz y lógico) reemplaza a la del 55 %, y el Spearman se mide contra el techo de confiabilidad.
   - Las brechas que quedan son limitaciones conocidas, que se recalibran en F11 y F13 con partidas reales.
   - SPEC 1.5 (§2.3, §5, T-19.6, T-35.7, T-35.8 y R-36) y `docs/puntuacion.md`.
 - **1.16:** la memoria del proyecto pasa a `CONTEXTO.md` (hoy `docs/ESTADO.md`) y se actualizan sus referencias. La sección 4 pasa a llamarse «Protocolo de trabajo» y su redacción, como la de la sección 5 y la de F0, queda neutra respecto de las herramientas. La CI suma el job `commit-policy`.
 - **1.17:** historial reescrito y repositorio recreado. Los 38 commits conservan autor, fecha y árbol final, con otros identificadores; la revisión de secretos no encontró ninguno real. No cambia el alcance ni las estimaciones de las fases.
 - **1.18:** F8 hecha (~3,4 h reales frente a 4–8 h).
   - Protocolo v1 completo, `packages/bank`, `packages/game` definitivo, servidor simulado solo para desarrollo (verificado sobre el build con `check-dist`), pantalla de partida con las prioridades 1 y 2 y bot compañero.
-  - Decisiones de las pruebas del usuario: «Usar notas» como preferencia local, la actividad en una línea con el historial a pedido, el grosor de las jaulas, el dígito pendiente inmediato, el aviso con «Reintentar» y el enlace a GitHub en el Inicio.
+  - Decisiones de las pruebas del autor: «Usar notas» como preferencia local, la actividad en una línea con el historial a pedido, el grosor de las jaulas, el dígito pendiente inmediato, el aviso con «Reintentar» y el enlace a GitHub en el Inicio.
   - Desviación: el punto de entrada `./model` de `packages/engine`, sin lógica nueva.
   - F10 suma la prioridad 3 completa de `entrega-f8.md`, los estados de red, la decisión 3 y los pendientes de su §4, con su criterio de aceptación. Pasa de 4–8 h a 5–10 h, y el total de la v1 queda en unas 46–68 h.
   - El tema oscuro va a `docs/IDEAS_FUTURAS.md`.
@@ -867,14 +867,14 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
   - Base local en PostgreSQL 18 con un rol sin privilegios, solo en localhost; banco completo cargado. Pruebas con PGlite, el inspector de filtración siempre activo y T-32.1 contra el servidor real.
   - F12 suma la revisión de las migraciones automáticas al arrancar.
   - SPEC 1.7 y notas de F9 en los ADR 0002, 0003, 0004 y 0006.
-- **1.20:** plan de F10 aprobado por el usuario (2026-10-24), con las subtareas F10a a F10i y sus decisiones (sin fotos en la v1, Compartir, paso a Resultados, reanudación al recargar, reconexión inmediata en móvil y Playwright sin reintentos). F10a hecha. La segunda prueba en papel de F5 confirma la equivalencia versión 2 (`docs/dificultad.md`, sección 6). F12: la clave de acceso del grupo pasa a ser obligatoria con el juego en internet, porque la lista de orígenes no autentica.
+- **1.20:** plan de F10 aprobado por el autor (2026-10-24), con las subtareas F10a a F10i y sus decisiones (sin fotos en la v1, Compartir, paso a Resultados, reanudación al recargar, reconexión inmediata en móvil y Playwright sin reintentos). F10a hecha. La segunda prueba en papel de F5 confirma la equivalencia versión 2 (`docs/dificultad.md`, sección 6). F12: la clave de acceso del grupo pasa a ser obligatoria con el juego en internet, porque la lista de orígenes no autentica.
 - **1.21:** F10 hecha (~3,1 h reales frente a 5–10 h).
-  - Punto de control del usuario con PC, iPhone y iPad (F10h): todo funcionó, con cinco correcciones: números iniciales de cada dificultad en el Lobby, la causa de la derrota (SPEC 1.8, `defeatCause` opcional), el aviso de la actividad tras una reconexión (R-38, con la alternativa en `IDEAS_FUTURAS.md`), T-32.2 con un error a través del reinicio y casos fijos de T-32.1.
+  - Punto de control del autor con PC, iPhone y iPad (F10h): todo funcionó, con cinco correcciones: números iniciales de cada dificultad en el Lobby, la causa de la derrota (SPEC 1.8, `defeatCause` opcional), el aviso de la actividad tras una reconexión (R-38, con la alternativa en `IDEAS_FUTURAS.md`), T-32.2 con un error a través del reinicio y casos fijos de T-32.1.
   - Criterios de aceptación revisados contra las E2E en la CI, el punto de control y las correcciones.
   - Comparación de horas al cerrar F10 en la sección 5: de F5 a F10, unas 14,1 h frente a 26–43 h. Propuesta pendiente de aprobación: F11 de 3–6 h a 2–4 h; F12 y F13 sin cambios. La tabla no cambia hasta que se apruebe.
-- **1.22:** recalibración del cierre de F10 aprobada por el usuario (2026-10-25): F11 de 3–6 h a 2–4 h; F12 y F13 sin cambios; total de la v1 en unas 33–37 h. Plan de F11 aprobado, con las subtareas F11a a F11i y sus decisiones (cortes reales en el caos, dos escenarios de carga con PostgreSQL 18, política de los hallazgos de seguridad, `scoring:report` sin cambiar parámetros y T(L) fuera de la v1).
+- **1.22:** recalibración del cierre de F10 aprobada por el autor (2026-10-25): F11 de 3–6 h a 2–4 h; F12 y F13 sin cambios; total de la v1 en unas 33–37 h. Plan de F11 aprobado, con las subtareas F11a a F11i y sus decisiones (cortes reales en el caos, dos escenarios de carga con PostgreSQL 18, política de los hallazgos de seguridad, `scoring:report` sin cambiar parámetros y T(L) fuera de la v1).
 - **1.23:** F11 hecha (~2,1 h reales frente a 2–4 h). E2E de casos límite y caos con semilla, equivalencia de la reconstrucción, prueba de carga (p95 de 15,3 ms realista y de 49–74 ms en estrés con 50 salas), memoria acotada (caché del catálogo), revisión de seguridad (topes de conexiones y de salas; SPEC 1.9) y `scoring:report`. Comparación de horas al cerrar F11 en la sección 5, sin cambios para F12 y F13. F12 suma lo que F11 le asignó.
-- **1.24:** plan de F12 aprobado por el usuario (2026-10-25), con las subtareas F12a a F12m y sus decisiones (Render y Neon, ADR 0007; clave de acceso con enlace de invitación; aviso al despertar; respaldos cifrados que cuentan como uso de Neon; logs de Actions sin datos). F12 sube de 2–4 h a 3–5 h; total de la v1 en unas 34–36 h.
-- **1.25:** F12j y F12l hechas (2026-10-25). Correcciones del cierre en `fix-f12-cierre`: el 4003 se envía al primer mensaje del cliente (detrás del proxy de Render el que salía con el 101 se perdía; SPEC 1.12, T-39.11), la prueba de humo acepta la HSTS más estricta de Render, `pg_dump` recibe `sslrootcert=system` con `sslmode=verify-full`, y `upload-artifact` pasa a v7 (Node 24). F12k y F12m quedan pendientes de dos decisiones del usuario: Brave (la regla `||onrender.com/health` de EasyPrivacy) y cómo medir la carga en el hosting.
+- **1.24:** plan de F12 aprobado por el autor (2026-10-25), con las subtareas F12a a F12m y sus decisiones (Render y Neon, ADR 0007; clave de acceso con enlace de invitación; aviso al despertar; respaldos cifrados que cuentan como uso de Neon; logs de Actions sin datos). F12 sube de 2–4 h a 3–5 h; total de la v1 en unas 34–36 h.
+- **1.25:** F12j y F12l hechas (2026-10-25). Correcciones del cierre en `fix-f12-cierre`: el 4003 se envía al primer mensaje del cliente (detrás del proxy de Render el que salía con el 101 se perdía; SPEC 1.12, T-39.11), la prueba de humo acepta la HSTS más estricta de Render, `pg_dump` recibe `sslrootcert=system` con `sslmode=verify-full`, y `upload-artifact` pasa a v7 (Node 24). F12k y F12m quedan pendientes de dos decisiones del autor: Brave (la regla `||onrender.com/health` de EasyPrivacy) y cómo medir la carga en el hosting.
 - **1.27:** corrección de la clave del grupo tras F12 (2026-10-25): el proxy de Render pierde también el 4003 que responde al primer mensaje, así que el cliente comprueba la clave con `POST /access` antes de abrir ningún WebSocket (la invitación también), el 4003 queda de respaldo y la prueba de humo comprueba el 401 (SPEC 1.14, T-39.12 a T-39.17). Unas 0,75 h, fuera de las horas de F12.
-- **1.26:** F12 hecha (~2,85 h reales frente a 3–5 h; comparación de horas en la sección 5, sin cambios para F13). Decisiones del usuario: Brave con la opción A (precalentar con `GET /ws`; SPEC 1.13) y F12k reemplazada por la línea `metrics` de producción durante la beta de F13 (desviación aprobada, `docs/carga.md` §8). F13 suma la lectura de `metrics` y el plazo de `migration-guard.test.ts` en la suite completa.
+- **1.26:** F12 hecha (~2,85 h reales frente a 3–5 h; comparación de horas en la sección 5, sin cambios para F13). Decisiones del autor: Brave con la opción A (precalentar con `GET /ws`; SPEC 1.13) y F12k reemplazada por la línea `metrics` de producción durante la beta de F13 (desviación aprobada, `docs/carga.md` §8). F13 suma la lectura de `metrics` y el plazo de `migration-guard.test.ts` en la suite completa.
