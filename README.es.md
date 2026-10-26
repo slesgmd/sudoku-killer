@@ -30,6 +30,8 @@ Sudoku killer cooperativo en tiempo real para hasta 6 jugadores. Se entra con un
 
 </details>
 
+El prototipo visual se hizo con Claude Design a partir de decisiones de diseño propias, documentadas en [docs/diseno.md](docs/diseno.md).
+
 ## Arquitectura
 
 ```mermaid

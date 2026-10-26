@@ -30,6 +30,8 @@ Cooperative, real-time killer sudoku for up to 6 players. Join with a room code 
 
 </details>
 
+The visual prototype was built with Claude Design from original design decisions, documented in [docs/diseno.md](docs/diseno.md).
+
 ## Architecture
 
 ```mermaid
