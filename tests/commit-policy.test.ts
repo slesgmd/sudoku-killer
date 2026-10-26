@@ -1,5 +1,5 @@
-// Hook commit-msg y guardia de atribuciones (CONTEXTO.md, "Convenciones"). Los fixtures están en
-// base64, como los términos de `scripts/attribution-patterns.mjs`, para que una búsqueda en el
+// Hook commit-msg y política de commits (CONTEXTO.md, "Convenciones"). Los fixtures están en
+// base64, como los términos de `scripts/commit-policy-patterns.mjs`, para que una búsqueda en el
 // repositorio no los encuentre.
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -9,8 +9,8 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const STRIP = join(ROOT, "scripts", "strip-attribution.mjs");
-const GUARD = join(ROOT, "scripts", "attribution-guard.mjs");
+const FILTER = join(ROOT, "scripts", "commit-msg-filter.mjs");
+const POLICY = join(ROOT, "scripts", "commit-policy.mjs");
 
 const decode = (encoded: string): string => Buffer.from(encoded, "base64").toString("utf8");
 
@@ -23,37 +23,37 @@ const CONTROL_LINE = decode("Tm90YXM6IGhlY2hvIGNvbiBDaGF0R1BULg==");
 const CONTROL_COMMIT = decode("ZG9jczogd3JpdHRlbiB3aXRoIENvcGlsb3Q=");
 const CONTROL_PATH = decode("ZG9jcy9HZW1pbmkubWQ=");
 
-function strip(message: string): string {
-  return execFileSync(process.execPath, [STRIP], { input: message, encoding: "utf8" });
+function filter(message: string): string {
+  return execFileSync(process.execPath, [FILTER], { input: message, encoding: "utf8" });
 }
 
-describe("strip-attribution: the commit-msg hook", () => {
+describe("commit-msg-filter: the commit-msg hook", () => {
   it("removes the attribution lines and keeps the rest, human co-authors included", () => {
-    expect(strip(MESSAGE)).toBe(
+    expect(filter(MESSAGE)).toBe(
       "feat: add the board\n\nBody line.\n\nCo-Authored-By: Jane Doe <jane@example.com>\n",
     );
   });
 
   it("leaves a clean message unchanged", () => {
-    expect(strip("fix: keep the cage sums\n\nDetails.\n")).toBe(
+    expect(filter("fix: keep the cage sums\n\nDetails.\n")).toBe(
       "fix: keep the cage sums\n\nDetails.\n",
     );
   });
 
   it("rewrites the file it receives as an argument", () => {
-    const dir = mkdtempSync(join(tmpdir(), "strip-"));
+    const dir = mkdtempSync(join(tmpdir(), "filter-"));
     try {
       const file = join(dir, "COMMIT_EDITMSG");
       writeFileSync(file, MESSAGE);
-      execFileSync(process.execPath, [STRIP, file]);
-      expect(readFileSync(file, "utf8")).toBe(strip(MESSAGE));
+      execFileSync(process.execPath, [FILTER, file]);
+      expect(readFileSync(file, "utf8")).toBe(filter(MESSAGE));
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 });
 
-describe("attribution-guard: the CI job", () => {
+describe("commit-policy: the CI job", () => {
   let repo: string;
 
   const git = (...args: string[]): string =>
@@ -77,13 +77,13 @@ describe("attribution-guard: the CI job", () => {
     return git("rev-parse", "HEAD");
   };
 
-  const guard = (...args: string[]): { status: number | null; output: string } => {
-    const result = spawnSync(process.execPath, [GUARD, ...args], { cwd: repo, encoding: "utf8" });
+  const policy = (...args: string[]): { status: number | null; output: string } => {
+    const result = spawnSync(process.execPath, [POLICY, ...args], { cwd: repo, encoding: "utf8" });
     return { status: result.status, output: result.stdout + result.stderr };
   };
 
   beforeEach(() => {
-    repo = mkdtempSync(join(tmpdir(), "guard-"));
+    repo = mkdtempSync(join(tmpdir(), "policy-"));
     git("init", "-q", "-b", "main");
     git("config", "core.autocrlf", "false");
     commit("README.md", "Sudoku killer.\n", "chore: start");
@@ -96,19 +96,19 @@ describe("attribution-guard: the CI job", () => {
   it("passes on clean files and commits", () => {
     const base = git("rev-parse", "HEAD");
     commit("docs/notes.md", "Jaulas y sumas.\n", "docs: add notes");
-    expect(guard("--files", "--range", `${base}..HEAD`).status).toBe(0);
+    expect(policy("--files", "--range", `${base}..HEAD`).status).toBe(0);
   });
 
   it("fails on a tracked file that contains a term, with its line", () => {
     commit("docs/notes.md", `Jaulas.\n${CONTROL_LINE}\n`, "docs: add notes");
-    const result = guard("--files");
+    const result = policy("--files");
     expect(result.status).toBe(1);
     expect(result.output).toContain("docs/notes.md:2");
   });
 
   it("fails on a tracked file whose name contains a term", () => {
     commit(CONTROL_PATH, "Jaulas.\n", "docs: add notes");
-    expect(guard("--files").status).toBe(1);
+    expect(policy("--files").status).toBe(1);
   });
 
   describe("control case: two commits, only the first one contains the term", () => {
@@ -122,32 +122,32 @@ describe("attribution-guard: the CI job", () => {
     });
 
     it("fails on the pull request range base..head", () => {
-      const result = guard("--range", `${base}..HEAD`);
+      const result = policy("--range", `${base}..HEAD`);
       expect(result.status).toBe(1);
       expect(result.output).toContain(first.slice(0, 12));
     });
 
     it("fails on the push range before..after", () => {
-      expect(guard("--push", base, git("rev-parse", "HEAD"), "main").status).toBe(1);
+      expect(policy("--push", base, git("rev-parse", "HEAD"), "main").status).toBe(1);
     });
 
     it("with a zero before, checks the commits that are not on another remote branch", () => {
       const zero = "0".repeat(40);
       git("update-ref", "refs/remotes/origin/feature", "HEAD");
       git("update-ref", "refs/remotes/origin/other", base);
-      expect(guard("--push", zero, "HEAD", "feature").status).toBe(1);
+      expect(policy("--push", zero, "HEAD", "feature").status).toBe(1);
 
       git("update-ref", "refs/remotes/origin/other", first);
-      expect(guard("--push", zero, "HEAD", "feature").status).toBe(0);
+      expect(policy("--push", zero, "HEAD", "feature").status).toBe(0);
     });
 
     it("with an unknown before (forced push), falls back to the other remote branches", () => {
       git("update-ref", "refs/remotes/origin/other", base);
-      expect(guard("--push", "1".repeat(40), "HEAD", "main").status).toBe(1);
+      expect(policy("--push", "1".repeat(40), "HEAD", "main").status).toBe(1);
     });
   });
 
   it("rejects a call without checks", () => {
-    expect(guard().status).toBe(2);
+    expect(policy().status).toBe(2);
   });
 });

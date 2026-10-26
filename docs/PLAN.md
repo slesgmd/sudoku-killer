@@ -852,7 +852,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
   - Las metas de F6 se cambiaron en el punto de control, por decisión del usuario. La de equidad (cuota de puntaje frente a cuota de aporte, entre veloz y lógico) reemplaza a la del 55 %, y el Spearman se mide contra el techo de confiabilidad.
   - Las brechas que quedan son limitaciones conocidas, que se recalibran en F11 y F13 con partidas reales.
   - SPEC 1.5 (§2.3, §5, T-19.6, T-35.7, T-35.8 y R-36) y `docs/puntuacion.md`.
-- **1.16:** la memoria del proyecto pasa a `CONTEXTO.md` y se actualizan sus referencias. La sección 4 pasa a llamarse «Protocolo de trabajo» y su redacción, como la de la sección 5 y la de F0, queda neutra respecto de las herramientas. La CI suma el job `attribution-guard`.
+- **1.16:** la memoria del proyecto pasa a `CONTEXTO.md` y se actualizan sus referencias. La sección 4 pasa a llamarse «Protocolo de trabajo» y su redacción, como la de la sección 5 y la de F0, queda neutra respecto de las herramientas. La CI suma el job `commit-policy`.
 - **1.17:** historial reescrito y repositorio recreado. Los 38 commits conservan autor, fecha y árbol final, con otros identificadores; la revisión de secretos no encontró ninguno real. No cambia el alcance ni las estimaciones de las fases.
 - **1.18:** F8 hecha (~3,4 h reales frente a 4–8 h).
   - Protocolo v1 completo, `packages/bank`, `packages/game` definitivo, servidor simulado solo para desarrollo (verificado sobre el build con `check-dist`), pantalla de partida con las prioridades 1 y 2 y bot compañero.

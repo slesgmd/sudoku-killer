@@ -1,1 +1,1 @@
-node scripts/strip-attribution.mjs "$1"
+node scripts/commit-msg-filter.mjs "$1"

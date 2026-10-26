@@ -1,6 +1,6 @@
-// Términos de atribución que no pueden aparecer en el repositorio. Están en base64 para que una
-// búsqueda en el árbol no los encuentre en este archivo. Los usan el hook commit-msg
-// (`strip-attribution.mjs`) y el job `attribution-guard` de la CI (`attribution-guard.mjs`).
+// Términos que no pueden aparecer en el repositorio. Están en base64 para que una búsqueda en el
+// árbol no los encuentre en este archivo. Los usan el hook commit-msg (`commit-msg-filter.mjs`) y
+// el job `commit-policy` de la CI (`commit-policy.mjs`).
 
 const ENCODED_TERMS = [
   "Y2xhdWRl",

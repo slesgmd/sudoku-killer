@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Guardia de atribuciones (job `attribution-guard` de la CI). Falla si algún archivo versionado o
-// algún mensaje de commit contiene uno de los términos de `attribution-patterns.mjs`.
+// Política de commits (job `commit-policy` de la CI). Falla si algún archivo versionado o algún
+// mensaje de commit contiene uno de los términos de `commit-policy-patterns.mjs`.
 //
 // Uso (se pueden combinar):
 //   --files                         revisa el contenido y el nombre de los archivos versionados.
@@ -12,7 +12,7 @@
 // Sale con 0 si no encuentra nada, con 1 si encuentra algo y con 2 si el uso es incorrecto.
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { TERM_PATTERN } from "./attribution-patterns.mjs";
+import { TERM_PATTERN } from "./commit-policy-patterns.mjs";
 
 const ZERO_SHA = /^0+$/;
 
@@ -96,16 +96,16 @@ function main(args) {
   }
   if (checks === 0) {
     console.error(
-      "Uso: attribution-guard.mjs [--files] [--range <a>..<b>] [--push <antes> <después> <rama>]",
+      "Uso: commit-policy.mjs [--files] [--range <a>..<b>] [--push <antes> <después> <rama>]",
     );
     return 2;
   }
   if (findings.length > 0) {
-    console.error("Se encontraron términos de atribución en:");
+    console.error("Se encontraron términos prohibidos en:");
     for (const finding of findings) console.error(`  ${finding}`);
     return 1;
   }
-  console.log("Sin términos de atribución.");
+  console.log("Sin términos prohibidos.");
   return 0;
 }
 

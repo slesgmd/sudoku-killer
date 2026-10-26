@@ -493,9 +493,9 @@ Al aprobar, agregó el nivel con los descartes públicos de los errores, las vid
 - Inventario de los archivos versionados: 27 coincidencias en 7 archivos, más un nombre de archivo. No había ninguna en el prototipo, el lockfile, los workflows ni los `package.json`.
 - La memoria del proyecto pasa a `CONTEXTO.md` y se actualizan sus referencias (también en las entradas anteriores de esta bitácora). El archivo de carga local, no versionado, solo importa `CONTEXTO.md`; se excluye con `.git/info/exclude` y no con `.gitignore`.
 - Redacción neutra: PLAN §4 pasa a «Protocolo de trabajo»; la línea de entorno verificado, las horas de §5, la tarea de verificación de F0, ADR 0001 y la entrada de F0 de esta bitácora ya no nombran herramientas. «Antes de cada /clear» pasa a «Antes de cerrar cada sesión o reiniciar el contexto». PLAN 1.16.
-- `scripts/attribution-patterns.mjs`: los términos, codificados en base64, y las expresiones del hook. `strip-attribution.mjs` los toma de ahí.
-- `scripts/attribution-guard.mjs` y el job `attribution-guard` de la CI: revisan el contenido y el nombre de los archivos versionados y los mensajes de los commits del push (`before..after`; si `before` es todo ceros o no existe, los commits que no están en otra rama remota) o del PR (`base..head`). El job empieza con un caso de control que tiene que fallar.
-- `tests/attribution.test.ts`: el hook y el guardia, con fixtures codificados. El caso de control tiene dos commits y solo el primero contiene el término; el guardia falla con el rango del PR, con el del push y con `before` en ceros.
+- `scripts/commit-policy-patterns.mjs`: los términos, codificados en base64, y las expresiones del hook. `commit-msg-filter.mjs` los toma de ahí.
+- `scripts/commit-policy.mjs` y el job `commit-policy` de la CI: revisan el contenido y el nombre de los archivos versionados y los mensajes de los commits del push (`before..after`; si `before` es todo ceros o no existe, los commits que no están en otra rama remota) o del PR (`base..head`). El job empieza con un caso de control que tiene que fallar.
+- `tests/commit-policy.test.ts`: el hook y el guardia, con fixtures codificados. El caso de control tiene dos commits y solo el primero contiene el término; el guardia falla con el rango del PR, con el del push y con `before` en ceros.
 
 **Problemas y soluciones:**
 - El job podía fallar con el propio push de la limpieza si un mensaje nombraba el archivo anterior. Los mensajes de estos commits lo evitan.
@@ -512,13 +512,13 @@ Al aprobar, agregó el nivel con los descartes públicos de los errores, las vid
 - Respaldo local completo del repositorio anterior, fuera de las carpetas sincronizadas, que se conserva hasta nueva orden.
 - Historial reescrito en un clon nuevo con reglas neutras para los mensajes y los contenidos, sin cambiar el sentido de las frases. Mismos 38 commits, mismos autores y fechas, y el árbol final es idéntico al anterior.
 - Verificaciones sobre el historial completo (mensajes, contenidos, rutas, autores y correos): 0 coincidencias. Instalación, `check`, `test` y `build` en verde sobre el clon.
-- Repositorio remoto recreado vacío, con la misma URL, y historial subido sin credenciales en la URL. La CI (`check` y `attribution-guard`) quedó en verde y `Corpus` figura como workflow programado.
+- Repositorio remoto recreado vacío, con la misma URL, y historial subido sin credenciales en la URL. La CI (`check` y `commit-policy`) quedó en verde y `Corpus` figura como workflow programado.
 - Seguridad del repositorio nuevo: secret scanning y push protection activos; alertas de Dependabot y actualizaciones de seguridad de Dependabot desactivadas (sin cambios, pendiente de decisión).
 - El repositorio de trabajo apunta al historial nuevo, con el árbol limpio.
 
 **Problemas y soluciones:**
 - La primera corrida de la reescritura falló por una regla con un escape no válido en el reemplazo, y la segunda dejó una frase de PLAN sin regla. Se corrigieron las reglas y se repitió todo en un clon nuevo.
-- Las versiones intermedias de `scripts/strip-attribution.mjs` quedaron con marcadores neutros en lugar de los patrones; la versión final no cambió.
+- Las versiones intermedias de `scripts/commit-msg-filter.mjs` quedaron con marcadores neutros en lugar de los patrones; la versión final no cambió.
 - Se perdieron las ejecuciones anteriores de Actions al recrear el repositorio.
 
 **Tiempo real:** menos de 1 h.
