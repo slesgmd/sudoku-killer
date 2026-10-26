@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Política de commits (job `commit-policy` de la CI). Falla si algún archivo versionado o algún
-// mensaje de commit contiene uno de los términos de `commit-policy-patterns.mjs`.
+// mensaje de commit contiene uno de los términos de `commit-policy-patterns.mjs`. Única excepción: la
+// frase exacta de `withoutAllowedPhrase`, solo en el contenido de `ALLOWED_FILES`.
 //
 // Uso (se pueden combinar):
 //   --files                         revisa el contenido y el nombre de los archivos versionados.
@@ -12,7 +13,7 @@
 // Sale con 0 si no encuentra nada, con 1 si encuentra algo y con 2 si el uso es incorrecto.
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { TERM_PATTERN } from "./commit-policy-patterns.mjs";
+import { TERM_PATTERN, withoutAllowedPhrase } from "./commit-policy-patterns.mjs";
 
 const ZERO_SHA = /^0+$/;
 
@@ -45,7 +46,8 @@ export function scanFiles() {
       .toString("utf8")
       .split(/\r?\n/)
       .forEach((line, index) => {
-        if (TERM_PATTERN.test(line)) findings.push(`${path}:${String(index + 1)}`);
+        if (TERM_PATTERN.test(withoutAllowedPhrase(path, line)))
+          findings.push(`${path}:${String(index + 1)}`);
       });
   }
   return findings;
