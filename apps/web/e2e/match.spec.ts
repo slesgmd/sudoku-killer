@@ -6,6 +6,7 @@
 //   nada (T-13.5);
 // - la misma ficha en otra pestaña desplaza a la primera, y «Jugar en esta pestaña» la recupera (E-08).
 // El inspector de filtración revisa todo lo que reciben las páginas (fixtures.ts).
+import { digitBit } from "@sudoku-killer/engine/model";
 import { cell, connections, createRoom, expect, joinRoom, record, test } from "./fixtures.ts";
 import { at, emptyCells, matchOf, place, start } from "./game.ts";
 
@@ -131,6 +132,9 @@ test("T-13.5 a real disconnection (the page closes) and coming back within the g
     await expect(cell(guest, noted)).toHaveAttribute("aria-label", /notas personales 4/);
     const tomas = () =>
       [...matchOf(game, code).state.players.values()].find((p) => p.nickname === "Tomás");
+    // La nota se ve al instante (el cliente es optimista, ADR 0005): «antes» se toma cuando el
+    // servidor ya la aplicó, no cuando la página la muestra.
+    await expect.poll(() => tomas()?.personalNotes[noted]).toBe(digitBit(4));
     const before = tomas();
     if (!before) throw new Error("No Tomás");
     expect(before.lives).toBe(2);
