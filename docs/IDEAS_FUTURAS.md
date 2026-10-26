@@ -39,7 +39,7 @@ Formato de cada entrada: título, descripción breve, origen (fecha y contexto) 
 ## 6. Tema oscuro
 
 - **Descripción:** una paleta oscura con los mismos tokens (`tokens.css`), elegida por `prefers-color-scheme` o desde los ajustes.
-- **Origen:** 2026-10-24, cierre de F8 (pendiente de `design/entrega-f8.md` §4). El prototipo de F7 solo diseña el tema claro, y el usuario decidió dejarlo fuera de la v1.
+- **Origen:** 2026-10-24, cierre de F8 (pendiente de `design/entrega-f8.md` §4). El prototipo de F7 solo diseña el tema claro, y se decidió dejarlo fuera de la v1.
 - **Notas:** hay que medir otra vez toda la matriz de contrastes (`docs/diseno.md` §2.5), incluidas las líneas de jaula y los colores de jugador, y revisar las sombras y la marca de GitHub del inicio, que pasaría a blanco.
 
 ## 7. Historial de actividad en el snapshot
@@ -56,6 +56,6 @@ Formato de cada entrada: título, descripción breve, origen (fecha y contexto) 
 ## 8. Tiempos reales por nivel de celda, T(L)
 
 - **Descripción:** medir T(L), el tiempo que lleva resolver una celda de nivel L, con partidas reales, para reemplazar el supuesto del modelo del mundo de la puntuación (`docs/puntuacion.md`, secciones 10 y 11). La medida directa necesita el momento en que un jugador selecciona la celda, que hoy solo viaja como presencia y no se guarda.
-- **Origen:** 2026-10-25, plan de F11. El usuario decidió no agregar un evento de selección al registro en la v1: T(L) queda fuera.
+- **Origen:** 2026-10-25, plan de F11. Se decidió no agregar un evento de selección al registro en la v1: T(L) queda fuera.
 - **Alternativa sin cambiar el registro:** estimarlo con el tiempo entre jugadas de un mismo jugador (`at` de sus `cell.solved` y `cell.mistake` consecutivos), que ya está en el registro, agrupado por el `level` de la celda resuelta. Es una cota superior ruidosa (incluye el tiempo que el jugador dedicó a otras celdas y a las notas), pero sirve para comparar los perfiles del simulador. `scoring:report` (F11) puede calcularla.
 - **Costo de la medida directa:** un evento de selección solo en el servidor, sin difusión (SPEC y ADR 0004), con su volumen en la base (la presencia llega hasta 10 veces por segundo por jugador; habría que guardar solo la primera selección de cada celda), unas 1–2 h.

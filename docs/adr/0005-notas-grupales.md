@@ -43,7 +43,7 @@ Las notas grupales son una capa de candidatos compartida, en la que escriben a l
 - **CRDT (OR-Set por celda):** sirve para trabajar sin conexión y sin un servidor central. Aquí siempre hay servidor autoritativo y conexión, así que agrega metadatos y complejidad sin ningún beneficio.
 - **El conjunto completo de la celda, gana la última escritura:** dos jugadores que agregan dígitos distintos a la vez se pisarían.
 - **Alternar:** lo prohíbe el plan, por la anulación silenciosa entre operaciones concurrentes.
-- **Deshacer sin comprobación (inversa ciega):** podría deshacer el trabajo de otro jugador. El usuario pidió la comprobación (P7).
+- **Deshacer sin comprobación (inversa ciega):** podría deshacer el trabajo de otro jugador. El autor pidió la comprobación (P7).
 - **Limpieza como eventos explícitos de borrado:** infla el registro y abre la puerta a divergencias si un cliente se pierde un evento. La función determinista hace lo mismo con menos datos.
 
 ## Consecuencias

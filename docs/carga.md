@@ -35,7 +35,7 @@ Los dos usan 50 salas × 6 jugadores (300 conexiones), 15 s de calentamiento, 60
 ## 3. Entorno de las mediciones (2026-10-25)
 
 - Contenedor Linux con 4 CPU y 16 GB de memoria; **los clientes corren en la misma máquina que el servidor** y compiten con él y con PostgreSQL por la CPU.
-- **PostgreSQL 16.15**, no 18: la red de esta máquina bloquea el repositorio de PGDG, así que se usó la versión del sistema (Ubuntu 24.04), como decidió el usuario. Rol `sudoku_load` sin privilegios, base `sudoku_load` en 127.0.0.1, configuración por defecto, banco completo (2000 puzzles, 500 vigentes por dificultad). El workflow usa PostgreSQL 18.
+- **PostgreSQL 16.15**, no 18: la red de esta máquina bloquea el repositorio de PGDG, así que se usó la versión del sistema (Ubuntu 24.04), como se decidió. Rol `sudoku_load` sin privilegios, base `sudoku_load` en 127.0.0.1, configuración por defecto, banco completo (2000 puzzles, 500 vigentes por dificultad). El workflow usa PostgreSQL 18.
 - **Node 22.22**, no la 24 del proyecto (`.node-version`): es la que trae esta máquina.
 
 ## 4. Resultados de la primera medición
@@ -75,7 +75,7 @@ Ninguna medición llegó a la saturación: no hubo cierres 1013. La prueba de ca
 
 ## 5. Estado
 
-Primera medición hecha y revisada en el punto de control del usuario. F11f (sección 6): se encontró y se corrigió la memoria que retenía la caché del catálogo de puzzles; no hizo falta otra optimización.
+Primera medición hecha y revisada en el punto de control del autor. F11f (sección 6): se encontró y se corrigió la memoria que retenía la caché del catálogo de puzzles; no hizo falta otra optimización.
 
 ## 6. Memoria en estrés de 5 minutos (F11f)
 
@@ -117,9 +117,9 @@ Desde F12, estas líneas reemplazan la prueba de carga en el hosting (sección 8
 
 ## 8. Carga en el hosting: desviación aprobada (F12k)
 
-El plan pedía repetir la prueba de carga en Render con 1, 3 y 5 salas y un p95 menor que 150 ms desde Actions. El usuario aprobó el 2026-10-25 no hacerla con bots y reemplazarla por la línea `metrics` de producción durante la beta de F13. Motivos:
+El plan pedía repetir la prueba de carga en Render con 1, 3 y 5 salas y un p95 menor que 150 ms desde Actions. El autor aprobó el 2026-10-25 no hacerla con bots y reemplazarla por la línea `metrics` de producción durante la beta de F13. Motivos:
 - El plan gratuito: 0,1 CPU y 512 MB compartidos con las partidas reales; una carga sintética mide sobre todo ese límite y puede tumbar la instancia del grupo.
 - No exponer la clave del grupo en GitHub: los bots necesitarían un secreto con ella en un repositorio público.
 - No mezclar partidas de bots con las reales, que `scoring:report` analiza en F13 (el registro de eventos es de solo agregar, ADR 0004).
 
-Qué se mira en F13, en el log de Render, con las partidas reales: `commitP95Ms` y `commitMaxMs` (la espera de la base en cada jugada), `eventLoopP95Ms` (la primera señal de saturación con 0,1 CPU) y `rssMb` y `heapUsedMb` (frente a los 512 MB), junto con `rooms`, `playersConnected` y `connections` para saber con cuánta carga se midió. Los valores de referencia son los de la sección 4, en local. Si en la beta el p95 de la base o del bucle se acerca a 150 ms, o la memoria a 512 MB, se registra en la BITÁCORA y se decide con el usuario.
+Qué se mira en F13, en el log de Render, con las partidas reales: `commitP95Ms` y `commitMaxMs` (la espera de la base en cada jugada), `eventLoopP95Ms` (la primera señal de saturación con 0,1 CPU) y `rssMb` y `heapUsedMb` (frente a los 512 MB), junto con `rooms`, `playersConnected` y `connections` para saber con cuánta carga se midió. Los valores de referencia son los de la sección 4, en local. Si en la beta el p95 de la base o del bucle se acerca a 150 ms, o la memoria a 512 MB, se registra en la BITÁCORA y se decide con el autor.

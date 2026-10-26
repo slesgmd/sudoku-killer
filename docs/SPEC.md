@@ -30,7 +30,7 @@ Resumen de `PLAN.md` §1 y §2. Las reglas detalladas están en la sección 6.
 - Notas personales y grupales.
 - Temporizador común que no se pausa.
 
-### 1.2 Decisiones de producto de F2 (ronda única con el usuario, 2026-10-22)
+### 1.2 Decisiones de producto de F2 (ronda única con el autor, 2026-10-22)
 
 | ID | Decisión | Regla |
 |---|---|---|
@@ -208,7 +208,7 @@ type CellState =
 ### 2.5 Persistencia
 Tablas `puzzles`, `matches` y `match_events`; ver ADR 0003. Los eventos del registro se describen en el ADR 0004 y en la sección 4.6.
 
-Esquema aprobado por el usuario en el punto de control de F9 (migración `0002_matches`):
+Esquema aprobado por el autor en el punto de control de F9 (migración `0002_matches`):
 - `matches`: `id` (el `matchId`, lo genera el servidor), `room_code`, `puzzle_id` (clave foránea a `puzzles`), `difficulty`, `mode_id`, `scoring_params_version`, `protocol_version`, `log_version` (forma de los eventos, hoy 1), `started_at`, `ended_at` y `result`. `ended_at` y `result` son nulos a la vez; se escriben en la misma transacción que `match.ended`. Un índice parcial lista las partidas en curso.
 - `match_events`: `(match_id, seq)` como clave primaria, `type` (los 10 tipos), `payload` (jsonb, el del evento tal cual) y `server_ts` (al milisegundo). Solo se agregan filas: un trigger rechaza `UPDATE` y `DELETE`. Al leer, cada evento se valida con su esquema Zod.
 - `puzzles` nunca pierde filas: `hash` (el del manifiesto) es único, `mapping_version` guarda la equivalencia y `retired_at` marca los puzzles que salieron del manifiesto. `(generator_version, seed)` es un índice común, porque con otra equivalencia la misma semilla da otro puzzle. Solo se eligen puzzles vigentes; las partidas viejas conservan su clave foránea.
