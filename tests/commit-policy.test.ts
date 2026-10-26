@@ -1,4 +1,4 @@
-// Hook commit-msg y política de commits (CONTEXTO.md, "Convenciones"). Los fixtures están en
+// Hook commit-msg y política de commits (docs/ESTADO.md, "Convenciones"). Los fixtures están en
 // base64, como los términos de `scripts/commit-policy-patterns.mjs`, para que una búsqueda en el
 // repositorio no los encuentre.
 import { execFileSync, spawnSync } from "node:child_process";
