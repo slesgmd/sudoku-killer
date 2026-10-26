@@ -22,6 +22,13 @@ const MESSAGE = decode(
 const CONTROL_LINE = decode("Tm90YXM6IGhlY2hvIGNvbiBDaGF0R1BULg==");
 const CONTROL_COMMIT = decode("ZG9jczogd3JpdHRlbiB3aXRoIENvcGlsb3Q=");
 const CONTROL_PATH = decode("ZG9jcy9HZW1pbmkubWQ=");
+/** La única frase permitida, el primer término solo y el mismo término seguido de otra palabra. */
+const ALLOWED_LINE = decode("RWwgcHJvdG90aXBvIHNlIGhpem8gY29uIENsYXVkZSBEZXNpZ24u");
+const BARE_TERM_LINE = decode("RWwgcHJvdG90aXBvIHNlIGhpem8gY29uIENsYXVkZS4=");
+const OTHER_WORD_LINE = decode("SGVjaG8gY29uIENsYXVkZSBDb2RlLg==");
+const ALLOWED_COMMIT = decode("ZG9jczogbWVudGlvbiBDbGF1ZGUgRGVzaWdu");
+/** Los únicos archivos donde se permite la frase. */
+const ALLOWED_FILES = ["docs/diseno.md", "README.md", "README.es.md"];
 
 function filter(message: string): string {
   return execFileSync(process.execPath, [FILTER], { input: message, encoding: "utf8" });
@@ -109,6 +116,72 @@ describe("commit-policy: the CI job", () => {
   it("fails on a tracked file whose name contains a term", () => {
     commit(CONTROL_PATH, "Jaulas.\n", "docs: add notes");
     expect(policy("--files").status).toBe(1);
+  });
+
+  describe("the only exception: the exact phrase in three files", () => {
+    it.each(ALLOWED_FILES)("passes with the phrase in %s", (path) => {
+      commit(
+        path,
+        `Jaulas.
+${ALLOWED_LINE}
+`,
+        "docs: add notes",
+      );
+      expect(policy("--files").status).toBe(0);
+    });
+
+    it("fails with the phrase in any other file, with its line", () => {
+      commit(
+        "docs/notes.md",
+        `Jaulas.
+${ALLOWED_LINE}
+`,
+        "docs: add notes",
+      );
+      const result = policy("--files");
+      expect(result.status).toBe(1);
+      expect(result.output).toContain("docs/notes.md:2");
+    });
+
+    it.each(ALLOWED_FILES)("fails with the first term alone in %s", (path) => {
+      commit(
+        path,
+        `Jaulas.
+${BARE_TERM_LINE}
+`,
+        "docs: add notes",
+      );
+      const result = policy("--files");
+      expect(result.status).toBe(1);
+      expect(result.output).toContain(`${path}:2`);
+    });
+
+    it.each(ALLOWED_FILES)("fails with the term and another word in %s", (path) => {
+      commit(
+        path,
+        `Jaulas.
+${OTHER_WORD_LINE}
+`,
+        "docs: add notes",
+      );
+      expect(policy("--files").status).toBe(1);
+    });
+
+    it("fails with the phrase lowercased in an allowed file", () => {
+      commit(
+        "README.md",
+        `${ALLOWED_LINE.toLowerCase()}
+`,
+        "docs: add notes",
+      );
+      expect(policy("--files").status).toBe(1);
+    });
+
+    it("fails with the phrase in a commit message", () => {
+      const base = git("rev-parse", "HEAD");
+      commit("docs/diseno.md", "Jaulas.\n", ALLOWED_COMMIT);
+      expect(policy("--range", `${base}..HEAD`).status).toBe(1);
+    });
   });
 
   describe("control case: two commits, only the first one contains the term", () => {
