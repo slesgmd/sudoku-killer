@@ -14,7 +14,7 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
   - Git 2.54.0.windows.1 (usuario global configurado)
   - REA (servidor MCP `rea-agents`) 6.7.0: `binary_session` responde; `inspect_web_page` y `capture_browser_scenario` disponibles (`available: true`). Los proveedores de ADB no están disponibles (no hacen falta para la v1).
 - `git init` con rama `main` y `.gitignore` (dependencias, builds, cobertura, `.env`, evidencia local de REA, archivos de editores y del sistema operativo).
-- Creados `CONTEXTO.md`, `docs/BITACORA.md`, `docs/IDEAS_FUTURAS.md` (primera entrada: modo competitivo) y `docs/adr/README.md` (plantilla e índice).
+- Creados `docs/ESTADO.md`, `docs/BITACORA.md`, `docs/IDEAS_FUTURAS.md` (primera entrada: modo competitivo) y `docs/adr/README.md` (plantilla e índice).
 - Primer commit.
 
 **Problemas y soluciones:**
@@ -59,7 +59,7 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 ## 2026-10-22 — F2: Especificación y arquitectura
 
 **Hecho:**
-- F2.0: la sección 15 de `referencia.md` quedó marcada como "Descartada: las reglas propias ya cubren estos puntos" y se quitó el pendiente de `CONTEXTO.md` (commit aparte).
+- F2.0: la sección 15 de `referencia.md` quedó marcada como "Descartada: las reglas propias ya cubren estos puntos" y se quitó el pendiente de `docs/ESTADO.md` (commit aparte).
 - Subtareas propuestas en modo plan. Las preguntas de producto se hicieron **en una sola ronda**, nueve preguntas (P1–P9) y once decisiones por defecto (D1–D11), cada una con su opción recomendada. El usuario aceptó todo con estos cambios:
   - P1: la pista le cuesta −H a quien la usa.
   - P7: deshacer una nota grupal solo se aplica si nadie la modificó después.
@@ -118,7 +118,7 @@ Historial detallado del proyecto: qué se hizo, problemas, soluciones y tiempo r
 ## 2026-10-22 — F4: plan por subfases y F4a (modelo, validador y `cleanupPeers`)
 
 **Hecho:**
-- Plan de F4 en modo plan, aprobado sin cambios. Seis subfases (F4a–F4f), una por sesión, cada una cerrada con pruebas, commit, push, CI y `CONTEXTO.md` apuntando a la siguiente. Requisitos del usuario incorporados:
+- Plan de F4 en modo plan, aprobado sin cambios. Seis subfases (F4a–F4f), una por sesión, cada una cerrada con pruebas, commit, push, CI y `docs/ESTADO.md` apuntando a la siguiente. Requisitos del usuario incorporados:
   - B no reutiliza código de A;
   - los puzzles de referencia se verifican con los dos solvers;
   - el corpus de 1000 puzzles va aparte y la CI corre una versión reducida;
@@ -472,7 +472,7 @@ Al aprobar, agregó el nivel con los descartes públicos de los errores, las vid
   - Grilla de 81 combinaciones (`scoring:calibrate`): ninguna cumplió la equidad, y la más cercana quedó en 10,2 puntos.
   - El usuario eligió w = 1/2/3/4/5, β = 1, H = 60 y P = 90.
   - Validación con la semilla 2, 8 réplicas y tres perfiles de T(L): se cumplen las metas exigidas. El adivinador de nivel 3 tiene media negativa frente a deducir (−2,4), pero su intervalo toca el 0; el usuario decidió exigir la media.
-- **F6e:** `docs/puntuacion.md`, SPEC 1.5, `docs/motor.md`, la prueba del corpus, PLAN 1.15 y CONTEXTO.md.
+- **F6e:** `docs/puntuacion.md`, SPEC 1.5, `docs/motor.md`, la prueba del corpus, PLAN 1.15 y `docs/ESTADO.md`.
 
 **Problemas y soluciones:**
 - **Expertos ausentes en las corridas parciales:** el manifiesto está en orden de semilla y los expertos llegan mucho más tarde. Los puzzles se intercalan por dificultad.
@@ -491,7 +491,7 @@ Al aprobar, agregó el nivel con los descartes públicos de los errores, las vid
 
 **Hecho:**
 - Inventario de los archivos versionados: 27 coincidencias en 7 archivos, más un nombre de archivo. No había ninguna en el prototipo, el lockfile, los workflows ni los `package.json`.
-- La memoria del proyecto pasa a `CONTEXTO.md` y se actualizan sus referencias (también en las entradas anteriores de esta bitácora). El archivo de carga local, no versionado, solo importa `CONTEXTO.md`; se excluye con `.git/info/exclude` y no con `.gitignore`.
+- La memoria del proyecto pasa a `CONTEXTO.md` (hoy `docs/ESTADO.md`) y se actualizan sus referencias (también en las entradas anteriores de esta bitácora). El archivo de carga local, no versionado, solo importa ese archivo; se excluye con `.git/info/exclude` y no con `.gitignore`.
 - Redacción neutra: PLAN §4 pasa a «Protocolo de trabajo»; la línea de entorno verificado, las horas de §5, la tarea de verificación de F0, ADR 0001 y la entrada de F0 de esta bitácora ya no nombran herramientas. «Antes de cada /clear» pasa a «Antes de cerrar cada sesión o reiniciar el contexto». PLAN 1.16.
 - `scripts/commit-policy-patterns.mjs`: los términos, codificados en base64, y las expresiones del hook. `commit-msg-filter.mjs` los toma de ahí.
 - `scripts/commit-policy.mjs` y el job `commit-policy` de la CI: revisan el contenido y el nombre de los archivos versionados y los mensajes de los commits del push (`before..after`; si `before` es todo ceros o no existe, los commits que no están en otra rama remota) o del PR (`base..head`). El job empieza con un caso de control que tiene que fallar.
@@ -577,7 +577,7 @@ Al aprobar, agregó:
   - jaulas de 2 px y de 3 px la seleccionada;
   - el enlace al repositorio en el Inicio;
   - una prueba de humo en WebKit por la IP de la red local, con el tamaño de un iPhone y de un iPad en vertical y en horizontal: sin solapamientos ni desplazamiento horizontal.
-- **Cierre:** PLAN 1.18, SPEC 1.6, notas en los ADR 0001 y 0004, `docs/diseno.md` (repaso de originalidad incluido), entrega de F7 con la lista de comprobación marcada, tema oscuro en ideas futuras y CONTEXTO.md.
+- **Cierre:** PLAN 1.18, SPEC 1.6, notas en los ADR 0001 y 0004, `docs/diseno.md` (repaso de originalidad incluido), entrega de F7 con la lista de comprobación marcada, tema oscuro en ideas futuras y `docs/ESTADO.md`.
 
 **Problemas y soluciones:**
 - **El calificador llegaba al build del cliente** por los imports del motor. Se agregó el punto de entrada `./model` del motor, que solo reexporta, y se corrigieron los imports, no el detector. Es la desviación registrada; el corpus siguió en verde.
@@ -837,7 +837,7 @@ Al aprobar, agregó:
 - Criterios de aceptación revisados en `docs/PLAN.md` (F11): p95 de jugada por debajo de 150 ms (15,3 ms realista y de 49,3 a 74,2 ms en estrés, en local); 0 fallos E2E (10 E2E sin reintentos); hallazgos documentados en `docs/seguridad.md` y `docs/carga.md`.
 - Lo que F11 deja a F12 (clave de acceso obligatoria por S-02, tope por IP detrás del proxy, cabeceras del sitio, plazos del HTTP y la carga en el hosting) y a F13 (S-03, S-04, la decisión sobre P con `scoring:report` y la de Dependabot) quedó en las tareas de esas fases.
 - **Horas reales de F11:** F11a 0,3; F11b 0,3; F11c 0,35; F11d 0,2; F11e 0,2; F11f 0,35; F11g 0,15; F11h 0,1; F11i 0,1. **Total: unas 2,1 h** frente a 2–4 h; no cuentan el punto de control del usuario ni las corridas de carga que siguieron solas en segundo plano. De F0 a F11, unas 21,0 h. Comparación en el PLAN, sección 5: sin cambios para F12 y F13.
-- PLAN 1.23, SPEC 1.9 y CONTEXTO con la fase F12.
+- PLAN 1.23, SPEC 1.9 y ESTADO con la fase F12.
 
 **Tiempo real:** de 10:34 a 10:45 (UTC−5), unas 0,1 h. F11 suma unas 2,1 h.
 

@@ -80,7 +80,7 @@ El modo competitivo entre amigos y cualquier idea nueva se registran en `docs/ID
 ## 4. Protocolo de trabajo
 
 ### Archivos de memoria
-- **`CONTEXTO.md` (raíz, máximo unas 120 líneas):** resumen del proyecto, fase actual y su estado, próxima tarea concreta, comandos, convenciones, mapa de carpetas y enlaces a decisiones. Es lo único que se carga en cada sesión, así que debe mantenerse breve.
+- **`docs/ESTADO.md` (máximo unas 120 líneas):** resumen del proyecto, fase actual y su estado, próxima tarea concreta, comandos, convenciones, mapa de carpetas y enlaces a decisiones. Es lo primero que se lee al retomar el trabajo, así que debe mantenerse breve.
 - **`docs/PLAN.md`:** este archivo, con el estado de cada fase.
 - **`docs/BITACORA.md`:** historial detallado (qué se hizo, problemas, soluciones, tiempo real dedicado). No se carga automáticamente; se consulta solo cuando hace falta.
 - **`docs/adr/NNNN-titulo.md`:** una decisión técnica por archivo.
@@ -88,11 +88,11 @@ El modo competitivo entre amigos y cualquier idea nueva se registran en `docs/ID
 - **`docs/IDEAS_FUTURAS.md`:** todo lo que queda fuera de la v1.
 
 ### Ciclo de trabajo
-1. Al iniciar una sesión, leer `CONTEXTO.md` y la sección de la fase actual de este plan.
+1. Al retomar el trabajo, leer `docs/ESTADO.md` y la sección de la fase actual de este plan.
 2. Al iniciar una fase, usar el modo plan: proponer las subtareas y esperar aprobación.
 3. Trabajar en tareas pequeñas. Cada tarea termina con sus pruebas en verde.
-4. **Antes de cerrar cada sesión o reiniciar el contexto:**
-   - Actualizar `CONTEXTO.md` (estado y próxima tarea exacta).
+4. **Antes de cerrar cada jornada de trabajo:**
+   - Actualizar `docs/ESTADO.md` (estado y próxima tarea exacta).
    - Agregar una entrada en `BITACORA.md`.
    - Marcar el avance en este plan.
    - Hacer commit.
@@ -193,11 +193,11 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, fre
 **Tareas:**
 - Verificar Node, pnpm, Git, las herramientas de desarrollo y REA.
 - Hacer `git init` y crear `.gitignore`.
-- Crear `CONTEXTO.md`, `docs/BITACORA.md`, `docs/IDEAS_FUTURAS.md` (con el modo competitivo como primera entrada) y la carpeta `docs/adr/`.
+- Crear `docs/ESTADO.md`, `docs/BITACORA.md`, `docs/IDEAS_FUTURAS.md` (con el modo competitivo como primera entrada) y la carpeta `docs/adr/`.
 
 **Criterios de aceptación:**
 - Los archivos existen.
-- `CONTEXTO.md` tiene menos de 120 líneas y apunta a F1.
+- `docs/ESTADO.md` tiene menos de 120 líneas y apunta a F1.
 - Primer commit hecho.
 
 **Estado:** hecha el 2026-10-22. Se cumplen todos los criterios de aceptación (ver la entrada de `BITACORA.md`).
@@ -289,7 +289,7 @@ Con lo ya hecho (unas 4,8 h), el total de la v1 queda en unas **45–66 h**, fre
 - 1000 puzzles generados con solución única confirmada por **ambos** solvers. Cualquier discrepancia entre ellos bloquea la fase.
 - Casos conocidos de la literatura con resultado esperado.
 
-**Subfases** (aprobadas el 2026-10-22). Cada una termina con las pruebas en verde, commit, push, CI en verde y `CONTEXTO.md` apuntando a la siguiente, para poder hacer `/clear` entre ellas. Las pruebas del motor están en SPEC R-35 (T-35.1 a T-35.6).
+**Subfases** (aprobadas el 2026-10-22). Cada una termina con las pruebas en verde, commit, push, CI en verde y `docs/ESTADO.md` apuntando a la siguiente, para poder hacer `/clear` entre ellas. Las pruebas del motor están en SPEC R-35 (T-35.1 a T-35.6).
 
 | Subfase | Contenido | Horas estimadas | Estado |
 |---|---|---|---|
@@ -804,7 +804,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 | La puntuación premia la velocidad sobre la habilidad | Pesos por nivel de deducción y simulación con bots en F6. |
 | Desincronización entre clientes | Servidor autoritativo, números de secuencia y reconstrucción desde el registro de eventos. |
 | Estimaciones optimistas | Registrar horas reales y recalibrar el plan al cerrar cada fase. |
-| `CONTEXTO.md` crece y consume contexto | Límite de unas 120 líneas; el historial va en `BITACORA.md`. |
+| `docs/ESTADO.md` crece y consume contexto | Límite de unas 120 líneas; el historial va en `BITACORA.md`. |
 
 ---
 
@@ -852,7 +852,7 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
   - Las metas de F6 se cambiaron en el punto de control, por decisión del usuario. La de equidad (cuota de puntaje frente a cuota de aporte, entre veloz y lógico) reemplaza a la del 55 %, y el Spearman se mide contra el techo de confiabilidad.
   - Las brechas que quedan son limitaciones conocidas, que se recalibran en F11 y F13 con partidas reales.
   - SPEC 1.5 (§2.3, §5, T-19.6, T-35.7, T-35.8 y R-36) y `docs/puntuacion.md`.
-- **1.16:** la memoria del proyecto pasa a `CONTEXTO.md` y se actualizan sus referencias. La sección 4 pasa a llamarse «Protocolo de trabajo» y su redacción, como la de la sección 5 y la de F0, queda neutra respecto de las herramientas. La CI suma el job `commit-policy`.
+- **1.16:** la memoria del proyecto pasa a `CONTEXTO.md` (hoy `docs/ESTADO.md`) y se actualizan sus referencias. La sección 4 pasa a llamarse «Protocolo de trabajo» y su redacción, como la de la sección 5 y la de F0, queda neutra respecto de las herramientas. La CI suma el job `commit-policy`.
 - **1.17:** historial reescrito y repositorio recreado. Los 38 commits conservan autor, fecha y árbol final, con otros identificadores; la revisión de secretos no encontró ninguno real. No cambia el alcance ni las estimaciones de las fases.
 - **1.18:** F8 hecha (~3,4 h reales frente a 4–8 h).
   - Protocolo v1 completo, `packages/bank`, `packages/game` definitivo, servidor simulado solo para desarrollo (verificado sobre el build con `check-dist`), pantalla de partida con las prioridades 1 y 2 y bot compañero.
