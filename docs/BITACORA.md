@@ -1092,3 +1092,21 @@ Al aprobar, agregó:
 **Tiempo real:** de 17:50 a 18:35 (UTC−5), unas 0,75 h.
 
 **Siguiente:** el autor lleva `fix-access-http` a `main` por PR (rebasada sobre `main`, que ya tiene `fix-f12-cierre`), cambia `sslmode=require` por `sslmode=verify-full` en `DATABASE_URL` (Render y el secreto de GitHub) y corre `smoke` y `backup`. Después, comprobar en producción con un navegador sin clave que aparece «Clave del grupo», y planificar F13 en plan mode.
+
+## 2026-10-25 — Presentación del repositorio
+
+**Hecho:**
+- `CONTEXTO.md` pasa a `docs/ESTADO.md`, con sus referencias en PLAN y en esta bitácora (también en las entradas anteriores). El estado queda al día: F12 hecha, con la comprobación de la clave por `POST /access` y el arreglo de T-13.5 ya en `main`; fase actual F13. «Al iniciar una sesión» pasa a «Al retomar el trabajo», y «Antes de cerrar cada sesión o reiniciar el contexto», a «Antes de cerrar cada jornada de trabajo», también en PLAN §4.
+- Arreglo de T-13.5 (3174ad9, sin entrada propia): la E2E toma la instantánea cuando el servidor aplicó la nota personal, no cuando la página la muestra de forma optimista.
+- Política de commits con nombres nuevos y el mismo comportamiento: `scripts/commit-msg-filter.mjs` (hook `commit-msg`), `scripts/commit-policy.mjs`, `scripts/commit-policy-patterns.mjs`, el job `commit-policy` de la CI y `tests/commit-policy.test.ts`; referencias al día, también en las entradas anteriores.
+- Única excepción de la política: una frase exacta (con sus mayúsculas y como palabras completas), solo en el contenido de `docs/diseno.md`, `README.md` y `README.es.md`. En otro archivo, en un nombre de archivo, en un commit, en minúsculas o con otra palabra se sigue rechazando.
+- `docs/diseno.md` y los dos README dicen cómo se hizo el prototipo visual.
+- Los documentos de `docs/`, `docs/adr/` y `design/` nombran al autor («se decidió», «pedido del autor», «aprobado por el autor»): había 184 apariciones de «usuario», 179 sobre el autor; quedan 5, sobre las cuentas, el usuario de git, el del sistema y el de la base de datos.
+
+**Verificación negativa:** sin la excepción, fallan las tres pruebas de la frase en los archivos permitidos; con la excepción en cualquier archivo, falla la del archivo no permitido; sin distinguir mayúsculas, falla la de la frase en minúsculas.
+
+**Verificación:** `check` y `build` en verde; política de commits con `--files` y `--range origin/main..HEAD`, sin hallazgos. `test`, 736 de 738 en la suite completa: falla por plazo `migration-guard.test.ts`, que pasa sola (4 de 4), como ya estaba anotado para F13. En una de tres corridas completas, «discards a candidate when solver A runs out of its node budget» de `generator.test.ts` también falló por plazo y pasa sola. Las pruebas de la política de commits reciben un margen de 30 s, porque cada una crea un repositorio y lanza git y node, y en la suite completa una llegó a 9 s.
+
+**Tiempo real:** de 19:37 a 19:55 (UTC−5), unas 0,3 h.
+
+**Siguiente:** planificar F13.
