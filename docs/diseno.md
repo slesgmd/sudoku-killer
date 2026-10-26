@@ -2,6 +2,8 @@
 
 Fuente: el prototipo de `design/prototipo/` (4 páginas y 51 artboards; índice en `design/prototipo/index.html`, se abre con `npx serve design/prototipo`). Esta guía describe lo que el prototipo resuelve. Lo que no resuelve figura como **pendiente**, y las correcciones decididas al cerrar F7 están en `design/entrega-f8.md` («Decisiones»), que se aplican en F8.
 
+El prototipo visual se hizo con Claude Design a partir de decisiones de diseño propias, documentadas en esta guía.
+
 Documentos relacionados:
 - `design/pantallas.md`: cada pantalla y los flujos.
 - `design/entrega-f8.md`: decisiones, prioridades para F8, pendientes y lista de comprobación.
