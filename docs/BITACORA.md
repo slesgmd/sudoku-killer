@@ -1105,7 +1105,9 @@ Al aprobar, agregó:
 
 **Verificación negativa:** sin la excepción, fallan las tres pruebas de la frase en los archivos permitidos; con la excepción en cualquier archivo, falla la del archivo no permitido; sin distinguir mayúsculas, falla la de la frase en minúsculas.
 
-**Verificación:** `check` y `build` en verde; política de commits con `--files` y `--range origin/main..HEAD`, sin hallazgos. `test`, 736 de 738 en la suite completa: falla por plazo `migration-guard.test.ts`, que pasa sola (4 de 4), como ya estaba anotado para F13. En una de tres corridas completas, «discards a candidate when solver A runs out of its node budget» de `generator.test.ts` también falló por plazo y pasa sola. Las pruebas de la política de commits reciben un margen de 30 s, porque cada una crea un repositorio y lanza git y node, y en la suite completa una llegó a 9 s.
+**Verificación:** `check` y `build` en verde; política de commits con `--files` y `--range origin/main..HEAD`, sin hallazgos. `test`, 736 de 738 en la suite completa: falla por plazo `migration-guard.test.ts`, que pasa sola (4 de 4), como ya estaba anotado para F13. En una de tres corridas completas, «discards a candidate when solver A runs out of its node budget» de `generator.test.ts` también falló por plazo y pasa sola. En otra, una prueba de `commit-policy` falló por tiempo (9 s); pasan solas, 23 de 23.
+
+**Pendiente para F13:** en la suite completa local, `migration-guard.test.ts`, `generator.test.ts` y las pruebas de `commit-policy` fallan a veces por tiempo y pasan solas y en la CI. Causa probable: la suite completa con muchos procesos en paralelo. Se investiga una vez para todas, sin subir límites.
 
 **Tiempo real:** de 19:37 a 19:55 (UTC−5), unas 0,3 h.
 
