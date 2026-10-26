@@ -58,11 +58,11 @@ Revisión del servidor de salas, del cliente y de las dependencias al cerrar F11
 Hoy solo están activas las **alertas** de Dependabot. Las **actualizaciones automáticas** abrirían PR con versiones nuevas.
 
 - **Recomendación:** activar solo las **actualizaciones de seguridad** (no las de versión), y además un `dependabot.yml` **mensual** y **agrupado** (un PR por ecosistema: npm y GitHub Actions) para las versiones, sin fusión automática.
-- **Costo:** unos 10–20 min al mes para revisar uno o dos PR agrupados; cada PR corre la CI completa (`check`, `test`, `build`, `e2e` y `attribution-guard`, unos 5 min de Actions). Las de seguridad llegan solo cuando hay un aviso.
+- **Costo:** unos 10–20 min al mes para revisar uno o dos PR agrupados; cada PR corre la CI completa (`check`, `test`, `build`, `e2e` y `commit-policy`, unos 5 min de Actions). Las de seguridad llegan solo cuando hay un aviso.
 - **Riesgo:**
   - Las versiones nuevas pueden romper cosas fijadas a propósito: TypeScript está en 6.0.x porque `typescript-eslint` no admite la 7 (ADR 0001), y `@playwright/test` debe coincidir con el navegador instalado. Hay que ignorar esas dependencias en `dependabot.yml` o revisar cada PR.
   - Un PR automático es una vía de cambios de código de terceros; sin fusión automática, el riesgo es el de cualquier PR revisado.
-  - Los commits de Dependabot tienen su propia identidad: hay que confirmar que el job `attribution-guard` los acepta.
+  - Los commits de Dependabot tienen su propia identidad: hay que confirmar que el job `commit-policy` los acepta.
 - **Sin activarlas**, el costo es depender de `pnpm audit` a mano o de las alertas; en un proyecto de un grupo cerrado y con pocas dependencias de ejecución (`ws`, `pg`, `drizzle-orm`, `zod` y React), también es una opción razonable hasta F13.
 
 La decisión es del usuario.

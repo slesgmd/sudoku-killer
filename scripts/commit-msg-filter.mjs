@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Quita las atribuciones de IA de un mensaje de commit (hook commit-msg de Husky y reescritura del
-// historial). Uso: `node scripts/strip-attribution.mjs <archivo>` reescribe el archivo; sin
+// Quita de un mensaje de commit las líneas que la política de commits no admite (hook commit-msg de
+// Husky). Uso: `node scripts/commit-msg-filter.mjs <archivo>` reescribe el archivo; sin
 // argumentos, filtra de la entrada estándar a la salida estándar.
 import { readFileSync, writeFileSync } from "node:fs";
-import { STRIP_PATTERNS } from "./attribution-patterns.mjs";
+import { STRIP_PATTERNS } from "./commit-policy-patterns.mjs";
 
-export function stripAttribution(message) {
+export function filterCommitMessage(message) {
   const lines = message
     .split(/\r?\n/)
     .filter((line) => !STRIP_PATTERNS.some((re) => re.test(line)));
@@ -15,7 +15,7 @@ export function stripAttribution(message) {
 
 const [file] = process.argv.slice(2);
 if (file) {
-  writeFileSync(file, stripAttribution(readFileSync(file, "utf8")));
+  writeFileSync(file, filterCommitMessage(readFileSync(file, "utf8")));
 } else {
-  process.stdout.write(stripAttribution(readFileSync(0, "utf8")));
+  process.stdout.write(filterCommitMessage(readFileSync(0, "utf8")));
 }
