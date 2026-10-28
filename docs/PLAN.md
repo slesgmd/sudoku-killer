@@ -1,6 +1,6 @@
 # PLAN — Sudoku Killer Multijugador · v1
 
-Versión del plan: 1.27
+Versión del plan: 1.29
 Estado global: F0 hecha (2026-10-22) · F1 hecha (2026-10-22) · F2 hecha (2026-10-22) · F3 hecha (2026-10-22) · F4 hecha (2026-10-23) · F5 hecha (2026-10-23) · F6 hecha (2026-10-24) · F7 hecha (2026-10-23) · F8 hecha (2026-10-24) · F9 hecha (2026-10-24) · F10 hecha (2026-10-25) · F11 hecha (2026-10-25) · F12 hecha (2026-10-25)
 Fuente de verdad del proyecto. Se actualiza al terminar cada fase o cuando se detecte un error de planificación (ver "Mantenimiento del plan").
 
@@ -879,3 +879,4 @@ Además: pantallas y flujos en `design/pantallas.md`, entrega a F8 (decisiones, 
 - **1.27:** corrección de la clave del grupo tras F12 (2026-10-25): el proxy de Render pierde también el 4003 que responde al primer mensaje, así que el cliente comprueba la clave con `POST /access` antes de abrir ningún WebSocket (la invitación también), el 4003 queda de respaldo y la prueba de humo comprueba el 401 (SPEC 1.14, T-39.12 a T-39.17). Unas 0,75 h, fuera de las horas de F12.
 - **1.26:** F12 hecha (~2,85 h reales frente a 3–5 h; comparación de horas en la sección 5, sin cambios para F13). Decisiones del autor: Brave con la opción A (precalentar con `GET /ws`; SPEC 1.13) y F12k reemplazada por la línea `metrics` de producción durante la beta de F13 (desviación aprobada, `docs/carga.md` §8). F13 suma la lectura de `metrics` y el plazo de `migration-guard.test.ts` en la suite completa.
 - **1.28:** presentación del repositorio, sin cambios de alcance ni de horas (2026-10-25): `CONTEXTO.md` pasa a `docs/ESTADO.md` (sección 4 al día); la política de commits cambia de nombre (`scripts/commit-policy.mjs`, `scripts/commit-msg-filter.mjs`, `scripts/commit-policy-patterns.mjs` y el job `commit-policy`) sin cambiar su comportamiento, salvo una única frase exacta permitida en `docs/diseno.md` y los dos README; los documentos nombran al autor.
+- **1.29:** corrección de la prueba de carga programada, sin cambios de alcance ni de horas (2026-10-28): el tope de 40 conexiones por IP de F12 rechazaba con 503 las 300 conexiones de la carga desde 127.0.0.1, así que cada sala entra con su propia IP simulada en `X-Forwarded-For` y el servidor de la prueba corre con `TRUST_PROXY_HOPS=1` (`docs/carga.md` §1). `load.yml` vuelve a estar en verde.
