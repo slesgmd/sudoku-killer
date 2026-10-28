@@ -1112,3 +1112,17 @@ Al aprobar, agregó:
 **Tiempo real:** de 19:37 a 19:55 (UTC−5), unas 0,3 h.
 
 **Siguiente:** planificar F13.
+
+## 2026-10-28 — Corrección de la prueba de carga programada
+
+**Problema:** la corrida semanal de `load.yml` (run 40702829322, la primera desde F12) falló al empezar el escenario realista con `Unexpected server response: 503`, y no dejó informe. Causa: la prueba abre 50 salas × 6 jugadores (300 conexiones) desde 127.0.0.1, y el tope de 40 conexiones por IP de F12e (`MAX_CONNECTIONS_PER_IP`, S-01) rechaza con 503 a partir de la 41. El tope funciona como debe: la prueba no lo tenía en cuenta.
+
+**Hecho:**
+- `apps/server/scripts/load/load.ts`: el servidor corre con `TRUST_PROXY_HOPS=1` y cada sala envía su propia IP simulada en `X-Forwarded-For` (198.18.0.0/15, el rango para pruebas de rendimiento): 6 conexiones por IP, como un grupo detrás del proxy de Render. La sonda de arranque usa la IP de la sala 0. El servidor y el tope no cambian.
+- `docs/carga.md` §1 lo explica.
+
+**Verificación:** `load.yml` en la rama `fix-load-per-ip` (run 40742935753) en verde: 300 conexiones abiertas y ningún cierre en los dos escenarios; p95 de 12,8 ms en el realista y de 26,4 ms en estrés (runner de Actions). La corrida fallida de `main` del 2026-10-28 sirve de verificación negativa. `check` y `build` en verde; `test`, 735 de 738: fallan por plazo las tres ya anotadas para F13 (`generator.test.ts`, `migration-guard.test.ts` y una de `commit-policy`), que pasan solas (42 de 42). Ninguna prueba usa el script de carga.
+
+**Tiempo real:** unas 0,9 h.
+
+**Siguiente:** llevar `fix-load-per-ip` a `main` por PR y planificar F13 en plan mode.
