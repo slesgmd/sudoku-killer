@@ -12,6 +12,7 @@ pnpm --filter @sudoku-killer/server load --scenario realistic|stress [--rooms 50
 - Script: `apps/server/scripts/load/load.ts`. Parámetros versionados: `apps/server/scripts/load/params.json` (versión 1); los argumentos los reemplazan.
 - Necesita `DATABASE_URL` hacia una base migrada y con el banco cargado (`db:migrate` y `bank:load`). `--reset-matches` vacía `matches` y `match_events` antes de empezar, para no reconstruir las partidas de una corrida anterior, y solo se acepta con una base cuyo nombre termina en `_load`.
 - El servidor corre en un proceso hijo, con el mismo punto de entrada de `pnpm dev` (`src/index.ts`, desde las fuentes) y `LOG_LEVEL=warn`. Los clientes son conexiones `ws` en el proceso del script, con el `Origin` permitido.
+- Cada sala entra desde su propia IP simulada (198.18.0.0/15, el rango para pruebas de rendimiento): el servidor corre con `TRUST_PROXY_HOPS=1` y los clientes la envían en `X-Forwarded-For`, como detrás del proxy de Render. Sin eso, el tope de 40 conexiones por IP de F12 (`docs/seguridad.md` S-01) rechaza con 503 las conexiones desde 127.0.0.1 a partir de la 41 (corrida programada del 2026-10-28).
 - No corre en cada push: se ejecuta a mano o con el workflow programado `.github/workflows/load.yml` (semanal y manual, con PostgreSQL 18 como servicio del job y el informe como artefacto).
 
 ## 2. Qué hace y qué mide
