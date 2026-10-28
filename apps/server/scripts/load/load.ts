@@ -12,6 +12,9 @@
 // - Al terminar una partida, quien inicia vuelve al lobby y empieza otra: la carga no decae.
 // - `--reset-matches` vacía `matches` y `match_events` antes de empezar (para no reconstruir las
 //   partidas de una corrida anterior). Solo se acepta con una base cuyo nombre termina en `_load`.
+// - Cada sala entra desde su propia IP simulada: el servidor admite 40 conexiones por IP (F12) y las
+//   300 desde 127.0.0.1 no caben. Corre con `TRUST_PROXY_HOPS=1` y los clientes envían la IP de su
+//   sala en `X-Forwarded-For`, como detrás del proxy de Render.
 //
 // Uso: pnpm --filter @sudoku-killer/server load --scenario realistic|stress [--rooms 50]
 //        [--players 6] [--duration 60] [--warmup 15] [--seed N] [--port 8090] [--reset-matches]
@@ -120,6 +123,19 @@ const sleep = (ms: number) =>
     setTimeout(resolve, ms);
   });
 
+/** La IP simulada de una sala, en 198.18.0.0/15 (el rango para pruebas de rendimiento, RFC 2544). */
+function roomAddress(room: number): string {
+  return `198.18.${String(Math.floor(room / 256) % 256)}.${String(room % 256)}`;
+}
+
+/** Una conexión al servidor con el `Origin` permitido, desde la IP simulada de la sala. */
+function connect(room: number): WebSocket {
+  return new WebSocket(`ws://127.0.0.1:${String(port)}${WS_PATH}`, {
+    origin: ORIGIN,
+    headers: { "x-forwarded-for": roomAddress(room) },
+  });
+}
+
 // --- Base de datos ---
 
 async function resetMatches(): Promise<void> {
@@ -153,6 +169,7 @@ async function startServer(): Promise<ChildProcess> {
         PORT: String(port),
         ALLOWED_ORIGINS: ORIGIN,
         LOG_LEVEL: "warn",
+        TRUST_PROXY_HOPS: "1",
       },
       stdio: ["ignore", "ignore", "inherit"],
     },
@@ -161,7 +178,7 @@ async function startServer(): Promise<ChildProcess> {
     await sleep(200);
     if (child.exitCode !== null) throw new Error("The server exited while starting");
     const open = await new Promise<boolean>((resolve) => {
-      const ws = new WebSocket(`ws://127.0.0.1:${String(port)}${WS_PATH}`, { origin: ORIGIN });
+      const ws = connect(0);
       ws.on("open", () => {
         ws.close();
         resolve(true);
@@ -300,10 +317,14 @@ class LoadClient {
   private readonly placed = new Map<string, number>();
   private readonly onMessage: (client: LoadClient, message: ServerEnvelope) => void;
 
-  constructor(name: string, onMessage: (client: LoadClient, message: ServerEnvelope) => void) {
+  constructor(
+    room: number,
+    name: string,
+    onMessage: (client: LoadClient, message: ServerEnvelope) => void,
+  ) {
     this.prefix = name;
     this.onMessage = onMessage;
-    this.ws = new WebSocket(`ws://127.0.0.1:${String(port)}${WS_PATH}`, { origin: ORIGIN });
+    this.ws = connect(room);
     this.ws.on("message", (data) => {
       received++;
       const text = (data as Buffer).toString("utf8");
@@ -482,7 +503,7 @@ const clients: LoadClient[] = [];
 const loops: Promise<void>[] = [];
 try {
   for (let r = 0; r < run.rooms; r++) {
-    const creator = new LoadClient(`r${String(r)}p0`, onMessage);
+    const creator = new LoadClient(r, `r${String(r)}p0`, onMessage);
     creator.starter = true;
     await creator.opened();
     const welcome = welcomeOf(await creator.request("room.create", { nickname: "Jugador 0" }));
@@ -491,7 +512,7 @@ try {
     creator.code = code;
     clients.push(creator);
     for (let p = 1; p < run.players; p++) {
-      const client = new LoadClient(`r${String(r)}p${String(p)}`, onMessage);
+      const client = new LoadClient(r, `r${String(r)}p${String(p)}`, onMessage);
       await client.opened();
       const joined = welcomeOf(
         await client.request("room.join", { code, nickname: `Jugador ${String(p)}` }),
