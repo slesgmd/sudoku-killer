@@ -1,6 +1,6 @@
-# Pantallas y flujos (F7)
+# Pantallas y flujos
 
-Derivado del prototipo de `design/prototipo/` (se abre con `npx serve design/prototipo`). La guía de estilo está en `docs/diseno.md`. Las correcciones decididas al cerrar F7 se citan como «decisión N» y están en `design/entrega-f8.md`. Lo que el prototipo no resuelve figura como **pendiente**.
+Derivado del prototipo de `design/prototipo/` (se abre con `npx serve design/prototipo`). La guía de estilo está en `docs/diseno.md`. Las correcciones al prototipo se citan como «decisión N» y están en `docs/diseno.md`, sección 10. Donde el prototipo no dibuja algo, se indica cómo lo resuelve la aplicación.
 
 Datos de ejemplo del prototipo: sala `HPQ6NZ`, dificultad Media sin números iniciales, jugadores Inés (tú), Tomás, Valeria, Rafa (desconectado) y Bruno (espectador).
 
@@ -62,7 +62,7 @@ Todas las pantallas fuera de la partida comparten la **cabecera** (`.apphead`): 
 **Contenido:**
 - **Código:** «HPQ6NZ» en grande (40 px; 32 en móvil), «Copiar código» (pasa a «Código copiado» con una marca y se anuncia) y «Compartir». Nota: «Quien tenga el código puede entrar mientras queden asientos, también con la partida en curso.»
 - **Jugadores** con «N de 6»: monograma, nombre, « · tú», etiqueta «Inicia la partida» y «Desconectado»; asientos libres con círculo discontinuo. Con la sala llena: «Sala llena: nadie más puede entrar hasta que se libere un asiento.»
-- **Dificultad:** quien inicia ve opciones de radio, cada una con sus números iniciales según la equivalencia versión 2 (Fácil, «30 números iniciales»; Media, «22 números iniciales»; Difícil, «10 números iniciales»; Experto, «Sin números iniciales»; corrección del punto de control de F10) y «Solo tú puedes cambiarla. Los demás la ven al momento.» Los demás ven la dificultad elegida y «La elige Tomás, que inicia la partida.»
+- **Dificultad:** quien inicia ve opciones de radio, cada una con sus números iniciales según la equivalencia versión 2 (Fácil, «30 números iniciales»; Media, «22 números iniciales»; Difícil, «10 números iniciales»; Experto, «Sin números iniciales»; corrección tras la primera prueba en tiempo real) y «Solo tú puedes cambiarla. Los demás la ven al momento.» Los demás ven la dificultad elegida y «La elige Tomás, que inicia la partida.»
 
 **Acciones:** quien inicia: «Iniciar partida» (principal) con la nota «Puedes iniciar aunque estés solo. Quien entre después se suma a la partida en curso con 3 vidas.» Los demás: bloque de espera «Esperando a que Tomás inicie la partida.» Todos: «Salir de la sala».
 
@@ -91,7 +91,7 @@ Todas las pantallas fuera de la partida comparten la **cabecera** (`.apphead`): 
 
 **Distribución:** foto de fondo a pantalla completa; encima, un panel paper de hasta 720 px (48 px de margen en escritorio; a todo el ancho en móvil).
 
-**Contenido:** «Partida terminada · Media»; titular «Tablero resuelto.» o, en una derrota, el de su causa (SPEC 1.8, corrección del punto de control de F10): «Se acabaron las vidas.», «La partida quedó sin jugadores.» o «La partida quedó sin jugadores activos.»; bajada («El equipo completó las 81 celdas.» o la de la causa: «Todos los jugadores perdieron sus 3 vidas antes de completar el tablero.», «Todos los jugadores salieron o estuvieron desconectados más de 2 minutos.» o «Los jugadores que quedaban perdieron sus vidas o salieron de la partida.»); datos «Tiempo total» y «Pistas usadas por el equipo»; tabla «Ranking de la partida» (Puesto, Jugador, Puntos, Errores) con «· tú», etiquetas «Empate» y «Salió», y la nota del desempate.
+**Contenido:** «Partida terminada · Media»; titular «Tablero resuelto.» o, en una derrota, el de su causa (SPEC 1.8, corrección tras la primera prueba en tiempo real): «Se acabaron las vidas.», «La partida quedó sin jugadores.» o «La partida quedó sin jugadores activos.»; bajada («El equipo completó las 81 celdas.» o la de la causa: «Todos los jugadores perdieron sus 3 vidas antes de completar el tablero.», «Todos los jugadores salieron o estuvieron desconectados más de 2 minutos.» o «Los jugadores que quedaban perdieron sus vidas o salieron de la partida.»); datos «Tiempo total» y «Pistas usadas por el equipo»; tabla «Ranking de la partida» (Puesto, Jugador, Puntos, Errores) con «· tú», etiquetas «Empate» y «Salió», y la nota del desempate.
 
 **Acciones:** quien inicia: «Volver al lobby» (principal). Los demás: «Esperando a que Inés vuelva al lobby.» Todos: «Salir de la sala», con un diálogo («Dejarás tu asiento libre y no estarás en la próxima partida.» y el aviso de traspaso solo para quien tiene el derecho, decisión 2).
 
@@ -114,7 +114,7 @@ Todas las pantallas fuera de la partida comparten la **cabecera** (`.apphead`): 
 
 **Contenido:** un interruptor, «Limpiar notas personales automáticamente» (activado por defecto), con la explicación «Cuando alguien acierta un número, ese número se quita de tus notas personales en su fila, columna, caja y jaula. Las notas grupales se limpian siempre.»; la nota «El movimiento reducido sigue la preferencia de tu sistema.»; «Cerrar» y la X. Esc cierra.
 
-**Disponibilidad:** solo dentro de una sala (lobby, partida y resultados), porque `settings.update` exige ser miembro (decisión 1). El prototipo también lo ofrece en Inicio, Entrar y Ayuda: en F8 se quita de ahí (en Ayuda, solo si se abrió fuera de una sala).
+**Disponibilidad:** solo dentro de una sala (lobby, partida y resultados), porque `settings.update` exige ser miembro (decisión 1). El prototipo también lo ofrece en Inicio, Entrar y Ayuda: la aplicación lo quita de ahí (en Ayuda, solo si se abrió fuera de una sala).
 
 ### 1.8 Estados transversales
 **Artboards:** Estados · tipo, texto y comportamiento (tabla resumen); a 360: carga inicial, reconectando, versión incompatible, demasiadas acciones, acción no permitida, ya resuelta, error propio, paso a espectador, confirmación de salida, confirmación de pista; a 1280: sesión en otra pestaña, servidor no disponible, partida terminada, confirmación de salida, confirmación de pista, se recuperaron X de Y notas; a 768: no se pudo deshacer; en horizontal: reconectando.
@@ -129,20 +129,20 @@ Tipos, textos y comportamiento en `docs/diseno.md`, sección 9.
 Inicio → «Entrar o crear sala» → Entrar: apodo → «Crear sala nueva» → «Entrando…» → Lobby como quien inicia (asiento 0, con «Inicia la partida»).
 - Apodo no válido: error en el campo, sin enviar.
 - Fallo de conexión: aviso con «Reintentar».
-- **Pendiente:** el prototipo se queda en «Entrando…»; la transición al lobby se ve con el enlace «Ir al lobby» de los controles de prueba.
+- **En la aplicación:** al entrar se pasa al lobby. El prototipo se queda en «Entrando…», y la transición se ve con el enlace «Ir al lobby» de los controles de prueba.
 
 ### 2.2 Unirse
 Entrar: apodo + código → «Entrar» → Lobby (los demás) si la sala espera.
 - Errores: sala inexistente, sala llena, apodo en uso, carácter rechazado (en línea, sin enviar), fallo de conexión.
-- Con la partida en curso y un asiento libre, se entra en la partida con 3 vidas (lo dicen el lobby y la Ayuda). **Pendiente:** el prototipo no dibuja esa llegada directa a la partida.
+- Con la partida en curso y un asiento libre, se entra en la partida con 3 vidas (lo dicen el lobby y la Ayuda). El prototipo no dibuja esa llegada directa; la aplicación la anuncia con un aviso.
 
 ### 2.3 Volver con ficha
 Inicio con ficha → «Volver a la sala HPQ6NZ» → la pantalla del estado de la sala: lobby, partida o resultados (decisión 3), con vidas, puntos y notas si queda asiento.
 - Sala borrada: aviso integrado en Inicio y la ficha se descarta.
-- **Pendiente:** el prototipo no dibuja el caso «sala sin asientos libres» al volver con ficha.
+- **En la aplicación:** volver con ficha a una sala sin asientos libres muestra un aviso en Inicio (el prototipo no lo dibuja).
 
 ### 2.4 Iniciar
-Lobby, quien inicia: elige la dificultad (los demás la ven al momento) → «Iniciar partida» → Partida (carga inicial y luego el tablero). Los demás: bloque de espera; pasan a la partida cuando empieza (**pendiente:** la transición no está dibujada).
+Lobby, quien inicia: elige la dificultad (los demás la ven al momento) → «Iniciar partida» → Partida (carga inicial y luego el tablero). Los demás: bloque de espera; pasan a la partida cuando empieza (`match.started`; el prototipo no dibuja la transición).
 - Traspaso: si quien inicia sale, aviso integrado a los demás y el derecho pasa a otra persona.
 
 ### 2.5 Jugar
@@ -157,13 +157,13 @@ Modo Notas (N) → capa Personal o Grupal (G) → teclas 1–9 alternan la nota 
 - «Borrar» (Supr) quita las notas de la capa activa en la celda.
 - «Deshacer» (Ctrl+Z) revierte tus últimas notas; si otra persona cambió la nota grupal después, «No se pudo deshacer…». Deshacer un «Borrar notas» agrupa varios `note.undo` y resume «Se recuperaron X de Y notas» (decisión 5).
 - Limpieza automática al acertar: siempre en las grupales; en las personales, según Ajustes.
-- **Pendiente:** el prototipo no tiene acciones en Borrar, Deshacer ni en las teclas; el flujo se ve en los estados.
+- **Prototipo:** no tiene acciones en Borrar, Deshacer ni en las teclas; el flujo se ve en los estados.
 
 ### 2.7 Pista
 Celda vacía seleccionada → «Pista · 2» (H) → diálogo «¿Usar una pista en F2 C7?» («Cuesta −H puntos a quien la usa y no da bonus.» y «Quedan 2 pistas para todo el equipo.») → «Usar pista» coloca el número correcto con la esquina doblada; «Cancelar» o Esc no hace nada.
 - Inactiva para espectadores, sin pistas, con una celda ocupada («Pista: elige una celda vacía»), al reconectar o sin servidor.
 - Si el rol cambió antes de llegar: «No se usó la pista: ya eres espectador…».
-- **Pendiente:** el valor de H lo fija F6.
+- H = 60 puntos (`docs/puntuacion.md`).
 
 ### 2.8 Error
 Número incorrecto → destello de 1500 ms en la celda (fondo danger-tint, dígito tachado con tu inicial; lo ven todos) → la celda vuelve a quedar vacía. A quien falla: aviso asertivo «El 3 no va en F7 C3. Te quedan 2 vidas.»; pierde una vida y puntos. El registro anota «Inés · error en F7 C3».
@@ -176,11 +176,11 @@ Error con la última vida → aviso de error «Te quedaste sin vidas. Ahora eres
 - **De un compañero:** monograma con contorno discontinuo y la etiqueta «Desconectado»; tiene 2 minutos para volver con su asiento.
 - **Otra pestaña:** diálogo bloqueante «La sala está abierta en otra pestaña» con «Jugar en esta pestaña».
 - **Versión nueva:** diálogo bloqueante con «Recargar» (el asiento se conserva 2 minutos).
-- **Pendiente:** el prototipo no dibuja el regreso al estado normal tras reconectar (por ejemplo, si se anuncia).
+- **En la aplicación:** al volver se anuncia «Conexión recuperada» (el prototipo no dibuja el regreso).
 
 ### 2.11 Fin y vuelta al lobby
 Última celda → banner «La partida terminó. El equipo completó el tablero en 31:07.» con «Ver resultados»; el tablero queda completo, sin selección y con los controles inactivos → Resultados (victoria o derrota). Quien expiró figura como «Salió».
 - Quien inicia: «Volver al lobby» → Lobby con los mismos jugadores.
 - Los demás: «Esperando a que Inés vuelva al lobby.»
 - Todos: «Salir de la sala».
-- **Pendiente:** si el paso a Resultados es automático o solo con «Ver resultados», y cómo llegan los demás al lobby (el prototipo no lo dibuja).
+- **En la aplicación:** el paso a Resultados es solo con «Ver resultados», y cuando quien inicia vuelve al lobby, todos pasan al lobby con un aviso (el prototipo no lo dibuja).

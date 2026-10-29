@@ -4,6 +4,8 @@
 
 Sudoku killer cooperativo en tiempo real para hasta 6 jugadores. Se entra con un código de sala y un apodo, sin cuentas.
 
+**Estado: v1.0.0, terminada.** Una beta cerrada del 26 al 28 de octubre de 2026, con 15 jugadores en Android, iPhone, Windows y Linux, terminó sin errores para los jugadores ([notas de la versión](https://github.com/slesgmd/sudoku-killer/releases/tag/v1.0.0)).
+
 [![CI](https://github.com/slesgmd/sudoku-killer/actions/workflows/ci.yml/badge.svg)](https://github.com/slesgmd/sudoku-killer/actions/workflows/ci.yml)
 [![Licencia: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg?logo=typescript&logoColor=white)](tsconfig.base.json)
@@ -90,9 +92,9 @@ Todas las decisiones están indexadas en [docs/adr/](docs/adr/README.md).
 ## Limitaciones conocidas y trabajo futuro
 
 - **El servidor gratuito se duerme** tras 15 minutos sin tráfico y tarda alrededor de un minuto en despertar; la web sigue en pie y muestra el aviso «Despertando el servidor…» ([ADR 0007](docs/adr/0007-hosting.md)).
-- **La puntuación solo está calibrada con simulación.** El jugador veloz todavía gana alrededor del 57 % de los duelos contra un jugador lógico igual de rápido, y el tamaño de la penalización por error es lo primero que se recalibra con partidas reales; el registro de eventos permite recalcular las partidas pasadas sin volver a jugarlas ([docs/puntuacion.md](docs/puntuacion.md#10-limitaciones-conocidas)).
+- **La puntuación se calibró con simulación** y se mantuvo sin cambios tras la beta cerrada. El jugador veloz todavía gana alrededor del 57 % de los duelos contra un jugador lógico igual de rápido, y escalar la penalización por error según la dificultad queda como trabajo futuro; el registro de eventos permite recalcular las partidas pasadas sin volver a jugarlas ([docs/puntuacion.md](docs/puntuacion.md#10-limitaciones-conocidas)).
 - **Una sola instancia.** Las salas vivas están en memoria detrás de la interfaz `RoomStore`; escalar exigiría un almacén compartido y afinidad por sala.
-- **Las cifras de carga son locales.** Falta repetirlas en el hosting, y la saturación en una red lenta real no se probó ([docs/carga.md](docs/carga.md)).
+- **Las cifras de carga son locales.** En producción el servidor se vigila con su línea de métricas en el log, en lugar de una carga sintética sobre la instancia gratuita; la beta cerrada no tuvo problemas de rendimiento, pero la saturación en una red lenta real no se probó ([docs/carga.md](docs/carga.md)).
 - **Interfaz solo en español**, con cada texto detrás de una clave de i18n; todavía sin tema oscuro.
 - Las ideas fuera de la v1 (modo competitivo, ranking de la sesión, chat, modo contrarreloj, identidad persistente) están en [docs/IDEAS_FUTURAS.md](docs/IDEAS_FUTURAS.md).
 

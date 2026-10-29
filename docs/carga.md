@@ -1,6 +1,6 @@
-# Prueba de carga (F11e)
+# Prueba de carga
 
-Mide si una instancia del servidor de salas aguanta al menos 50 salas simultáneas con la latencia de una jugada por debajo de 150 ms en el p95 (criterio de F11), y cuánta memoria y CPU usa. La cifra de esta máquina **no es la de producción**: se repite en F12, en el hosting.
+Mide si una instancia del servidor de salas aguanta al menos 50 salas simultáneas con la latencia de una jugada por debajo de 150 ms en el p95, y cuánta memoria y CPU usa. La cifra de esta máquina **no es la de producción**; el hosting se trata en la sección 8.
 
 ## 1. Cómo se ejecuta
 
@@ -12,7 +12,7 @@ pnpm --filter @sudoku-killer/server load --scenario realistic|stress [--rooms 50
 - Script: `apps/server/scripts/load/load.ts`. Parámetros versionados: `apps/server/scripts/load/params.json` (versión 1); los argumentos los reemplazan.
 - Necesita `DATABASE_URL` hacia una base migrada y con el banco cargado (`db:migrate` y `bank:load`). `--reset-matches` vacía `matches` y `match_events` antes de empezar, para no reconstruir las partidas de una corrida anterior, y solo se acepta con una base cuyo nombre termina en `_load`.
 - El servidor corre en un proceso hijo, con el mismo punto de entrada de `pnpm dev` (`src/index.ts`, desde las fuentes) y `LOG_LEVEL=warn`. Los clientes son conexiones `ws` en el proceso del script, con el `Origin` permitido.
-- Cada sala entra desde su propia IP simulada (198.18.0.0/15, el rango para pruebas de rendimiento): el servidor corre con `TRUST_PROXY_HOPS=1` y los clientes la envían en `X-Forwarded-For`, como detrás del proxy de Render. Sin eso, el tope de 40 conexiones por IP de F12 (`docs/seguridad.md` S-01) rechaza con 503 las conexiones desde 127.0.0.1 a partir de la 41 (corrida programada del 2026-10-28).
+- Cada sala entra desde su propia IP simulada (198.18.0.0/15, el rango para pruebas de rendimiento): el servidor corre con `TRUST_PROXY_HOPS=1` y los clientes la envían en `X-Forwarded-For`, como detrás del proxy de Render. Sin eso, el tope de 40 conexiones por IP (`docs/seguridad.md` S-01) rechaza con 503 las conexiones desde 127.0.0.1 a partir de la 41 (corrida programada del 2026-10-28).
 - No corre en cada push: se ejecuta a mano o con el workflow programado `.github/workflows/load.yml` (semanal y manual, con PostgreSQL 18 como servicio del job y el informe como artefacto).
 
 ## 2. Qué hace y qué mide
@@ -57,11 +57,11 @@ Los dos usan 50 salas × 6 jugadores (300 conexiones), 15 s de calentamiento, 60
 | Cierres de conexión (1013 u otros) y `rate_limited` | ninguno | ninguno |
 
 **Lectura:**
-- El criterio de F11 (p95 < 150 ms con al menos 50 salas) se cumple en los dos escenarios, en esta máquina.
+- El criterio (p95 < 150 ms con al menos 50 salas) se cumple en los dos escenarios, en esta máquina.
 - El piso de unos 13 ms del p50 es la espera del group commit (`COMMIT_DELAY_MS` = 10 ms, `apps/server/src/match/sink.ts`) más la escritura en PostgreSQL: el evento se confirma antes de responder.
 - El generador no infló la latencia de forma apreciable: su retraso p95 (unos 11 ms) está en la resolución del monitor.
 - `match.not_running` y `already_solved` son jugadas que llegaron después del final de la partida o sobre una celda ya resuelta por otro: con 6 personas a 20 comandos por segundo, un tablero medio se resuelve en unos 3 s.
-- **Para revisar en el punto de control:** en estrés, la memoria del servidor subió de 208 a 343 MB durante los 60 s de medición y terminó en su pico, con más de 1 300 partidas empezadas y terminadas. Con esta corrida no se puede distinguir una meseta de una fuga (por ejemplo, lo que la sala conserva de cada partida jugada). No se optimizó nada antes del punto de control. Se investigó en F11f (sección 6).
+- **Observación:** en estrés, la memoria del servidor subió de 208 a 343 MB durante los 60 s de medición y terminó en su pico, con más de 1 300 partidas empezadas y terminadas. Con esta corrida no se puede distinguir una meseta de una fuga (por ejemplo, lo que la sala conserva de cada partida jugada). No se optimizó nada antes de investigarlo (sección 6).
 
 Todas las mediciones de este documento usaron **Node 22.22 y PostgreSQL 16.15** (sección 3).
 
@@ -72,13 +72,13 @@ Todas las mediciones de este documento usaron **Node 22.22 y PostgreSQL 16.15** 
 
 ### Limitación de E-17 (saturación)
 
-Ninguna medición llegó a la saturación: no hubo cierres 1013. La prueba de caos de F11c provoca E-17 **forzando el valor de bytes encolados** (`bufferedAmount`) de la conexión: el servidor toma su camino real (descarta la presencia, cierra con 1013 y el cliente se reconecta), pero **no se prueba un búfer lleno en una red real**. En una conexión local, los búferes del sistema operativo absorben varios MB antes de que `bufferedAmount` suba, y llegar a 1 MiB con los límites de velocidad llevaría minutos. Queda para observar en F12, con clientes reales sobre redes lentas.
+Ninguna medición llegó a la saturación: no hubo cierres 1013. La prueba de caos provoca E-17 **forzando el valor de bytes encolados** (`bufferedAmount`) de la conexión: el servidor toma su camino real (descarta la presencia, cierra con 1013 y el cliente se reconecta), pero **no se prueba un búfer lleno en una red real**. En una conexión local, los búferes del sistema operativo absorben varios MB antes de que `bufferedAmount` suba, y llegar a 1 MiB con los límites de velocidad llevaría minutos. En producción se observa con clientes reales (sección 8).
 
 ## 5. Estado
 
-Primera medición hecha y revisada en el punto de control del autor. F11f (sección 6): se encontró y se corrigió la memoria que retenía la caché del catálogo de puzzles; no hizo falta otra optimización.
+Primera medición hecha y revisada. En la sección 6 se encontró y se corrigió la memoria que retenía la caché del catálogo de puzzles; no hizo falta otra optimización.
 
-## 6. Memoria en estrés de 5 minutos (F11f)
+## 6. Memoria en estrés de 5 minutos
 
 Método (`--memory`): el servidor corre con `--expose-gc` y el inspector de Node; el script lee `process.memoryUsage()` del servidor por el inspector. Primero mide el heap base (tras una recolección, sin salas); durante 5 min de estrés, el RSS y el heap cada 10 s; después cierra todos los clientes, espera 130 s (las salas sin nadie se borran a los 120 s, R-14; se comprobó que no quedaba ninguna partida sin terminar en la base), fuerza la recolección y vuelve a medir el heap. Con `--heap-snapshots`, guarda una instantánea del heap al empezar y otra al final.
 
@@ -95,16 +95,16 @@ Método (`--memory`): el servidor corre con `--expose-gc` y el inspector de Node
 
 **Corrección.** La caché del catálogo es ahora una LRU de 64 puzzles (`CATALOG_CACHE_ENTRIES`). Las partidas en curso conservan su puzzle aunque salga de la caché, y lo que sale se vuelve a leer de la base al empezar otra partida o al reconstruir. Prueba: `apps/server/test/catalog.test.ts`, que falla sin la corrección (el puzzle menos usado nunca se volvía a leer).
 
-**Latencia después de la corrección** (corridas normales de 60 s, como las de la sección 4): estrés, p95 de 49,3 ms (p99 de 85,8 ms y máximo de 144,1 ms; antes, 74,2 ms) y pico de RSS de 295 MB (antes, 343 MB); realista, p95 de 15,2 ms (antes, 15,3 ms). En las corridas de 5 min con el inspector conectado, el p95 de estrés fue de 39,9 ms antes y de 102,3 ms después, con la CPU media del servidor en el 83 % y el 97 %. Entre corridas, la latencia de estrés de esta máquina varía más que esa diferencia, y con 64 puzzles en caché cada partida nueva puede recalcular el contexto del calificador: en estrés empiezan unas 19 por segundo, y en un uso real, muy pocas. Se vuelve a medir en F12, en el hosting.
+**Latencia después de la corrección** (corridas normales de 60 s, como las de la sección 4): estrés, p95 de 49,3 ms (p99 de 85,8 ms y máximo de 144,1 ms; antes, 74,2 ms) y pico de RSS de 295 MB (antes, 343 MB); realista, p95 de 15,2 ms (antes, 15,3 ms). En las corridas de 5 min con el inspector conectado, el p95 de estrés fue de 39,9 ms antes y de 102,3 ms después, con la CPU media del servidor en el 83 % y el 97 %. Entre corridas, la latencia de estrés de esta máquina varía más que esa diferencia, y con 64 puzzles en caché cada partida nueva puede recalcular el contexto del calificador: en estrés empiezan unas 19 por segundo, y en un uso real, muy pocas.
 
-## 7. Logs y métricas en producción (F12h)
+## 7. Logs y métricas en producción
 
 El servidor escribe una línea JSON por entrada en la salida estándar, que el panel de Render muestra como log del servicio. Cada 60 s escribe una línea `metrics` con estos campos, todos recuentos o tiempos. Nunca lleva códigos de sala, apodos, fichas, claves ni direcciones IP (prueba `apps/server/test/metrics.test.ts`).
 
 | Campo | Qué es |
 |---|---|
 | `uptimeS` | Segundos desde el arranque (un valor bajo delata un reinicio o un despertar). |
-| `connections` / `addresses` | Conexiones abiertas y cuántas direcciones distintas las abren (para confirmar `TRUST_PROXY_HOPS` en F12j: con dos redes distintas, 2). |
+| `connections` / `addresses` | Conexiones abiertas y cuántas direcciones distintas las abren (para confirmar `TRUST_PROXY_HOPS`: con dos redes distintas, 2). |
 | `rooms` / `matchesRunning` / `playersConnected` | Salas en memoria, partidas en curso y jugadores conectados. |
 | `commits` / `events` / `commitP95Ms` / `commitMaxMs` | Escrituras en la base del período, eventos escritos y su duración (la espera que suma cada jugada, ADR 0004). |
 | `eventLoopP95Ms` | Retraso del bucle de eventos en el p95 (con 0,1 CPU, la primera señal de saturación). |
@@ -114,13 +114,15 @@ El servidor escribe una línea JSON por entrada en la salida estándar, que el p
 | `accessLocked` | Handshakes y `POST /access` con 429 en el período: una red que agotó sus 10 intentos y vuelve a ofrecer una clave (T-39.3). |
 | `addressUnknown` | Handshakes en el período cuya IP no se pudo saber (T-39.8): si no es 0, `TRUST_PROXY_HOPS` no coincide con lo que manda el proxy (el primer caso deja en el log `client address unknown` con el número de entradas de `X-Forwarded-For`, nunca su contenido). |
 
-Desde F12, estas líneas reemplazan la prueba de carga en el hosting (sección 8).
+En producción, estas líneas reemplazan la prueba de carga en el hosting (sección 8).
 
-## 8. Carga en el hosting: desviación aprobada (F12k)
+## 8. Carga en el hosting
 
-El plan pedía repetir la prueba de carga en Render con 1, 3 y 5 salas y un p95 menor que 150 ms desde Actions. El autor aprobó el 2026-10-25 no hacerla con bots y reemplazarla por la línea `metrics` de producción durante la beta de F13. Motivos:
+En Render no se repite la prueba con bots (decisión del 2026-10-25); se observa la línea `metrics` de producción con partidas reales. Motivos:
 - El plan gratuito: 0,1 CPU y 512 MB compartidos con las partidas reales; una carga sintética mide sobre todo ese límite y puede tumbar la instancia del grupo.
 - No exponer la clave del grupo en GitHub: los bots necesitarían un secreto con ella en un repositorio público.
-- No mezclar partidas de bots con las reales, que `scoring:report` analiza en F13 (el registro de eventos es de solo agregar, ADR 0004).
+- No mezclar partidas de bots con las reales, que analiza `scoring:report` (el registro de eventos es de solo agregar, ADR 0004).
 
-Qué se mira en F13, en el log de Render, con las partidas reales: `commitP95Ms` y `commitMaxMs` (la espera de la base en cada jugada), `eventLoopP95Ms` (la primera señal de saturación con 0,1 CPU) y `rssMb` y `heapUsedMb` (frente a los 512 MB), junto con `rooms`, `playersConnected` y `connections` para saber con cuánta carga se midió. Los valores de referencia son los de la sección 4, en local. Si en la beta el p95 de la base o del bucle se acerca a 150 ms, o la memoria a 512 MB, se registra en la BITÁCORA y se decide con el autor.
+**Beta cerrada (2026-10-26 a 2026-10-28):** 15 personas jugaron durante tres días desde Android, iPhone, Windows y Linux, sin problemas de rendimiento para los jugadores. La corrida programada de esta prueba falló una vez por el tope por IP (sección 2) y quedó corregida.
+
+Qué se mira en el log de Render, con las partidas reales: `commitP95Ms` y `commitMaxMs` (la espera de la base en cada jugada), `eventLoopP95Ms` (la primera señal de saturación con 0,1 CPU) y `rssMb` y `heapUsedMb` (frente a los 512 MB), junto con `rooms`, `playersConnected` y `connections` para saber con cuánta carga se midió. Los valores de referencia son los de la sección 4, en local. Si el p95 de la base o del bucle se acerca a 150 ms, o la memoria a 512 MB, hay que revisar el plan de la instancia.

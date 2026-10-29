@@ -1,13 +1,11 @@
-# Guía de estilo — Sudoku Killer (F7)
+# Guía de estilo — Sudoku Killer
 
-Fuente: el prototipo de `design/prototipo/` (4 páginas y 51 artboards; índice en `design/prototipo/index.html`, se abre con `npx serve design/prototipo`). Esta guía describe lo que el prototipo resuelve. Lo que no resuelve figura como **pendiente**, y las correcciones decididas al cerrar F7 están en `design/entrega-f8.md` («Decisiones»), que se aplican en F8.
+Fuente: el prototipo de `design/prototipo/` (4 páginas y 51 artboards; índice en `design/prototipo/index.html`, se abre con `npx serve design/prototipo`). Esta guía describe lo que el prototipo resuelve. Lo que no resolvía se decidió al implementar, y las correcciones al prototipo están en la sección 10 («decisión N»).
 
 El prototipo visual se hizo con Claude Design a partir de decisiones de diseño propias, documentadas en esta guía.
 
 Documentos relacionados:
 - `design/pantallas.md`: cada pantalla y los flujos.
-- `design/entrega-f8.md`: decisiones, prioridades para F8, pendientes y lista de comprobación.
-- `design/fotos.md`: registro de fuente y licencia de las fotos.
 
 ---
 
@@ -53,8 +51,8 @@ Los valores propuestos no llegaban al mínimo sobre alguna superficie o tinte y 
 | `--cell-line` | `= border` | Línea de celda, 1 px |
 | `--box-line` | `= ink` | Línea de caja, 2 px |
 | `--cage-line` | `#827968` | Jaula: línea discontinua a 3 px del borde |
-| `--cage-width` | `2px` | Grosor de la línea de jaula (F8: 1 px en F7, 1,5 px en el punto de control y 2 px tras la prueba con el bot) |
-| `--cage-width-selected` | `3px` | Grosor en la jaula de la celda seleccionada (F8: 2 px en F7, después 2,5 px y 3 px) |
+| `--cage-width` | `2px` | Grosor de la línea de jaula (1 px en el prototipo, 1,5 px en la primera prueba en celular y 2 px tras la prueba con el bot) |
+| `--cage-width-selected` | `3px` | Grosor en la jaula de la celda seleccionada (2 px en el prototipo, después 2,5 px y 3 px) |
 | `--selection-tint` | `#E3E6D4` | Celda propia (con borde accent de 2 px) |
 | `--related-tint` | `#EFEDE2` | Fila, columna, caja y jaula de la celda seleccionada |
 | `--danger-tint` | `#F7E6E1` | Fondo del error durante el destello |
@@ -74,7 +72,7 @@ Seis colores derivados de la gama tierra y piedra, con luminancias parecidas par
 
 Como contorno de presencia sobre selection-tint: 4,41:1 o más.
 
-**Asignación por asiento (resuelta en F8):** el asiento N (de 0 a 5) usa `--player-(N + 1)`, en el orden de la tabla. El color sigue al asiento actual. Si el jugador queda sin asiento (salió o expiró), conserva el color del último que tuvo, así sus entradas del registro de actividad no cambian de color.
+**Asignación por asiento:** el asiento N (de 0 a 5) usa `--player-(N + 1)`, en el orden de la tabla. El color sigue al asiento actual. Si el jugador queda sin asiento (salió o expiró), conserva el color del último que tuvo, así sus entradas del registro de actividad no cambian de color.
 
 ### 2.5 Contrastes medidos
 
@@ -107,7 +105,7 @@ Medidos con la fórmula de luminancia relativa de WCAG 2.2. Mínimos: texto 4,5:
 | `--t-error-flash` | 1500 ms | Destello del error en la celda (T-04.3; el cliente usa el mismo valor) |
 | `--t-fast` | 120 ms | Transiciones cortas |
 
-Además, en el CSS: sacudida del dígito erróneo de 320 ms (`sk-shake`) y puntos de espera con un ciclo de 1,2 s (`sk-wait`). Los avisos breves duran 6 s (decisión 4 de `design/entrega-f8.md`).
+Además, en el CSS: sacudida del dígito erróneo de 320 ms (`sk-shake`) y puntos de espera con un ciclo de 1,2 s (`sk-wait`). Los avisos breves duran 6 s (decisión 4, sección 10).
 
 ## 3. Tipografía
 
@@ -151,7 +149,7 @@ Los tamaños del tablero salen de la celda: dígito = 52 % de la celda, suma = 1
 - **Bordes:** 1 px en toda la interfaz; 2 px solo en las cajas del tablero, la selección propia y el foco.
 - **Sombra flotante** (`--shadow-float`): solo diálogos y avisos.
 - **Foco:** contorno ink de 2 px con 2 px de separación. Es ink para no confundirse con la selección, que es accent.
-- **Área táctil mínima:** 44 × 44 px (`--target`). Excepción conocida: la celda del tablero a 360 px mide 37,3 px (el botón cubre la celda entera, bordes incluidos); la lupa ayuda a verificar la celda elegida. Verificada en un celular en el punto de control de F8, sin cambios.
+- **Área táctil mínima:** 44 × 44 px (`--target`). Excepción conocida: la celda del tablero a 360 px mide 37,3 px (el botón cubre la celda entera, bordes incluidos); la lupa ayuda a verificar la celda elegida. Verificada en un celular real, sin cambios.
 - **Iconos:** SVG en línea, de trazo, 16 × 16 con trazo de 1,5 px y extremos redondeados, en `currentColor`. Dibujados para el prototipo; sin emojis ni biblioteca de iconos.
 
 ## 5. Componentes y sus estados
@@ -176,7 +174,7 @@ Disposición: 3 × 3 en 1280; 9 en fila en 768; 5 + 4 escalonadas en 360 y en ho
 - **Modo:** segmentado Número / Notas (atajo N). El espectador solo tiene Notas.
 - **Capa de escritura:** Personal / Grupal (atajo G), activa solo en modo Notas.
 - **Visibilidad:** un botón de ojo por capa (`.vis`). Oculta: ojo tachado, borde discontinuo y `aria-pressed="false"`. En escritorio se ve la forma corta («Personales», «Grupales») bajo «Mostrar notas»; el nombre accesible es el completo («Notas personales»). Desde 320 px y por debajo de 360, la capa y su ojo van en dos filas.
-- **«Usar notas» (F8, preferencia local):** un interruptor de Ajustes, activado por defecto, que se guarda solo en el navegador (`localStorage`, `sk:pref:useNotes`) y no viaja por el protocolo (SPEC, R-06). Desactivado, se ocultan el selector Número / Notas, la capa de escritura, la visibilidad, la lupa y «Borrar»; el tablero no dibuja notas, N, G y Supr no hacen nada, y las teclas 1–9 solo colocan números. «Usar notas» va primero en Ajustes y recibe el foco inicial.
+- **«Usar notas» (preferencia local):** un interruptor de Ajustes, activado por defecto, que se guarda solo en el navegador (`localStorage`, `sk:pref:useNotes`) y no viaja por el protocolo (SPEC, R-06). Desactivado, se ocultan el selector Número / Notas, la capa de escritura, la visibilidad, la lupa y «Borrar»; el tablero no dibuja notas, N, G y Supr no hacen nada, y las teclas 1–9 solo colocan números. «Usar notas» va primero en Ajustes y recibe el foco inicial.
 
 ### 5.5 Jugadores
 - **Monograma** (`.mono`, 32 px; 24 y 20 px en tamaños menores): círculo con el color del jugador y la inicial en paper. **Desconectado:** fondo paper, inicial y **contorno discontinuo** de su color. **Asiento libre:** círculo discontinuo border y «Asiento libre» / «N asientos libres».
@@ -208,10 +206,10 @@ Fondo ink al 45 %; panel paper de hasta 440 px, radio 10, sombra flotante. Títu
 - **Espera** (`.waiting`): bloque surface con tres puntos animados y el texto «Esperando a que …».
 - **Puntos en botón** (`.bdots`): para «Entrando…» y cargas.
 - **Esqueleto** (`.skel`) para la carga inicial.
-- **Registro de actividad (más sobrio desde F8):** monograma de 20 px, texto «Tomás · error en F7 C3» y tiempo de partida en tnum. En 1280, una sola línea con la última entrada bajo los jugadores y «Ver actividad», que abre el historial completo en un diálogo. En 360 y 768 queda plegado en un botón que muestra la última entrada (`aria-expanded`); en horizontal, detrás de un botón de cabecera. Una región oculta con `role="log"` anuncia cada entrada nueva, y el historial incluye los textos de los avisos.
-- **Enlace al repositorio (F8):** solo en la cabecera del Inicio, arriba a la derecha; nunca en la partida. Es la marca de GitHub (Invertocat) en SVG local, sin CDN, de 20 px dentro de un área táctil de 44 × 44, en ink (el negro de la paleta), sin cambiar su forma ni su proporción, como piden las pautas de uso del logo de GitHub. Es un botón fantasma con el nombre accesible «Código fuente en GitHub» (también como `title`), abre https://github.com/slesgmd/sudoku-killer en otra pestaña (`target="_blank"`) con `rel="noopener noreferrer"`.
+- **Registro de actividad (más sobrio que en el prototipo):** monograma de 20 px, texto «Tomás · error en F7 C3» y tiempo de partida en tnum. En 1280, una sola línea con la última entrada bajo los jugadores y «Ver actividad», que abre el historial completo en un diálogo. En 360 y 768 queda plegado en un botón que muestra la última entrada (`aria-expanded`); en horizontal, detrás de un botón de cabecera. Una región oculta con `role="log"` anuncia cada entrada nueva, y el historial incluye los textos de los avisos.
+- **Enlace al repositorio:** solo en la cabecera del Inicio, arriba a la derecha; nunca en la partida. Es la marca de GitHub (Invertocat) en SVG local, sin CDN, de 20 px dentro de un área táctil de 44 × 44, en ink (el negro de la paleta), sin cambiar su forma ni su proporción, como piden las pautas de uso del logo de GitHub. Es un botón fantasma con el nombre accesible «Código fuente en GitHub» (también como `title`), abre https://github.com/slesgmd/sudoku-killer en otra pestaña (`target="_blank"`) con `rel="noopener noreferrer"`.
 - **Menú compacto** (`.menu`): Ayuda, Ajustes y Salir en móvil y horizontal.
-- **Marcador de foto** (`.ph`): rectángulo surface con aspa y leyenda de la foto prevista (ver `design/fotos.md`).
+- **Marcador de foto** (`.ph`): rectángulo surface con aspa y leyenda de la foto prevista. Solo existe en el prototipo: la v1 no lleva fotos.
 - **Controles de prueba** (`.testbar`, barra oscura): solo del prototipo, **no forman parte de la interfaz**.
 
 ## 6. Tablero y celdas
@@ -219,7 +217,7 @@ Fondo ink al 45 %; panel paper de hasta 440 px, radio 10, sombra flotante. Títu
 ### 6.1 Dibujo
 - Celda paper; líneas de celda de 1 px (border) y de caja de 2 px (ink).
 - **Jaula:** línea discontinua de 2 px (`--cage-width`) a 3 px hacia dentro, con esquinas cóncavas resueltas; 3 px (`--cage-width-selected`) en la jaula de la celda seleccionada. Tiene el mismo grosor que la línea de caja, pero se distingue de ella por el trazo discontinuo, el color (`--cage-line` frente a ink) y la separación de 3 px.
-  - **Grosores enteros:** Chromium redondea hacia abajo el ancho de un borde fraccionario a píxeles enteros en cualquier densidad (medido en F8: 1,5 px se dibuja como 1 px y 2,5 px como 2 px). WebKit lo hace solo con densidad 1. Por eso los dos grosores son enteros: con 2,5 px, la jaula seleccionada habría quedado igual que las demás en Chrome. El contraste de `--cage-line` no cambia: 4,05 sobre paper, 3,39 sobre selección, 3,66 sobre relación y 3,55 sobre error (mínimo 3:1).
+  - **Grosores enteros:** Chromium redondea hacia abajo el ancho de un borde fraccionario a píxeles enteros en cualquier densidad (medido: 1,5 px se dibuja como 1 px y 2,5 px como 2 px). WebKit lo hace solo con densidad 1. Por eso los dos grosores son enteros: con 2,5 px, la jaula seleccionada habría quedado igual que las demás en Chrome. El contraste de `--cage-line` no cambia: 4,05 sobre paper, 3,39 sobre selección, 3,66 sobre relación y 3,55 sobre error (mínimo 3:1).
 - **Suma:** arriba a la izquierda de la celda ancla (la de menor índice), con el fondo de la celda para cortar la línea.
 - **Variante A (elegida): franja superior reservada.** Todas las celdas reservan arriba la altura de la suma. Las notas ocupan el resto en una cuadrícula 3 × 3 con **posición fija por dígito** en todo el tablero.
 - **Notas:** grupales en ink 600; personales en accent 400 subrayadas; en las dos capas, ink 600 subrayado en accent.
@@ -260,16 +258,16 @@ Fondo ink al 45 %; panel paper de hasta 440 px, radio 10, sombra flotante. Títu
 
 - **Contraste AA** medido para cada par usado (sección 2.5); los pares que fallan están prohibidos.
 - **Nunca solo color:** error (tachado, inicial y aviso con texto), notas (negrita frente a subrayado), pista (esquina doblada), pendiente (puntos), presencia (contorno e inicial), desconectado (contorno discontinuo y etiqueta), inactivo (borde discontinuo), capa oculta (ojo tachado), mismo dígito (anillo).
-- **Teclado:** flechas para mover la selección; 1–9 para número o nota según el modo; N alterna Número y Notas; G alterna la capa; Supr borra las notas de la capa activa en la celda; Ctrl+Z deshace tus últimas notas (agrupadas); H pide pista (abre la confirmación); Esc cierra un diálogo o un menú. Implementados en F8; se ignoran mientras el foco está en un campo de texto. Se listan en la Ayuda (F10).
+- **Teclado:** flechas para mover la selección; 1–9 para número o nota según el modo; N alterna Número y Notas; G alterna la capa; Supr borra las notas de la capa activa en la celda; Ctrl+Z deshace tus últimas notas (agrupadas); H pide pista (abre la confirmación); Esc cierra un diálogo o un menú. Se ignoran mientras el foco está en un campo de texto. Se listan en la Ayuda.
 - **Foco itinerante en el tablero:** solo la celda seleccionada entra en el orden de tabulación (`tabindex` 0; el resto −1). El tablero es `role="grid"` con filas y `gridcell` y `aria-selected`.
 - **Etiqueta de cada celda:** «Fila 2, columna 7, jaula de 10, vacía, notas grupales 1 y 2, notas personales 2 y 4», «…, 3, resuelta por Rafa», «…, pista usada por Valeria», «…, pendiente de confirmación», «…, vacía; Tomás acaba de fallar con un 3», más «mismo número que la celda seleccionada» y «Valeria está aquí».
 - **Regiones vivas:** avisos con `role="status"` (polite) o `role="alert"` (assertive) según la tabla de estados; región oculta `aria-live` con la última actividad; `aria-busy` durante las cargas; cronómetro `role="timer"` con `aria-live="off"`.
-- **Diálogos:** foco atrapado, Esc, foco inicial en la acción segura y vuelta al control que lo abrió (confirmado en F8, con prueba de componente).
-- **Foco inicial de Ajustes (resuelto en F8):** en el primer interruptor («Usar notas»), en el lobby y en la partida, porque los interruptores son los controles del diálogo y la razón de abrirlo. Activarlo exige Espacio o Intro, así que no hay cambios por accidente. «Cerrar» y la X cierran, igual que Esc.
+- **Diálogos:** foco atrapado, Esc, foco inicial en la acción segura y vuelta al control que lo abrió (con prueba de componente).
+- **Foco inicial de Ajustes:** en el primer interruptor («Usar notas»), en el lobby y en la partida, porque los interruptores son los controles del diálogo y la razón de abrirlo. Activarlo exige Espacio o Intro, así que no hay cambios por accidente. «Cerrar» y la X cierran, igual que Esc.
 - **Movimiento reducido:** con `prefers-reduced-motion`, sin sacudida del error ni animación de los puntos.
 - **Texto oculto** donde la forma no basta: puntos, vidas, «Puesto 2, empate», código deletreado («H P Q 6 N Z»).
 - **Áreas táctiles** de 44 px, salvo la celda del tablero a 360 px (37,3 px; sección 4).
-- **Avisos breves de 6 s:** se aceptan frente a WCAG 2.2.1 (decisión 4 de `design/entrega-f8.md`).
+- **Avisos breves de 6 s:** se aceptan frente a WCAG 2.2.1 (decisión 4, sección 10).
 
 ## 8. Responsive
 
@@ -284,7 +282,7 @@ Partida (convención del prototipo en `game.css`; en producción, media queries)
 
 En móvil y horizontal, la cabecera es compacta (código, dificultad, cronómetro, pistas y menú «⋯»).
 
-Resto de pantallas (`screens.css`): `.L-movil` (< 600 px) y `.L-escritorio` (≥ 1024 px). **Pendiente para F10:** el prototipo no dibuja estas pantallas entre 600 y 1023 px.
+Resto de pantallas (`screens.css`): `.L-movil` (< 600 px) y `.L-escritorio` (≥ 1024 px). Entre 600 y 1023 px, que el prototipo no dibuja, estas pantallas usan una columna centrada (el lobby, de hasta 560 px, y la Ayuda con el índice desplegable).
 
 ## 9. Estados transversales
 
@@ -304,8 +302,8 @@ Cuatro tipos:
 | Demasiadas acciones | Aviso | «Vas muy rápido: la última acción no se envió. Espera un momento y repítela.» | Polite. Sin efecto en vidas ni puntos. |
 | Sala borrada | Aviso integrado | «La sala HPQ6NZ ya no existe. Las salas se borran tras 2 minutos sin nadie conectado.» | En Inicio, con ficha caducada: se descarta la ficha. En Entrar, error «sala inexistente». |
 | Acción no permitida | Aviso de error | «No se usó la pista: ya eres espectador y solo puedes escribir notas.» | Assertive. La acción salió antes del cambio de rol; sin efecto. |
-| Partida terminada | Banner + integrado | «La partida terminó. El equipo completó el tablero en 31:07.» con «Ver resultados» | Tablero completo sin selección ni lupa; controles inactivos; cronómetro detenido. En F8, sin la pantalla Resultados, el botón era «Volver al inicio» (decisión del autor); desde F10e es «Ver resultados», y el paso a Resultados nunca es automático. |
-| Confirmación de salida | Diálogo | «¿Salir de la sala?» | `alertdialog`; foco en «Quedarme»; Esc cancela. Aviso de traspaso del derecho de iniciar solo si quien sale lo tiene (decisión 2), también en la partida (decidido en F8). |
+| Partida terminada | Banner + integrado | «La partida terminó. El equipo completó el tablero en 31:07.» con «Ver resultados» | Tablero completo sin selección ni lupa; controles inactivos; cronómetro detenido. El paso a Resultados nunca es automático. |
+| Confirmación de salida | Diálogo | «¿Salir de la sala?» | `alertdialog`; foco en «Quedarme»; Esc cancela. Aviso de traspaso del derecho de iniciar solo si quien sale lo tiene (decisión 2), también en la partida. |
 | Confirmación de pista | Diálogo | «¿Usar una pista en F2 C7?» «Cuesta −H puntos a quien la usa y no da bonus.» | Siempre se pide; requiere celda vacía; foco en «Cancelar». |
 | «Ya resuelta» | Aviso, solo al autor | «Valeria resolvió F1 C3 un instante antes. Tu jugada no cuenta y no pierdes vida.» | Polite; sin destello. |
 | Error propio | Aviso de error + destello | «El 3 no va en F7 C3. Te quedan 2 vidas.» | Assertive; destello de 1500 ms con tu inicial, que ven todos. |
@@ -314,13 +312,29 @@ Cuatro tipos:
 | No se pudo deshacer | Aviso | «No se pudo deshacer: otra persona cambió esa nota grupal después.» | También «…: la celda ya está resuelta». Polite. |
 | Traspaso del derecho de iniciar | Aviso integrado | «Inés salió de la sala. Ahora inicia la partida Tomás.» | En el lobby. `role=status`. |
 | Errores al entrar | Error de campo o aviso | Sala inexistente, sala llena, apodo en uso, apodo no válido, fallo de conexión, carga | Hoja «Entrar · validación, errores y carga». |
-| No se pudo empezar (F8) | Aviso de error en el formulario | «No se pudo empezar. La partida no terminó de cargar. Revisa tu conexión y vuelve a intentarlo.» con «Reintentar» | Si la entrada o la carga fallan (error del servidor) o no terminan en 15 s, el inicio vuelve con el aviso en lugar de «Entrando…» para siempre. Es el mismo aviso que «Fallo de conexión» en Entrar: `role=alert`, con el apodo y la dificultad conservados. «Reintentar» vuelve a enviar el formulario. Si ya había entrado a la sala, sale de ella. T-37.1. |
+| No se pudo empezar | Aviso de error en el formulario | «No se pudo empezar. La partida no terminó de cargar. Revisa tu conexión y vuelve a intentarlo.» con «Reintentar» | Si la entrada o la carga fallan (error del servidor) o no terminan en 15 s, el inicio vuelve con el aviso en lugar de «Entrando…» para siempre. Es el mismo aviso que «Fallo de conexión» en Entrar: `role=alert`, con el apodo y la dificultad conservados. «Reintentar» vuelve a enviar el formulario. Si ya había entrado a la sala, sale de ella. T-37.1. |
+
+## 10. Correcciones al prototipo
+
+El HTML del prototipo no se corrigió: estas decisiones lo enmiendan y se aplicaron en `apps/web`.
+
+- **Variante A del tablero** (franja superior reservada para la suma). La variante B (la fila 1 · 2 · 3 de notas corrida a la derecha de la suma) se descartó: a 37 px la suma ocupa la casilla del 1, y las notas perderían su posición fija.
+- **Inter** para la interfaz y el tablero, y **Newsreader** solo en titulares de 24 px o más. IBM Plex Sans queda de reserva: en la prueba en celular, Inter distingue el 1 y el 7 por dos rasgos y se lee a 10 px.
+- Solo tema claro (el oscuro está en `docs/IDEAS_FUTURAS.md`).
+
+1. **Ajustes solo está disponible dentro de una sala** (lobby, partida y resultados), porque `settings.update` exige ser miembro (SPEC §4.2). En Ayuda solo aparece si se abrió desde una sala.
+2. **El aviso de que el derecho de iniciar pasa a otra persona solo aparece si quien sale tiene ese derecho**, en todos los diálogos de salida.
+3. **«Volver a la sala» lleva a la pantalla que corresponde al estado de la sala:** lobby (`waiting`), partida (`running`) o resultados (`finished`). La sala tiene una sola ruta (`#/sala/CODIGO`) y la pantalla sale de su estado.
+4. **Los avisos breves duran 6 s y se pausan con el cursor encima o con el foco.** Se aceptan frente a WCAG 2.2.1 (tiempo ajustable) porque la información queda en el registro de actividad y en la lista de jugadores.
+5. **Deshacer «Borrar notas» agrupa varios `note.undo` del lado del cliente** y resume el resultado («Se recuperaron X de Y notas»). El protocolo no cambia.
+6. **El anillo de mismo dígito se verificó en un celular real**, junto con el área táctil y las notas de 8 px con la lupa: sin cambios.
+7. **Sin fotos en la v1:** las pantallas fuera de la partida usan una columna centrada, y Resultados va sobre el fondo `surface`.
 
 ---
 
 ## Revisión de originalidad (T-18.1)
 
-**Fecha:** 2026-10-23. **Alcance:** las 4 páginas y los 51 artboards de `design/prototipo/` y los tokens, la tipografía, los iconos y los textos de esta guía. **Contra qué se compara:** la app de referencia (sudoku.com/es/killer) tal como la describe `docs/referencia.md`. Ese estudio registró **solo comportamiento**, sin colores, tipografías, maquetación ni capturas, y el repositorio no guarda material visual de la referencia (la evidencia de F1 está fuera de git). Por eso la revisión comprueba que la identidad se definió desde cero y que lo que coincide con la referencia es una convención del género o una función, no su forma.
+**Fecha:** 2026-10-23. **Alcance:** las 4 páginas y los 51 artboards de `design/prototipo/` y los tokens, la tipografía, los iconos y los textos de esta guía. **Contra qué se compara:** una app de sudoku killer existente, usada como referencia de reglas (sudoku.com/es/killer). De ella se estudió **solo el comportamiento**, sin colores, tipografías, maquetación ni capturas, y el repositorio no guarda material visual suyo. Por eso la revisión comprueba que la identidad se definió desde cero y que lo que coincide con la referencia es una convención del género o una función, no su forma.
 
 | Comprobación | Resultado |
 |---|---|
@@ -330,18 +344,18 @@ Cuatro tipos:
 | Textos | Propios, en español, escritos para este juego (cooperativo, notas por capas, vidas por persona, pistas de equipo). |
 | Código | El prototipo no contiene código de la referencia; su motor (`support.js`) es propio. |
 | Tablero | Retícula 9 × 9 con cajas marcadas, jaulas discontinuas con la suma arriba a la izquierda: **convención del sudoku killer**, común a todo el género. La forma es propia: franja reservada para la suma (variante A), línea a 3 px con esquinas cóncavas y suma que corta la línea con el fondo de la celda. |
-| Selección y resaltado | Resaltar fila, columna y caja es una convención del género. Lo propio: resaltado también de la **jaula** (línea de 2 px), que la referencia no tiene (`docs/referencia.md`, sección 7), y **anillo** para el mismo dígito en lugar de relleno. |
+| Selección y resaltado | Resaltar fila, columna y caja es una convención del género. Lo propio: resaltado también de la **jaula** (línea de 2 px), que la referencia no tiene, y **anillo** para el mismo dígito en lugar de relleno. |
 | Notas | La referencia solo tiene notas personales con un control de lápiz. Aquí hay **dos capas** (personal y grupal) con marca tipográfica distinta, selector de capa de escritura y de visibilidad, y una lupa en móvil. |
-| Teclado | Un teclado numérico es una convención del género. Lo propio: **contador de restantes** en cada tecla y «✓» al completar (la referencia solo deshabilita la tecla, sección 13); disposición escalonada en móvil. |
+| Teclado | Un teclado numérico es una convención del género. Lo propio: **contador de restantes** en cada tecla y «✓» al completar (la referencia solo deshabilita la tecla); disposición escalonada en móvil. |
 | Errores y vidas | Vidas por persona con corazones, destello con la **inicial del autor**, paso a espectador: mecánicas y formas propias del modo cooperativo. |
 | Funciones sin equivalente en la referencia | Salas con código y apodo, lobby, presencia de compañeros, registro de actividad, ranking de aporte, pistas compartidas con confirmación, estados de red. |
 | Funciones de la referencia que no se replican | Pantalla de pausa, ajustes de resaltado desactivables, puntuación por velocidad. |
 
 **Conclusión:** nada del prototipo replica la interfaz de la app de referencia. Las coincidencias son convenciones del sudoku killer (retícula, jaulas con suma, teclado numérico, resaltado de fila, columna y caja) resueltas con forma propia. Cumple R-18 y T-18.1.
 
-**Para F8:** al implementar no se toman capturas ni recursos de la referencia; cualquier cambio de diseño que se acerque a ella se vuelve a revisar con esta lista.
+**Al implementar** no se toman capturas ni recursos de la referencia; cualquier cambio de diseño que se acerque a ella se vuelve a revisar con esta lista.
 
-**Repaso al cerrar F8 (2026-10-24).** Cambios de diseño del punto de control y de la prueba con el bot, revisados con la misma lista:
+**Repaso del 2026-10-24.** Cambios de diseño de las pruebas en celular y con el bot, revisados con la misma lista:
 - **Jaulas de 2 px y de 3 px la seleccionada:** solo cambia el grosor de una forma propia (línea discontinua a 3 px hacia dentro, con esquinas cóncavas).
 - **Actividad en una línea con «Ver actividad»:** el registro de actividad no tiene equivalente en la referencia.
 - **«Usar notas»:** es una preferencia local que oculta las notas por capas, que la referencia no tiene. No se parece a sus ajustes de resaltado, que no se replican.

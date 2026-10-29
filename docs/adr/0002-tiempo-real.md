@@ -4,7 +4,7 @@
 - Fecha: 2026-10-22
 
 ## Contexto
-Hasta 6 jugadores por sala intercambian jugadas, notas y presencia con latencia baja (objetivo de F11: p95 menor a 150 ms).
+Hasta 6 jugadores por sala intercambian jugadas, notas y presencia con latencia baja (objetivo: p95 menor a 150 ms en la prueba de carga).
 
 El servidor es autoritativo. El estado se reconstruye desde un registro de eventos propio (ADR 0004), y el protocolo tiene versión y se valida con Zod (SPEC §4). La reconexión se hace con una ficha propia, con un plazo de gracia de 2 minutos y recuperación de asiento, vidas, puntos y notas.
 
@@ -30,7 +30,7 @@ Se usa **WebSocket con la librería `ws`** y un **protocolo propio**: JSON con e
 - Límite de velocidad por conexión con cubetas de tokens (SPEC §4.8).
 - Comprobación del `Origin` en el handshake.
 - Las conexiones sin sala se cierran a los 30 s.
-- En producción solo se acepta `wss://` (F12).
+- En producción solo se acepta `wss://` (ADR 0007).
 
 **Orden**
 - Cada sala tiene una cola de comandos que se procesa de a uno, y así se define "la primera que llega".
@@ -56,14 +56,14 @@ Se usa **WebSocket con la librería `ws`** y un **protocolo propio**: JSON con e
 - **WebTransport y WebRTC** son excesivos para hasta 6 jugadores y tienen menos soporte.
 
 ## Consecuencias
-- Tenemos control total y una superficie mínima, a cambio de implementar y probar el heartbeat, la reconexión, el límite de velocidad y la saturación. Esto se agrega a F9 y a sus pruebas I.
-- El `Transport` en memoria para las pruebas y el servidor simulado de F8 salen de la misma interfaz.
-- Pendiente para F11: calibrar los límites con la prueba de carga.
+- Tenemos control total y una superficie mínima, a cambio de implementar y probar el heartbeat, la reconexión, el límite de velocidad y la saturación. Esto se suma al servidor de salas y a sus pruebas de integración.
+- El `Transport` en memoria para las pruebas y el servidor simulado del cliente salen de la misma interfaz.
+- Los límites se validaron con la prueba de carga (`docs/carga.md`).
 
-## Nota de F9 (2026-10-24): implementación
+## Nota del 2026-10-24: implementación
 - El adaptador `ws` está en `apps/server/src/infra/ws-transport.ts`, detrás de la interfaz `Transport`; las pruebas usan un transporte en memoria con el mismo contrato.
 - **Origen:** el handshake solo se acepta si `Origin` está en `ALLOWED_ORIGINS` (variable de entorno, separada por comas; en desarrollo, `http://localhost:5173`). Un origen ausente o ajeno recibe HTTP 403, y una ruta distinta de `/ws`, 404.
 - **Heartbeat:** ping cada 15 s; se termina la conexión que no respondió el anterior (entre 15 y 30 s sin pong). Usa el `Clock` del servidor, así la prueba avanza un reloj falso.
 - **Límites:** cubeta de comandos de 20 por segundo con ráfagas de 40 (`rate_limited`); presencia, 50 por segundo con ráfaga de 50, y ping, 2 por segundo con ráfaga de 5, descartando lo que sobra. Un mensaje binario recibe `bad_request`.
 - **Cierres:** 1001 (apagado), 1009, 1012 (sala cerrada para reconstruirla, E-16), 1013, 4000, 4001 y 4002 (sin sala en 30 s). SPEC §4.4.
-- Para F10: en desarrollo, Vite reenvía `/ws` al servidor (proxy), así el servidor sigue en 127.0.0.1 y `ALLOWED_ORIGINS` incluye el origen de `dev:lan` solo en desarrollo.
+- En desarrollo, Vite reenvía `/ws` al servidor (proxy), así el servidor sigue en 127.0.0.1 y `ALLOWED_ORIGINS` incluye el origen de `dev:lan` solo en desarrollo.

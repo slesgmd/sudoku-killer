@@ -4,7 +4,7 @@
 - Fecha: 2026-10-22
 
 ## Contexto
-Las notas grupales son una capa de candidatos compartida, en la que escriben a la vez hasta 6 personas, espectadores incluidos (P5). El plan exige operaciones explícitas de agregar o quitar, ordenadas por el servidor, sin alternar (`PLAN.md` §2), y una limpieza automática al bloquearse una celda. P7 agrega el deshacer con una condición: solo se aplica si el estado sigue siendo el que dejó la operación. La interfaz tiene que responder al instante aunque haya latencia.
+Las notas grupales son una capa de candidatos compartida, en la que escriben a la vez hasta 6 personas, espectadores incluidos (P5). Las reglas de producto exigen operaciones explícitas de agregar o quitar, ordenadas por el servidor, sin alternar, y una limpieza automática al bloquearse una celda. P7 agrega el deshacer con una condición: solo se aplica si el estado sigue siendo el que dejó la operación. La interfaz tiene que responder al instante aunque haya latencia.
 
 ## Decisión
 
@@ -43,10 +43,10 @@ Las notas grupales son una capa de candidatos compartida, en la que escriben a l
 - **CRDT (OR-Set por celda):** sirve para trabajar sin conexión y sin un servidor central. Aquí siempre hay servidor autoritativo y conexión, así que agrega metadatos y complejidad sin ningún beneficio.
 - **El conjunto completo de la celda, gana la última escritura:** dos jugadores que agregan dígitos distintos a la vez se pisarían.
 - **Alternar:** lo prohíbe el plan, por la anulación silenciosa entre operaciones concurrentes.
-- **Deshacer sin comprobación (inversa ciega):** podría deshacer el trabajo de otro jugador. El autor pidió la comprobación (P7).
+- **Deshacer sin comprobación (inversa ciega):** podría deshacer el trabajo de otro jugador. Por eso P7 exige la comprobación.
 - **Limpieza como eventos explícitos de borrado:** infla el registro y abre la puerta a divergencias si un cliente se pierde un evento. La función determinista hace lo mismo con menos datos.
 
 ## Consecuencias
 - La convergencia se puede verificar con una prueba de propiedades (T-16.2).
 - La misma lógica de pendientes sirve para las notas personales. Allí también hay comprobación al deshacer, porque la limpieza automática puede modificar la nota.
-- La función `cleanupPeers` forma parte del contrato del motor (F4). Si cambia, también cambia la reproducción de partidas viejas, así que su comportamiento se fija con tests.
+- La función `cleanupPeers` forma parte del contrato del motor (`docs/motor.md`). Si cambia, también cambia la reproducción de partidas viejas, así que su comportamiento se fija con tests.
