@@ -1,6 +1,6 @@
 // Sesión guardada en este navegador (SPEC §2.4): la ficha de reconexión de cada sala, en
 // `sk:token:<code>`, el último apodo, la última sala y la clave de acceso del grupo (`sk:access`,
-// F12, R-39), que solo sale de aquí hacia el servidor, en `POST /access` y en el handshake del
+// R-39), que solo sale de aquí hacia el servidor, en `POST /access` y en el handshake del
 // WebSocket, y solo se guarda después de que `POST /access` la aceptó. La ficha solo sale de aquí hacia el servidor,
 // en `room.join`: nunca va a la URL, a un log, al estado de la interfaz ni a otros jugadores. Si el
 // almacenamiento no está disponible (modo privado estricto), la sesión dura lo que la página.

@@ -1,7 +1,7 @@
-// Análisis de partidas jugadas para la recalibración de la puntuación (F11h, `docs/puntuacion.md`,
+// Análisis de partidas jugadas para la recalibración de la puntuación (`docs/puntuacion.md`,
 // sección 11). Puro: recibe los registros de eventos de partidas terminadas y sus puzzles públicos,
 // los reproduce con el reductor de `packages/game` y calcula lo que la sección 11 pide medir. No
-// cambia ningún parámetro: la decisión sobre P y una versión nueva de los parámetros son de F13.
+// cambia ningún parámetro: una versión nueva de los parámetros sería un archivo nuevo.
 //
 // Limitaciones del registro (ver la salida `limits`): la presencia no se guarda, así que T(L) se
 // estima con el tiempo entre jugadas de un mismo jugador (`docs/IDEAS_FUTURAS.md`, sección 8) y el

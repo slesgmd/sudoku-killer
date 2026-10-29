@@ -1,6 +1,6 @@
 // El servidor de salas real sobre `ws` en 127.0.0.1 (puerto libre), con el banco de pruebas en PGlite,
 // un reloj falso y el inspector de filtración (SPEC §8.3). Lo usan las pruebas del adaptador `ws`
-// y las del cliente contra el servidor real (F10).
+// y las del cliente contra el servidor real.
 import { createRng } from "@sudoku-killer/engine";
 import { AccessGate, hashAccessKey } from "../../src/infra/access.ts";
 import { seededIds } from "../../src/infra/random.ts";
@@ -32,7 +32,7 @@ export interface WsServerOptions {
   /** Topes más bajos que los de producción, para probarlos (S-01). */
   readonly maxConnections?: number;
   readonly maxRooms?: number;
-  /** La clave de acceso del grupo que pide el servidor (F12, R-39); sin ella, no pide. */
+  /** La clave de acceso del grupo que pide el servidor (R-39); sin ella, no pide. */
   readonly accessKey?: string;
   readonly trustProxyHops?: number;
   readonly maxConnectionsPerIp?: number;

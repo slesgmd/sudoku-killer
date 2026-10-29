@@ -1,4 +1,4 @@
-// Parámetros de la puntuación (F6, `docs/puntuacion.md`). Se versionan: una partida guarda la
+// Parámetros de la puntuación (`docs/puntuacion.md`). Se versionan: una partida guarda la
 // versión con que se puntuó (`scoringParamsVersion`) y se puede recalcular con otra (T-32.4).
 import { z } from "zod";
 import v1 from "./params.v1.json" with { type: "json" };

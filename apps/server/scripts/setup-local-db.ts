@@ -1,4 +1,4 @@
-// Configura la base de datos local de desarrollo (F9, PostgreSQL 18 en Windows) sin que nadie vea
+// Configura la base de datos local de desarrollo (PostgreSQL 18 en Windows) sin que nadie vea
 // ninguna contraseña:
 //   1. genera con node:crypto una contraseña aleatoria larga para el rol `sudoku_killer`;
 //   2. abre una ventana de psql conectada como `postgres`, donde la persona escribe la contraseña de

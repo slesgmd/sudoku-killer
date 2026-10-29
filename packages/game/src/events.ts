@@ -64,7 +64,7 @@ export type MatchEvent =
         readonly playerId: PlayerId;
         readonly cell: number;
         readonly value: number;
-        /** `levelToDeduce` antes de la jugada, con los descartes públicos (F6). */
+        /** `levelToDeduce` antes de la jugada, con los descartes públicos. */
         readonly level: number;
         /** Versión del calificador que dio `level`. */
         readonly graderVersion: string;

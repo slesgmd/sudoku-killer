@@ -1,4 +1,4 @@
-// Tipos del calificador humano (F4e y F4f): deducciones, técnicas y niveles (SPEC R-35, T-35.4 y T-35.5).
+// Tipos del calificador humano: deducciones, técnicas y niveles (SPEC R-35, T-35.4 y T-35.5).
 import type { GraderContext } from "./context.ts";
 import type { GraderState } from "./state.ts";
 

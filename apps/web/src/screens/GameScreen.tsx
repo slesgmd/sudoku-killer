@@ -1,5 +1,5 @@
 // Pantalla de partida (design/pantallas.md §1.4) en las cuatro disposiciones, con los atajos de
-// teclado (docs/diseno.md §7) y los estados que produce el modo simulado (entrega-f8.md §3).
+// teclado (docs/diseno.md §7) y los estados que produce el modo simulado (docs/diseno.md §9).
 import { useCallback, useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { Activity, activityText } from "../components/Activity.tsx";

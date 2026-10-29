@@ -1,4 +1,4 @@
-// Puntos de cada hecho de la partida (F6, SPEC §5). Las funciones de `createScoring` tienen las firmas
+// Puntos de cada hecho de la partida (SPEC §5). Las funciones de `createScoring` tienen las firmas
 // de `onCorrect`, `onMistake` y `onHint` de `GameMode`: sus contextos son tipos mínimos a los que el
 // `PlacementContext` de la SPEC es asignable, así que el modo Normal las usa sin adaptarlas.
 import { SCORED_LEVELS, type ScoringParams } from "./params.ts";

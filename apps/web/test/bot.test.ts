@@ -1,4 +1,4 @@
-// Bot compañero (F8f): juega por el protocolo v1 contra el servidor simulado, sin ver la solución,
+// Bot compañero: juega por el protocolo v1 contra el servidor simulado, sin ver la solución,
 // con semilla, ritmo configurable y errores a propósito.
 import { createRng } from "@sudoku-killer/engine";
 import { regenerateSeed } from "@sudoku-killer/bank";

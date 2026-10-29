@@ -1,4 +1,4 @@
-// Lista de comprobación de F8 (design/entrega-f8.md §5): los tokens de `tokens.css` son la única
+// Los tokens de `tokens.css` son la única
 // fuente de colores y tipografías del cliente, y las fuentes se sirven en local como woff2, con su
 // licencia OFL.
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -64,7 +64,7 @@ describe("F8 checklist: tokens.css is the only source of colors and fonts", () =
 
   it("tokens.css keeps the values of the F7 prototype, plus the tokens added in F8", () => {
     const prototype = path.resolve(import.meta.dirname, "../design/prototipo/tokens.css");
-    // Agregados en F8, tras el punto de control (docs/diseno.md §2.3).
+    // Agregados al implementar, tras la prueba en celular (docs/diseno.md §2.3).
     const added = ["--cage-width: 2px", "--cage-width-selected: 3px"];
     const current = declarations(TOKENS);
     expect(current.filter((d) => !added.includes(d))).toEqual(declarations(prototype));

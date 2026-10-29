@@ -1,4 +1,4 @@
-// `levelsToDeduce` y los descartes públicos (F6). T-35.7: una sola pasada da el mismo nivel que
+// `levelsToDeduce` y los descartes públicos. T-35.7: una sola pasada da el mismo nivel que
 // `levelToDeduce` en cada celda, y sus puntos fijos por nivel son coherentes con esos niveles y con
 // la solución. T-35.8: descartar dígitos de errores (nunca el de la solución) no contradice la
 // solución y no sube ningún nivel. Si una celda tiene 2 candidatos en el punto fijo del nivel L y

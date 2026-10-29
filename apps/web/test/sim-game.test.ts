@@ -1,4 +1,4 @@
-// Criterio de F8: una partida completa de un jugador contra el servidor simulado, por el protocolo
+// Una partida completa de un jugador contra el servidor simulado, por el protocolo
 // v1 real (esquemas Zod en los dos sentidos) y con el reductor de `@sudoku-killer/game`.
 import { afterEach, describe, expect, it } from "vitest";
 import { createHarness, type SimHarness } from "./helpers/sim.ts";

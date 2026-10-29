@@ -1,4 +1,4 @@
-// Dónde está el servidor de salas (F12). En desarrollo y en las E2E, en el mismo origen que la página
+// Dónde está el servidor de salas. En desarrollo y en las E2E, en el mismo origen que la página
 // (`/ws`, que Vite reenvía). En producción, la web estática y el servidor viven en subdominios
 // distintos (ADR 0007): el build recibe `VITE_SERVER_URL`, que solo puede ser `wss://` (TLS).
 // Sin imports de paquetes del monorepo: `vite.config.ts` importa este archivo, y Vite carga la config
@@ -41,10 +41,10 @@ export function serverUrl(
 }
 
 /**
- * Lo que la página pide al abrirse para que el servidor dormido empiece a despertar (F12g), o `null`
+ * Lo que la página pide al abrirse para que el servidor dormido empiece a despertar, o `null`
  * si el servidor está en el mismo origen (desarrollo y E2E). Es `GET /ws` (T-39.9), no `/healthz`:
  * la regla `||onrender.com/health` de EasyPrivacy, que Brave aplica a las peticiones a otro sitio,
- * bloquea `/healthz` (F12j). `/healthz` queda para el chequeo de Render y la prueba de humo.
+ * bloquea `/healthz`. `/healthz` queda para el chequeo de Render y la prueba de humo.
  */
 export function prewarmUrl(configured: string | undefined): string | null {
   const url = checkServerUrl(configured);

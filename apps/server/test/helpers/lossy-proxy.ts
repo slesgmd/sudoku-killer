@@ -1,4 +1,4 @@
-// Proxies TCP de prueba que se portan como el de Render delante del servidor (F12j). Las respuestas
+// Proxies TCP de prueba que se portan como el de Render delante del servidor. Las respuestas
 // HTTP sin upgrade (`POST /access`, `GET /ws`) pasan tal cual; lo que cambia es el WebSocket:
 // - `early`: pierde lo que el servidor envía detrás del 101 antes de que el cliente envíe algo (lo
 //   que se vio en el primer despliegue, T-39.11).

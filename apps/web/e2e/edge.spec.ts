@@ -1,4 +1,4 @@
-// E2E de F11 sobre casos límite de la SPEC (§7) que tienen su prueba de integración en el servidor,
+// E2E sobre casos límite de la SPEC (§7) que tienen su prueba de integración en el servidor,
 // pero no en el cliente: aquí se comprueba lo que hace la página (reconexión, bandeja de
 // pendientes, pantallas y avisos) contra el servidor real.
 // - derrota con espectadores y su causa en Resultados y al recargar (E-10, T-01.2, T-01.6, T-01.7);

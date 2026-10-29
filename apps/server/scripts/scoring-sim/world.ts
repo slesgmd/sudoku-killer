@@ -1,4 +1,4 @@
-// Modelo del mundo del simulador de la puntuación (F6, `docs/puntuacion.md`): cuánto tarda un bot en
+// Modelo del mundo del simulador de la puntuación (`docs/puntuacion.md`): cuánto tarda un bot en
 // pensar cada celda, cómo elige y cuándo se equivoca. Son supuestos del simulador, no parámetros de
 // la puntuación; la robustez se mide con perfiles de tiempos alternativos.
 import { createRng, type Rng } from "@sudoku-killer/engine";

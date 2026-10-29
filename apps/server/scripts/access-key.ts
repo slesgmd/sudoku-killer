@@ -1,4 +1,4 @@
-// Clave de acceso del grupo (F12, S-02): genera una clave nueva o toma una propia, y escribe la
+// Clave de acceso del grupo (S-02): genera una clave nueva o toma una propia, y escribe la
 // clave, el enlace de invitación y el valor de ACCESS_KEY_HASH para el panel del hosting. Se corre
 // solo en la computadora de quien administra el grupo, nunca en la CI: la salida es secreta.
 //   pnpm --filter @sudoku-killer/server access:key [--own] [--web https://…]

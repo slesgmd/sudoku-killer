@@ -1,4 +1,4 @@
-// Clave de acceso del grupo en el cliente (F12, R-39): sin clave o con una que dejó de valer, la
+// Clave de acceso del grupo en el cliente (R-39): sin clave o con una que dejó de valer, la
 // comprobación por HTTP lleva a «Clave del grupo» (y, de respaldo, el cierre 4003); la clave escrita y
 // la de la invitación (`#k=`) se comprueban con `POST /access` y solo se guardan si valen (T-39.14);
 // una guardada que deja de valer se olvida con un aviso (T-39.15).

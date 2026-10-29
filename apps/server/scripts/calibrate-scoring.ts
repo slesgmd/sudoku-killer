@@ -1,4 +1,4 @@
-// Calibración de la puntuación (F6d, `docs/puntuacion.md`): simula una vez y recalcula los puntajes
+// Calibración de la puntuación (`docs/puntuacion.md`): simula una vez y recalcula los puntajes
 // con una grilla de pesos entre v1 (1/1,5/2/3/4) y 1/2/3/4/5, con β de 1 o 2. P es el mínimo que
 // cumple la condición para adivinadores de nivel ≤ 2 más un margen, y H = B·w(5) + 10. Imprime cada
 // combinación con sus metas y escribe la grilla en JSON.

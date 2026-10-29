@@ -73,7 +73,7 @@ export interface MatchState {
   readonly cells: readonly CellState[];
   readonly groupNotes: Uint16Array;
   readonly hintsLeft: number;
-  /** Dígitos de los errores (públicos), para `levelToDeduce` (F6). Sin repetir. */
+  /** Dígitos de los errores (públicos), para `levelToDeduce`. Sin repetir. */
   readonly excluded: readonly Exclusion[];
   /** Clave de candidato (`noteKey`) → `seq` de su última modificación (P7). */
   readonly lastNoteOp: ReadonlyMap<string, number>;

@@ -1,4 +1,4 @@
-# Base de datos local de desarrollo (F9): PostgreSQL solo escucha en localhost (127.0.0.1 y ::1).
+# Base de datos local de desarrollo: PostgreSQL solo escucha en localhost (127.0.0.1 y ::1).
 # Hace una copia de postgresql.conf, cambia listen_addresses a 'localhost' y reinicia el servicio.
 # Necesita permisos de administrador: se ejecuta con
 #   Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File <este archivo>'

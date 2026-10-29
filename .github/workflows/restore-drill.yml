@@ -1,6 +1,6 @@
 name: Simulacro de restauración
 
-# Simulacro de restauración (F12i, criterio de F12: «restaurar un respaldo funciona»), a mano. Baja
+# Simulacro de restauración (comprueba que restaurar un respaldo funciona), a mano. Baja
 # el último artefacto `db-backup` de `Respaldo de la base`, lo descifra con la clave privada de `age`
 # (secreto BACKUP_AGE_KEY), lo restaura en un PostgreSQL efímero del runner y lo comprueba: recuentos
 # y arranque del servidor con la reconstrucción de las partidas. No toca la base de producción. Cada

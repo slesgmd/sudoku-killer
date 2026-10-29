@@ -1,4 +1,4 @@
-// Calificador, niveles 4 y 5 (F4f). T-35.4: desde estados que todavía admiten la solución (dígitos
+// Calificador, niveles 4 y 5. T-35.4: desde estados que todavía admiten la solución (dígitos
 // correctos colocados y candidatos equivocados quitados al azar), ninguna técnica la contradice. Y
 // cada técnica nueva deduce exactamente lo mismo que un oráculo por fuerza bruta escrito aparte, que
 // no usa nada del calificador.
@@ -375,7 +375,7 @@ const ORACLES: readonly [string, (o: Oracle) => void][] = [
   ],
 ];
 
-/** Cotas medidas en F5, más dos muy chicas para que la cota se note también en 4×4 y 6×6. */
+/** Cotas medidas en el corpus, más dos muy chicas para que la cota se note también en 4×4 y 6×6. */
 const BOUNDS: readonly UnitCombinationBound[] = [
   UNBOUNDED,
   { maxOpenCages: 4, maxCombinations: 8 },

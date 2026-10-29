@@ -1,4 +1,4 @@
-// Cabeceras del sitio (F12, S-05): `vite preview` sirve las mismas que `render.yaml`, y el detector
+// Cabeceras del sitio (S-05): `vite preview` sirve las mismas que `render.yaml`, y el detector
 // de violaciones de la CSP que usan todas las E2E (fixture `player`) ve un script en línea bloqueado
 // (control, como el de T-31.2).
 import { contentSecurityPolicy, securityHeaders } from "../scripts/security-headers.ts";

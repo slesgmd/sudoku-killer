@@ -1,6 +1,6 @@
-// Calificador humano (F4e y F4f, SPEC R-35): resuelve con técnicas por niveles, siempre con la de menor
+// Calificador humano (SPEC R-35): resuelve con técnicas por niveles, siempre con la de menor
 // nivel que encuentre algo, y nunca adivina. `levelToDeduce` da el nivel mínimo con el que una celda
-// queda determinada desde un estado (F6 lo usa para puntuar).
+// queda determinada desde un estado (la puntuación lo usa).
 import type { KillerPuzzle } from "../types.ts";
 import { at } from "../model/at.ts";
 import { popcount } from "../model/mask.ts";
@@ -17,11 +17,11 @@ import { MAX_TECHNIQUE_LEVEL, UNRATED, type Deduction, type Technique } from "./
 
 /**
  * Cambia cuando un cambio del calificador altera el nivel o los pasos de algún puzzle. "1" fue el
- * de F4f (`unitCombination` sin cota); "2" acota `unitCombination` (F5).
+ * de los cinco niveles con `unitCombination` sin cota; "2" acota `unitCombination`.
  */
 export const GRADER_VERSION = "2";
 
-/** Cota de `unitCombination` en `TECHNIQUES` (elegida en F5, `docs/dificultad.md`). */
+/** Cota de `unitCombination` en `TECHNIQUES` (`docs/dificultad.md` y `docs/motor.md`). */
 export const UNIT_COMBINATION_BOUND: UnitCombinationBound = {
   maxOpenCages: 4,
   maxCombinations: 8,
@@ -159,7 +159,7 @@ export function grade(
   };
 }
 
-/** Un dígito descartado en una celda (F6): el de un error, que es público (`cell.mistake`). */
+/** Un dígito descartado en una celda: el de un error, que es público (`cell.mistake`). */
 export interface Exclusion {
   readonly cell: number;
   readonly digit: number;
@@ -171,7 +171,7 @@ export interface BoardState {
   /** `size²` dígitos de 0 a `size`, 0 si la celda está vacía. Los números iniciales se aplican igual. */
   readonly values: readonly number[];
   /**
-   * Dígitos descartados por errores públicos (F6). Un error nunca es el dígito de la solución, así
+   * Dígitos descartados por errores públicos. Un error nunca es el dígito de la solución, así
    * que descartarlo no la contradice, y con más descartes el nivel no sube.
    */
   readonly excluded?: readonly Exclusion[];
@@ -245,7 +245,7 @@ export interface BoardLevels {
 }
 
 /**
- * `levelToDeduce` de todas las celdas en una sola pasada (F6, para el simulador). La secuencia de
+ * `levelToDeduce` de todas las celdas en una sola pasada (para el simulador). La secuencia de
  * pasos no depende de la celda pedida (`levelToDeduce` solo corta antes), así que el nivel de cada
  * celda es el más alto usado hasta que queda con un solo candidato. Antes del primer paso de nivel
  * mayor que L, el estado es el punto fijo de los niveles ≤ L.

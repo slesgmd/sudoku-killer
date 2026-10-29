@@ -1,5 +1,5 @@
 // T-35.1: los solvers A y B devuelven el mismo número de soluciones y, cuando se pueden enumerar,
-// las mismas soluciones. Una discrepancia bloquea F4.
+// las mismas soluciones. Una discrepancia es un error de un solver.
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { solveA, solveB, type Geometry, type KillerPuzzle } from "@sudoku-killer/engine";
@@ -44,7 +44,7 @@ function compare(puzzle: KillerPuzzle): number {
 /**
  * Por tamaño: cadenas, variantes y números iniciales de partida. En 9×9 se parte de 3 números
  * iniciales: sin ellos, B tarda hasta varios segundos en algunos puzzles con muchas soluciones
- * (docs/motor.md). Esos casos se comparan en la medición de 1000 puzzles y en el corpus de F4d.
+ * (docs/motor.md). Esos casos se comparan en la medición de 1000 puzzles y en el corpus del generador.
  */
 describe.each<[Geometry, number, number, number]>([
   [GEOMETRY_6, 30, 40, 0],

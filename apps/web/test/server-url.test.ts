@@ -1,4 +1,4 @@
-// URL del servidor de salas en producción (F12b, ADR 0007): solo `wss://…/ws`; sin configurar, el
+// URL del servidor de salas en producción (ADR 0007): solo `wss://…/ws`; sin configurar, el
 // mismo origen; el precalentamiento con `GET /ws` en el mismo host.
 import { describe, expect, it } from "vitest";
 import { checkServerUrl, prewarmUrl, probeUrl, serverUrl } from "../src/transport/server-url.ts";

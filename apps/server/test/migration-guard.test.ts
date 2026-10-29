@@ -1,4 +1,4 @@
-// Migraciones al arrancar (F12f): en producción una migración destructiva pendiente no se aplica sola
+// Migraciones al arrancar: en producción una migración destructiva pendiente no se aplica sola
 // (ni las que vienen antes en el mismo despliegue) salvo que esté en MIGRATIONS_ALLOW; las de hoy no
 // son destructivas, así que el primer despliegue sobre una base vacía las aplica todas.
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";

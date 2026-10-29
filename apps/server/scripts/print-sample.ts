@@ -1,4 +1,4 @@
-// Muestra imprimible del banco (F5d): 3 puzzles por dificultad en SVG, 2 por hoja A4, en un orden al
+// Muestra imprimible del banco: 3 puzzles por dificultad en SVG, 2 por hoja A4, en un orden al
 // azar y con letras, para que quien los resuelva no sepa la dificultad. Al final, la clave
 // (dificultad, nivel y pasos de cada letra) y las soluciones. Sirve para la prueba manual en papel
 // mientras no haya cliente (docs/dificultad.md).

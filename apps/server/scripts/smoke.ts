@@ -1,4 +1,4 @@
-// Prueba de humo del despliegue (F12b): se corre desde Actions (`smoke.yml`) contra la web y el
+// Prueba de humo del despliegue: se corre desde Actions (`smoke.yml`) contra la web y el
 // servidor publicados. Solo imprime `smoke.<prueba>: ok|fail` (docs/seguridad.md §3); nunca el
 // contenido de una respuesta. Variables: SMOKE_WEB_URL (https://…) y SMOKE_SERVER_URL (wss://…/ws).
 import { randomBytes } from "node:crypto";

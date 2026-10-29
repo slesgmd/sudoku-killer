@@ -1,4 +1,4 @@
-// Genera el manifiesto del banco de puzzles (F5, ADR 0006): recorre semillas en orden; cada semilla
+// Genera el manifiesto del banco de puzzles (ADR 0006): recorre semillas en orden; cada semilla
 // es de una sola dificultad, recibe sus números iniciales y se queda si cumple la banda. Imprime las
 // distribuciones y los tiempos para docs/dificultad.md.
 //

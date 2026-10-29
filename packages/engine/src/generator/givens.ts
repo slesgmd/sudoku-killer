@@ -1,4 +1,4 @@
-// Números iniciales por dificultad (F5, SPEC R-20): se agregan a un puzzle generado, repartidos
+// Números iniciales por dificultad (SPEC R-20): se agregan a un puzzle generado, repartidos
 // entre las cajas y con semilla, y con una guarda opcional que impide que el puzzle baje del piso
 // de su dificultad. Puro: el orden de las celdas sale de la semilla.
 import type { Given } from "../types.ts";

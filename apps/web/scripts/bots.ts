@@ -1,4 +1,4 @@
-// Bots compañeros contra el servidor real (F10, solo desarrollo): entran a una sala existente como
+// Bots compañeros contra el servidor real (solo desarrollo): entran a una sala existente como
 // clientes Node por WebSocket y juegan por el protocolo v1 sin ver la solución (`src/dev/bot/`).
 // Sirven para probar con varios jugadores desde una sola máquina. Se detienen con Ctrl+C.
 //

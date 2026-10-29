@@ -63,7 +63,7 @@ export interface GameServer {
   loseServerClose(lose: boolean): void;
   /** Olvida las claves que no valieron y las esperas por IP (pasa la ventana de `AccessGate`). */
   forgetAccessFailures(): void;
-  /** El servidor «se duerme» (F12g): deja de escuchar en su puerto hasta `wake`. */
+  /** El servidor «se duerme»: deja de escuchar en su puerto hasta `wake`. */
   sleep(): Promise<void>;
   /** Vuelve a arrancar sobre la misma base y el mismo puerto (si estaba dormido). */
   wake(): Promise<void>;
@@ -71,7 +71,7 @@ export interface GameServer {
 }
 
 /**
- * Una conexión real vista por el fixture, con fallas a pedido para el caos (F11c): sabe de quién es
+ * Una conexión real vista por el fixture, con fallas a pedido para el caos: sabe de quién es
  * (por su `room.create` o `room.join`), puede cerrarse justo después de entregar el próximo comando que cambia el
  * estado, antes de su respuesta (E-07), y puede declarar más bytes encolados de los que tiene, para
  * que el servidor tome su propio camino de saturación (E-17).

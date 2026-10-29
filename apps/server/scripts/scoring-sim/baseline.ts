@@ -1,4 +1,4 @@
-// Modelo de comparación basado en velocidad (PLAN F6): una base por dificultad que decrece con el
+// Modelo de comparación basado en velocidad : una base por dificultad que decrece con el
 // tiempo desde la jugada anterior del mismo jugador, con un mínimo y un multiplicador por completar
 // filas, columnas o cajas. Sirve para mostrar cuánto reduce el modelo propio la ventaja de correr por
 // las celdas fáciles. Puntúa los mismos registros que el modelo propio.

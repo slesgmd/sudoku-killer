@@ -1,6 +1,6 @@
 // Reglas puras de la sala fuera del registro de la partida (SPEC §2.3, §3.1 y §3.3): el código de
-// sala, los asientos, el derecho de iniciar y la vista del lobby. Las usan el servidor (F9) y el
-// servidor simulado del cliente (F8). El azar llega como un generador con semilla.
+// sala, los asientos, el derecho de iniciar y la vista del lobby. Las usan el servidor y el
+// servidor simulado del cliente. El azar llega como un generador con semilla.
 import type { Rng } from "@sudoku-killer/engine";
 import {
   ROOM_CODE_ALPHABET,

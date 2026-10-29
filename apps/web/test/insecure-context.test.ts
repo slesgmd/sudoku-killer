@@ -1,4 +1,4 @@
-// Red local por `http://<IP>` (F8, prueba en el celular): la página no es un contexto seguro y el
+// Red local por `http://<IP>` (prueba en el celular): la página no es un contexto seguro y el
 // navegador no expone `crypto.randomUUID` ni `crypto.subtle`, solo `crypto.getRandomValues`. El
 // servidor simulado tiene que arrancar igual, con la comprobación del hash contra el manifiesto.
 import { afterEach, describe, expect, it, vi } from "vitest";

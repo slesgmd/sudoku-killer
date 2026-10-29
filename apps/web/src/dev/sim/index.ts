@@ -1,7 +1,7 @@
 // Entrada del servidor simulado de desarrollo. Opciones por la URL:
 // - `lat`: latencia de cada mensaje, en milisegundos (por defecto 120, para ver la jugada pendiente).
 // - `skew`: desfase del reloj del servidor respecto del navegador, en milisegundos (T-07.2).
-// - `bot`: cuántos bots compañeros entran al crear la sala (F8f; por defecto 0, como máximo 5).
+// - `bot`: cuántos bots compañeros entran al crear la sala (por defecto 0, como máximo 5).
 // - `pace`: tiempo medio entre jugadas de cada bot, en milisegundos (por defecto 4000).
 // - `errors`: probabilidad de que un bot se equivoque a propósito, de 0 a 1 (por defecto 0,1).
 // - `seed`: semilla de los bots (por defecto 1).

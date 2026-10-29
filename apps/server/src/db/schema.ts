@@ -58,7 +58,7 @@ const quoted = (values: readonly string[]): string =>
  * Banco de puzzles. `solution` solo se lee con `PuzzleRepository.getForServer` (ADR 0003). El `id`
  * es un UUID aleatorio: no deriva de la semilla, para que un cliente no pueda enumerar el banco ni
  * predecir el puzzle siguiente (T-20.4). Las filas nunca se borran: las que salen del manifiesto
- * quedan retiradas (`retired_at`), y las partidas viejas conservan su clave foránea (F9).
+ * quedan retiradas (`retired_at`), y las partidas viejas conservan su clave foránea.
  */
 export const puzzles = pgTable(
   "puzzles",

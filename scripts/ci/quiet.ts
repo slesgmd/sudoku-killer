@@ -1,4 +1,4 @@
-// Envoltorio de los pasos de Actions que tocan secretos o la base (F12, docs/seguridad.md §3): los
+// Envoltorio de los pasos de Actions que tocan secretos o la base (docs/seguridad.md §3): los
 // logs de un repositorio público son públicos. Corre el comando con su salida retenida en memoria y
 // solo deja pasar las líneas de recuento o de estado con una clave de los scripts del proyecto
 // (`backup.puzzles: 2000`, `smoke.healthz: ok`, …); el resto se cuenta y se descarta. Si el comando falla, dice el código de salida, nunca su salida.

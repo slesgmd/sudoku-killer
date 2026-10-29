@@ -24,11 +24,11 @@ export interface AppOptions {
   readonly allowedOrigins: readonly string[];
   readonly logger: Logger;
   readonly clock?: Clock;
-  /** El hash de la clave de acceso del grupo (F12); `null` o ausente, sin clave. */
+  /** El hash de la clave de acceso del grupo; `null` o ausente, sin clave. */
   readonly accessKeyHash?: string | null;
-  /** Proxies de confianza delante del servidor (F12). */
+  /** Proxies de confianza delante del servidor. */
   readonly trustProxyHops?: number;
-  /** Cada cuánto se escribe la línea `metrics` (F12h); 0 para no escribirla. */
+  /** Cada cuánto se escribe la línea `metrics`; 0 para no escribirla. */
   readonly metricsIntervalMs?: number;
 }
 

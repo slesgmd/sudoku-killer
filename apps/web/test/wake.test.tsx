@@ -1,4 +1,4 @@
-// Servidor dormido (F12g, decisión del usuario en el plan de F12): si la conexión no abre en 3 s al
+// Servidor dormido (ADR 0007): si la conexión no abre en 3 s al
 // entrar, Entrar avisa «Despertando el servidor…» y se sigue intentando; el estado `unavailable` no
 // corta la entrada; a los 2 min aparece el aviso con «Reintentar». Si abre, el aviso se va y vale el
 // plazo normal de 15 s para entrar (T-37.1). Un handshake rechazado (429, 403 o 4003) no es el

@@ -1,4 +1,4 @@
-// La prueba de humo del despliegue (F12b, `scripts/smoke.ts`) contra el servidor real en 127.0.0.1:
+// La prueba de humo del despliegue (`scripts/smoke.ts`) contra el servidor real en 127.0.0.1:
 // el handshake con un origen ajeno da 403 y con el permitido abre; `POST /access` sin clave y con una
 // inválida da 401 también detrás de un proxy que pierde el 4003 (T-39.17). Y la comparación de las
 // cabeceras de seguridad con las que sirve Render.

@@ -1,5 +1,5 @@
-// Corpus del generador (F4d, T-20.1 y T-35.1): 1000 puzzles 9×9 generados, cada uno con solución
-// única confirmada por A y por B sin presupuesto. Una discrepancia bloquea F4. No corre en la CI de
+// Corpus del generador (T-20.1 y T-35.1): 1000 puzzles 9×9 generados, cada uno con solución
+// única confirmada por A y por B sin presupuesto. Una discrepancia es un error del motor. No corre en la CI de
 // cada push: `pnpm test:corpus` en local y el workflow programado `corpus.yml`.
 // Semillas: de CORPUS_BASE_SEED (por defecto 1) en adelante; CORPUS_SIZE cambia la cantidad.
 import { describe, expect, it } from "vitest";

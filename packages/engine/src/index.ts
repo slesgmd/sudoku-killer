@@ -1,4 +1,4 @@
-// Motor del puzzle (F4): lógica pura, sin E/S, reloj ni azar.
+// Motor del puzzle: lógica pura, sin E/S, reloj ni azar.
 
 export type { Cage, Geometry, Given, Grid, KillerPuzzle } from "./types.ts";
 export {

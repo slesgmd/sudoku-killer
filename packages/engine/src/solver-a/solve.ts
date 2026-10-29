@@ -9,7 +9,7 @@ export interface SolveAOptions {
   /**
    * Presupuesto de nodos (por defecto, sin límite). Si la búsqueda lo agota, se detiene con
    * `exhausted` en true: `count` y `solutions` son entonces lo encontrado hasta ahí, no el total.
-   * Es de nodos y no de tiempo porque el motor no lee el reloj; lo usa el generador (F4d).
+   * Es de nodos y no de tiempo porque el motor no lee el reloj; lo usa el generador.
    */
   readonly maxNodes?: number;
 }

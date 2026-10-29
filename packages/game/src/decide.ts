@@ -1,7 +1,7 @@
 // Decisión de los comandos de juego (SPEC §4.2, §4.4 y §6): valida un comando contra el estado y
 // devuelve los eventos que produce, o la respuesta que recibe solo su autor. Es pura: la solución,
 // la hora y el modo llegan como argumentos, y el estado nunca guarda la solución (R-31). La usan el
-// servidor (F9) y el servidor simulado del cliente (F8). Las salas, la cola y la idempotencia son
+// servidor y el servidor simulado del cliente. Las salas, la cola y la idempotencia son
 // del servidor.
 import { GRADER_VERSION, checkPlacement, digitBit, levelToDeduce } from "@sudoku-killer/engine";
 import type { ClientMessage, Connection, ErrorCode, ServerMessage } from "@sudoku-killer/protocol";

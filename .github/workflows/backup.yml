@@ -1,6 +1,6 @@
 name: Respaldo de la base
 
-# Respaldo de la base de producción (F12i, ADR 0007), cada domingo y a mano. Vuelca la base de Neon,
+# Respaldo de la base de producción (ADR 0007), cada domingo y a mano. Vuelca la base de Neon,
 # lo restaura en un PostgreSQL efímero del runner, lo comprueba (recuentos y arranque del servidor con
 # la reconstrucción de las partidas) y sube solo el volcado cifrado con `age` (artefacto `db-backup`,
 # 90 días): el repositorio es público, y con él los logs y los artefactos. Cada paso corre con

@@ -5,12 +5,12 @@
 // - `permessage-deflate` desactivado.
 // - Heartbeat: ping cada 15 s; si no llegó el pong del anterior, la conexión se termina.
 // - Los mensajes binarios no son del protocolo: llegan al servidor como texto inválido.
-// - `GET /healthz` responde 204 sin cuerpo (F12): el chequeo del hosting y el precalentamiento de
+// - `GET /healthz` responde 204 sin cuerpo: el chequeo del hosting y el precalentamiento de
 //   la web. `GET /ws` sin upgrade dice qué recibiría el handshake (403, 429 o 204, T-39.9): el
 //   navegador no deja leer el estado de un handshake rechazado, y así la web lo distingue de un
 //   servidor dormido. `POST /access` comprueba la clave antes de abrir el WebSocket (T-39.12).
 //   Cualquier otra petición HTTP recibe 404.
-// - Clave de acceso del grupo (F12, R-39): el cliente la comprueba con `POST /access` y la ofrece
+// - Clave de acceso del grupo (R-39): el cliente la comprueba con `POST /access` y la ofrece
 //   como subprotocolo en el handshake. Si en el handshake falta o no vale, la conexión se abre y se
 //   cierra con 4003 en cuanto el cliente envía algo, sin llegar a las salas (`deny`, T-39.11): es
 //   solo el respaldo, porque el proxy de Render pierde ese cierre. Una IP con demasiadas claves que
@@ -18,8 +18,8 @@
 //   dos caminos. La clave nunca se registra.
 // - La IP del cliente sale de `X-Forwarded-For` (`clientAddress`). Si no se puede saber, la
 //   conexión sigue sin tope por IP ni bloqueo, en lugar de compartir uno con todos (T-39.8).
-// - Plazos del HTTP (F12, S-06): 10 s para recibir las cabeceras y la petición entera (Node trae
-//   60 s y 300 s); no afectan a un WebSocket ya abierto. Tope de conexiones por IP (F12, S-01).
+// - Plazos del HTTP (S-06): 10 s para recibir las cabeceras y la petición entera (Node trae
+//   60 s y 300 s); no afectan a un WebSocket ya abierto. Tope de conexiones por IP (S-01).
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { isIP } from "node:net";
 import type { Duplex } from "node:stream";
@@ -40,16 +40,16 @@ export const HEALTH_PATH = "/healthz";
 export const MAX_PAYLOAD_BYTES = 16 * 1024;
 export const HEARTBEAT_MS = 15_000;
 /**
- * Tope de conexiones abiertas a la vez (F11, `docs/seguridad.md` S-01): por encima, el handshake
+ * Tope de conexiones abiertas a la vez (`docs/seguridad.md` S-01): por encima, el handshake
  * recibe 503. Unas 6 veces las 300 de la prueba de carga.
  */
 export const MAX_CONNECTIONS = 2_000;
 /**
- * Tope de conexiones abiertas desde una misma IP (F12, S-01): una casa con el grupo entero y varias
+ * Tope de conexiones abiertas desde una misma IP (S-01): una casa con el grupo entero y varias
  * pestañas, o la prueba de carga en el hosting (5 salas × 6), caben.
  */
 export const MAX_CONNECTIONS_PER_IP = 40;
-/** Plazo para recibir las cabeceras y la petición HTTP (F12, S-06). */
+/** Plazo para recibir las cabeceras y la petición HTTP (S-06). */
 export const HTTP_TIMEOUT_MS = 10_000;
 /**
  * Cuánto espera una conexión sin la clave el primer mensaje del cliente antes de cerrarse con 4003
@@ -67,9 +67,9 @@ export interface WsTransportOptions {
   readonly heartbeatMs?: number;
   /** Tope de conexiones abiertas (por defecto `MAX_CONNECTIONS`). */
   readonly maxConnections?: number;
-  /** La clave de acceso del grupo (F12); sin ella, no se pide. */
+  /** La clave de acceso del grupo; sin ella, no se pide. */
   readonly access?: AccessGate;
-  /** Proxies de confianza delante del servidor (`TRUST_PROXY_HOPS`, F12). */
+  /** Proxies de confianza delante del servidor (`TRUST_PROXY_HOPS`). */
   readonly trustProxyHops?: number;
   /** Tope de conexiones por IP (por defecto `MAX_CONNECTIONS_PER_IP`). */
   readonly maxConnectionsPerIp?: number;
@@ -188,7 +188,7 @@ export class WsTransport implements Transport {
     return this.alive.size;
   }
 
-  /** Direcciones distintas con alguna conexión abierta (métricas, F12h; nunca cuáles). */
+  /** Direcciones distintas con alguna conexión abierta (para las métricas; nunca cuáles). */
   get openAddresses(): number {
     return this.perIp.size;
   }

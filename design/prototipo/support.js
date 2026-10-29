@@ -1,4 +1,4 @@
-/* Sudoku Killer — motor mínimo del prototipo (F7).
+/* Sudoku Killer — motor mínimo del prototipo.
    Cada artboard es un archivo .dc.html con una plantilla dentro de <x-dc> y una clase
    Component (extends DCLogic) cuyo renderVals() alimenta la plantilla:
    - {{ruta.con.puntos}} en texto y atributos (un atributo que es solo {{x}} recibe el valor tal cual);

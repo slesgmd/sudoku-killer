@@ -1,4 +1,4 @@
-// Generador de puzzles (F4d, SPEC R-20 y R-35). Puro: todo el azar sale de la semilla.
+// Generador de puzzles (SPEC R-20 y R-35). Puro: todo el azar sale de la semilla.
 import type { Cage, Geometry, Given, Grid, KillerPuzzle } from "../types.ts";
 import { at } from "../model/at.ts";
 import { STANDARD_GEOMETRY, isValidGeometry } from "../model/geometry.ts";
@@ -18,7 +18,7 @@ import { createRng, shuffle, type Rng } from "./rng.ts";
 export type GivensReason = "none" | "difficulty" | "uniqueness";
 
 /**
- * Cambia cuando un cambio del generador altera los puzzles que salen de una semilla. "2" (F5):
+ * Cambia cuando un cambio del generador altera los puzzles que salen de una semilla. "2":
  * los números iniciales extra salen de `addGivens`, repartidos por cajas, en lugar de `easyGivens`.
  */
 export const GENERATOR_VERSION = "2";
@@ -208,7 +208,7 @@ function resolveSettings(options: GenerateOptions): Settings {
 }
 
 /**
- * Genera un puzzle killer con solución única (SPEC R-20, plan F4):
+ * Genera un puzzle killer con solución única (SPEC R-20):
  * 1. una cuadrícula completa aleatoria;
  * 2. jaulas conectadas de 2 a 5 celdas sin dígitos repetidos;
  * 3. sus sumas;
@@ -218,7 +218,7 @@ function resolveSettings(options: GenerateOptions): Settings {
  *    veces) y, si no alcanza, se agrega un número inicial de la cuadrícula en una de esas celdas.
  *
  * El puzzle aceptado se verifica con `solveB`: tiene que ser único y con la misma solución. Una
- * discrepancia es un error de un solver y lanza `Error` (bloquea F4). Determinista: la misma semilla
+ * discrepancia es un error de un solver y lanza `Error`. Determinista: la misma semilla
  * y las mismas opciones dan el mismo resultado (T-35.6).
  */
 export function generatePuzzle(options: GenerateOptions): GeneratedPuzzle {

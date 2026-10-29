@@ -1,4 +1,4 @@
-// Resúmenes de los corpus del calificador (F4f y F5): cuantiles, tiempos, conteos y partidas
+// Resúmenes de los corpus del calificador: cuantiles, tiempos, conteos y partidas
 // simuladas para medir `levelToDeduce` como lo hará el servidor.
 import { createRng, type GeneratedPuzzle } from "@sudoku-killer/engine";
 import { at } from "../../src/model/at.ts";

@@ -1,4 +1,4 @@
-// Calificador humano (F4e). T-35.4: ninguna deducción contradice la solución, y en cada paso de
+// Calificador humano. T-35.4: ninguna deducción contradice la solución, y en cada paso de
 // `grade` el dígito de la solución de cada celda sigue entre sus candidatos. T-35.5: `levelToDeduce`
 // da un nivel entre 1 y UNRATED, vale 1 en un single y no sube al agregar celdas correctas, también
 // en puzzles de nivel 4 y 5. Versión rápida para la CI; el corpus de 1000 puzzles y las 9000

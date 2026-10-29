@@ -1,4 +1,4 @@
-// Clave de acceso del grupo (F12, `docs/seguridad.md` S-02, SPEC R-39). El cliente la comprueba antes
+// Clave de acceso del grupo (`docs/seguridad.md` S-02, SPEC R-39). El cliente la comprueba antes
 // con `POST /access`, en la cabecera `X-Sk-Access-Key` (T-39.12), y después la ofrece en el handshake,
 // como subprotocolo del WebSocket: `sk.v1` y `sk.k.<clave en base64url>`. En los dos casos va en
 // base64url y nunca en una URL ni en un mensaje, así que no queda en los logs de acceso de un proxy.

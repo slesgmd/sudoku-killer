@@ -1,4 +1,4 @@
-# Despliegue en Render (F12, ADR 0007): el servidor de salas (servicio web gratuito, Virginia) y la
+# Despliegue en Render (ADR 0007): el servidor de salas (servicio web gratuito, Virginia) y la
 # web (sitio estático gratuito), los dos desde `main` y solo cuando pasan los checks del commit.
 # Sin secretos: DATABASE_URL y ACCESS_KEY_HASH se escriben en el panel de Render (`sync: false`).
 # Si Render agrega un sufijo a algún nombre, hay que ajustar ALLOWED_ORIGINS, VITE_SERVER_URL y la
@@ -27,7 +27,7 @@ services:
         value: info
       - key: ALLOWED_ORIGINS
         value: https://sudoku-killer-lima.onrender.com
-      # Render agrega una entrada a X-Forwarded-For (F12, S-01); se confirma en F12j.
+      # Render agrega una entrada a X-Forwarded-For (S-01), confirmado en producción.
       - key: TRUST_PROXY_HOPS
         value: "1"
       - key: DATABASE_URL

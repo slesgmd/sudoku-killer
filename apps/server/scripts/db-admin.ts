@@ -1,7 +1,7 @@
-// Administración de la base de producción desde Actions (F12i; `db-admin.yml`, a mano). Con
+// Administración de la base de producción desde Actions (`db-admin.yml`, a mano). Con
 // DB_ADMIN_ACTION:
 // - `status`: recuentos de las tablas y migraciones pendientes;
-// - `migrate`: aplica las migraciones con la guarda de F12f (MIGRATIONS_ALLOW para una destructiva);
+// - `migrate`: aplica las migraciones con la guarda de migraciones destructivas (MIGRATIONS_ALLOW para una destructiva);
 // - `bank-load`: migra y carga el banco del manifiesto (ADR 0006; unos minutos).
 // Solo escribe recuentos (`db.*`), nunca la cadena de conexión ni filas (docs/seguridad.md §3).
 import { readFileSync } from "node:fs";

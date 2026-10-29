@@ -1,4 +1,4 @@
-// Equivalencia de la reconstrucción (F11d; T-32.1, E-07 y E-15): una partida aleatoria contra el
+// Equivalencia de la reconstrucción (T-32.1, E-07 y E-15): una partida aleatoria contra el
 // servidor real (aciertos, errores, pistas, notas personales y grupales, deshacer, caídas y vueltas
 // con ficha, avances del reloj) con un reinicio del servidor en un punto al azar. Al final:
 // - el estado de la sala es igual a `replay(registro)`;

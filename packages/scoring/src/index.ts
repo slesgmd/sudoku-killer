@@ -1,4 +1,4 @@
-// Puntuación pura y parametrizada (F6, `docs/puntuacion.md`). Sin reloj ni azar.
+// Puntuación pura y parametrizada (`docs/puntuacion.md`). Sin reloj ni azar.
 
 export {
   PARAMS_V1,

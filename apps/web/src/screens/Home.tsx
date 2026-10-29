@@ -1,6 +1,6 @@
 // Inicio (design/pantallas.md §1.1): el juego en una frase, «Entrar o crear sala» y, con una ficha
-// guardada, «Volver a la sala». Sin fotos en la v1: una columna centrada (plan de F10). Conserva el
-// enlace al repositorio del inicio mínimo de F8.
+// guardada, «Volver a la sala». Sin fotos en la v1: una columna centrada. Conserva el
+// enlace al repositorio en la cabecera.
 import { AppHeader } from "../components/AppHeader.tsx";
 import { Icon } from "../components/Icon.tsx";
 import type { RoomNotice } from "../game/state.ts";

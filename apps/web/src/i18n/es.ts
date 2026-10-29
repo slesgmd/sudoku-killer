@@ -1,5 +1,5 @@
-// Textos de la interfaz en español (catálogo propio, ADR 0001, nota de F8). Las variables van entre
-// llaves; los plurales, como `{ one, other }` según `count`. Coinciden con los del prototipo de F7.
+// Textos de la interfaz en español (catálogo propio, ADR 0001, nota del 2026-10-24). Las variables van entre
+// llaves; los plurales, como `{ one, other }` según `count`. Coinciden con los del prototipo de diseño.
 export type Message = string | { readonly one: string; readonly other: string };
 
 export const es = {
@@ -66,7 +66,7 @@ export const es = {
   "enter.wakingText":
     "La primera vez del día puede tardar hasta 1 minuto. Se sigue intentando solo.",
 
-  // Clave de acceso del grupo (F12, R-39)
+  // Clave de acceso del grupo (R-39)
   "access.title": "Clave del grupo",
   "access.leadMissing":
     "Este juego es privado. Escribe la clave del grupo una sola vez: queda guardada en este dispositivo.",
@@ -86,7 +86,7 @@ export const es = {
   "access.retry": "Reintentar",
   "access.back": "Volver al inicio",
 
-  // Inicio mínimo de F8 (arranque directo, solo en las pruebas)
+  // Inicio mínimo (arranque directo, solo en las pruebas)
   "home.failedTitle": "No se pudo empezar.",
   "home.failedText": "La partida no terminó de cargar. Revisa tu conexión y vuelve a intentarlo.",
 

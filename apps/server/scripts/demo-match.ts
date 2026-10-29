@@ -1,4 +1,4 @@
-// Demostración de F9: levanta el servidor real (WebSocket en /ws, registro con group commit) y dos
+// Demostración: levanta el servidor real (WebSocket en /ws, registro con group commit) y dos
 // clientes Node, Ana y Bea, juegan una partida completa hasta la victoria.
 // - Los clientes nunca reciben la solución: la calculan con el solver del motor sobre el puzzle
 //   público, como podría hacerlo cualquier cliente (el puzzle tiene solución única).

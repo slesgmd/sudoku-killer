@@ -1,5 +1,5 @@
 // Log del servidor: una línea JSON por entrada. Nunca registra fichas, sus hash, la clave de acceso
-// del grupo ni su hash (F12) ni la cadena de conexión a la base de datos: esas claves, y cualquier
+// del grupo ni su hash ni la cadena de conexión a la base de datos: esas claves, y cualquier
 // texto con forma de URL de PostgreSQL o de hash `sha256:…`, se reemplazan por "[redacted]" aunque
 // lleguen por error.
 export type LogLevel = "debug" | "info" | "warn" | "error";

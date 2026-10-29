@@ -1,4 +1,4 @@
-// Manifiesto del banco (F5, ADR 0006). T-20.3: cada puzzle cumple la banda de su dificultad (versión
+// Manifiesto del banco (ADR 0006). T-20.3: cada puzzle cumple la banda de su dificultad (versión
 // 2), ninguno excede las técnicas y cada dificultad tiene sus 500. T-20.2 y T-20.4 (muestra): cada
 // semilla regenera el mismo puzzle, con los números iniciales de su dificultad. T-20.5 (muestra): en
 // partidas simuladas, `levelToDeduce` nunca devuelve `UNRATED`. El banco completo se verifica en

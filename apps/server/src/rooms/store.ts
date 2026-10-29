@@ -8,7 +8,7 @@ export interface RoomStore {
   add(room: Room): void;
   delete(code: string): void;
   values(): Iterable<Room>;
-  /** Cuántas salas hay (para el tope de salas, F11). */
+  /** Cuántas salas hay (para el tope de salas). */
   readonly size: number;
 }
 

@@ -1,5 +1,5 @@
 // Avisos breves (docs/diseno.md §5.6 y §9): duran 6 s y se pausan con el cursor encima o con el foco
-// (decisión 4 de entrega-f8.md). Los errores propios son `alert`; el resto, `status`.
+// (decisión 4, docs/diseno.md §10). Los errores propios son `alert`; el resto, `status`.
 import { useEffect, useRef, useState } from "react";
 import type { Toast } from "../game/state.ts";
 import { Icon } from "./Icon.tsx";

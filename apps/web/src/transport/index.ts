@@ -1,5 +1,5 @@
 // Elección del transporte. Por defecto, el servidor real por WebSocket: en producción, el de
-// `VITE_SERVER_URL` (F12, solo `wss://`); sin ella, el del mismo origen (`/ws`; en desarrollo, Vite lo
+// `VITE_SERVER_URL` (solo `wss://`); sin ella, el del mismo origen (`/ws`; en desarrollo, Vite lo
 // reenvía al servidor local). Solo en desarrollo, con `?sim=1`, el servidor
 // simulado en memoria (`src/dev/sim/`), que es el único lugar del navegador donde existe la
 // solución. En producción no se incluye (T-31.2): la rama de `import.meta.env.DEV` desaparece del

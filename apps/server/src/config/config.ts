@@ -14,13 +14,13 @@ export interface Config {
   readonly port: number;
   readonly allowedOrigins: readonly string[];
   readonly logLevel: LogLevel;
-  /** `NODE_ENV=production`: la clave de acceso es obligatoria (F12, S-02). */
+  /** `NODE_ENV=production`: la clave de acceso es obligatoria (S-02). */
   readonly production: boolean;
   /** El hash de la clave de acceso del grupo (`sha256:…`), o `null` sin clave (solo en desarrollo). */
   readonly accessKeyHash: string | null;
-  /** Proxies de confianza delante del servidor, para la IP del cliente (F12, S-01). */
+  /** Proxies de confianza delante del servidor, para la IP del cliente (S-01). */
   readonly trustProxyHops: number;
-  /** Migraciones destructivas que este despliegue puede aplicar (F12f, `MIGRATIONS_ALLOW`). */
+  /** Migraciones destructivas que este despliegue puede aplicar (`MIGRATIONS_ALLOW`). */
   readonly migrationsAllow: readonly string[];
 }
 

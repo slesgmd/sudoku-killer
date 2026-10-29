@@ -1,7 +1,7 @@
 // Registro de actividad (docs/diseno.md §5.9): una sola línea con la última entrada y el historial
 // completo aparte. En escritorio, la línea va bajo los jugadores con «Ver actividad», que abre el
 // historial en un diálogo; en tableta y móvil, la línea es un botón plegable; en horizontal, un botón
-// de la cabecera. Los textos de los avisos también quedan aquí (decisión 4 de entrega-f8.md).
+// de la cabecera. Los textos de los avisos también quedan aquí (decisión 4, docs/diseno.md §10).
 import { useRef, useState, type CSSProperties } from "react";
 import { cellName } from "../game/client.ts";
 import { formatClock, playerName, type ActivityEntry, type ClientState } from "../game/state.ts";

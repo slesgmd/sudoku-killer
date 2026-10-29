@@ -1,4 +1,4 @@
-// Pruebas de componentes de la pantalla de partida (nivel C de la SPEC, F8). Cada una cita su T. La
+// Pruebas de componentes de la pantalla de partida (nivel C de la SPEC). Cada una cita su T. La
 // prueba hace de servidor con un transporte falso y comprueba lo que se ve y lo que se envía.
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { PARAMS_V1 } from "@sudoku-killer/scoring";

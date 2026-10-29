@@ -1,6 +1,6 @@
 name: Humo del despliegue
 
-# Prueba de humo del despliegue (F12b, ADR 0007), a mano: TLS de la web y del servidor, la
+# Prueba de humo del despliegue (ADR 0007), a mano: TLS de la web y del servidor, la
 # redirección de http a https, `/healthz` (espera hasta 2 min a que el servidor despierte) y el
 # handshake del WebSocket con un origen ajeno (403), con el de la web y sin clave (4003, T-39.11).
 # Los logs de Actions son

@@ -31,5 +31,5 @@ export const CLOSE_UNSUPPORTED = 4000;
 export const CLOSE_REPLACED = 4001;
 /** La conexión no entró a ninguna sala en 30 s (ADR 0002). */
 export const CLOSE_NO_ROOM = 4002;
-/** Falta la clave de acceso del grupo o no vale (F12, R-39). */
+/** Falta la clave de acceso del grupo o no vale (R-39). */
 export const CLOSE_ACCESS_DENIED = 4003;

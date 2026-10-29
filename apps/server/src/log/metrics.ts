@@ -1,4 +1,4 @@
-// Métricas básicas del servidor (F12h): una línea `metrics` en el log cada 60 s, que el panel del
+// Métricas básicas del servidor: una línea `metrics` en el log cada 60 s, que el panel del
 // hosting muestra. Solo recuentos y tiempos: nunca códigos de sala, apodos, fichas, claves ni
 // direcciones IP. Sirven para ver la carga real del grupo y los límites del plan gratuito (memoria,
 // CPU del bucle de eventos y la espera de la base, ADR 0007).

@@ -1,4 +1,4 @@
-// Cabeceras de seguridad del sitio estático (F12, `docs/seguridad.md` S-05): una sola fuente para
+// Cabeceras de seguridad del sitio estático (`docs/seguridad.md` S-05): una sola fuente para
 // `render.yaml` (lo comprueba tests/render-config.test.ts), `vite preview` en las E2E (que fallan
 // ante cualquier violación de la CSP) y la prueba de humo del despliegue. La CSP solo permite lo del
 // propio sitio y, para conectarse, el servidor de salas: un XSS no podría enviar la ficha ni la

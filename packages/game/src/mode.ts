@@ -15,7 +15,7 @@ export interface PlacementContext {
   readonly at: number;
   /** Unidades que esta jugada completa, en el orden fila, columna, caja y jaula. */
   readonly closedUnits: readonly ClosedUnit[];
-  /** `levelToDeduce` con los descartes públicos (F4 y F6), guardado en el evento. */
+  /** `levelToDeduce` con los descartes públicos, guardado en el evento. */
   readonly levelToDeduce: number;
 }
 

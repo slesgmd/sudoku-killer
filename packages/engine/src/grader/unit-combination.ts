@@ -1,6 +1,6 @@
 // Nivel 5: combinaciones de una unidad entera con sus jaulas. Generaliza la regla del 45 y las
 // combinaciones de jaula: una fila, columna o caja usa cada dígito una vez, y las jaulas que la
-// tocan tienen que cuadrar a la vez. La técnica se acota (F5) a unidades que una persona puede
+// tocan tienen que cuadrar a la vez. La técnica se acota a unidades que una persona puede
 // razonar con notas: pocas jaulas abiertas y pocas combinaciones.
 import { at } from "../model/at.ts";
 import { digitBit, digitsOf, popcount } from "../model/mask.ts";
@@ -20,7 +20,7 @@ export interface UnitCombinationBound {
   readonly maxCombinations: number;
 }
 
-/** Sin cota: la enumeración completa de F4f. Solo para medir. */
+/** Sin cota: la enumeración completa. Solo para medir. */
 export const UNBOUNDED: UnitCombinationBound = {
   maxOpenCages: Infinity,
   maxCombinations: Infinity,

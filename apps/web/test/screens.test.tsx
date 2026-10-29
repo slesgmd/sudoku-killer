@@ -1,5 +1,5 @@
-// F10e: Inicio, Entrar o crear, Lobby, Resultados y Ayuda (design/pantallas.md §1.1–1.6), con las
-// rutas por hash y «Compartir» (plan de F10). El transporte es falso: la prueba hace de servidor.
+// Inicio, Entrar o crear, Lobby, Resultados y Ayuda (design/pantallas.md §1.1–1.6), con las
+// rutas por hash y «Compartir». El transporte es falso: la prueba hace de servidor.
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { PublicPlayer, ServerEnvelope } from "@sudoku-killer/protocol";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -461,7 +461,7 @@ describe("F10e Resultados (pantallas.md §1.5)", () => {
     const { transport } = inLobby({ players: [waiting(ME), waiting(TOMAS), waiting(valeria)] });
     started(transport, [ME, TOMAS, valeria]);
     ended(transport);
-    // El paso a Resultados nunca es automático (plan de F10).
+    // El paso a Resultados nunca es automático.
     expect(screen.getByRole("grid", { name: "Tablero" })).toBeDefined();
     fireEvent.click(screen.getByRole("button", { name: "Ver resultados" }));
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Tablero resuelto.");

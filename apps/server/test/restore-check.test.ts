@@ -1,4 +1,4 @@
-// Comprobación de una base restaurada (F12i; respaldo semanal y simulacro): los recuentos, lo que no
+// Comprobación de una base restaurada (respaldo semanal y simulacro): los recuentos, lo que no
 // cuadra entre el origen y lo restaurado, el arranque del servidor con la reconstrucción de una
 // partida en curso, y que la salida sea solo de recuentos (`scripts/ci/quiet.ts`).
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";

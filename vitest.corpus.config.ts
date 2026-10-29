@@ -1,7 +1,7 @@
 import { defineConfig } from "vitest/config";
 import { CORPUS_TESTS, conditions } from "./vitest.config.ts";
 
-// Solo los corpus (F4d; el banco del servidor desde F5): `pnpm test:corpus` y el workflow programado
+// Solo los corpus (también el banco del servidor): `pnpm test:corpus` y el workflow programado
 // `corpus.yml`. Se arma aparte porque `mergeConfig` sumaría las listas `include` y `exclude` de la
 // configuración base.
 export default defineConfig({

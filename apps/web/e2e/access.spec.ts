@@ -1,4 +1,4 @@
-// E2E de la clave de acceso del grupo (F12, R-39, `docs/seguridad.md` S-02) contra el servidor real:
+// E2E de la clave de acceso del grupo (R-39, `docs/seguridad.md` S-02) contra el servidor real:
 // el enlace de invitación pasa la clave por `POST /access` y la saca de la URL; la clave nunca
 // aparece en la URL del WebSocket ni en la página, y el enlace de la sala no la lleva.
 // Detrás de un proxy que pierde el cierre del servidor, como el de Render (T-39.16), la página no

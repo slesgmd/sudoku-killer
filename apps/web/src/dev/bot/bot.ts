@@ -1,4 +1,4 @@
-// Bot compañero (F8f, solo desarrollo): otro jugador que entra a la sala simulada y juega por el
+// Bot compañero (solo desarrollo): otro jugador que entra a la sala simulada y juega por el
 // mismo protocolo v1, para ver jugadas, errores y presencia de otros. No ve la solución: deduce
 // cada dígito con `levelsToDeduce` sobre lo público (números colocados y descartes de los errores),
 // prefiere las celdas más fáciles y, a veces, se equivoca a propósito. El azar sale de un `Rng`

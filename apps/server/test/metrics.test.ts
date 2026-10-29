@@ -1,4 +1,4 @@
-// Métricas básicas (F12h): cada 60 s, una línea `metrics` con recuentos y tiempos del servidor real
+// Métricas básicas: cada 60 s, una línea `metrics` con recuentos y tiempos del servidor real
 // (conexiones, direcciones, salas, partidas, jugadores conectados, escrituras en la base, bucle de
 // eventos, memoria y claves rechazadas), sin códigos de sala, apodos, fichas ni direcciones IP.
 import { accessProtocols } from "@sudoku-killer/protocol";
