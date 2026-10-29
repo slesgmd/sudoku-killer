@@ -4,7 +4,7 @@
 - Fecha: 2026-10-25
 
 ## Contexto
-F12 publica el juego para un grupo cerrado de unas 6 personas en Lima (iPad, iPhone y PC). Restricciones del autor: **0 USD** por ahora, el subdominio gratuito del proveedor, un servidor con **WebSocket persistente** (no sirve un modelo serverless sin conexiones largas) y un PostgreSQL que **no se borre**. Cada jugada espera su confirmación en la base antes de difundirse (ADR 0004), así que la distancia entre el servidor y la base pesa más que la distancia entre Lima y el servidor.
+El juego se publica para un grupo cerrado de amigos en Lima (al decidir, unas 6 personas con iPad, iPhone y PC). Restricciones: **0 USD** por ahora, el subdominio gratuito del proveedor, un servidor con **WebSocket persistente** (no sirve un modelo serverless sin conexiones largas) y un PostgreSQL que **no se borre**. Cada jugada espera su confirmación en la base antes de difundirse (ADR 0004), así que la distancia entre el servidor y la base pesa más que la distancia entre Lima y el servidor.
 
 Fuentes consultadas el 2026-10-25 (resultados de búsqueda sobre las páginas oficiales; la red de la máquina de desarrollo no abre esos dominios directamente). Con * los datos que solo aparecen en fuentes de terceros.
 
@@ -32,18 +32,18 @@ Fuentes consultadas el 2026-10-25 (resultados de búsqueda sobre las páginas of
 
 ## Alternativas consideradas
 - **Fly.io y Cloud Run:** piden tarjeta; Cloud Run además corta cada WebSocket a los 60 min.
-- **Oracle Always Free:** no duerme, pero reclama una VM casi ociosa (nuestro caso) y deja el sistema operativo, el TLS, PostgreSQL y los respaldos a cargo del autor.
+- **Oracle Always Free:** no duerme, pero reclama una VM casi ociosa (nuestro caso) y deja el sistema operativo, el TLS, PostgreSQL y los respaldos a nuestro cargo.
 - **Koyeb:** su base gratuita tiene 5 h de cómputo al mes, y las fuentes no coinciden sobre la tarjeta.
 - **Supabase:** se pausa tras una semana sin uso y no trae respaldos en el plan gratuito.
 - **Render Postgres:** caduca a los 30 días.
 - **Aiven:** trae respaldos, pero no se confirmaron sus regiones ni cuánto tiempo sin uso tolera. Queda como alternativa si Neon falla.
 
 ## Consecuencias
-- **Primera conexión del día:** el servidor tarda alrededor de un minuto en despertar. La web lo precalienta al abrirse (`GET /ws`; `/healthz`, que Brave bloquea por una regla de EasyPrivacy, queda para el chequeo de Render y el humo) y muestra el aviso con reintento (F12g). Un reinicio del proveedor reconstruye las partidas (ADR 0003).
-- **CPU:** 0,1 CPU no permite repetir el estrés de 50 salas; la carga en el hosting se adapta a 1, 3 y 5 salas (F12k).
+- **Primera conexión del día:** el servidor tarda alrededor de un minuto en despertar. La web lo precalienta al abrirse (`GET /ws`; `/healthz`, que Brave bloquea por una regla de EasyPrivacy, queda para el chequeo de Render y el humo) y muestra el aviso con reintento. Un reinicio del proveedor reconstruye las partidas (ADR 0003).
+- **CPU:** 0,1 CPU no permite repetir el estrés de 50 salas; en el hosting no se repite la carga con bots: se vigila la línea `metrics` del log (`docs/carga.md` §8).
 - **Neon y los 90 días sin uso.** La página de regiones de Neon dice que los proyectos del plan gratuito con 90 días o más sin uso pueden borrarse desde el 2026-10-05. La nota aparece junto a las regiones de Azure retiradas, y no queda claro si alcanza a las de AWS; se toma como si aplicara. Neon no define «uso»; lo más cercano es la última actividad del cómputo de cada rama (página de ramas), que se enciende con cualquier conexión de un cliente. Por eso:
   - **El respaldo semanal cuenta como uso:** se conecta a la base y lee todas las tablas, lo que enciende el cómputo, como una partida.
   - **Comprobación:** después del primer respaldo programado, la «última actividad» de la rama principal en la consola de Neon debe coincidir con la hora del job; se repite una vez al mes, junto con la revisión de que el workflow siga activo.
   - **Riesgo encadenado:** GitHub desactiva los workflows programados de un repositorio público tras 60 días sin actividad en él. Si eso pasa, quedan 30 días antes de los 90 de Neon. La revisión mensual lo detecta; reactivarlo es un botón en la pestaña Actions.
 - **Despliegue desde `main`:** cada fusión que pase la CI se publica sola.
-- **Pendiente para F12j:** confirmar los nombres públicos de los dos servicios (si Render agrega un sufijo, se ajustan `render.yaml` y los orígenes) y el número de proxies delante del servidor (`TRUST_PROXY_HOPS`, S-01).
+- **Confirmado en el despliegue:** los nombres públicos de los dos servicios (en `render.yaml` y en los orígenes) y el número de proxies delante del servidor (`TRUST_PROXY_HOPS`, S-01).

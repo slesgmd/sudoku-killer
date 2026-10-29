@@ -1,8 +1,8 @@
-# Puntuación (F6)
+# Puntuación
 
 Cómo se puntúa una partida del modo Normal, cómo se eligieron los parámetros y qué se sabe de sus límites. Las reglas verificables son R-02, R-03, R-19, R-32 y R-36, más T-35.7 y T-35.8 del motor (SPEC 1.5). El código está en `packages/scoring` (puntuación pura) y en `apps/server/scripts/scoring-sim/` (simulador).
 
-## 1. Parámetros vigentes (v1)
+## 1. Parámetros finales de la v1
 
 `packages/scoring/src/params.v1.json`, validado con Zod al cargar:
 
@@ -28,24 +28,24 @@ El esquema exige que w no decrezca, que B·w(L) sea entero (los puntos son enter
 
 **El bonus β nunca se suma a una celda difícil.** La última celda de una unidad siempre es de nivel 1 (`hiddenSingle` o `cageLastCell`). Por eso β no entra en la condición de adivinar, pero sí premia cerrar, que es lo que hace quien corre por las celdas fáciles. Por eso β quedó en 1.
 
-### API para F9 (`packages/scoring`)
+### API (`packages/scoring`)
 
 - `createScoring(params)` devuelve `{ onCorrect, onMistake, onHint }` con las firmas de `GameMode` (SPEC §5). Sus contextos son tipos mínimos a los que `PlacementContext` es asignable, así que el modo Normal las usa sin adaptarlas (T-36.5). `onCorrect` devuelve un `ScoreChange` `correct` y uno `closure` por unidad, en el orden de `closedUnits`, para armar `bonuses`.
 - `scoreLog(events, params, players?)` da por jugador `score`, `mistakes` y `scoreReachedAt`. `scoreReachedAt` es el `at` más alto de los hechos que cambiaron su puntaje: en un registro en orden es el último cambio, y así no depende del orden de los hechos que no se afectan (T-36.4).
 - `rankPlayers(entries)` ordena el ranking.
 - `pointsFor(level, params)` lanza `RangeError` con un nivel fuera de 1 a 5, porque eso sería un error del servidor.
 
-**Recomendaciones para F9:**
+**Recomendaciones para el servidor (aplicadas, ADR 0004):**
 - Guardar `level` y `graderVersion` en el evento de un acierto. Así, recalcular con otros parámetros no depende de la versión del calificador, y la reproducción no necesita volver a calificar.
 - Mantener en `Match` los descartes públicos (`excluded`, SPEC §2.3), derivados de los eventos `cell.mistake`.
 
 ## 3. Condiciones analíticas
 
-**Adivinar (corregida en el punto de control).** Un adivinador de nivel s ve 2 candidatos en el punto fijo de sus técnicas, en una celda de nivel L > s. Prueba uno: con probabilidad ½ acierta y cobra B·w(L). Si falla, paga −P y, con el descarte, la celda pasa a nivel ≤ s, así que el segundo intento cobra a lo sumo B·w(s). El valor esperado de «probar hasta acertar» es ½·B·w(L) + ½·(−P + B·w(s)), negativo si y solo si:
+**Adivinar (corregida tras la primera revisión).** Un adivinador de nivel s ve 2 candidatos en el punto fijo de sus técnicas, en una celda de nivel L > s. Prueba uno: con probabilidad ½ acierta y cobra B·w(L). Si falla, paga −P y, con el descarte, la celda pasa a nivel ≤ s, así que el segundo intento cobra a lo sumo B·w(s). El valor esperado de «probar hasta acertar» es ½·B·w(L) + ½·(−P + B·w(s)), negativo si y solo si:
 
 **P > B·(w(L) + w(s))**
 
-- La primera versión del plan decía w(1) en vez de w(s). Después de un error, la celda queda en el nivel en que se veían los 2 candidatos, no en el nivel 1.
+- Una primera versión de la condición decía w(1) en vez de w(s). Después de un error, la celda queda en el nivel en que se veían los 2 candidatos, no en el nivel 1.
 - k = 2 es el peor caso: con más candidatos el valor esperado baja.
 - Con w = 1/2/3/4/5, el peor caso es L = 5 y depende de s: B·(w(5) + w(s)) da 60, 70, 80 y 90 para s = 1 a 4. P = 90 cubre a los adivinadores de nivel ≤ 3 (P > 80). **El peor caso, s = 4, queda documentado y no se fuerza:** con P = 90 su valor esperado es 0, y un adivinador que ya domina el nivel 4 rara vez necesita adivinar.
 
@@ -108,11 +108,11 @@ Los bots no reaccionan a la puntuación, así que cada registro se puntúa con c
   - la validación, con 441 628 simulaciones (8 réplicas y los dos perfiles alternativos), tardó 13,5 minutos en 31 hilos, unas 6,9 h de CPU;
   - la prueba del corpus (10 000 partidas, sin réplicas), 79 s.
 
-## 7. Punto de control: parámetros iniciales y cambio de metas
+## 7. Parámetros iniciales y cambio de metas
 
 **Parámetros iniciales:** B = 10, w = 1/1,5/2/3/4, P = 60, β = 2 y H = 50. Primera corrida con la semilla 1 y 4 réplicas:
 
-| Métrica | Meta del plan | Inicial | Modelo de velocidad |
+| Métrica | Meta inicial | Inicial | Modelo de velocidad |
 |---|---|---|---|
 | Spearman agrupado | ≥ 0,8 | 0,82 | 0,84 |
 | Spearman, mínimo por estrato | ≥ 0,8 | 0,51 | 0,62 |
@@ -125,7 +125,7 @@ Los bots no reaccionan a la puntuación, así que cada registro se puntúa con c
 2. **Bajar los duelos al 55 % exigía pesos casi proporcionales a T(L)** (1/2,5/6/12/24). Con eso, la condición de adivinar pedía P ≈ 370 y H ≈ 250, entre 2 y 3 veces el puntaje mediano de un jugador, y el Spearman caía a 0,55.
 3. **El Spearman de 0,8 en cada estrato está en el techo de la medición** para las mesas grandes de experto.
 
-**Metas que reemplazaron a las del plan** (decisión del autor en el punto de control):
+**Metas que reemplazaron a las iniciales** (decididas tras esta corrida):
 - **Equidad entre veloz y lógico:** la cuota de puntaje de cada uno no se aparta más de 5 puntos de su cuota de aporte, en mesas generales y en duelos. Además, el porcentaje de duelos que gana el veloz queda a ±5 puntos del porcentaje en que su aporte supera al del lógico.
   - **El adivinador queda fuera a propósito.** El diseño busca que adivinar no se premie aunque aporte tiempo al equipo: un error público hasta le descarta un dígito a los demás. Que su puntaje quede por debajo de su aporte es el comportamiento buscado.
 - **Spearman:** ≥ 0,8 agrupado y, en cada estrato, ≥ 80 % del techo de confiabilidad.
@@ -141,7 +141,7 @@ Los bots no reaccionan a la puntuación, así que cada registro se puntúa con c
 
 **Ninguna combinación cumplió la equidad.** La más cercana, 1/2/3/4/5 con β = 1, quedó en 10,2 puntos. La traban los duelos (el veloz gana el 59,4 %, frente al 49,2 % que le da el aporte) y la cuota del adivinador (94 frente a 104), que abre P. Fuera de la grilla, solo los pesos 1/2,5/6/12/24 con P = 80 y H = 60 bajaban de 5 puntos, y violan las reglas de P y H.
 
-**Decisión del autor:**
+**Decisión:**
 - w = 1/2/3/4/5, β = 1, H = 60 y P = 90, que cumple P > B·(w(5) + w(3)) = 80;
 - equidad solo entre veloz y lógico, informada como limitación conocida;
 - para el adivinador de nivel 2, valor esperado negativo frente a deducir con su intervalo de confianza; para el de nivel 3, con su media.
@@ -201,11 +201,13 @@ Quedan registradas sin seguir persiguiéndolas en la v1; se revisan con partidas
 - **Dependencia del modelo del mundo:** los T(L) son un supuesto. Con el perfil plano, la equidad y el Spearman casi se cumplen (5,6 puntos y 0,82); con el empinado, empeoran (9,4 y 0,74). Las metas exigidas se cumplen con los tres. El aporte medido en tiempo supone que las celdas son trabajo en paralelo: si en la realidad las deducciones difíciles destraban más de lo que el modelo supone, el lógico vale más de lo que aquí se mide.
 - **Rama por rama, una pista puede dar más puntos** por la desviación de la partida (alrededor del 6 % de las ramas). En media nunca la da.
 
-## 11. Recalibración con partidas reales (F11 y F13)
+## 11. Partidas reales y recalibración
 
-El registro de eventos permite recalcular cualquier partida con parámetros nuevos (T-32.4), así que la recalibración no necesita volver a jugar.
+**Beta cerrada (2026-10-26 a 2026-10-28):** 15 personas jugaron durante tres días desde Android, iPhone, Windows y Linux. Nadie reportó problemas con la puntuación, así que los parámetros v1 (P = 90) quedan como los finales de la v1. Escalar P por dificultad queda como idea para una versión futura (`docs/IDEAS_FUTURAS.md`).
 
-**Primera prioridad: el tamaño de P.** Hoy un error equivale al 78 % del puntaje mediano de un jugador en fácil (66 % en media, 50 % en difícil y 41 % en experto). Es duro para los descuidos honestos, que en el simulador son el 1 % de las jugadas. Qué medir con los registros reales:
+El registro de eventos permite recalcular cualquier partida con parámetros nuevos (T-32.4), así que una recalibración futura no necesita volver a jugar. Lo que sigue es lo que se mediría para una versión nueva de los parámetros.
+
+**Primera prioridad: el tamaño de P.** Con P = 90, un error equivale al 78 % del puntaje mediano de un jugador en fácil (66 % en media, 50 % en difícil y 41 % en experto). Es duro para los descuidos honestos, que en el simulador son el 1 % de las jugadas. Qué medir con los registros reales:
 - la tasa de errores por descuido frente a la de adivinanzas, separándolas por señales del registro: el tiempo desde la jugada anterior del mismo jugador, un error repetido en la misma celda, el nivel de la celda y si el error repite el dígito de una celda bloqueada (D6);
 - el puntaje por jugador y por equipo en cada dificultad (mediana y p95), para expresar P y H en proporción;
 - cuántas veces un jugador acierta enseguida en la celda donde acaba de equivocarse (la marca de «probar hasta acertar»).
@@ -219,13 +221,13 @@ Si los descuidos dominan, la opción prevista es **escalar P por dificultad** (p
 - **Pistas:** quién las usa, sobre qué nivel de celda y si alguna cae sobre la celda que otro tenía seleccionada (robo).
 - **Ranking:** cuántas partidas se definen por desempate.
 
-### Herramienta de análisis: `scoring:report` (F11h)
+### Herramienta de análisis: `scoring:report`
 
 `pnpm --filter @sudoku-killer/server scoring:report [--since AAAA-MM-DD] [--limit 500] [--out informe.json]` lee las partidas terminadas de la base (`DATABASE_URL`), las reproduce con el reductor y da, por dificultad: partidas y victorias; puntaje por jugador y por equipo (mediana y p95); **P frente al puntaje mediano de un jugador**; aciertos, errores y tasa de errores; las señales de cada error (tiempo desde la acción anterior del mismo jugador, error repetido en la misma celda, error evidente porque el dígito ya está bloqueado en su fila, columna o caja, y nivel de la celda, que es el del acierto posterior en ella); «probar hasta acertar» (el mismo jugador acierta la celda en menos de 30 s tras fallarla); pistas por jugador; la parte de los puntos que viene del cierre de unidades (β); partidas definidas por desempate y empates exactos; y una **estimación de T(L)**: el tiempo entre jugadas del mismo jugador, por nivel de la celda resuelta.
 
-Solo lee: no cambia parámetros ni filas. **La decisión sobre P y una versión nueva de los parámetros quedan para F13** (decisión del autor en el plan de F11), con las partidas de la beta. Limitaciones, que el informe también lista: T(L) es una cota superior (el intervalo incluye otras celdas y las notas) y el «robo» de pistas no se puede medir, porque la presencia no se guarda (T(L) medido de forma directa queda fuera de la v1: `docs/IDEAS_FUTURAS.md`, sección 8). La prueba `apps/server/test/scoring-report.test.ts` comprueba los conteos sobre el registro de una partida jugada contra el servidor de pruebas.
+Solo lee: no cambia parámetros ni filas. Una versión nueva de los parámetros sería un archivo nuevo junto a `params.v1.json`, y las partidas ya jugadas conservan la versión con que se puntuaron. Limitaciones, que el informe también lista: T(L) es una cota superior (el intervalo incluye otras celdas y las notas) y el «robo» de pistas no se puede medir, porque la presencia no se guarda (T(L) medido de forma directa queda fuera de la v1: `docs/IDEAS_FUTURAS.md`, sección 8). La prueba `apps/server/test/scoring-report.test.ts` comprueba los conteos sobre el registro de una partida jugada contra el servidor de pruebas.
 
-Hasta F11 no hay partidas reales para analizar: las partidas internas son tiempo de personas, fuera de las horas de F11, y las de la prueba de carga son de clientes automáticos (aciertos y errores al azar), así que solo sirven para comprobar que la herramienta corre sobre miles de partidas, no para calibrar.
+Las partidas de la prueba de carga son de clientes automáticos (aciertos y errores al azar): solo sirven para comprobar que la herramienta corre sobre miles de partidas, no para calibrar.
 
 ## 12. Cómo se ejecuta
 

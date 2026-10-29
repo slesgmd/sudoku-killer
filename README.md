@@ -4,6 +4,8 @@
 
 Cooperative, real-time killer sudoku for up to 6 players. Join with a room code and a nickname — no accounts.
 
+**Status: v1.0.0, complete.** A closed beta ran from 26 to 28 October 2026 with 15 players on Android, iPhone, Windows and Linux, with no player-facing bugs ([release notes](https://github.com/slesgmd/sudoku-killer/releases/tag/v1.0.0)).
+
 [![CI](https://github.com/slesgmd/sudoku-killer/actions/workflows/ci.yml/badge.svg)](https://github.com/slesgmd/sudoku-killer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg?logo=typescript&logoColor=white)](tsconfig.base.json)
@@ -90,9 +92,9 @@ All decisions are indexed in [docs/adr/](docs/adr/README.md).
 ## Known limitations and future work
 
 - **The free server sleeps** after 15 minutes without traffic and takes about a minute to wake up; the web app stays up and shows a "waking up the server" notice ([ADR 0007](docs/adr/0007-hosting.md)).
-- **Scoring is calibrated by simulation only.** The fast player still wins about 57% of duels against an equally fast logical player, and the size of the mistake penalty is the first thing to recalibrate with real games; the event log allows rescoring past matches without replaying them ([docs/puntuacion.md](docs/puntuacion.md#10-limitaciones-conocidas)).
+- **Scoring was calibrated by simulation** and kept unchanged after the closed beta. The fast player still wins about 57% of duels against an equally fast logical player, and scaling the mistake penalty by difficulty is listed as future work; the event log allows rescoring past matches without replaying them ([docs/puntuacion.md](docs/puntuacion.md#10-limitaciones-conocidas)).
 - **Single instance.** Live rooms are kept in memory behind a `RoomStore` interface; scaling out would need a shared store and room affinity.
-- **Load figures are local.** They still have to be repeated on the hosting, and saturation on a real slow network has not been tested ([docs/carga.md](docs/carga.md)).
+- **Load figures are local.** In production the server is watched through its metrics log line instead of a synthetic load on the free instance; the closed beta ran without performance problems, but saturation on a real slow network has not been tested ([docs/carga.md](docs/carga.md)).
 - **Spanish-only interface**, with every string behind an i18n key; no dark theme yet.
 - Ideas outside v1 — competitive mode, session ranking, chat, time-attack mode, persistent identity — are listed in [docs/IDEAS_FUTURAS.md](docs/IDEAS_FUTURAS.md).
 

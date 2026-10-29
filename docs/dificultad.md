@@ -1,10 +1,10 @@
-# Dificultad y banco de puzzles (F5)
+# Dificultad y banco de puzzles
 
 Cómo se arma cada dificultad del juego a partir de la calificación de un puzzle (`grade`, `docs/motor.md`), cómo se generó el banco y sus distribuciones. Las reglas verificables son T-20.2 a T-20.5 (SPEC 1.4). La decisión de versionar un manifiesto de semillas está en el ADR 0006.
 
 ## 1. Equivalencia vigente, versión 2
 
-`DIFFICULTY_MAPPING_VERSION = "2"` (`packages/bank/src/difficulty.ts`), aprobada el 2026-10-23 tras la prueba en papel (sección 2). Reemplaza a la versión 1 (sección 7) y a la decisión b) de F5, que solo permitía números iniciales en el fácil.
+`DIFFICULTY_MAPPING_VERSION = "2"` (`packages/bank/src/difficulty.ts`), aprobada el 2026-10-23 tras la prueba en papel (sección 2). Reemplaza a la versión 1 (sección 7), que solo permitía números iniciales en el fácil.
 
 | Dificultad | Números iniciales | Banda: nivel calculado con los números iniciales | Piso de la guarda |
 |---|---|---|---|
@@ -29,7 +29,7 @@ Cómo se arma cada dificultad del juego a partir de la calificación de un puzzl
 
 - **Muestra:** 12 puzzles de la equivalencia versión 1, generada el 2026-10-23 con la semilla 2026. Esos puzzles no tenían números iniciales, salvo los de unicidad.
 - **Conclusión:** sin números iniciales, los puzzles resultan difíciles, incluido el fácil.
-- **Decisión** (aprobada por el autor el 2026-10-23):
+- **Decisión** (2026-10-23):
   - números iniciales escalonados por dificultad (30, 22, 10 y 0), con las bandas de la sección 1;
   - celdas con guarda, repartidas por cajas y con semilla;
   - semillas separadas por dificultad;
@@ -90,13 +90,13 @@ Generado el 2026-10-23 con `pnpm --filter @sudoku-killer/server bank:generate` (
 
 - **Regenerar el manifiesto:** `pnpm --filter @sudoku-killer/server bank:generate [--base-seed 1] [--per-difficulty 500]`. Con las mismas opciones y versiones da el mismo archivo (T-20.4) e imprime las tablas de la sección 4.
 - **Cuándo hace falta:** si cambian `GENERATOR_VERSION`, `GRADER_VERSION`, `DIFFICULTY_MAPPING_VERSION`, `UNIT_COMBINATION_BOUND` o los números iniciales de una dificultad. El cargador rechaza el manifiesto viejo.
-- **Cargar en la base de datos:** `loadBank(db, manifest)` regenera y verifica cada semilla con sus números iniciales y después inserta en una transacción, de forma idempotente (ADR 0006). El comando contra PostgreSQL y la comprobación al arrancar se conectan en F9.
+- **Cargar en la base de datos:** `loadBank(db, manifest)` regenera y verifica cada semilla con sus números iniciales y después inserta en una transacción, de forma idempotente (ADR 0006). El comando contra PostgreSQL es `bank:load`, y el servidor comprueba al arrancar que hay puzzles de cada dificultad.
 - **Pruebas:**
   - CI: una muestra del manifiesto en `apps/server/test/bank.test.ts` y `repository.test.ts`, con PGlite.
   - `pnpm test:corpus`: el banco completo en `apps/server/test/bank.corpus.test.ts`, que lo carga, lo verifica y juega una partida simulada por puzzle (T-20.5). Con la versión 2 (2026-10-23), los 2000 puzzles se cargaron y verificaron en 421 s, en paralelo con los otros corpus. Las 131 000 llamadas a `levelToDeduce` de las 2000 partidas dieron siempre un nivel entre 1 y el del puzzle, nunca `UNRATED`.
-- **Parte pura en `packages/bank` (F8):** la equivalencia (`difficulty.ts`), el esquema del manifiesto y `regenerateSeed` pasaron del servidor a un paquete puro, para que el servidor simulado del cliente regenere las mismas semillas sin copiar las reglas. El hash con `node:crypto` y la carga siguen en `apps/server`.
+- **Parte pura en `packages/bank`:** la equivalencia (`difficulty.ts`), el esquema del manifiesto y `regenerateSeed` pasaron del servidor a un paquete puro, para que el servidor simulado del cliente regenere las mismas semillas sin copiar las reglas. El hash con `node:crypto` y la carga siguen en `apps/server`.
 
-### 5.1 Carga en el servidor simulado del cliente (F8)
+### 5.1 Carga en el servidor simulado del cliente
 
 En desarrollo, el servidor simulado (`apps/web/src/dev/sim/`) toma una semilla al azar de la dificultad pedida en el manifiesto, la regenera en el navegador con `regenerateSeed` y comprueba la dificultad, la calificación y el hash (`crypto.subtle`, idéntico al de `node:crypto`, con una prueba sobre una muestra) contra su entrada. El manifiesto se importa con el alias `@dev/bank-manifest`, que solo existe al servir en desarrollo y en las pruebas: un build no lo resuelve, y `check-dist` confirma que no queda en el de producción (T-31.2).
 
@@ -109,7 +109,7 @@ Tiempo de carga (regenerar y calcular el hash), medido en Node con las primeras 
 | Difícil | 157 ms | 264 ms | 275 ms |
 | Experto | 54 ms | 87 ms | 101 ms |
 
-El experto es el más rápido porque no lleva números iniciales: `addGivens` califica el puzzle con cada número que agrega. En el navegador, el simulador escribe el tiempo de cada carga en la consola (`[sim] … loaded in N ms`). Los tiempos en PC y en celular se anotan en el punto de control de F8; si en el celular pasan de unos 1,5 s, se propone mover la carga a un Worker.
+El experto es el más rápido porque no lleva números iniciales: `addGivens` califica el puzzle con cada número que agrega. En el navegador, el simulador escribe el tiempo de cada carga en la consola (`[sim] … loaded in N ms`). Si en el celular pasaran de unos 1,5 s, la carga se movería a un Worker.
 
 ## 6. Prueba manual
 
@@ -117,16 +117,18 @@ El experto es el más rápido porque no lleva números iniciales: `addGivens` ca
   - Son 12 puzzles, 3 por dificultad, en un orden al azar y con letras.
   - La cantidad de números iniciales anticipa la dificultad. Al final están la clave y las soluciones.
 - **Qué se anota:** por puzzle, el tiempo, si se terminó y la dificultad percibida, de 1 a 5.
-- **Qué se hace con el resultado:** si las dificultades no se distinguen o no siguen el orden esperado, se ajustan las cantidades o las bandas, con una nueva versión de la equivalencia y un manifiesto nuevo, antes de F9.
-- **Desviación registrada:** la prueba con varios jugadores en tiempo real queda para F8 (con el servidor simulado) y para la beta de F13.
+- **Qué se hace con el resultado:** si las dificultades no se distinguen o no siguen el orden esperado, se ajustan las cantidades o las bandas, con una nueva versión de la equivalencia y un manifiesto nuevo.
+- **Con varios jugadores en tiempo real:** se probó con el servidor simulado y en la beta cerrada (sección 6, al final).
 
 | Puzzle | Persona | Tiempo | ¿Terminado? | Dificultad percibida (1 a 5) | Comentarios |
 |---|---|---|---|---|---|
-| Un medio y un difícil de la muestra versión 2 | Autor | No anotado | Sí, los dos | No anotada en números | La diferencia entre el medio y el difícil se nota, y el fácil se siente fácil. |
+| Un medio y un difícil de la muestra versión 2 | Una persona | No anotado | Sí, los dos | No anotada en números | La diferencia entre el medio y el difícil se nota, y el fácil se siente fácil. |
 
-**Resultado de la segunda prueba (2026-10-24):** las dificultades se distinguen en el orden esperado. Una sola persona resolvió dos puzzles, así que es una señal y no una medición; la calibración sigue con partidas reales en F13.
+**Resultado de la segunda prueba (2026-10-24):** las dificultades se distinguen en el orden esperado. Una sola persona resolvió dos puzzles, así que es una señal y no una medición.
 - La equivalencia versión 2 se mantiene, incluida la guarda que deja un solo paso de nivel 2 en las medias y uno de nivel 3 en las difíciles (sección 1).
 - No se regenera el manifiesto ni se vuelve a cargar el banco.
+
+**Beta cerrada (2026-10-26 a 2026-10-28):** 15 personas jugaron partidas reales durante tres días. No hubo reportes sobre la dificultad, y la equivalencia versión 2 queda como la de la v1.
 
 ## 7. Historia: versión 1 (sin números iniciales por dificultad)
 
@@ -135,7 +137,7 @@ Equivalencia aprobada el 2026-10-23 y reemplazada el mismo día por la versión 
 - **Números iniciales:** solo los de unicidad.
 - **Banco v1:** 15 254 semillas en 9,2 minutos y 1589 excluidas (10,4 %).
 
-**Cota de `unitCombination`**, que sigue vigente. Sin cota, el nivel 5 dependía de una enumeración que llegaba a 825 combinaciones por deducción. Con la cota 4/8, la técnica solo mira unidades que una persona puede cruzar con notas (`docs/motor.md`, «Cota de `unitCombination` (F5)»).
+**Cota de `unitCombination`**, que sigue vigente. Sin cota, el nivel 5 dependía de una enumeración que llegaba a 825 combinaciones por deducción. Con la cota 4/8, la técnica solo mira unidades que una persona puede cruzar con notas (`docs/motor.md`, «Cota de `unitCombination`»).
 
 | Cota | Nivel 5 conservados (de 85) | Pasan a exceder | Tasa de nivel 5 | Minutos para 500 |
 |---|---|---|---|---|

@@ -1,15 +1,15 @@
 # SPEC — Sudoku Killer Multijugador · v1
 
-- Versión del documento: 1.14 (F12, 2026-10-25). Cambios desde la 1.0 (F2): R-05 precisa las jugadas simultáneas y suma T-05.5 (1.1); R-35 fija las pruebas del motor del puzzle (1.2); R-20 suma el banco de puzzles (T-20.3 a T-20.5) y `PuzzleRecord` guarda `graderVersion` y `seed` (1.3); P2 y R-20 escalonan los números iniciales por dificultad y `givensReason` cambia `easy` por `difficulty` (1.4); F6 fija B, w, P, β y H, el nivel se calcula con los descartes públicos de los errores (§2.3 y §5), R-35 suma T-35.7 y T-35.8 y la nueva R-36 reúne las pruebas de la puntuación (1.5); F8 fija el destello en 1500 ms (§1.4 y T-04.3), el evento `cell.solved` guarda `level` y `graderVersion` (§5), T-31.2 describe su detector, las pruebas de esquema, T-15.1 y la base de T-32.1 se adelantan a F8, R-06 suma la preferencia local «Usar notas» (T-06.3) y la nueva R-37 cubre el arranque que falla (1.6); F9 fija las cubetas de presencia y de ping, los cierres 4002 y 1012, el 403 por origen, el apodo en grafemas, la persistencia de §2.5 y el registro de las desconexiones al reconstruir (1.7); F10 suma `defeatCause`, opcional, a `match.ended` y al snapshot (§4.3, §4.5, T-01.6 y T-01.7), y la nueva R-38 cubre la actividad tras una reconexión (1.8); F11 suma a §4.8 los topes de conexiones y de salas por instancia (`docs/seguridad.md`, S-01) y registra que la prueba de carga confirmó los valores iniciales (1.9); F12 suma la clave de acceso del grupo en el handshake (R-39, cierre 4003, espera por IP y `sk:access`), el tope de conexiones por IP, los plazos del HTTP y el servidor dormido en R-37 (1.10); tras el primer despliegue, solo una clave ofrecida que no vale cuenta para la espera por IP, una IP que no se puede saber no comparte espera ni tope, el 429 lleva `Retry-After`, `GET /ws` dice qué recibiría el handshake y el cliente distingue un handshake rechazado del servidor dormido (T-39.7 a T-39.10, 1.11); el 4003 se envía en respuesta al primer mensaje del cliente, porque detrás del proxy de Render el que salía junto con el 101 no llegaba (T-39.11, 1.12); la página precalienta el servidor con `GET /ws` en lugar de `/healthz`, que Brave bloquea (R-37, 1.13); como el proxy de Render pierde también el 4003 que responde al primer mensaje, el cliente comprueba la clave con `POST /access` antes de abrir ningún WebSocket, la invitación pasa por la misma comprobación, el 4003 queda de respaldo y la prueba de humo comprueba el 401 (T-39.12 a T-39.17, 1.14). El protocolo sigue en la versión 1: un campo opcional es un cambio compatible (§4.7).
+- Versión del documento: 1.14 (2026-10-25), la de la v1. Los cambios desde la 1.0 (2026-10-22) están en el historial de git de este archivo.
 - Versión del protocolo: **1**
-- Fuente de las reglas: `docs/PLAN.md`, secciones 1 y 2, más las decisiones de producto de F2 (sección 1 de este documento).
+- Fuente de las reglas: la visión, las reglas y las decisiones de producto de la v1 (sección 1 de este documento).
 - Decisiones técnicas: `docs/adr/0001`–`0007`.
 
 ## 0. Cómo leer este documento
 
 | Prefijo | Significado |
 |---|---|
-| **P-n / D-n** | Decisión de producto tomada en F2 (sección 1). |
+| **P-n / D-n** | Decisión de producto (sección 1). |
 | **R-nn** | Regla verificable (sección 6). |
 | **T-nn.m** | Caso de prueba de la regla R-nn, escrito como *Dado / Cuando / Entonces*. |
 | **E-nn** | Caso límite (sección 7). Cada uno remite a sus T. |
@@ -21,7 +21,7 @@ Los nombres de tipos, mensajes y campos están en inglés, porque son código. L
 ## 1. Alcance y decisiones de producto
 
 ### 1.1 Modo Normal (único modo de la v1)
-Resumen de `PLAN.md` §1 y §2. Las reglas detalladas están en la sección 6.
+Resumen de la visión y de las reglas de producto. Las reglas detalladas están en la sección 6.
 
 - Juego cooperativo: el equipo gana al completar el tablero.
 - Ranking individual por puntos.
@@ -30,12 +30,12 @@ Resumen de `PLAN.md` §1 y §2. Las reglas detalladas están en la sección 6.
 - Notas personales y grupales.
 - Temporizador común que no se pausa.
 
-### 1.2 Decisiones de producto de F2 (ronda única con el autor, 2026-10-22)
+### 1.2 Decisiones de producto (2026-10-22)
 
 | ID | Decisión | Regla |
 |---|---|---|
-| P1 | **Pistas compartidas por el equipo: 3 por partida.**<br>• Las usa un jugador activo sobre una celda vacía que él elige. El servidor coloca el valor correcto y bloquea la celda.<br>• No da bonus de cierre a nadie, no cuesta vidas y se avisa a todos quién la usó.<br>• **Le cuesta −H puntos a quien la usa** (H = 60, fijado en F6: `docs/puntuacion.md`). Así no sirve para quitarles celdas difíciles a otros jugadores. | R-19 |
-| P2 | Jaulas de 2 a 5 celdas; no hay jaulas de 1 celda. Los números iniciales se escalonan por dificultad: 30 en fácil, 22 en media, 10 en difícil y ninguno en experto, además de los que el generador necesite para que la solución sea única. Cambio aprobado en F5 (2026-10-23) tras la prueba en papel; antes solo había números iniciales en el fácil o por unicidad. | R-20 |
+| P1 | **Pistas compartidas por el equipo: 3 por partida.**<br>• Las usa un jugador activo sobre una celda vacía que él elige. El servidor coloca el valor correcto y bloquea la celda.<br>• No da bonus de cierre a nadie, no cuesta vidas y se avisa a todos quién la usó.<br>• **Le cuesta −H puntos a quien la usa** (H = 60: `docs/puntuacion.md`). Así no sirve para quitarles celdas difíciles a otros jugadores. | R-19 |
+| P2 | Jaulas de 2 a 5 celdas; no hay jaulas de 1 celda. Los números iniciales se escalonan por dificultad: 30 en fácil, 22 en media, 10 en difícil y ninguno en experto, además de los que el generador necesite para que la solución sea única. Cambio del 2026-10-23, tras la prueba en papel; antes solo había números iniciales en el fácil o por unicidad. | R-20 |
 | P3 | 4 niveles: fácil, media, difícil y experto. Los elige quien puede iniciar, antes de cada partida. | R-21 |
 | P4 | Al terminar, la sala vuelve al lobby y la partida siguiente empieza con todos activos (3 vidas, 0 puntos). El ranking es por partida; no hay ranking acumulado. | R-22 |
 | P5 | Los espectadores ven todo y pueden escribir notas grupales y personales. No colocan números ni usan pistas. | R-23 |
@@ -53,7 +53,7 @@ Resumen de `PLAN.md` §1 y §2. Las reglas detalladas están en la sección 6.
 | D7 | Las notas personales solo las ve su dueño. | R-29 |
 | D8 | No hay "segunda oportunidad" ni pausa. | R-34 |
 | D9 | El puzzle se elige al azar del banco, dentro de la dificultad, sin repetir los que ya se jugaron en la sala. | R-21 |
-| D10 | Se resalta la jaula de la celda seleccionada. El diseño se define en F7. | R-33 |
+| D10 | Se resalta la jaula de la celda seleccionada. El diseño está en `docs/diseno.md`. | R-33 |
 | D11 | Un espectador no vuelve a ser activo en la misma partida. | R-23 |
 
 ### 1.3 Fuera de la v1
@@ -64,33 +64,33 @@ Estas ideas están registradas en `docs/IDEAS_FUTURAS.md`:
 - Contrarreloj.
 - Identidad persistente, que sobreviva al borrado del navegador.
 
-### 1.4 Preguntas abiertas: resolución y dueño
-Incluye las 14 preguntas de `docs/referencia.md` y la pregunta de pistas de `PLAN.md`. Ninguna queda sin dueño.
+### 1.4 Preguntas abiertas y su resolución
+Incluye las 14 preguntas que dejó el estudio de reglas de la app de referencia y la pregunta sobre las pistas. Todas quedaron cerradas.
 
-| # | Pregunta | Resolución | Dueño |
+| # | Pregunta | Resolución | Estado |
 |---|---|---|---|
-| ref-1 | Respuesta real de `/api/level` | No aplica: los puzzles se generan en F4 y F5. | Cerrada |
+| ref-1 | Respuesta real de `/api/level` | No aplica: los puzzles se generan con el motor propio y forman el banco (ADR 0006). | Cerrada |
 | ref-2 | Notas en ejecución | No aplica: las reglas propias son R-16 y R-17. | Cerrada |
 | ref-3 | ¿La limpieza se dispara con un número incorrecto? | No. Solo se dispara al bloquear una celda (R-17, T-17.3). | Cerrada |
 | ref-4 | ¿Se puede desactivar la limpieza? | En las notas personales, sí (ajuste). En las grupales, no (R-17). | Cerrada |
-| ref-5 | Resaltado de la jaula seleccionada | Sí (D10). | F7 (diseño), F8 (implementación) |
+| ref-5 | Resaltado de la jaula seleccionada | Sí (D10), con el diseño de `docs/diseno.md`. | Cerrada |
 | ref-6 | Deshacer | Solo notas, con comprobación (R-25). | Cerrada |
 | ref-7 | ¿Se puede borrar o sobrescribir un número correcto? | No: la celda queda bloqueada para siempre (R-15). | Cerrada |
-| ref-8 | Pista en ejecución | R-19. H = 60 (F6, `docs/puntuacion.md`). | Cerrada |
+| ref-8 | Pista en ejecución | R-19. H = 60 (`docs/puntuacion.md`). | Cerrada |
 | ref-9 | Pausa | No hay pausa (R-07, R-34). | Cerrada |
 | ref-10 | Segunda oportunidad | No hay (D8). | Cerrada |
 | ref-11 | `checkMistakes` | No aplica: todo error cuenta (R-03). | Cerrada |
-| ref-12 | Multiplicador por completar áreas | No aplica: usamos el bonus β = 1 por unidad cerrada (F6). | Cerrada |
+| ref-12 | Multiplicador por completar áreas | No aplica: usamos el bonus β = 1 por unidad cerrada. | Cerrada |
 | ref-13 | ¿El temporizador sigue con la pestaña oculta? | El tiempo lo lleva el servidor y no se pausa (R-07). | Cerrada |
 | ref-14 | Cambio de dificultad en ejecución | No aplica: la dificultad se elige en el lobby (R-21). | Cerrada |
-| plan | Pistas en la v1 | P1 y R-19, con H = 60 (F6). | Cerrada |
+| pistas | Pistas en la v1 | P1 y R-19, con H = 60. | Cerrada |
 
-Parámetros que quedan pendientes con su dueño:
-- B, w, P, β y H: **resueltos en F6** (`docs/puntuacion.md`, `packages/scoring/src/params.v1.json`): B = 10, w = 1, 2, 3, 4 y 5 para los niveles 1 a 5, P = 90, β = 1 y H = 60. Se recalibran con registros de partidas reales en F11 y F13.
-- Mapeo de los niveles del calificador a las dificultades: **resuelto en F5** (`docs/dificultad.md`, versión 2, con números iniciales por dificultad). Se recalibra con la segunda muestra impresa de F5 y con partidas reales en F13.
-- Límites de velocidad y de tamaño de mensaje: valores iniciales en la sección 4.8; se calibran en F11.
-- Duración del destello de un error: **resuelta en F7 y F8**: 1500 ms (`--t-error-flash`, T-04.3).
-- Hosting: F12.
+Parámetros de la v1 (finales tras la beta cerrada del 2026-10-26 al 2026-10-28):
+- B, w, P, β y H (`docs/puntuacion.md`, `packages/scoring/src/params.v1.json`): B = 10, w = 1, 2, 3, 4 y 5 para los niveles 1 a 5, P = 90, β = 1 y H = 60.
+- Mapeo de los niveles del calificador a las dificultades: `docs/dificultad.md`, versión 2, con números iniciales por dificultad.
+- Límites de velocidad y de tamaño de mensaje: sección 4.8, confirmados por la prueba de carga.
+- Duración del destello de un error: 1500 ms (`--t-error-flash`, T-04.3).
+- Hosting: ADR 0007.
 
 ---
 
@@ -122,11 +122,11 @@ interface PublicPuzzle {
 // Solo servidor (packages/engine y apps/server). NUNCA se importa en packages/protocol.
 interface PuzzleRecord extends PublicPuzzle {
   solution: number[];            // size² dígitos
-  graderMaxLevel: number;        // técnica máxima requerida (F4/F5), de 1 a 5 en el banco
+  graderMaxLevel: number;        // técnica máxima requerida, de 1 a 5 en el banco
   graderSteps: number;
-  graderVersion: string;         // versión del calificador que dio el nivel (F5)
+  graderVersion: string;         // versión del calificador que dio el nivel
   generatorVersion: string;
-  seed: number;                  // semilla del generador (F5, ADR 0006); nunca sale del servidor
+  seed: number;                  // semilla del generador (ADR 0006); nunca sale del servidor
   givensReason: 'none' | 'difficulty' | 'uniqueness'; // 'difficulty' aunque también haya de unicidad
 }
 ```
@@ -186,7 +186,7 @@ interface Match {
   cells: CellState[];
   groupNotes: Uint16Array;
   hintsLeft: number;             // P1: 3
-  excluded: Array<{ cell: number; digit: number }>;  // dígitos de los errores (públicos), para levelToDeduce (F6)
+  excluded: Array<{ cell: number; digit: number }>;  // dígitos de los errores (públicos), para levelToDeduce
   lastNoteOp: Map<string, number>;          // `group:${cell}:${digit}` | `personal:${playerId}:${cell}:${digit}` → seq de la última modificación (P7)
   recentClientMsgIds: Map<PlayerId, LRU<string, CachedResult>>;  // idempotencia (E-07)
 }
@@ -202,13 +202,13 @@ type CellState =
 - Son 128 bits aleatorios codificados en base64url. Se generan con un CSPRNG al entrar por primera vez.
 - Se envían **solo** al dueño, en `room.welcome`. El navegador la guarda en `localStorage` bajo la clave `sk:token:<code>`.
 - El servidor guarda solo `tokenHash` (SHA-256), en memoria y en el registro de eventos.
-- **Clave de acceso del grupo (F12, R-39):** el navegador la guarda normalizada en `localStorage` bajo `sk:access`, solo después de que `POST /access` la aceptó, y solo la envía en esa comprobación (cabecera `X-Sk-Access-Key`) y en el handshake del WebSocket. Es la misma para todo el grupo y no identifica a nadie.
+- **Clave de acceso del grupo (R-39):** el navegador la guarda normalizada en `localStorage` bajo `sk:access`, solo después de que `POST /access` la aceptó, y solo la envía en esa comprobación (cabecera `X-Sk-Access-Key`) y en el handshake del WebSocket. Es la misma para todo el grupo y no identifica a nadie.
 - La ficha vale para una sala y deja de valer cuando el jugador se purga, es decir, al terminar la partida si había salido o expirado, o al salir o expirar fuera de una partida.
 
 ### 2.5 Persistencia
 Tablas `puzzles`, `matches` y `match_events`; ver ADR 0003. Los eventos del registro se describen en el ADR 0004 y en la sección 4.6.
 
-Esquema aprobado por el autor en el punto de control de F9 (migración `0002_matches`):
+Esquema (migración `0002_matches`):
 - `matches`: `id` (el `matchId`, lo genera el servidor), `room_code`, `puzzle_id` (clave foránea a `puzzles`), `difficulty`, `mode_id`, `scoring_params_version`, `protocol_version`, `log_version` (forma de los eventos, hoy 1), `started_at`, `ended_at` y `result`. `ended_at` y `result` son nulos a la vez; se escriben en la misma transacción que `match.ended`. Un índice parcial lista las partidas en curso.
 - `match_events`: `(match_id, seq)` como clave primaria, `type` (los 10 tipos), `payload` (jsonb, el del evento tal cual) y `server_ts` (al milisegundo). Solo se agregan filas: un trigger rechaza `UPDATE` y `DELETE`. Al leer, cada evento se valida con su esquema Zod.
 - `puzzles` nunca pierde filas: `hash` (el del manifiesto) es único, `mapping_version` guarda la equivalencia y `retired_at` marca los puzzles que salieron del manifiesto. `(generator_version, seed)` es un índice común, porque con otra equivalencia la misma semilla da otro puzzle. Solo se eligen puzzles vigentes; las partidas viejas conservan su clave foránea.
@@ -242,7 +242,7 @@ Esquema aprobado por el autor en el punto de control de F9 (migración `0002_mat
 En `waiting` y en `finished` se puede entrar y salir libremente. En `running` también se puede entrar (R-12).
 
 ### 3.2 Jugador: dos ejes independientes
-`PLAN.md` describe una cadena lineal (`activo → espectador → desconectado → expirado`). La SPEC la descompone en **dos ejes independientes**, porque un espectador también puede desconectarse.
+Las reglas de producto describen una cadena lineal (`activo → espectador → desconectado → expirado`). La SPEC la descompone en **dos ejes independientes**, porque un espectador también puede desconectarse.
 
 **Eje de rol** (existe solo durante una partida):
 
@@ -373,7 +373,7 @@ interface RankingEntry { playerId; nickname; score; mistakes; scoreReachedAt; po
 | `undo.not_applicable` | `reason`: `modified` (otro jugador, una limpieza o un bloqueo cambiaron ese candidato), `not_owner` o `unknown_op`. |
 | `server.unavailable` | La base de datos no responde (ADR 0004), la sala se está reconstruyendo tras un fallo (E-16) o el servidor tuvo un error interno. Nunca lleva detalles. |
 
-Códigos de cierre de la conexión: 1001 (apagado del servidor), 1009 (mensaje de más de 16 KiB), 1012 (la sala se cerró para reconstruirla, E-16), 1013 (saturación, E-17), 4000 (versión, E-19), 4001 (reemplazo, E-08) y 4002 (la conexión no entró a ninguna sala en 30 s, ADR 0002) y 4003 (falta la clave de acceso del grupo o no vale, R-39; se envía al llegar el primer mensaje del cliente, o a los 5 s si no envía nada, T-39.11). Un handshake con un `Origin` ausente o fuera de `ALLOWED_ORIGINS` recibe HTTP 403; una ruta distinta de `/ws`, 404; y uno que ofrece una clave desde una IP que agotó sus intentos, 429 con `Retry-After`. `GET /healthz` responde 204 sin cuerpo (F12). `GET /ws` sin upgrade responde lo que recibiría el handshake: 403 con un `Origin` ajeno, 429 con `Retry-After` si la IP está en espera y 204 si no, con `Access-Control-Allow-Origin: *` (solo un estado, sin datos): el navegador no deja leer el estado de un handshake rechazado (T-39.9). `POST /access` comprueba la clave de la cabecera `X-Sk-Access-Key` (normalizada, en base64url): 204 si vale o si el servidor no pide clave, 401 si falta o no vale, 429 con `Retry-After` si la IP está en espera y ofrece una clave, y 403 con un `Origin` ausente o fuera de `ALLOWED_ORIGINS`; CORS solo para el origen permitido que preguntó, y `OPTIONS` responde la consulta previa del navegador (T-39.12).
+Códigos de cierre de la conexión: 1001 (apagado del servidor), 1009 (mensaje de más de 16 KiB), 1012 (la sala se cerró para reconstruirla, E-16), 1013 (saturación, E-17), 4000 (versión, E-19), 4001 (reemplazo, E-08) y 4002 (la conexión no entró a ninguna sala en 30 s, ADR 0002) y 4003 (falta la clave de acceso del grupo o no vale, R-39; se envía al llegar el primer mensaje del cliente, o a los 5 s si no envía nada, T-39.11). Un handshake con un `Origin` ausente o fuera de `ALLOWED_ORIGINS` recibe HTTP 403; una ruta distinta de `/ws`, 404; y uno que ofrece una clave desde una IP que agotó sus intentos, 429 con `Retry-After`. `GET /healthz` responde 204 sin cuerpo. `GET /ws` sin upgrade responde lo que recibiría el handshake: 403 con un `Origin` ajeno, 429 con `Retry-After` si la IP está en espera y 204 si no, con `Access-Control-Allow-Origin: *` (solo un estado, sin datos): el navegador no deja leer el estado de un handshake rechazado (T-39.9). `POST /access` comprueba la clave de la cabecera `X-Sk-Access-Key` (normalizada, en base64url): 204 si vale o si el servidor no pide clave, 401 si falta o no vale, 429 con `Retry-After` si la IP está en espera y ofrece una clave, y 403 con un `Origin` ausente o fuera de `ALLOWED_ORIGINS`; CORS solo para el origen permitido que preguntó, y `OPTIONS` responde la consulta previa del navegador (T-39.12).
 
 Un error **nunca** cambia vidas ni puntos.
 
@@ -410,7 +410,7 @@ Se envía al entrar, al volver con ficha y tras una reconstrucción del servidor
 - Los esquemas viven en `packages/protocol/src/v1/`. Cada versión nueva será una carpeta aparte.
 - El cliente ignora los tipos que no conoce y los registra en el log de depuración.
 
-### 4.8 Límites (valores iniciales, confirmados por la prueba de carga de F11: `docs/carga.md`)
+### 4.8 Límites (confirmados por la prueba de carga: `docs/carga.md`)
 
 | Límite | Valor |
 |---|---|
@@ -420,11 +420,11 @@ Se envía al entrar, al volver con ficha y tras una reconstrucción del servidor
 | Heartbeat | Ping del servidor cada 15 s; la conexión se corta si pasan 30 s sin pong |
 | Ping de aplicación del cliente | Cada 5 s; sirve para sincronizar el reloj y detectar caídas desde el cliente |
 | Saturación (backpressure) | Con `bufferedAmount` por encima de 256 KiB se descarta la presencia. Por encima de 1 MiB se cierra con el código 1013 y el cliente se reconecta. |
-| Conexiones por instancia (F11) | Como máximo 2 000 abiertas a la vez; por encima, el handshake recibe 503. |
-| Salas por instancia (F11) | Como máximo 500 a la vez; por encima, `room.create` recibe `server.unavailable`. |
-| Conexiones por IP (F12) | Como máximo 40 abiertas a la vez desde una misma IP; por encima, el handshake recibe 503. |
-| Plazos del HTTP (F12) | 10 s para recibir las cabeceras y la petición entera (408); no afectan a un WebSocket abierto. |
-| Intentos de clave por IP (F12) | 10 claves ofrecidas que no valen en 10 min; después, el handshake desde esa IP que ofrece una clave recibe 429 hasta que pase la ventana. Sin clave ofrecida no cuenta ni espera: recibe 4003. La IP sale de `X-Forwarded-For` contando `TRUST_PROXY_HOPS` desde la derecha, sin puerto y en forma canónica; si la cabecera falta, tiene menos entradas o esa entrada no es una IP, la IP no se sabe y la conexión no tiene espera ni tope por IP (nunca uno compartido por todos). |
+| Conexiones por instancia | Como máximo 2 000 abiertas a la vez; por encima, el handshake recibe 503. |
+| Salas por instancia | Como máximo 500 a la vez; por encima, `room.create` recibe `server.unavailable`. |
+| Conexiones por IP | Como máximo 40 abiertas a la vez desde una misma IP; por encima, el handshake recibe 503. |
+| Plazos del HTTP | 10 s para recibir las cabeceras y la petición entera (408); no afectan a un WebSocket abierto. |
+| Intentos de clave por IP | 10 claves ofrecidas que no valen en 10 min; después, el handshake desde esa IP que ofrece una clave recibe 429 hasta que pase la ventana. Sin clave ofrecida no cuenta ni espera: recibe 4003. La IP sale de `X-Forwarded-For` contando `TRUST_PROXY_HOPS` desde la derecha, sin puerto y en forma canónica; si la cabecera falta, tiene menos entradas o esa entrada no es una IP, la IP no se sabe y la conexión no tiene espera ni tope por IP (nunca uno compartido por todos). |
 
 ---
 
@@ -447,7 +447,7 @@ interface PlacementContext {
   state: Readonly<MatchState>;          // estado ANTES de aplicar
   playerId: PlayerId; cell: number; value: number; at: number;
   closedUnits: Array<{ unit: Bonus['unit']; index: number }>;   // unidades que esta jugada completa
-  levelToDeduce: number;                // engine.levelToDeduce(cell, { puzzle, values, excluded }) — F4 y F6
+  levelToDeduce: number;                // engine.levelToDeduce(cell, { puzzle, values, excluded })
 }
 
 interface ScoreChange { playerId: PlayerId; delta: number; reason: 'correct' | 'closure' | 'mistake' | 'hint' }
@@ -465,7 +465,7 @@ interface GameMode {
 }
 ```
 
-**Nivel con descartes públicos (F6).** `levelToDeduce` se calcula sobre el estado anterior a la jugada, con los dígitos colocados y con los dígitos de los errores anteriores (`Match.excluded`), que todos vieron en `cell.mistake`. Un error nunca es el dígito de la solución, así que descartarlo no la contradice y el nivel no sube (T-35.8). Así, después de un error entre 2 candidatos, la celda vale lo que vale con un candidato menos, y adivinar «hasta acertar» no cobra el nivel alto (`docs/puntuacion.md`).
+**Nivel con descartes públicos.** `levelToDeduce` se calcula sobre el estado anterior a la jugada, con los dígitos colocados y con los dígitos de los errores anteriores (`Match.excluded`), que todos vieron en `cell.mistake`. Un error nunca es el dígito de la solución, así que descartarlo no la contradice y el nivel no sube (T-35.8). Así, después de un error entre 2 candidatos, la celda vale lo que vale con un candidato menos, y adivinar «hasta acertar» no cobra el nivel alto (`docs/puntuacion.md`).
 
 **Modo Normal (boceto)**
 - `can`: `active` puede hacer todas las acciones. `spectator` puede hacer `note.*` y `presence`.
@@ -473,7 +473,7 @@ interface GameMode {
 - `onCorrect`: `B × w(level)` más β por cada unidad cerrada: un `ScoreChange` `correct` y uno `closure` por unidad, en el orden de `closedUnits`.
 - `onMistake`: `{ score: [−P], livesDelta: −1 }`.
 - `onHint`: `[−H]`, sin β aunque la pista cierre unidades.
-- Parámetros v1 (`params.v1.json`): B = 10, w = 1/2/3/4/5, P = 90, β = 1 y H = 60. `scoreLog(eventos, parámetros)` recalcula una partida con cualquier versión (T-32.4). El evento `cell.solved` guarda `level` y `graderVersion`, calculados al decidir la jugada (F8, ADR 0004): la reproducción no vuelve a calcular `levelToDeduce`, y un cambio de calificador no cambia el nivel de las partidas ya jugadas.
+- Parámetros v1 (`params.v1.json`): B = 10, w = 1/2/3/4/5, P = 90, β = 1 y H = 60. `scoreLog(eventos, parámetros)` recalcula una partida con cualquier versión (T-32.4). El evento `cell.solved` guarda `level` y `graderVersion`, calculados al decidir la jugada (ADR 0004): la reproducción no vuelve a calcular `levelToDeduce`, y un cambio de calificador no cambia el nivel de las partidas ya jugadas.
 - `outcome`: `victory` si no queda ninguna celda vacía. `defeat` si ningún jugador `active` tiene `connection ∈ {connected, disconnected}`. Si no, `null`.
 - `ranking`: ordena por puntaje descendente; a igual puntaje, menos errores; después, menor `scoreReachedAt`. Si todo empata, comparten posición; para mostrarlos se ordenan por apodo.
 
@@ -488,247 +488,247 @@ Niveles de prueba:
 - **E:** E2E con Playwright.
 - **M:** revisión manual.
 
-Entre corchetes va la fase en que se implementa cada prueba.
+Entre corchetes va el nivel de cada prueba.
 
-### Visión del modo Normal (`PLAN.md` §1)
+### Visión del modo Normal (§1.1)
 
 **R-01 Resultado grupal.** El equipo gana al completar el tablero y pierde cuando no queda ningún jugador activo (D4).
-- T-01.1 *Dado* una sola celda vacía, *cuando* un jugador activo coloca el valor correcto, *entonces* todos reciben `cell.solved` y después `match.ended{victory}`, y la sala pasa a `finished`. [I, F9]
-- T-01.2 *Dado* un único activo con 1 vida y el resto espectadores, *cuando* comete un error, *entonces* pasa a espectador y se emite `match.ended{defeat}`. [I, F9]
-- T-01.3 *Dado* un único activo desconectado, *cuando* el reloj falso avanza 120 s, *entonces* expira y se emite `match.ended{defeat}`. [I, F9]
-- T-01.4 *Dado* un único activo desconectado durante 60 s y espectadores conectados, *entonces* la partida sigue en `running`. [I, F9]
-- T-01.5 *Dado* una sola celda vacía, *cuando* se usa una pista sobre ella, *entonces* el resultado es `victory`. [I, F9]
-- T-01.6 La derrota lleva su causa (§4.3): `lives` si todos terminaron con 0 vidas (T-01.2), `mixed` si uno quedó sin vidas y otro expiró (T-01.3) y `gone` si todos expiraron (T-14.3). El snapshot de quien vuelve después de la purga trae la misma causa, y `replay` del registro también. [I, F10]
-- T-01.7 Resultados y la franja del tablero muestran el titular y la bajada de la causa: «Se acabaron las vidas.», «La partida quedó sin jugadores.» o «La partida quedó sin jugadores activos.», igual al llegar en vivo y al recargar. Sin causa (un servidor anterior), los de la mezcla. [C, F10]
+- T-01.1 *Dado* una sola celda vacía, *cuando* un jugador activo coloca el valor correcto, *entonces* todos reciben `cell.solved` y después `match.ended{victory}`, y la sala pasa a `finished`. [I]
+- T-01.2 *Dado* un único activo con 1 vida y el resto espectadores, *cuando* comete un error, *entonces* pasa a espectador y se emite `match.ended{defeat}`. [I]
+- T-01.3 *Dado* un único activo desconectado, *cuando* el reloj falso avanza 120 s, *entonces* expira y se emite `match.ended{defeat}`. [I]
+- T-01.4 *Dado* un único activo desconectado durante 60 s y espectadores conectados, *entonces* la partida sigue en `running`. [I]
+- T-01.5 *Dado* una sola celda vacía, *cuando* se usa una pista sobre ella, *entonces* el resultado es `victory`. [I]
+- T-01.6 La derrota lleva su causa (§4.3): `lives` si todos terminaron con 0 vidas (T-01.2), `mixed` si uno quedó sin vidas y otro expiró (T-01.3) y `gone` si todos expiraron (T-14.3). El snapshot de quien vuelve después de la purga trae la misma causa, y `replay` del registro también. [I]
+- T-01.7 Resultados y la franja del tablero muestran el titular y la bajada de la causa: «Se acabaron las vidas.», «La partida quedó sin jugadores.» o «La partida quedó sin jugadores activos.», igual al llegar en vivo y al recargar. Sin causa (un servidor anterior), los de la mezcla. [C]
 
 **R-02 Ranking individual.**
-- T-02.1 El ranking ordena por puntaje descendente. [U, F6]
-- T-02.2 A igual puntaje, va primero quien tiene menos errores. [U, F6]
-- T-02.3 A igual puntaje y errores, va primero quien tiene menor `scoreReachedAt`. [U, F6]
-- T-02.4 Los jugadores que salieron o expiraron durante la partida aparecen en el ranking de `match.ended`. [I, F9]
+- T-02.1 El ranking ordena por puntaje descendente. [U]
+- T-02.2 A igual puntaje, va primero quien tiene menos errores. [U]
+- T-02.3 A igual puntaje y errores, va primero quien tiene menor `scoreReachedAt`. [U]
+- T-02.4 Los jugadores que salieron o expiraron durante la partida aparecen en el ranking de `match.ended`. [I]
 
 **R-03 Vidas.** Cada jugador tiene 3 vidas. Cada error resta una vida y P puntos. Con 0 vidas, el jugador pasa a espectador y conserva sus puntos.
-- T-03.1 *Cuando* un jugador activo coloca un dígito incorrecto, *entonces* pasa de 3 a 2 vidas, su puntaje baja P y todos reciben `cell.mistake` con `by`, `livesLeft` y `role`. [I, F9]
-- T-03.2 *Cuando* comete su tercer error, *entonces* `role = spectator` y su puntaje es el anterior menos P. [I, F9]
-- T-03.3 Un segundo dígito incorrecto en la **misma** celda cuenta como un error nuevo. [I, F9]
+- T-03.1 *Cuando* un jugador activo coloca un dígito incorrecto, *entonces* pasa de 3 a 2 vidas, su puntaje baja P y todos reciben `cell.mistake` con `by`, `livesLeft` y `role`. [I]
+- T-03.2 *Cuando* comete su tercer error, *entonces* `role = spectator` y su puntaje es el anterior menos P. [I]
+- T-03.3 Un segundo dígito incorrecto en la **misma** celda cuenta como un error nuevo. [I]
 
 **R-04 Jugadas visibles.** Los aciertos y los errores se notifican a todos con su autor. La celda acertada queda bloqueada. El número erróneo se muestra un instante y luego se retira.
-- T-04.1 Después de `cell.solved`, el snapshot de cualquier jugador incluye la celda en `locked`, con `by`. [I, F9]
-- T-04.2 Después de `cell.mistake`, el snapshot no guarda ningún valor en esa celda. [I, F9]
-- T-04.3 El cliente muestra el dígito erróneo con su autor durante 1500 ms (`--t-error-flash`) y después la celda vuelve a quedar vacía. [C, F8]
+- T-04.1 Después de `cell.solved`, el snapshot de cualquier jugador incluye la celda en `locked`, con `by`. [I]
+- T-04.2 Después de `cell.mistake`, el snapshot no guarda ningún valor en esa celda. [I]
+- T-04.3 El cliente muestra el dígito erróneo con su autor durante 1500 ms (`--t-error-flash`) y después la celda vuelve a quedar vacía. [C]
 
 **R-05 Celda bloqueada / "ya resuelta" y jugadas simultáneas.** Una celda acertada queda bloqueada. Cualquier jugada posterior sobre ella recibe `cell.already_solved`, sin penalización y sin evento, sea su dígito correcto o incorrecto.
 - **Jugadas simultáneas** sobre la misma celda: el servidor las ordena con la cola de la sala (§4.6) y gana la primera que procesa. Si la primera es un acierto, la segunda (y las siguientes) recibe `cell.already_solved`, sin penalización y sin evento, aunque su autor todavía no hubiera visto el `cell.solved`.
 - Si la primera es un error, la celda no se bloquea: el error cuenta (R-03) y la siguiente jugada se evalúa con normalidad (E-03).
-- T-05.1 *Dado* dos `cell.place` correctos sobre la misma celda en la misma tanda de la cola, *entonces* el primero produce `cell.solved` y el segundo recibe `cell.already_solved`. No cambian vidas ni puntos, y el registro tiene un solo evento. [I, F9]
-- T-05.2 Una jugada sobre un número inicial recibe `cell.already_solved`, sin penalización. [I, F9]
-- T-05.3 *Dado* una celda bloqueada, *cuando* llega un dígito **incorrecto** sobre ella, *entonces* recibe `cell.already_solved`, no `cell.mistake`. [I, F9]
-- T-05.4 Seis pestañas hacen clic en la misma celda a la vez: un solo acierto y ninguna penalización. [E, F10]
-- T-05.5 *Dado* un `cell.place` incorrecto seguido de uno correcto sobre la misma celda en la misma tanda de la cola, *entonces* el primero produce `cell.mistake` (−1 vida y −P) y el segundo `cell.solved`. El registro tiene dos eventos. [I, F9]
+- T-05.1 *Dado* dos `cell.place` correctos sobre la misma celda en la misma tanda de la cola, *entonces* el primero produce `cell.solved` y el segundo recibe `cell.already_solved`. No cambian vidas ni puntos, y el registro tiene un solo evento. [I]
+- T-05.2 Una jugada sobre un número inicial recibe `cell.already_solved`, sin penalización. [I]
+- T-05.3 *Dado* una celda bloqueada, *cuando* llega un dígito **incorrecto** sobre ella, *entonces* recibe `cell.already_solved`, no `cell.mistake`. [I]
+- T-05.4 Seis pestañas hacen clic en la misma celda a la vez: un solo acierto y ninguna penalización. [E]
+- T-05.5 *Dado* un `cell.place` incorrecto seguido de uno correcto sobre la misma celda en la misma tanda de la cola, *entonces* el primero produce `cell.mistake` (−1 vida y −P) y el segundo `cell.solved`. El registro tiene dos eventos. [I]
 
 **R-06 Notas en dos capas.** Cada jugador elige qué capas ve (personal, grupal o ambas) y en cuál escribe.
-- T-06.1 El selector de vista oculta y muestra cada capa por separado, y el selector de escritura determina el `layer` que se envía. [C, F8]
-- T-06.2 Un `note.add` personal llega solo al dueño; uno grupal llega a todos. [I, F9]
-- **Preferencia local del cliente, «Usar notas» (F8):** cada jugador puede desactivar las notas en Ajustes. Se guarda solo en su navegador, no cambia el protocolo ni `settings.update` y no afecta a los demás. Desactivada, el cliente oculta los controles de notas y no dibuja notas; las notas existentes no se borran.
-- T-06.3 Con «Usar notas» desactivado no se ve ningún control de notas, y N, G y Supr no envían mensajes; las teclas 1–9 solo colocan números. El ajuste no se envía al servidor. [C, F8]
+- T-06.1 El selector de vista oculta y muestra cada capa por separado, y el selector de escritura determina el `layer` que se envía. [C]
+- T-06.2 Un `note.add` personal llega solo al dueño; uno grupal llega a todos. [I]
+- **Preferencia local del cliente, «Usar notas»:** cada jugador puede desactivar las notas en Ajustes. Se guarda solo en su navegador, no cambia el protocolo ni `settings.update` y no afecta a los demás. Desactivada, el cliente oculta los controles de notas y no dibuja notas; las notas existentes no se borran.
+- T-06.3 Con «Usar notas» desactivado no se ve ningún control de notas, y N, G y Supr no envían mensajes; las teclas 1–9 solo colocan números. El ajuste no se envía al servidor. [C]
 
 **R-07 Temporizador común.** Lo controla el servidor, no se pausa y no tiene límite (P9).
-- T-07.1 `match.started` y el snapshot incluyen `startedAt` y `serverNow`. No existe ningún comando de pausa: el esquema rechaza `match.pause` con `bad_request`. [U, F8 (esquema); I, F9]
-- T-07.2 Con el reloj del cliente desfasado 10 minutos, el cronómetro mostrado coincide con el del servidor (±1 s), gracias al desfase que mide `sys.ping`. [C, F8 / E, F10]
-- T-07.3 Después de una reconstrucción por reinicio, el cronómetro es `ahora − startedAt` e incluye el tiempo de caída. [I, F9]
+- T-07.1 `match.started` y el snapshot incluyen `startedAt` y `serverNow`. No existe ningún comando de pausa: el esquema rechaza `match.pause` con `bad_request`. [U (esquema); I]
+- T-07.2 Con el reloj del cliente desfasado 10 minutos, el cronómetro mostrado coincide con el del servidor (±1 s), gracias al desfase que mide `sys.ping`. [C / E]
+- T-07.3 Después de una reconstrucción por reinicio, el cronómetro es `ahora − startedAt` e incluye el tiempo de caída. [I]
 
-### Reglas de producto (`PLAN.md` §2)
+### Reglas de producto
 
 **R-08 Capacidad.** Hay 6 asientos. Los espectadores y los desconectados en gracia conservan el suyo.
-- T-08.1 Con 6 asientos ocupados, un séptimo `room.join` recibe `room.full`. [I, F9]
-- T-08.2 Un jugador que pasa a espectador sigue ocupando su asiento, así que el séptimo sigue rechazado. [I, F9]
-- T-08.3 Un jugador `disconnected` ocupa asiento; uno `left` no lo ocupa. [I, F9]
+- T-08.1 Con 6 asientos ocupados, un séptimo `room.join` recibe `room.full`. [I]
+- T-08.2 Un jugador que pasa a espectador sigue ocupando su asiento, así que el séptimo sigue rechazado. [I]
+- T-08.3 Un jugador `disconnected` ocupa asiento; uno `left` no lo ocupa. [I]
 
 **R-09 Acceso.** Se entra con código y apodo único, sin cuentas (D2).
-- T-09.1 Un código inexistente recibe `room.not_found`. [I, F9]
-- T-09.2 "Ana" en una sala donde ya está "ana" recibe `nickname.taken`. [I, F9]
-- T-09.3 Un apodo de 1 o de 17 caracteres, o vacío después de recortar espacios, recibe `nickname.invalid`. [U, F9]
-- T-09.4 Propiedad: los códigos generados tienen 6 caracteres del alfabeto de D2 y no chocan con una sala existente. [U, F9]
+- T-09.1 Un código inexistente recibe `room.not_found`. [I]
+- T-09.2 "Ana" en una sala donde ya está "ana" recibe `nickname.taken`. [I]
+- T-09.3 Un apodo de 1 o de 17 caracteres, o vacío después de recortar espacios, recibe `nickname.invalid`. [U]
+- T-09.4 Propiedad: los códigos generados tienen 6 caracteres del alfabeto de D2 y no chocan con una sala existente. [U]
 
 **R-10 Creador.** Solo puede iniciar. No expulsa a nadie ni cierra la sala.
-- T-10.1 `match.start` de un jugador que no es starter recibe `forbidden`. [I, F9]
-- T-10.2 `room.kick` y `room.close` reciben `bad_request` (no existen). [U, F8]
+- T-10.1 `match.start` de un jugador que no es starter recibe `forbidden`. [I]
+- T-10.2 `room.kick` y `room.close` reciben `bad_request` (no existen). [U]
 
 **R-11 Traspaso del derecho de iniciar.**
-- T-11.1 Si el starter sale en el lobby, el derecho pasa al jugador con menor `joinedAt` y todos reciben `room.starter_changed`. [I, F9]
-- T-11.2 Si el starter expira durante una partida, el derecho pasa en ese momento y en la partida siguiente inicia el nuevo starter. [I, F9]
-- T-11.3 Un starter `disconnected` (dentro de los 120 s) conserva el derecho. [I, F9]
-- T-11.4 Un antiguo starter que vuelve con ficha no recupera el derecho. [I, F9]
-- T-11.5 Si el starter sale y no queda nadie, el siguiente que entra es el starter. [I, F9]
+- T-11.1 Si el starter sale en el lobby, el derecho pasa al jugador con menor `joinedAt` y todos reciben `room.starter_changed`. [I]
+- T-11.2 Si el starter expira durante una partida, el derecho pasa en ese momento y en la partida siguiente inicia el nuevo starter. [I]
+- T-11.3 Un starter `disconnected` (dentro de los 120 s) conserva el derecho. [I]
+- T-11.4 Un antiguo starter que vuelve con ficha no recupera el derecho. [I]
+- T-11.5 Si el starter sale y no queda nadie, el siguiente que entra es el starter. [I]
 
 **R-12 Entrada con la partida en curso.** Quien entra sin ficha y encuentra cupo empieza como activo, con 3 vidas y 0 puntos.
-- T-12.1 *Dado* una partida en curso con cupo, *cuando* entra un jugador nuevo, *entonces* es `active`, con 3 vidas y 0 puntos, y recibe un snapshot que pasa el inspector de filtración. [I, F9]
-- T-12.2 Sin cupo, recibe `room.full`. [I, F9]
+- T-12.1 *Dado* una partida en curso con cupo, *cuando* entra un jugador nuevo, *entonces* es `active`, con 3 vidas y 0 puntos, y recibe un snapshot que pasa el inspector de filtración. [I]
+- T-12.2 Sin cupo, recibe `room.full`. [I]
 
 **R-13 Desconexión.** Hay 2 minutos para volver con la ficha y recuperar asiento, vidas, puntos y notas.
-- T-13.1 Vuelve a los 119 s: tiene el mismo asiento, vidas, puntos y notas personales, y todos reciben `room.player_connection{connected}`. [I, F9]
-- T-13.2 A los 120 s pasa a `expired` y su asiento queda libre. Si vuelve después con ficha y hay cupo, recupera vidas, puntos y notas (D3'). [I, F9]
-- T-13.3 Una ficha inválida se trata como una entrada nueva con el `nickname` del mensaje. [I, F9]
-- T-13.4 La ficha tiene 128 bits de un CSPRNG. Ni la memoria persistida ni el registro guardan la ficha en claro, solo su hash. [U+I, F9]
-- T-13.5 Desconexión y vuelta dentro del plazo, en navegadores reales, sin pérdida de estado. [E, F10]
+- T-13.1 Vuelve a los 119 s: tiene el mismo asiento, vidas, puntos y notas personales, y todos reciben `room.player_connection{connected}`. [I]
+- T-13.2 A los 120 s pasa a `expired` y su asiento queda libre. Si vuelve después con ficha y hay cupo, recupera vidas, puntos y notas (D3'). [I]
+- T-13.3 Una ficha inválida se trata como una entrada nueva con el `nickname` del mensaje. [I]
+- T-13.4 La ficha tiene 128 bits de un CSPRNG. Ni la memoria persistida ni el registro guardan la ficha en claro, solo su hash. [U+I]
+- T-13.5 Desconexión y vuelta dentro del plazo, en navegadores reales, sin pérdida de estado. [E]
 
 **R-14 Borrado de la sala.** La sala se borra cuando pasan 2 minutos sin nadie conectado.
-- T-14.1 El último conectado se desconecta; 120 s después la sala se borra y un `room.join` posterior recibe `room.not_found`. [I, F9]
-- T-14.2 Si alguien vuelve a los 119 s, la sala no se borra. [I, F9]
-- T-14.3 Si había una partida en curso, `match.ended{defeat}` queda en el registro antes del borrado. [I, F9]
+- T-14.1 El último conectado se desconecta; 120 s después la sala se borra y un `room.join` posterior recibe `room.not_found`. [I]
+- T-14.2 Si alguien vuelve a los 119 s, la sala no se borra. [I]
+- T-14.3 Si había una partida en curso, `match.ended{defeat}` queda en el registro antes del borrado. [I]
 
 **R-15 Una celda correcta queda bloqueada para siempre.**
-- T-15.1 Propiedad: para cualquier secuencia de comandos, una celda `locked` nunca cambia de valor ni vuelve a `empty`. [U, F8, fast-check sobre el reductor]
-- T-15.2 Un `note.add` sobre una celda bloqueada recibe `cell.locked`. [I, F9]
+- T-15.1 Propiedad: para cualquier secuencia de comandos, una celda `locked` nunca cambia de valor ni vuelve a `empty`. [U, fast-check sobre el reductor]
+- T-15.2 Un `note.add` sobre una celda bloqueada recibe `cell.locked`. [I]
 
 **R-16 Notas grupales con operaciones explícitas, ordenadas por el servidor.**
-- T-16.1 El esquema acepta `note.add` y `note.remove`; un hipotético `note.toggle` recibe `bad_request`. [U, F8]
-- T-16.2 Propiedad: con secuencias aleatorias de operaciones concurrentes de varios clientes, todos convergen al estado que define el orden del servidor (ADR 0005). [U, F10]
-- T-16.3 Un `note.add` de un candidato que ya está recibe `ack{applied:false}` y no genera evento. [I, F9]
+- T-16.1 El esquema acepta `note.add` y `note.remove`; un hipotético `note.toggle` recibe `bad_request`. [U]
+- T-16.2 Propiedad: con secuencias aleatorias de operaciones concurrentes de varios clientes, todos convergen al estado que define el orden del servidor (ADR 0005). [U]
+- T-16.3 Un `note.add` de un candidato que ya está recibe `ack{applied:false}` y no genera evento. [I]
 
 **R-17 Limpieza automática.** Al bloquearse una celda con el dígito d, se quita d de sus pares en las notas grupales (fila, columna, caja y jaula). En las notas personales se quita según el ajuste de cada jugador, activado por defecto (D5). Además, siempre se vacían las dos capas de la celda bloqueada.
-- T-17.1 Al bloquear (c, d), d desaparece de las notas grupales de los pares de c, y la celda c queda sin notas. [U, F9]
-- T-17.2 Con el ajuste activado, las notas personales se limpian igual. Con el ajuste desactivado, solo se vacía la celda c. [U+I, F9]
-- T-17.3 Un error no limpia nada. [I, F9]
-- T-17.4 Una pista limpia igual que un acierto. [I, F9]
-- T-17.5 Un jugador recién entrado tiene `autoCleanPersonalNotes = true`. [I, F9]
+- T-17.1 Al bloquear (c, d), d desaparece de las notas grupales de los pares de c, y la celda c queda sin notas. [U]
+- T-17.2 Con el ajuste activado, las notas personales se limpian igual. Con el ajuste desactivado, solo se vacía la celda c. [U+I]
+- T-17.3 Un error no limpia nada. [I]
+- T-17.4 Una pista limpia igual que un acierto. [I]
+- T-17.5 Un jugador recién entrado tiene `autoCleanPersonalNotes = true`. [I]
 
 **R-18 Diseño visual 100 % propio.**
-- T-18.1 Al cerrar F7 hay una revisión explícita que confirma que nada replica la interfaz de la referencia, registrada en `docs/diseno.md`. [M, F7]
+- T-18.1 Hay una revisión explícita del diseño que confirma que nada replica la interfaz de la referencia, registrada en `docs/diseno.md`. [M]
 
-### Decisiones de F2
+### Decisiones de producto
 
 **R-19 Pistas (P1).**
-- T-19.1 Un jugador activo usa una pista sobre una celda vacía. Todos reciben `hint.used` con `value` y `by`, la celda queda bloqueada con `source = hint` y `hintsLeft` baja de 3 a 2. Quien la usó pierde H puntos y nadie recibe bonus. [I, F9]
-- T-19.2 Con `hintsLeft = 0`, `hint.use` recibe `hint.none_left`. [I, F9]
-- T-19.3 Una pista sobre una celda bloqueada recibe `cell.already_solved` y no gasta pista. [I, F9]
-- T-19.4 Un espectador que usa `hint.use` recibe `forbidden`. [I, F9]
-- T-19.5 Si la pista completa una fila, columna, caja o jaula, nadie recibe β. [U, F6]
-- T-19.6 La simulación de F6 incluye el uso de pistas y muestra que pedir una pista no da más puntos que no pedirla, incluido lo que suman las celdas que deja fáciles, y que tampoco compensa usarla para quitarle a otro la celda difícil que está pensando. Se mide en ramas pareadas (con y sin la pista, más un placebo con la misma espera): el efecto neto sobre el propio puntaje y sobre la diferencia con la víctima es ≤ 0 en media. Rama por rama no se exige, porque la partida se desvía y el ruido va en los dos sentidos. [U, F6: versión reducida en la CI y completa en `pnpm test:corpus`]
+- T-19.1 Un jugador activo usa una pista sobre una celda vacía. Todos reciben `hint.used` con `value` y `by`, la celda queda bloqueada con `source = hint` y `hintsLeft` baja de 3 a 2. Quien la usó pierde H puntos y nadie recibe bonus. [I]
+- T-19.2 Con `hintsLeft = 0`, `hint.use` recibe `hint.none_left`. [I]
+- T-19.3 Una pista sobre una celda bloqueada recibe `cell.already_solved` y no gasta pista. [I]
+- T-19.4 Un espectador que usa `hint.use` recibe `forbidden`. [I]
+- T-19.5 Si la pista completa una fila, columna, caja o jaula, nadie recibe β. [U]
+- T-19.6 La simulación de la puntuación incluye el uso de pistas y muestra que pedir una pista no da más puntos que no pedirla, incluido lo que suman las celdas que deja fáciles, y que tampoco compensa usarla para quitarle a otro la celda difícil que está pensando. Se mide en ramas pareadas (con y sin la pista, más un placebo con la misma espera): el efecto neto sobre el propio puntaje y sobre la diferencia con la víctima es ≤ 0 en media. Rama por rama no se exige, porque la partida se desvía y el ruido va en los dos sentidos. [U: versión reducida en la CI y completa en `pnpm test:corpus`]
 
 **R-20 Puzzles (P2).**
-- T-20.1 Propiedad sobre los puzzles generados: jaulas de 2 a 5 celdas, conectadas, que cubren todas las celdas, sin dígitos repetidos y con la suma correcta. Ambos solvers confirman que la solución es única. [U, F4]
-- T-20.2 Hay números iniciales solo si `givensReason` es `difficulty` o `uniqueness`; en `none` la lista está vacía. Todos son de la solución, y con ellos A y B siguen encontrando una sola solución. Con `difficulty`, el puzzle tiene los de su dificultad (30, 22 o 10; más, solo si los de unicidad ya pasaban esa cantidad), agregados repartidos entre las cajas, en un orden que sale de la semilla. [U, F4/F5]
-- T-20.3 Ningún puzzle del banco excede las técnicas: `graderMaxLevel` está entre 1 y 5, y la base de datos rechaza otro valor. Calificado con sus números iniciales, cada puzzle cumple la banda de su dificultad, y las bandas no se solapan: fácil, nivel máximo 1; media, nivel máximo 2; difícil, nivel máximo 3 o 4 con algún paso de nivel 3; experto, nivel máximo 5. Cada semilla pertenece a una sola dificultad, así que dos puzzles del banco nunca comparten cuadrícula y jaulas. Cada dificultad tiene al menos 500 puzzles. [U, F5]
-- T-20.4 El banco cargado coincide con el manifiesto versionado (ADR 0006). Cada semilla, regenerada con las versiones vigentes del generador y del calificador, da el mismo puzzle (hash), el mismo nivel, los mismos pasos y la misma dificultad, y si no, la carga falla antes de escribir. Cargar dos veces no duplica filas. El `id` es un UUID aleatorio que no deriva de la semilla, y ni la semilla ni la solución salen en el puzzle público. El `id` es opaco para que un cliente no pueda enumerar el banco ni predecir el puzzle siguiente. Ocultar la semilla no protege la solución: cualquier solver la obtiene del puzzle público, porque es única. Lo que la protege es que el servidor nunca la envía (R-31). [U, F5]
-- T-20.5 En partidas simuladas sobre puzzles del banco, en las que las celdas vacías se llenan con la solución en un orden aleatorio, `levelToDeduce` devuelve antes de cada jugada un nivel entre 1 y el `graderMaxLevel` del puzzle, nunca `UNRATED`. F6 puntúa con eso. La CI usa una muestra por dificultad y `pnpm test:corpus`, el banco completo. [U, F5]
+- T-20.1 Propiedad sobre los puzzles generados: jaulas de 2 a 5 celdas, conectadas, que cubren todas las celdas, sin dígitos repetidos y con la suma correcta. Ambos solvers confirman que la solución es única. [U]
+- T-20.2 Hay números iniciales solo si `givensReason` es `difficulty` o `uniqueness`; en `none` la lista está vacía. Todos son de la solución, y con ellos A y B siguen encontrando una sola solución. Con `difficulty`, el puzzle tiene los de su dificultad (30, 22 o 10; más, solo si los de unicidad ya pasaban esa cantidad), agregados repartidos entre las cajas, en un orden que sale de la semilla. [U]
+- T-20.3 Ningún puzzle del banco excede las técnicas: `graderMaxLevel` está entre 1 y 5, y la base de datos rechaza otro valor. Calificado con sus números iniciales, cada puzzle cumple la banda de su dificultad, y las bandas no se solapan: fácil, nivel máximo 1; media, nivel máximo 2; difícil, nivel máximo 3 o 4 con algún paso de nivel 3; experto, nivel máximo 5. Cada semilla pertenece a una sola dificultad, así que dos puzzles del banco nunca comparten cuadrícula y jaulas. Cada dificultad tiene al menos 500 puzzles. [U]
+- T-20.4 El banco cargado coincide con el manifiesto versionado (ADR 0006). Cada semilla, regenerada con las versiones vigentes del generador y del calificador, da el mismo puzzle (hash), el mismo nivel, los mismos pasos y la misma dificultad, y si no, la carga falla antes de escribir. Cargar dos veces no duplica filas. El `id` es un UUID aleatorio que no deriva de la semilla, y ni la semilla ni la solución salen en el puzzle público. El `id` es opaco para que un cliente no pueda enumerar el banco ni predecir el puzzle siguiente. Ocultar la semilla no protege la solución: cualquier solver la obtiene del puzzle público, porque es única. Lo que la protege es que el servidor nunca la envía (R-31). [U]
+- T-20.5 En partidas simuladas sobre puzzles del banco, en las que las celdas vacías se llenan con la solución en un orden aleatorio, `levelToDeduce` devuelve antes de cada jugada un nivel entre 1 y el `graderMaxLevel` del puzzle, nunca `UNRATED`. La puntuación usa ese nivel. La CI usa una muestra por dificultad y `pnpm test:corpus`, el banco completo. [U]
 
 **R-21 Dificultad y elección del puzzle (P3, D9).**
-- T-21.1 `room.set_difficulty` del starter llega a todos, y `match.start` elige un puzzle de esa dificultad que no esté en `playedPuzzleIds`. [I, F9]
-- T-21.2 Si ya se jugaron todos los puzzles de la dificultad en esa sala, se elige el que se jugó hace más tiempo. [U, F9]
-- T-21.3 `room.set_difficulty` de un jugador que no es starter recibe `forbidden`. [I, F9]
+- T-21.1 `room.set_difficulty` del starter llega a todos, y `match.start` elige un puzzle de esa dificultad que no esté en `playedPuzzleIds`. [I]
+- T-21.2 Si ya se jugaron todos los puzzles de la dificultad en esa sala, se elige el que se jugó hace más tiempo. [U]
+- T-21.3 `room.set_difficulty` de un jugador que no es starter recibe `forbidden`. [I]
 
 **R-22 Partidas siguientes (P4).**
-- T-22.1 Después de `match.ended`, la sala está en `finished`. Con `room.reset` pasa a `waiting`, y con `match.start` todos los presentes pasan a activos con 3 vidas, 0 puntos y notas vacías, y vuelven a haber 3 pistas. [I, F9]
-- T-22.2 El puntaje de la partida anterior no pasa a la nueva. [I, F9]
-- T-22.3 Al terminar la partida se purgan los jugadores `left` o `expired`; su apodo queda libre y su ficha deja de valer. [I, F9]
+- T-22.1 Después de `match.ended`, la sala está en `finished`. Con `room.reset` pasa a `waiting`, y con `match.start` todos los presentes pasan a activos con 3 vidas, 0 puntos y notas vacías, y vuelven a haber 3 pistas. [I]
+- T-22.2 El puntaje de la partida anterior no pasa a la nueva. [I]
+- T-22.3 Al terminar la partida se purgan los jugadores `left` o `expired`; su apodo queda libre y su ficha deja de valer. [I]
 
 **R-23 Espectadores (P5, D11).**
-- T-23.1 La nota grupal de un espectador se aplica y llega a todos. [I, F9]
-- T-23.2 Un `cell.place` de un espectador recibe `forbidden`, sin cambio de vidas ni puntos. [I, F9]
-- T-23.3 Un espectador que sale y vuelve con ficha sigue siendo espectador. [I, F9]
+- T-23.1 La nota grupal de un espectador se aplica y llega a todos. [I]
+- T-23.2 Un `cell.place` de un espectador recibe `forbidden`, sin cambio de vidas ni puntos. [I]
+- T-23.3 Un espectador que sale y vuelve con ficha sigue siendo espectador. [I]
 
 **R-24 Presencia (P6).**
-- T-24.1 Un `presence.select` genera `presence.updated` para los demás y no agrega ningún evento al registro. [I, F9]
-- T-24.2 Una ráfaga de 50 selecciones en 1 s produce como máximo 10 difusiones, y la última refleja la selección final. [I, F9]
-- T-24.3 El cliente muestra la celda seleccionada de cada compañero. [C, F8]
+- T-24.1 Un `presence.select` genera `presence.updated` para los demás y no agrega ningún evento al registro. [I]
+- T-24.2 Una ráfaga de 50 selecciones en 1 s produce como máximo 10 difusiones, y la última refleja la selección final. [I]
+- T-24.3 El cliente muestra la celda seleccionada de cada compañero. [C]
 
 **R-25 Deshacer notas (P7).**
-- T-25.1 Un jugador deshace su `note.add` grupal sin cambios posteriores sobre ese candidato: se aplica un `remove` con `undoOf` y llega a todos. [I, F9]
-- T-25.2 Si otro jugador modificó ese candidato (celda y dígito) después, `note.undo` recibe `undo.not_applicable{modified}`, el estado no cambia y el cliente muestra un aviso. [I, F9; C, F8]
-- T-25.3 Si después hubo una limpieza automática o se bloqueó la celda, `note.undo` recibe `undo.not_applicable{modified}`. [I, F9]
-- T-25.4 Deshacer la operación de otro jugador recibe `undo.not_applicable{not_owner}`. [I, F9]
-- T-25.5 Deshacer una nota personal sigue la misma regla, y solo el dueño recibe el resultado. [I, F9]
-- T-25.6 No existe un mensaje para deshacer `cell.place`: el esquema lo rechaza. [U, F8]
+- T-25.1 Un jugador deshace su `note.add` grupal sin cambios posteriores sobre ese candidato: se aplica un `remove` con `undoOf` y llega a todos. [I]
+- T-25.2 Si otro jugador modificó ese candidato (celda y dígito) después, `note.undo` recibe `undo.not_applicable{modified}`, el estado no cambia y el cliente muestra un aviso. [I; C]
+- T-25.3 Si después hubo una limpieza automática o se bloqueó la celda, `note.undo` recibe `undo.not_applicable{modified}`. [I]
+- T-25.4 Deshacer la operación de otro jugador recibe `undo.not_applicable{not_owner}`. [I]
+- T-25.5 Deshacer una nota personal sigue la misma regla, y solo el dueño recibe el resultado. [I]
+- T-25.6 No existe un mensaje para deshacer `cell.place`: el esquema lo rechaza. [U]
 
 **R-26 Salir y volver (D3, D3').**
-- T-26.1 Un `room.leave` durante una partida libera el asiento al instante (`connection = left`), y el jugador sigue en el ranking. [I, F9]
-- T-26.2 Si vuelve con ficha a la misma partida y hay cupo, recupera vidas, puntos y notas personales. [I, F9]
-- T-26.3 Si tenía 0 vidas, vuelve como `spectator`. [I, F9]
-- T-26.4 Si vuelve con ficha y no hay cupo, recibe `room.full` y sus datos siguen guardados. [I, F9]
-- T-26.5 Sin ficha y con otro apodo, entra como jugador nuevo con 3 vidas. Es la limitación aceptada de D3: el test documenta el comportamiento. [I, F9]
-- T-26.6 Un `room.leave` en el lobby borra al jugador y libera su apodo. [I, F9]
+- T-26.1 Un `room.leave` durante una partida libera el asiento al instante (`connection = left`), y el jugador sigue en el ranking. [I]
+- T-26.2 Si vuelve con ficha a la misma partida y hay cupo, recupera vidas, puntos y notas personales. [I]
+- T-26.3 Si tenía 0 vidas, vuelve como `spectator`. [I]
+- T-26.4 Si vuelve con ficha y no hay cupo, recibe `room.full` y sus datos siguen guardados. [I]
+- T-26.5 Sin ficha y con otro apodo, entra como jugador nuevo con 3 vidas. Es la limitación aceptada de D3: el test documenta el comportamiento. [I]
+- T-26.6 Un `room.leave` en el lobby borra al jugador y libera su apodo. [I]
 
 **R-27 Apodo reservado hasta el fin de la partida (D2).**
-- T-27.1 Si un jugador salió o expiró durante la partida, un jugador nuevo que pide su apodo recibe `nickname.taken`. [I, F9]
-- T-27.2 Después de `match.ended`, con la purga, ese apodo queda disponible. [I, F9]
+- T-27.1 Si un jugador salió o expiró durante la partida, un jugador nuevo que pide su apodo recibe `nickname.taken`. [I]
+- T-27.2 Después de `match.ended`, con la purga, ese apodo queda disponible. [I]
 
 **R-28 Error evidente (D6).**
-- T-28.1 Un dígito que repite el valor de una celda bloqueada de la misma fila, columna, caja o jaula se procesa como `cell.mistake`. [I, F9]
-- T-28.2 El cliente no bloquea la tecla en ese caso. [C, F8]
+- T-28.1 Un dígito que repite el valor de una celda bloqueada de la misma fila, columna, caja o jaula se procesa como `cell.mistake`. [I]
+- T-28.2 El cliente no bloquea la tecla en ese caso. [C]
 
 **R-29 Notas personales privadas (D7).**
-- T-29.1 El inspector comprueba que ningún mensaje lleva notas personales de un jugador a otro, ni en `note.applied` ni en snapshots. [I, F9]
+- T-29.1 El inspector comprueba que ningún mensaje lleva notas personales de un jugador a otro, ni en `note.applied` ni en snapshots. [I]
 
 **R-30 Se puede iniciar con 1 jugador (D1).**
-- T-30.1 En una sala donde solo está el creador, `match.start` funciona. [I, F9]
+- T-30.1 En una sala donde solo está el creador, `match.start` funciona. [I]
 
 ### Principios de arquitectura
 
 **R-31 La solución nunca sale del servidor.**
-- T-31.1 El inspector de la sección 8.3 revisa todos los mensajes salientes de todas las pruebas I y E. [I, F9; E, F10–F11]
-- T-31.2 El build de producción del cliente no incluye el servidor simulado ni ninguna solución. Lo comprueba `apps/web/scripts/check-dist.ts` en cada `pnpm build`, con dos revisiones. En los módulos de cada chunk: nada de `src/dev/`, de `packages/bank` ni del manifiesto, y del motor y de `packages/game` solo los módulos de la lista permitida al cliente. En el texto emitido: el identificador `solution`, las claves del manifiesto, la marca del simulador, el SHA-256 en JavaScript del simulador y cualquier solución serializada (81 dígitos seguidos o un arreglo de 81 dígitos). Un fixture de control tiene que hacer fallar el detector, y el build real tiene que pasar. [U, F8]
-- T-31.3 `packages/protocol` no exporta ningún tipo con un campo `solution`: lo verifica un test de los tipos exportados. [U, F3/F9]
+- T-31.1 El inspector de la sección 8.3 revisa todos los mensajes salientes de todas las pruebas I y E. [I; E]
+- T-31.2 El build de producción del cliente no incluye el servidor simulado ni ninguna solución. Lo comprueba `apps/web/scripts/check-dist.ts` en cada `pnpm build`, con dos revisiones. En los módulos de cada chunk: nada de `src/dev/`, de `packages/bank` ni del manifiesto, y del motor y de `packages/game` solo los módulos de la lista permitida al cliente. En el texto emitido: el identificador `solution`, las claves del manifiesto, la marca del simulador, el SHA-256 en JavaScript del simulador y cualquier solución serializada (81 dígitos seguidos o un arreglo de 81 dígitos). Un fixture de control tiene que hacer fallar el detector, y el build real tiene que pasar. [U]
+- T-31.3 `packages/protocol` no exporta ningún tipo con un campo `solution`: lo verifica un test de los tipos exportados. [U]
 
 **R-32 Registro de eventos reproducible.**
-- T-32.1 Propiedad: para partidas aleatorias, `replay(registro)` produce el mismo estado y los mismos puntajes que el servidor en vivo. [U, F8 (reductor y modo: `decide` y `apply` paso a paso frente a `replay`, y puntajes frente a `scoreLog`); I, F9 (servidor en vivo)]
-- T-32.2 Al reiniciar el servidor, las partidas sin `endedAt` se reconstruyen. Sus jugadores quedan `disconnected` con un plazo nuevo y pueden volver con su ficha. Quien figuraba conectado recibe un evento `player.connection{disconnected}` con la hora del arranque, así el registro sigue reproduciendo el estado. [I, F9]
-- T-32.3 Un evento que no se confirmó en la base de datos no se difunde. [I, F9]
-- T-32.4 Recalcular los puntajes con otra versión de los parámetros cambia los puntajes sin modificar el registro. [U, F6]
+- T-32.1 Propiedad: para partidas aleatorias, `replay(registro)` produce el mismo estado y los mismos puntajes que el servidor en vivo. [U (reductor y modo: `decide` y `apply` paso a paso frente a `replay`, y puntajes frente a `scoreLog`); I (servidor en vivo)]
+- T-32.2 Al reiniciar el servidor, las partidas sin `endedAt` se reconstruyen. Sus jugadores quedan `disconnected` con un plazo nuevo y pueden volver con su ficha. Quien figuraba conectado recibe un evento `player.connection{disconnected}` con la hora del arranque, así el registro sigue reproduciendo el estado. [I]
+- T-32.3 Un evento que no se confirmó en la base de datos no se difunde. [I]
+- T-32.4 Recalcular los puntajes con otra versión de los parámetros cambia los puntajes sin modificar el registro. [U]
 
-**R-35 Motor del puzzle (F4).** El motor (`packages/engine`) es puro y admite tableros de `size` ≤ 16. Tiene dos solvers independientes: A (propagación y backtracking) y B (Dancing Links), y B no importa código de A. Lo que define que un puzzle es correcto lo confirman los dos.
-- T-35.1 *Dado* un puzzle aleatorio o de referencia, A y B devuelven el mismo número de soluciones (0, 1 o 2 o más) y las mismas soluciones. En 4×4 coinciden además con una fuerza bruta. Una discrepancia bloquea F4. [U, F4]
-- T-35.2 Los puzzles de referencia tienen un resultado esperado que calcularon A y B y confirmó el validador; nunca se escribe de memoria. [U, F4]
-- T-35.3 `validateSolution` acepta solo cuadrículas que cumplen filas, columnas, cajas, sumas de jaula y jaulas sin dígitos repetidos, y respeta los números iniciales. `validateStructure` rechaza jaulas de menos de 2 o más de 5 celdas, no conectadas, solapadas, que no cubren el tablero o con sumas inalcanzables. `checkPlacement` devuelve `correct` solo con el dígito de la solución, e `isEvidentMistake` detecta un dígito repetido en un par bloqueado (R-28). [U, F4]
-- T-35.4 El calificador es correcto: en cada paso de `grade`, el dígito de la solución de cada celda sigue entre sus candidatos. [U, F4]
-- T-35.5 `levelToDeduce(cell, state)` devuelve un nivel entre 1 y `UNRATED`. Vale 1 si la celda es un single, y no sube al agregar celdas bloqueadas correctas. [U, F4]
-- T-35.6 Con la misma semilla y las mismas opciones, el generador produce el mismo puzzle. [U, F4]
-- T-35.7 `levelsToDeduce(board)` da en una sola pasada el `levelToDeduce` de cada celda vacía, y sus puntos fijos por nivel son coherentes: una celda tiene un solo candidato en el punto fijo del nivel L si y solo si su nivel es ≤ L, y la solución nunca sale de los candidatos. [U, F6]
-- T-35.8 Los descartes públicos (`excluded`, dígitos de errores) no contradicen la solución y no suben ningún nivel. Con 2 candidatos en el punto fijo del nivel L y el falso descartado, la celda queda de nivel ≤ L. [U, F6]
+**R-35 Motor del puzzle.** El motor (`packages/engine`) es puro y admite tableros de `size` ≤ 16. Tiene dos solvers independientes: A (propagación y backtracking) y B (Dancing Links), y B no importa código de A. Lo que define que un puzzle es correcto lo confirman los dos.
+- T-35.1 *Dado* un puzzle aleatorio o de referencia, A y B devuelven el mismo número de soluciones (0, 1 o 2 o más) y las mismas soluciones. En 4×4 coinciden además con una fuerza bruta. Una discrepancia se trata como un error del motor. [U]
+- T-35.2 Los puzzles de referencia tienen un resultado esperado que calcularon A y B y confirmó el validador; nunca se escribe de memoria. [U]
+- T-35.3 `validateSolution` acepta solo cuadrículas que cumplen filas, columnas, cajas, sumas de jaula y jaulas sin dígitos repetidos, y respeta los números iniciales. `validateStructure` rechaza jaulas de menos de 2 o más de 5 celdas, no conectadas, solapadas, que no cubren el tablero o con sumas inalcanzables. `checkPlacement` devuelve `correct` solo con el dígito de la solución, e `isEvidentMistake` detecta un dígito repetido en un par bloqueado (R-28). [U]
+- T-35.4 El calificador es correcto: en cada paso de `grade`, el dígito de la solución de cada celda sigue entre sus candidatos. [U]
+- T-35.5 `levelToDeduce(cell, state)` devuelve un nivel entre 1 y `UNRATED`. Vale 1 si la celda es un single, y no sube al agregar celdas bloqueadas correctas. [U]
+- T-35.6 Con la misma semilla y las mismas opciones, el generador produce el mismo puzzle. [U]
+- T-35.7 `levelsToDeduce(board)` da en una sola pasada el `levelToDeduce` de cada celda vacía, y sus puntos fijos por nivel son coherentes: una celda tiene un solo candidato en el punto fijo del nivel L si y solo si su nivel es ≤ L, y la solución nunca sale de los candidatos. [U]
+- T-35.8 Los descartes públicos (`excluded`, dígitos de errores) no contradicen la solución y no suben ningún nivel. Con 2 candidatos en el punto fijo del nivel L y el falso descartado, la celda queda de nivel ≤ L. [U]
 
-**R-36 Puntuación (F6).** El puntaje es una función pura del registro de hechos y de la versión de los parámetros (`packages/scoring`, `docs/puntuacion.md`).
-- T-36.1 Determinismo: `scoreLog` da lo mismo dos veces, con copias del registro y sin modificarlo. [U, F6]
-- T-36.2 Cotas: un acierto da entre B·w(1) y B·w(5) + 4β; un error, −P; una pista, −H. [U, F6]
-- T-36.3 Monotonía: más aciertos del mismo nivel dan más puntos, y un nivel mayor da al menos los mismos puntos. [U, F6]
-- T-36.4 Independencia del orden de los hechos que no se afectan: permutar hechos con su contexto (nivel y unidades cerradas) y su `at` no cambia puntajes, errores ni `scoreReachedAt`. [U, F6]
-- T-36.5 `createScoring` encaja en las firmas de `onCorrect`, `onMistake` y `onHint` de la sección 5 sin adaptarlas (prueba de tipos). [U, F6]
-- T-36.6 La simulación de F6 es determinista (da lo mismo en el hilo actual, en otro orden y en varios hilos) y, con los parámetros vigentes, adivinar tiene un valor esperado negativo frente a deducir para los adivinadores de nivel 2 y 3, P y H cumplen sus reglas (P > B·(w(5) + w(3)), H = B·w(5) + 10) y β no pasa del 20 % de los puntos de una partida. [U, F6: determinismo en la CI; metas en `pnpm test:corpus` y `scoring:simulate`]
+**R-36 Puntuación.** El puntaje es una función pura del registro de hechos y de la versión de los parámetros (`packages/scoring`, `docs/puntuacion.md`).
+- T-36.1 Determinismo: `scoreLog` da lo mismo dos veces, con copias del registro y sin modificarlo. [U]
+- T-36.2 Cotas: un acierto da entre B·w(1) y B·w(5) + 4β; un error, −P; una pista, −H. [U]
+- T-36.3 Monotonía: más aciertos del mismo nivel dan más puntos, y un nivel mayor da al menos los mismos puntos. [U]
+- T-36.4 Independencia del orden de los hechos que no se afectan: permutar hechos con su contexto (nivel y unidades cerradas) y su `at` no cambia puntajes, errores ni `scoreReachedAt`. [U]
+- T-36.5 `createScoring` encaja en las firmas de `onCorrect`, `onMistake` y `onHint` de la sección 5 sin adaptarlas (prueba de tipos). [U]
+- T-36.6 La simulación de la puntuación es determinista (da lo mismo en el hilo actual, en otro orden y en varios hilos) y, con los parámetros vigentes, adivinar tiene un valor esperado negativo frente a deducir para los adivinadores de nivel 2 y 3, P y H cumplen sus reglas (P > B·(w(5) + w(3)), H = B·w(5) + 10) y β no pasa del 20 % de los puntos de una partida. [U: determinismo en la CI; metas en `pnpm test:corpus` y `scoring:simulate`]
 
 ### Reglas del cliente
 
 **R-33 Resaltado de la jaula seleccionada (D10).**
-- T-33.1 Al seleccionar una celda, el cliente resalta su jaula, además de la fila, la columna y la caja. [C, F8]
+- T-33.1 Al seleccionar una celda, el cliente resalta su jaula, además de la fila, la columna y la caja. [C]
 
 **R-34 Sin segunda oportunidad ni pausa (D8).**
-- T-34.1 El esquema no tiene mensajes para pedir una segunda oportunidad ni para pausar, así que esos tipos reciben `bad_request`. [U, F8]
+- T-34.1 El esquema no tiene mensajes para pedir una segunda oportunidad ni para pausar, así que esos tipos reciben `bad_request`. [U]
 
-**R-37 Arranque que falla (F8, prueba en la red local).** Si la entrada a la sala o la carga de la partida fallan (un `error` del arranque o del servidor) o no terminan en 15 s, el cliente sale de la sala si llegó a entrar y vuelve al inicio con un aviso de error y «Reintentar», conservando el apodo y la dificultad. Nunca se queda en «Entrando…» para siempre.
-- T-37.1 Sin respuesta, a los 15 s aparece el aviso con «Reintentar», que vuelve a enviar `room.create` con el mismo apodo y la misma dificultad. Un `error` a `match.start` durante la carga, o un `error` del servidor sin `replyTo`, lo muestra en el acto. Un apodo en uso sigue siendo un error de campo, y una partida que empieza a tiempo cancela el plazo. [C, F8]
-- **Servidor dormido (F12, ADR 0007).** Si la conexión no llegó a abrir desde que empezó la entrada, el plazo es de 2 min en lugar de 15 s: a los 3 s, Entrar muestra «Despertando el servidor…», la conexión se reintenta (como máximo cada 5 s) y `unavailable` no corta la entrada. Al abrir, el aviso se va y vuelve el plazo de 15 s; a los 2 min sin conexión, el aviso con «Reintentar». La página pide `GET /ws` al abrirse para que el servidor empiece a despertar (no `/healthz`: la regla `||onrender.com/health` de EasyPrivacy, que Brave aplica a otro sitio, lo bloquea; `/healthz` queda para el chequeo de Render y la prueba de humo).
-- T-37.2 Sin conexión, el aviso aparece a los 3 s y el de «Reintentar» a los 2 min, aunque el estado pase a `unavailable`; si abre a los 30 s, el aviso se va y vale el plazo de 15 s; con la conexión ya abierta no hay aviso (verificación negativa). [C, F12]
-- T-37.3 Con el servidor sin escuchar al entrar, aparece «Despertando el servidor…», sigue a los 11 s sin «Reintentar» y, cuando el servidor arranca, la página entra a la sala sola. [E, F12]
+**R-37 Arranque que falla (prueba en la red local).** Si la entrada a la sala o la carga de la partida fallan (un `error` del arranque o del servidor) o no terminan en 15 s, el cliente sale de la sala si llegó a entrar y vuelve al inicio con un aviso de error y «Reintentar», conservando el apodo y la dificultad. Nunca se queda en «Entrando…» para siempre.
+- T-37.1 Sin respuesta, a los 15 s aparece el aviso con «Reintentar», que vuelve a enviar `room.create` con el mismo apodo y la misma dificultad. Un `error` a `match.start` durante la carga, o un `error` del servidor sin `replyTo`, lo muestra en el acto. Un apodo en uso sigue siendo un error de campo, y una partida que empieza a tiempo cancela el plazo. [C]
+- **Servidor dormido (ADR 0007).** Si la conexión no llegó a abrir desde que empezó la entrada, el plazo es de 2 min en lugar de 15 s: a los 3 s, Entrar muestra «Despertando el servidor…», la conexión se reintenta (como máximo cada 5 s) y `unavailable` no corta la entrada. Al abrir, el aviso se va y vuelve el plazo de 15 s; a los 2 min sin conexión, el aviso con «Reintentar». La página pide `GET /ws` al abrirse para que el servidor empiece a despertar (no `/healthz`: la regla `||onrender.com/health` de EasyPrivacy, que Brave aplica a otro sitio, lo bloquea; `/healthz` queda para el chequeo de Render y la prueba de humo).
+- T-37.2 Sin conexión, el aviso aparece a los 3 s y el de «Reintentar» a los 2 min, aunque el estado pase a `unavailable`; si abre a los 30 s, el aviso se va y vale el plazo de 15 s; con la conexión ya abierta no hay aviso (verificación negativa). [C]
+- T-37.3 Con el servidor sin escuchar al entrar, aparece «Despertando el servidor…», sigue a los 11 s sin «Reintentar» y, cuando el servidor arranca, la página entra a la sala sola. [E]
 
-**R-38 Actividad tras una reconexión (F10).** El snapshot no trae el historial de jugadas. Si llega con una partida en curso que ya tiene jugadas (alguna celda bloqueada que no es un número inicial), la línea de actividad y el diálogo «Ver actividad» muestran «La actividad anterior a la reconexión no está disponible.» y las jugadas nuevas se agregan después. Con una partida sin jugadas sigue «Todavía no hay jugadas». La alternativa (las últimas 50 jugadas públicas en el snapshot) está en `docs/IDEAS_FUTURAS.md`.
-- T-38.1 Al reconectar o recargar con jugadas previas aparece el aviso en la línea y en el diálogo, y una jugada nueva queda antes que él; sin jugadas, «Todavía no hay jugadas». [C, F10]
+**R-38 Actividad tras una reconexión.** El snapshot no trae el historial de jugadas. Si llega con una partida en curso que ya tiene jugadas (alguna celda bloqueada que no es un número inicial), la línea de actividad y el diálogo «Ver actividad» muestran «La actividad anterior a la reconexión no está disponible.» y las jugadas nuevas se agregan después. Con una partida sin jugadas sigue «Todavía no hay jugadas». La alternativa (las últimas 50 jugadas públicas en el snapshot) está en `docs/IDEAS_FUTURAS.md`.
+- T-38.1 Al reconectar o recargar con jugadas previas aparece el aviso en la línea y en el diálogo, y una jugada nueva queda antes que él; sin jugadas, «Todavía no hay jugadas». [C]
 
-**R-39 Clave de acceso del grupo (F12, `docs/seguridad.md` S-02).** Con el juego en internet, el servidor pide una clave compartida por el grupo antes de cualquier sala. Guarda solo su hash (`ACCESS_KEY_HASH`, SHA-256 con prefijo de dominio), obligatorio en producción. La clave se compara normalizada (NFKC, mayúsculas, sin espacios ni guiones) y tiene de 12 a 64 caracteres. Antes de abrir cada WebSocket, el cliente comprueba la clave guardada (o su falta) con `POST /access` (§4.4), que comparte con el handshake los intentos, la espera por IP y las métricas: con 204 abre el WebSocket; con 401 muestra «Clave del grupo» sin abrir ninguno; con 429 pide esperar. El cliente la pide una sola vez; al continuar, la comprueba y solo con 204 la guarda en el dispositivo y repite lo que estaba haciendo; con 401 sigue en la pantalla diciendo que no vale. Si la guardada deja de valer, la olvida y la vuelve a pedir con un aviso. El enlace de invitación (`…/#k=CLAVE`) la quita de la URL y del historial y pasa por la misma comprobación; el enlace «Compartir» de la sala nunca la lleva, ni la ficha. De respaldo, sin clave o con una que no vale en el handshake, la conexión se cierra con 4003 sin procesar ningún mensaje: en cuanto llega el primero, o a los 5 s. El diseño no depende de ese cierre: detrás del proxy de Render no llega (T-39.16). La clave nunca va en una URL, en un mensaje ni en un log.
-- T-39.1 La clave se normaliza y viaja como subprotocolo `sk.k.` en base64url (también con caracteres fuera de ASCII); una oferta mal formada, corta o larga no trae clave. [U, F12]
-- T-39.2 Sin clave o con una que no vale, el handshake se cierra con 4003 y no se crea ninguna sala; con la clave (escrita en minúsculas y sin guiones), el servidor elige `sk.v1` y se juega. Sin clave configurada, las mismas ofertas se aceptan (verificación negativa). Ni la clave, ni su hash, ni la oferta llegan al log. [I, F12]
-- T-39.3 Tras 10 claves que no valen desde una IP, esa IP recibe 429 (una respuesta HTTP completa, con `Retry-After`) hasta que pasa la ventana; otra IP no se ve afectada, y escribir otra dirección a la izquierda de `X-Forwarded-For` no cambia la del cliente. [I, F12]
-- T-39.4 Un 401 de `POST /access` o el cierre 4003 llevan a «Clave del grupo» sin reintentar solo; una clave corta se rechaza sin preguntar al servidor; «Volver al inicio» sale. [C, F12]
-- T-39.5 El enlace `#k=` entrega la clave para comprobarla y deja la URL en `#/`, también con una clave inválida (que no se entrega). [C, F12]
-- T-39.6 Contra el servidor real: la invitación guarda la clave después de comprobarla; las URL del WebSocket y de `POST /access` terminan en `/ws` y `/access`, y ni ellas, ni la página, ni el enlace de «Compartir» tienen la clave. [E, F12]
-- T-39.7 Un navegador sin clave nunca recibe 429: doce navegadores sin clave detrás de la misma entrada del proxy reciben 4003, y después uno con la clave entra (el fallo del primer despliegue). [I, F12]
-- T-39.8 Con la cabecera ausente, con menos entradas que `TRUST_PROXY_HOPS` o con una entrada que no es una IP, las claves que no valen no bloquean a nadie; la misma IP con puerto, entre corchetes o mapeada en IPv6 es la misma IP. [I, F12]
-- T-39.9 `GET /ws` responde 403 con un origen ajeno, 429 con `Retry-After` si la IP está en espera (también sin `Origin`) y 204 si no, legible desde otro origen. [I, F12]
-- T-39.10 Tras un intento que no llegó a abrir, el cliente pregunta `GET /ws`: con 429 pide esperar en «Clave del grupo», conserva la clave y ofrece «Reintentar»; con 403 la entrada falla con «Reintentar»; con 4003 y sin clave, «Clave del grupo»; en ningún caso queda «Despertando el servidor…». Otra respuesta, o ninguna, sigue con la espera exponencial. [U y C, F12]
-- T-39.11 Detrás de un proxy que pierde lo que el servidor envía tras el 101 antes de que hable el cliente (lo que pasaba en Render, F12j), un cliente sin clave o con una que no vale recibe igual el 4003 al enviar su primer mensaje, y con la clave juega; uno que no envía nada se cierra con 4003 a los 5 s. Sin clave cuenta como conexión sin clave (`accessMissing`), no como clave rechazada (`accessDenied`). Verificación negativa: con el cierre junto con el 101, el cliente detrás del proxy nunca recibe el 4003. En producción el 4003 tampoco llega (T-39.16): la prueba de humo ya no lo comprueba (T-39.17). [I, F12]
-- T-39.12 `POST /access` responde 401 sin clave, con una que no vale y con una mal formada, y 204 con la clave (escrita en minúsculas y sin guiones); sin clave cuenta como `accessMissing` y las otras como `accessDenied`, como en el handshake. Con un `Origin` ajeno o ausente, 403 sin CORS; para el permitido, CORS solo con su origen, y la consulta previa (`OPTIONS`) permite solo `POST` y la cabecera de la clave. Las claves que no valen por cualquiera de los dos caminos suman a la misma espera: con 10, los dos responden 429 con `Retry-After`, salvo `POST /access` sin clave, que sigue en 401 (T-39.7); otra IP no se ve afectada y la espera pasa con la ventana. Sin clave configurada, todo responde 204 (verificación negativa). Ni la clave, ni la cabecera, ni el hash llegan al log. [I, F12]
-- T-39.13 Antes de cada intento, el transporte pregunta `POST /access` con la clave guardada en ese momento (en la cabecera, nunca en la URL): 204, o 404 (un servidor sin la ruta), abre el WebSocket; 401 deja `denied`, 429 `locked` y 403 `refused`, sin abrir ninguno ni reintentar solo; sin respuesta, o con otra, sigue la espera exponencial sin abrir; una respuesta que llega después de `disconnect` o de un intento más nuevo no cuenta. [U, F12]
-- T-39.14 La clave escrita se comprueba con `POST /access` y, mientras tanto, el botón dice «Comprobando la clave…» y nada se guarda; con 204 se guarda normalizada y se repite la entrada con los mismos datos; con 401 sigue en «Clave del grupo» diciendo que esa clave no vale, sin guardarla; con 429 pide esperar; sin respuesta, dice que no se pudo comprobar. La clave de la invitación pasa por la misma comprobación: con 204 se guarda; con 401 se pide la clave y la guardada antes no se toca. [C, F12]
-- T-39.15 Si la clave guardada deja de valer (401 o 4003 al volver a conectar), se olvida y «Clave del grupo» avisa que ya no vale. [C, F12]
-- T-39.16 Detrás de un proxy de prueba que pierde el cierre del servidor (el marco de cierre y el fin de la conexión), como el de Render: el 4003 no llega aunque el cliente envíe un mensaje, y `POST /access` responde igual 401 y 204 [I]. Contra el servidor real detrás de ese proxy, sin clave aparece «Clave del grupo» sin abrir ningún WebSocket; con una que no vale, lo dice y no la guarda; con la vigente se entra a la sala; con una guardada que dejó de valer, el aviso; con una invitación que no vale, se pide la clave; y con la dirección bloqueada, «Demasiados intentos» sin abrir ningún WebSocket, y «Reintentar» entra pasada la espera [E]. Verificación negativa: con `SK_E2E_SKIP_ACCESS_CHECK=1` (`POST /access` responde 204 a todo en el navegador), las E2E fallan: la página nunca pide la clave. [I y E, F12]
-- T-39.17 La prueba de humo comprueba el camino real sin usar la clave: `POST /access` sin clave y con una inválida generada al azar en cada corrida da 401 con CORS para el origen de la web (`smoke.access_keyless_401`, `smoke.access_wrong_key_401`), y desde un origen ajeno, 403 (`smoke.access_foreign_origin_403`); también detrás del proxy que pierde el cierre. Reemplaza a `smoke.ws_keyless_4003`. Verificación negativa: contra un servidor que no pide clave, las dos primeras fallan. [I, F12]
+**R-39 Clave de acceso del grupo (`docs/seguridad.md` S-02).** Con el juego en internet, el servidor pide una clave compartida por el grupo antes de cualquier sala. Guarda solo su hash (`ACCESS_KEY_HASH`, SHA-256 con prefijo de dominio), obligatorio en producción. La clave se compara normalizada (NFKC, mayúsculas, sin espacios ni guiones) y tiene de 12 a 64 caracteres. Antes de abrir cada WebSocket, el cliente comprueba la clave guardada (o su falta) con `POST /access` (§4.4), que comparte con el handshake los intentos, la espera por IP y las métricas: con 204 abre el WebSocket; con 401 muestra «Clave del grupo» sin abrir ninguno; con 429 pide esperar. El cliente la pide una sola vez; al continuar, la comprueba y solo con 204 la guarda en el dispositivo y repite lo que estaba haciendo; con 401 sigue en la pantalla diciendo que no vale. Si la guardada deja de valer, la olvida y la vuelve a pedir con un aviso. El enlace de invitación (`…/#k=CLAVE`) la quita de la URL y del historial y pasa por la misma comprobación; el enlace «Compartir» de la sala nunca la lleva, ni la ficha. De respaldo, sin clave o con una que no vale en el handshake, la conexión se cierra con 4003 sin procesar ningún mensaje: en cuanto llega el primero, o a los 5 s. El diseño no depende de ese cierre: detrás del proxy de Render no llega (T-39.16). La clave nunca va en una URL, en un mensaje ni en un log.
+- T-39.1 La clave se normaliza y viaja como subprotocolo `sk.k.` en base64url (también con caracteres fuera de ASCII); una oferta mal formada, corta o larga no trae clave. [U]
+- T-39.2 Sin clave o con una que no vale, el handshake se cierra con 4003 y no se crea ninguna sala; con la clave (escrita en minúsculas y sin guiones), el servidor elige `sk.v1` y se juega. Sin clave configurada, las mismas ofertas se aceptan (verificación negativa). Ni la clave, ni su hash, ni la oferta llegan al log. [I]
+- T-39.3 Tras 10 claves que no valen desde una IP, esa IP recibe 429 (una respuesta HTTP completa, con `Retry-After`) hasta que pasa la ventana; otra IP no se ve afectada, y escribir otra dirección a la izquierda de `X-Forwarded-For` no cambia la del cliente. [I]
+- T-39.4 Un 401 de `POST /access` o el cierre 4003 llevan a «Clave del grupo» sin reintentar solo; una clave corta se rechaza sin preguntar al servidor; «Volver al inicio» sale. [C]
+- T-39.5 El enlace `#k=` entrega la clave para comprobarla y deja la URL en `#/`, también con una clave inválida (que no se entrega). [C]
+- T-39.6 Contra el servidor real: la invitación guarda la clave después de comprobarla; las URL del WebSocket y de `POST /access` terminan en `/ws` y `/access`, y ni ellas, ni la página, ni el enlace de «Compartir» tienen la clave. [E]
+- T-39.7 Un navegador sin clave nunca recibe 429: doce navegadores sin clave detrás de la misma entrada del proxy reciben 4003, y después uno con la clave entra (el fallo del primer despliegue). [I]
+- T-39.8 Con la cabecera ausente, con menos entradas que `TRUST_PROXY_HOPS` o con una entrada que no es una IP, las claves que no valen no bloquean a nadie; la misma IP con puerto, entre corchetes o mapeada en IPv6 es la misma IP. [I]
+- T-39.9 `GET /ws` responde 403 con un origen ajeno, 429 con `Retry-After` si la IP está en espera (también sin `Origin`) y 204 si no, legible desde otro origen. [I]
+- T-39.10 Tras un intento que no llegó a abrir, el cliente pregunta `GET /ws`: con 429 pide esperar en «Clave del grupo», conserva la clave y ofrece «Reintentar»; con 403 la entrada falla con «Reintentar»; con 4003 y sin clave, «Clave del grupo»; en ningún caso queda «Despertando el servidor…». Otra respuesta, o ninguna, sigue con la espera exponencial. [U y C]
+- T-39.11 Detrás de un proxy que pierde lo que el servidor envía tras el 101 antes de que hable el cliente (lo que pasaba en Render), un cliente sin clave o con una que no vale recibe igual el 4003 al enviar su primer mensaje, y con la clave juega; uno que no envía nada se cierra con 4003 a los 5 s. Sin clave cuenta como conexión sin clave (`accessMissing`), no como clave rechazada (`accessDenied`). Verificación negativa: con el cierre junto con el 101, el cliente detrás del proxy nunca recibe el 4003. En producción el 4003 tampoco llega (T-39.16): la prueba de humo ya no lo comprueba (T-39.17). [I]
+- T-39.12 `POST /access` responde 401 sin clave, con una que no vale y con una mal formada, y 204 con la clave (escrita en minúsculas y sin guiones); sin clave cuenta como `accessMissing` y las otras como `accessDenied`, como en el handshake. Con un `Origin` ajeno o ausente, 403 sin CORS; para el permitido, CORS solo con su origen, y la consulta previa (`OPTIONS`) permite solo `POST` y la cabecera de la clave. Las claves que no valen por cualquiera de los dos caminos suman a la misma espera: con 10, los dos responden 429 con `Retry-After`, salvo `POST /access` sin clave, que sigue en 401 (T-39.7); otra IP no se ve afectada y la espera pasa con la ventana. Sin clave configurada, todo responde 204 (verificación negativa). Ni la clave, ni la cabecera, ni el hash llegan al log. [I]
+- T-39.13 Antes de cada intento, el transporte pregunta `POST /access` con la clave guardada en ese momento (en la cabecera, nunca en la URL): 204, o 404 (un servidor sin la ruta), abre el WebSocket; 401 deja `denied`, 429 `locked` y 403 `refused`, sin abrir ninguno ni reintentar solo; sin respuesta, o con otra, sigue la espera exponencial sin abrir; una respuesta que llega después de `disconnect` o de un intento más nuevo no cuenta. [U]
+- T-39.14 La clave escrita se comprueba con `POST /access` y, mientras tanto, el botón dice «Comprobando la clave…» y nada se guarda; con 204 se guarda normalizada y se repite la entrada con los mismos datos; con 401 sigue en «Clave del grupo» diciendo que esa clave no vale, sin guardarla; con 429 pide esperar; sin respuesta, dice que no se pudo comprobar. La clave de la invitación pasa por la misma comprobación: con 204 se guarda; con 401 se pide la clave y la guardada antes no se toca. [C]
+- T-39.15 Si la clave guardada deja de valer (401 o 4003 al volver a conectar), se olvida y «Clave del grupo» avisa que ya no vale. [C]
+- T-39.16 Detrás de un proxy de prueba que pierde el cierre del servidor (el marco de cierre y el fin de la conexión), como el de Render: el 4003 no llega aunque el cliente envíe un mensaje, y `POST /access` responde igual 401 y 204 [I]. Contra el servidor real detrás de ese proxy, sin clave aparece «Clave del grupo» sin abrir ningún WebSocket; con una que no vale, lo dice y no la guarda; con la vigente se entra a la sala; con una guardada que dejó de valer, el aviso; con una invitación que no vale, se pide la clave; y con la dirección bloqueada, «Demasiados intentos» sin abrir ningún WebSocket, y «Reintentar» entra pasada la espera [E]. Verificación negativa: con `SK_E2E_SKIP_ACCESS_CHECK=1` (`POST /access` responde 204 a todo en el navegador), las E2E fallan: la página nunca pide la clave. [I y E]
+- T-39.17 La prueba de humo comprueba el camino real sin usar la clave: `POST /access` sin clave y con una inválida generada al azar en cada corrida da 401 con CORS para el origen de la web (`smoke.access_keyless_401`, `smoke.access_wrong_key_401`), y desde un origen ajeno, 403 (`smoke.access_foreign_origin_403`); también detrás del proxy que pierde el cierre. Reemplaza a `smoke.ws_keyless_4003`. Verificación negativa: contra un servidor que no pide clave, las dos primeras fallan. [I]
 
 ---
 
@@ -742,8 +742,8 @@ Entre corchetes va la fase en que se implementa cada prueba.
 | E-04 | Llegan a la vez una pista y una jugada sobre la misma celda | Gana el primero. Si la pista llega segunda, recibe `already_solved` y no gasta pista. | T-19.3 |
 | E-05 | El creador sale antes de iniciar, durante la partida, o se desconecta | Antes de iniciar o durante la partida, el derecho pasa en el momento de salir o expirar. Si solo está desconectado, lo conserva. | T-11.1–T-11.5 |
 | E-06 | Todos se desconectan | 120 s después de la última desconexión, todos expiran. Si había partida en curso, se registra la derrota y después se borra la sala. Si alguien vuelve antes, se cancela el borrado. | T-14.1–T-14.3 |
-| E-07 | Reconexión en medio de un evento: el comando se envió y la conexión cayó antes de la respuesta | El cliente vuelve con su ficha, recibe el snapshot y reenvía los pendientes con el mismo `id`. Un comando ya aplicado devuelve el resultado guardado y no penaliza dos veces. Si el evento se confirmó mientras el cliente estaba fuera, ya aparece en el snapshot. | T-32.1, prueba I específica en F9 (`idempotency.reconnect`) |
-| E-08 | La misma ficha se abre en dos pestañas | La conexión nueva reemplaza a la anterior, que se cierra con el código 4001 (`replaced`). | Prueba I en F9 |
+| E-07 | Reconexión en medio de un evento: el comando se envió y la conexión cayó antes de la respuesta | El cliente vuelve con su ficha, recibe el snapshot y reenvía los pendientes con el mismo `id`. Un comando ya aplicado devuelve el resultado guardado y no penaliza dos veces. Si el evento se confirmó mientras el cliente estaba fuera, ya aparece en el snapshot. | T-32.1, prueba I específica (`idempotency.reconnect`) |
+| E-08 | La misma ficha se abre en dos pestañas | La conexión nueva reemplaza a la anterior, que se cierra con el código 4001 (`replaced`). | Prueba I |
 | E-09 | Entrada a mitad de partida con la sala llena | `room.full`. Con cupo, el jugador entra activo con 3 vidas. | T-12.1, T-12.2 |
 | E-10 | El último jugador activo pierde su última vida mientras quedan espectadores | Derrota inmediata. | T-01.2 |
 | E-11 | El último jugador activo sale | Derrota inmediata (D4). Aunque después vuelva, la partida ya terminó. | T-01.3, T-26.1 |
@@ -751,10 +751,10 @@ Entre corchetes va la fase en que se implementa cada prueba.
 | E-13 | Se deshace una nota grupal que otro jugador modificó | `undo.not_applicable{modified}` y un aviso. | T-25.2 |
 | E-14 | Un jugador nuevo pide el apodo de alguien que salió | `nickname.taken` hasta que termine la partida. | T-27.1, T-27.2 |
 | E-15 | El servidor se reinicia durante una partida | La partida se reconstruye desde el registro, con plazos de gracia nuevos. El cronómetro sigue desde `startedAt`. Las salas en lobby se pierden. | T-32.2, T-07.3 |
-| E-16 | La base de datos falla al confirmar eventos | No se difunde nada que no esté confirmado, ni siquiera las respuestas sin evento que vienen después. Los comandos que cambian el estado reciben `server.unavailable`; la presencia y el ping siguen. El lote se reintenta cada segundo. Si el fallo dura 10 s, la sala se cierra (las conexiones con 1012), se reconstruye desde el registro confirmado cuando la base responde, y mientras tanto `room.join` a ese código recibe `server.unavailable`. Ningún cliente vio los eventos perdidos; el cliente reenvía sus pendientes con el mismo `id`. | T-32.3, prueba I en F9 |
-| E-17 | Un cliente consume demasiado lento | Primero se descarta la presencia y después se cierra con 1013. El cliente se reconecta y recibe un snapshot. | Prueba I en F9, carga en F11 |
+| E-16 | La base de datos falla al confirmar eventos | No se difunde nada que no esté confirmado, ni siquiera las respuestas sin evento que vienen después. Los comandos que cambian el estado reciben `server.unavailable`; la presencia y el ping siguen. El lote se reintenta cada segundo. Si el fallo dura 10 s, la sala se cierra (las conexiones con 1012), se reconstruye desde el registro confirmado cuando la base responde, y mientras tanto `room.join` a ese código recibe `server.unavailable`. Ningún cliente vio los eventos perdidos; el cliente reenvía sus pendientes con el mismo `id`. | T-32.3, prueba I |
+| E-17 | Un cliente consume demasiado lento | Primero se descarta la presencia y después se cierra con 1013. El cliente se reconecta y recibe un snapshot. | Prueba I y prueba de carga |
 | E-18 | Llega un mensaje inválido, demasiado grande o de un tipo desconocido | `bad_request` sin cambio de estado; si es demasiado grande, se cierra con 1009. | T-10.2, T-16.1 |
-| E-19 | El cliente usa otra versión del protocolo | `protocol.unsupported` y cierre con 4000. | Prueba U en F9 |
+| E-19 | El cliente usa otra versión del protocolo | `protocol.unsupported` y cierre con 4000. | Prueba U |
 | E-20 | Vuelve con ficha un jugador que tenía 0 vidas | Vuelve como espectador. | T-26.3, T-23.3 |
 | E-21 | Un espectador intenta jugar o pedir una pista | `forbidden`, sin efecto. | T-23.2, T-19.4 |
 | E-22 | La última celda se resuelve con una pista | Victoria; nadie recibe bonus de cierre. | T-01.5, T-19.5 |
@@ -767,15 +767,15 @@ Entre corchetes va la fase en que se implementa cada prueba.
 
 ### 8.1 Niveles y herramientas
 
-| Nivel | Herramienta | Qué cubre | Fase |
-|---|---|---|---|
-| Unitarias y de propiedades | Vitest y fast-check | Motor (solvers, generador, calificador), puntuación, reductor de la partida, esquemas del protocolo | F4, F6, F9 |
-| Integración del servidor | Vitest, `Transport` en memoria, `Clock` falso, PGlite | Todos los T de nivel I: máquinas de estado, plazos, cola por sala, persistencia | F9 |
-| Componentes | Vitest y Testing Library | Los T de nivel C | F8 |
-| E2E | Playwright (6 contextos de navegador) | Partida completa, clics simultáneos, reconexión | F10–F11 |
-| Caos | Playwright con cortes de red | E-01, E-07, E-17 | F11 |
-| Carga | Script con muchos clientes WS | 50 salas, p95 menor a 150 ms y memoria | F11 |
-| Manual | Lista de revisión | T-18.1 | F7 |
+| Nivel | Herramienta | Qué cubre |
+|---|---|---|
+| Unitarias y de propiedades | Vitest y fast-check | Motor (solvers, generador, calificador), puntuación, reductor de la partida, esquemas del protocolo |
+| Integración del servidor | Vitest, `Transport` en memoria, `Clock` falso, PGlite | Todos los T de nivel I: máquinas de estado, plazos, cola por sala, persistencia |
+| Componentes | Vitest y Testing Library | Los T de nivel C |
+| E2E | Playwright (6 contextos de navegador) | Partida completa, clics simultáneos, reconexión |
+| Caos | Playwright con cortes de red | E-01, E-07, E-17 |
+| Carga | Script con muchos clientes WS | 50 salas, p95 menor a 150 ms y memoria |
+| Manual | Lista de revisión | T-18.1 |
 
 ### 8.2 Interfaces que hacen testeable al servidor
 - `Transport`: se implementa con `ws` en producción y en memoria para las pruebas.
@@ -797,9 +797,9 @@ El inspector está activo por defecto en todas las pruebas I. Las pruebas E2E us
 - **Convergencia de notas grupales (T-16.2):** varios clientes simulados, con operaciones optimistas, latencias aleatorias y reordenamiento de las entregas, terminan con el mismo estado.
 - **Esquemas:** cada mensaje de los catálogos 4.2 y 4.3 tiene un ejemplo válido y uno inválido en `packages/protocol`.
 
-### 8.5 Matriz de cobertura de `PLAN.md` §2
+### 8.5 Matriz de cobertura de las reglas de producto
 
-| Regla del plan | R | Pruebas |
+| Regla de producto | R | Pruebas |
 |---|---|---|
 | Capacidad | R-08 | T-08.1–3 |
 | Acceso | R-09 | T-09.1–4 |
@@ -813,4 +813,4 @@ El inspector está activo por defecto en todas las pruebas I. Las pruebas E2E us
 | Limpieza automática | R-17 | T-17.1–5 |
 | Diseño visual | R-18 | T-18.1 |
 
-Todas las reglas de la visión (R-01 a R-07), las decisiones de F2 (R-19 a R-34), el motor (R-35), la puntuación (R-36) y el arranque del cliente (R-37) y la actividad tras una reconexión (R-38) tienen también sus pruebas en la sección 6.
+Todas las reglas de la visión (R-01 a R-07), las decisiones de producto (R-19 a R-34), el motor (R-35), la puntuación (R-36) y el arranque del cliente (R-37) y la actividad tras una reconexión (R-38) tienen también sus pruebas en la sección 6.

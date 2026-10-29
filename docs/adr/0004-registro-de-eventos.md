@@ -4,7 +4,7 @@
 - Fecha: 2026-10-22
 
 ## Contexto
-`PLAN.md` §3.3 pide que el estado, la puntuación y la reconexión se reconstruyan reproduciendo los eventos de cada partida, y que `puntaje = f(registro, versión de parámetros)`. También hay que reconstruir las partidas tras un reinicio (ADR 0003) y deduplicar los comandos reenviados (SPEC §4.6).
+El diseño pide que el estado, la puntuación y la reconexión se reconstruyan reproduciendo los eventos de cada partida, y que `puntaje = f(registro, versión de parámetros)`. También hay que reconstruir las partidas tras un reinicio (ADR 0003) y deduplicar los comandos reenviados (SPEC §4.6).
 
 ## Decisión
 
@@ -43,7 +43,7 @@ Las expiraciones **sí** se registran, con su `ts`. Así la reproducción no dep
   - el servidor en vivo;
   - la reconstrucción tras un reinicio;
   - el recálculo de puntajes;
-  - el servidor simulado del cliente en F8.
+  - el servidor simulado del cliente.
 - El modo de juego se inyecta como `GameMode` (SPEC §5).
 
 **Confirmar antes de difundir (group commit)**
@@ -58,7 +58,7 @@ El costo previsto es de 10 a 20 ms de latencia, que entra en el objetivo de p95 
 
 **Versionado:** `matches.scoring_params_version` y `protocol_version` fijan con qué reglas se jugó. Para recalcular con otros parámetros, se ejecuta `replay` con `params` distintos, sin tocar el registro (T-32.4).
 
-**Sin snapshots en la v1:** una partida tiene del orden de 10³ eventos, y reproducirla tarda milisegundos. Se agregan si F11 muestra que hacen falta.
+**Sin snapshots en la v1:** una partida tiene del orden de 10³ eventos, y reproducirla tarda milisegundos. Se agregarían si la carga lo pidiera; la prueba de carga no lo mostró (`docs/carga.md`).
 
 ## Alternativas consideradas
 - **Guardar el estado y no los eventos:** pierde la depuración y la posibilidad de recalibrar.
@@ -68,20 +68,20 @@ El costo previsto es de 10 a 20 ms de latencia, que entra en el objetivo de p95 
 - **Event store dedicado (EventStoreDB, Kafka):** es excesivo para una sola instancia.
 
 ## Consecuencias
-- Hay un paquete nuevo, `packages/game` (plan 1.04, F3).
-- La reproducción determinista se vuelve un invariante probado (T-32.1). Cualquier uso de `Date.now()` o `Math.random()` dentro del reductor es un error; se agrega una regla de lint en F3.
+- Hay un paquete propio, `packages/game`.
+- La reproducción determinista se vuelve un invariante probado (T-32.1). Cualquier uso de `Date.now()` o `Math.random()` dentro del reductor es un error, y una regla de lint lo impide.
 - Cambiar la forma de un evento exige migrar o versionar el registro. Por eso los eventos llevan solo hechos mínimos.
 
-## Nota de F8 (2026-10-24): forma definitiva de los eventos
-- El reductor y el modo Normal quedaron en `packages/game` (`decide`, `apply`, `replay` y `project`). El servidor simulado de F8 los usa tal cual, y F9 los reutiliza sin reescribirlos.
-- `cell.solved` guarda `level` (el `levelToDeduce` antes de la jugada, con los descartes públicos) y `graderVersion`, calculados al decidir. La reproducción no vuelve a calcular el nivel, y una versión nueva del calificador no cambia la puntuación de las partidas ya jugadas. Era la recomendación de F6 (`docs/puntuacion.md`).
+## Nota del 2026-10-24: forma definitiva de los eventos
+- El reductor y el modo Normal quedaron en `packages/game` (`decide`, `apply`, `replay` y `project`). El servidor simulado del cliente y el servidor de salas los usan tal cual.
+- `cell.solved` guarda `level` (el `levelToDeduce` antes de la jugada, con los descartes públicos) y `graderVersion`, calculados al decidir. La reproducción no vuelve a calcular el nivel, y una versión nueva del calificador no cambia la puntuación de las partidas ya jugadas. Era la recomendación de `docs/puntuacion.md`.
 - Cada entrada de jugador (`players[]` de `match.started` y `player.joined`) lleva su `connection`. Quien entra a mitad de partida puede llegar en cualquier estado de conexión, y la reproducción no tiene que adivinarlo.
 - `match.started` lleva `matchId` y `settings.changed` lleva `clientMsgId`, para la idempotencia.
-- La tabla de arriba ya refleja estos cambios. Las pruebas de propiedad T-15.1 y la base de T-32.1 (estado en vivo igual a `replay`, y puntajes iguales a `scoreLog`) corren desde F8.
+- La tabla de arriba ya refleja estos cambios. Las pruebas de propiedad T-15.1 y la base de T-32.1 (estado en vivo igual a `replay`, y puntajes iguales a `scoreLog`) corren en la CI.
 
-## Nota de F9 (2026-10-24): confirmación y fallos
+## Nota del 2026-10-24: confirmación y fallos
 - **Group commit:** un `EventWriter` para todas las salas escribe un lote cada 10 ms, o en cuanto hay 64 eventos, en una transacción, de a un lote por vez y en orden. `matches` se inserta con su `match.started`, y se cierra en la misma transacción que su `match.ended`.
 - **Bandeja de salida por sala:** cada mensaje sale después de que se confirman los eventos anteriores, incluidas las respuestas que no generan evento (como `cell.already_solved`). Así ningún cliente ve algo que dependa de un evento sin confirmar (T-32.3). El snapshot se arma al decidir y sale en ese mismo orden. La presencia y `sys.pong` no esperan.
 - **Fallo de la base (E-16):** el lote se reintenta cada segundo y los comandos que cambian el estado reciben `server.unavailable`. A los 10 s se rechazan los lotes pendientes: sus salas se cierran con 1012 y se reconstruyen desde lo confirmado cuando la base responde.
-- **Forma del registro:** sin cambios respecto de la nota de F8. Cada evento leído se valida con `matchEventSchema` (`packages/game`), y `matches.log_version` permite versionar la forma si alguna vez cambia.
+- **Forma del registro:** sin cambios respecto de la nota anterior. Cada evento leído se valida con `matchEventSchema` (`packages/game`), y `matches.log_version` permite versionar la forma si alguna vez cambia.
 - T-32.1 contra el servidor real: con partidas aleatorias de varios jugadores (incluidas salidas, caídas, vueltas con ficha, entradas nuevas y saltos del reloj), el estado en vivo coincide con `replay` del registro confirmado en PGlite.

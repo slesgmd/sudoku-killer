@@ -4,7 +4,7 @@
 - Fecha: 2026-10-23
 
 ## Contexto
-F5 genera el banco de la v1: 500 puzzles por dificultad, con su solución, que van a la tabla `puzzles` (ADR 0003). Hay que decidir qué se versiona en el repositorio y cómo llega el banco a la base de datos.
+El banco de la v1 son 500 puzzles por dificultad, con su solución, que van a la tabla `puzzles` (ADR 0003). Hay que decidir qué se versiona en el repositorio y cómo llega el banco a la base de datos.
 
 El generador es determinista (T-35.6): con la misma semilla, las mismas opciones y la misma `GENERATOR_VERSION`, da siempre el mismo puzzle. El calificador también es determinista, con su `GRADER_VERSION`.
 
@@ -23,7 +23,7 @@ El generador es determinista (T-35.6): con la misma semilla, las mismas opciones
 2. Regenera cada semilla con sus números iniciales y comprueba el hash, el nivel, los pasos, la dificultad y la banda. Si algo no coincide, falla con la semilla **antes de escribir nada**.
 3. Inserta en una transacción con `ON CONFLICT (generator_version, seed) DO NOTHING`, así que cargar dos veces no duplica filas.
 
-Con el banco completo tarda unos minutos (generar y calificar unas 2000 semillas). Por eso es un paso de despliegue, no del arranque del servidor. El comando contra PostgreSQL (`bank:load` con `DATABASE_URL`) y la comprobación al arrancar de que hay puzzles de cada dificultad se conectan en F9.
+Con el banco completo tarda unos minutos (generar y calificar unas 2000 semillas). Por eso es un paso de despliegue, no del arranque del servidor. El comando contra PostgreSQL (`bank:load` con `DATABASE_URL`) y la comprobación al arrancar de que hay puzzles de cada dificultad están en el servidor de salas.
 
 **`id` opaco.**
 - El `id` de cada puzzle es un UUID aleatorio de la base de datos y no deriva de la semilla. La semilla queda en la columna `seed`, que nunca sale del servidor.
@@ -45,8 +45,8 @@ Con el banco completo tarda unos minutos (generar y calificar unas 2000 semillas
 - El índice único `(generator_version, seed)` permite que convivan bancos de distintas versiones del generador.
 - `pnpm test:corpus` regenera y verifica el banco completo (`bank.corpus.test.ts`). La CI verifica una muestra.
 
-## Nota de F9 (2026-10-24): cambios del manifiesto
-- **Ninguna fila se borra al cambiar el manifiesto** (pedido del autor al aprobar F9). `loadBank` inserta los puzzles nuevos (por `hash`), reactiva los que vuelven a estar en el manifiesto y marca `retired_at` en los que ya no están, en una transacción. Devuelve cuántos insertó, cuántos ya estaban, cuántos reactivó y cuántos retiró.
+## Nota del 2026-10-24: cambios del manifiesto
+- **Ninguna fila se borra al cambiar el manifiesto.** `loadBank` inserta los puzzles nuevos (por `hash`), reactiva los que vuelven a estar en el manifiesto y marca `retired_at` en los que ya no están, en una transacción. Devuelve cuántos insertó, cuántos ya estaban, cuántos reactivó y cuántos retiró.
 - `listIds` y la elección del servidor solo usan puzzles vigentes. Las partidas viejas conservan su clave foránea al puzzle retirado y se siguen reproduciendo.
 - El índice `(generator_version, seed)` ya no es único: una equivalencia nueva con el mismo generador da otros números iniciales para la misma semilla, y la fila vieja tiene que convivir con la nueva.
 - `bank:load` usa `DATABASE_URL`, aplica las migraciones y carga el manifiesto completo. En la base local tardó unos minutos y dejó 500 puzzles vigentes por dificultad. El servidor no arranca si alguna dificultad no tiene puzzles vigentes.
