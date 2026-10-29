@@ -34,7 +34,7 @@ export function HintDialog({
         </>
       }
     >
-      {/* H sale de los parámetros vigentes (F6), nunca escrito a mano. */}
+      {/* H sale de los parámetros vigentes, nunca escrito a mano. */}
       <p>{t("hint.cost", { points: PARAMS_V1.hintPenalty })}</p>
       <p>{t("hint.left", { count: hintsLeft })}</p>
     </Dialog>

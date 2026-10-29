@@ -1,4 +1,4 @@
-// Clave de acceso del grupo en el servidor (F12, `docs/seguridad.md` S-02, SPEC R-39). El servidor
+// Clave de acceso del grupo en el servidor (`docs/seguridad.md` S-02, SPEC R-39). El servidor
 // guarda solo el hash (`ACCESS_KEY_HASH`, SHA-256 con un prefijo de dominio) y compara en tiempo
 // constante. Tras `MAX_ACCESS_FAILURES` claves que no valen desde una IP en `ACCESS_FAILURE_WINDOW_MS`,
 // esa IP recibe 429 en el handshake y en `POST /access` hasta que pase la ventana. Los dos caminos
@@ -48,7 +48,7 @@ export class AccessGate {
   private readonly maxFailures: number;
   private readonly windowMs: number;
   private readonly failures = new Map<string, { count: number; resetAt: number }>();
-  /** Claves ofrecidas que no valen desde que arrancó (métricas, F12h). */
+  /** Claves ofrecidas que no valen desde que arrancó (métricas). */
   denied = 0;
   /** Conexiones sin clave desde que arrancó (métricas): un navegador nuevo, no un intento. */
   missing = 0;

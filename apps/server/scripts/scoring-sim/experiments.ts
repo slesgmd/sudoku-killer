@@ -1,4 +1,4 @@
-// Bloques de experimentos del simulador (F6, `docs/puntuacion.md`). Cada puzzle del banco se juega 5
+// Bloques de experimentos del simulador (`docs/puntuacion.md`). Cada puzzle del banco se juega 5
 // veces: 3 en el bloque A (mesas al azar, con el aporte contrafáctico y la rama sin adivinar), 1 en
 // el B (duelo de un veloz y un lógico de igual velocidad) y 1 en el C (ramas con y sin una pista
 // forzada). Todo sale de la semilla de la partida, así que el resultado no depende de en qué hilo

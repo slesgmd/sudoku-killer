@@ -1,4 +1,4 @@
-// Puntaje de una partida a partir de sus hechos (F6, R-32): puntaje = f(registro, parámetros). El
+// Puntaje de una partida a partir de sus hechos (R-32): puntaje = f(registro, parámetros). El
 // mismo registro se puede recalcular con otra versión de los parámetros (T-32.4).
 import type { ScoringParams } from "./params.ts";
 import {

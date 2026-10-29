@@ -337,7 +337,7 @@ describe("F12 access key (R-39, S-02)", () => {
   });
 });
 
-// El fallo del primer despliegue (F12j): detrás del proxy de Render, cada intento recibía 429 sin
+// El fallo del primer despliegue: detrás del proxy de Render, cada intento recibía 429 sin
 // que ninguna clave se hubiera rechazado desde el navegador. Las cabeceras son las que arma un proxy:
 // lo que trae el cliente a la izquierda y, a la derecha, una entrada por proxy.
 describe("F12 access behind the proxy (T-39.7, T-39.8, T-39.9)", () => {
@@ -426,7 +426,7 @@ describe("F12 the 4003 reaches the browser behind the proxy (T-39.11)", () => {
 
   it("T-39.11 behind a proxy that loses what follows the 101, without a key or with a wrong one the client still gets 4003; with the key it plays", async () => {
     const r = await start({ accessKey: KEY });
-    // El proxy del primer despliegue (F12j): pierde lo que sigue al 101 hasta que el cliente habla.
+    // El proxy del primer despliegue: pierde lo que sigue al 101 hasta que el cliente habla.
     const proxy = await lossyProxy(r.port, { mode: "early" });
     try {
       expect(await handshake(r, { port: proxy.port, protocols: accessProtocols(null) })).toBe(

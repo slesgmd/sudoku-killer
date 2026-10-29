@@ -1,4 +1,4 @@
-// Metas de la puntuación (F6d, `docs/puntuacion.md`, decididas en el punto de control). Las metas
+// Metas de la puntuación (`docs/puntuacion.md`, sección 7). Las metas
 // exigidas: P y H según sus reglas, adivinar con EV negativo frente a deducir (con su intervalo de
 // confianza en el nivel 2, y en media en el nivel 3), pistas y robo sin ganancia neta y β acotado. La equidad entre veloz y lógico y el Spearman
 // se informan contra sus metas, pero son limitaciones conocidas de la v1: no bloquean.
@@ -68,7 +68,7 @@ export function checkTargets(
   ];
   // Nivel 2: la media y el intervalo de confianza, negativos. Nivel 3: la media negativa; su
   // alternativa es deducir celdas de nivel 4 o 5 (de 70 a 140 s), así que queda cerca del límite y su
-  // intervalo se informa sin exigirlo (decisión del punto de control, `docs/puntuacion.md`).
+  // intervalo se informa sin exigirlo (`docs/puntuacion.md`, sección 8).
   const level2 = guessing.bySkill[2];
   const level3 = guessing.bySkill[3];
   const describe = (x: typeof level2) =>

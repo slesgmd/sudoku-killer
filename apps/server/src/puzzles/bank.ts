@@ -1,4 +1,4 @@
-// Banco de puzzles (F5, ADR 0006): el banco se versiona como un manifiesto de semillas, porque el
+// Banco de puzzles (ADR 0006): el banco se versiona como un manifiesto de semillas, porque el
 // generador es determinista. La parte pura (equivalencia, manifiesto y regeneración) está en
 // `@sudoku-killer/bank`; aquí quedan el hash, la construcción del banco y la verificación.
 import { createHash } from "node:crypto";
@@ -20,7 +20,7 @@ import {
 } from "@sudoku-killer/engine";
 import { DIFFICULTIES, type Difficulty } from "@sudoku-killer/protocol";
 
-/** Puzzles por dificultad del banco de la v1 (criterio de aceptación de F5). */
+/** Puzzles por dificultad del banco de la v1 (`docs/dificultad.md`). */
 export const DEFAULT_PER_DIFFICULTY = 500;
 
 export function puzzleHash(generated: GeneratedPuzzle): string {

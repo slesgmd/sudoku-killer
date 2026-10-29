@@ -44,7 +44,7 @@ export function publicPuzzleOf(record: PuzzleRecord): PublicPuzzle {
 }
 
 /**
- * Puzzles que la caché conserva (F11f, `docs/carga.md` §6). Sin tope, cada puzzle jugado quedaba en
+ * Puzzles que la caché conserva (`docs/carga.md` §6). Sin tope, cada puzzle jugado quedaba en
  * memoria para siempre, y con él el contexto del calificador del motor (unos 80 KB por puzzle, en un
  * `WeakMap`): hasta unos 160 MB con el banco completo. Las partidas en curso conservan su puzzle
  * aunque salga de aquí, así que basta con cubrir las que empiezan a la vez.

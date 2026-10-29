@@ -1,4 +1,4 @@
-// T-32.1 (I, F9): para partidas aleatorias contra el servidor real (aciertos, errores, pistas, notas,
+// T-32.1 (I): para partidas aleatorias contra el servidor real (aciertos, errores, pistas, notas,
 // deshacer, ajustes, presencia, entradas, salidas, caídas, vueltas con ficha y avances del reloj),
 // `replay(registro)` da el mismo estado que el servidor en vivo: tablero, notas, vidas, puntajes,
 // roles, conexiones y ranking. El registro es el que confirmó el `MatchRepository`.

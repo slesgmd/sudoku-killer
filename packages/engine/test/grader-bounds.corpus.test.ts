@@ -1,4 +1,4 @@
-// Cotas de `unitCombination` (F5): califica el corpus con la técnica completa de F4f y con cada
+// Cotas de `unitCombination`: califica el corpus con la técnica completa y con cada
 // cota, y mide cuántos puzzles de nivel 5 conserva cada una, cuántos pasan a exceder las técnicas,
 // la tasa de nivel 5 por candidato, los minutos estimados para 500 y los tiempos de `grade` y
 // `levelToDeduce`. Con la cota de `TECHNIQUES`, imprime los histogramas para la equivalencia entre
@@ -28,7 +28,7 @@ const BASE_SEED = Number(process.env["CORPUS_BASE_SEED"] ?? 1);
 const SIZE = Number(process.env["CORPUS_SIZE"] ?? 1000);
 /** Puzzles en los que se simula una partida para medir `levelToDeduce` con cada cota. */
 const GAMES = Math.min(SIZE, 100);
-/** Puzzles por dificultad del banco (criterio de aceptación de F5). */
+/** Puzzles por dificultad del banco (`docs/dificultad.md`). */
 const TARGET = 500;
 
 const name = ({ maxOpenCages, maxCombinations }: UnitCombinationBound): string =>
@@ -65,7 +65,7 @@ interface BoundRun {
   readonly levels: Map<number, number>;
 }
 
-/** Propuesta de equivalencia (punto de control de F5a): `null` si el puzzle se excluye. */
+/** Propuesta de equivalencia de dificultades: `null` si el puzzle se excluye. */
 function proposedDifficulty(result: GradeResult): string | null {
   if (result.status !== "solved") return null;
   const levelThreeSteps = at(result.stepsByLevel, 3);

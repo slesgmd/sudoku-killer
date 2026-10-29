@@ -1,10 +1,10 @@
 name: Carga
 
-# Prueba de carga (F11e, SPEC §8.1): `pnpm --filter @sudoku-killer/server load` con los dos escenarios
+# Prueba de carga (SPEC §8.1): `pnpm --filter @sudoku-killer/server load` con los dos escenarios
 # de `apps/server/scripts/load/params.json` (realista y estrés), contra PostgreSQL real (servicio del
 # job) y el banco completo. No corre en cada push: cada semana y a mano. Los clientes corren en la
 # misma máquina que el servidor y el runner es compartido: la cifra sirve para comparar corridas,
-# no es la de producción (se mide en F12, en el hosting). El informe queda como artefacto.
+# no es la de producción (docs/carga.md, sección 8). El informe queda como artefacto.
 
 on:
   schedule:

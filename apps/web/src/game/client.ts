@@ -47,7 +47,7 @@ const CLOCK_SAMPLES = 8;
  */
 export const START_TIMEOUT_MS = 15_000;
 /**
- * Servidor dormido (F12g, ADR 0007): si la conexión no abre en 3 s al entrar, se avisa
+ * Servidor dormido (ADR 0007): si la conexión no abre en 3 s al entrar, se avisa
  * «Despertando el servidor…» y se sigue intentando hasta 2 min (el hosting gratuito tarda alrededor
  * de un minuto en despertar). Después, el aviso de error con «Reintentar» (T-37.1).
  */
@@ -144,7 +144,7 @@ export class GameClient {
   private readonly startIds = new Set<string>();
   private startTimer: ReturnType<typeof setTimeout> | null = null;
   private wakeTimer: ReturnType<typeof setTimeout> | null = null;
-  /** Si la conexión llegó a abrir desde que empezó la entrada actual (F12g). */
+  /** Si la conexión llegó a abrir desde que empezó la entrada actual. */
   private openedSinceEntry = false;
   /** Mensajes del lobby y de Resultados (`match.start` y `room.reset`) sin respuesta. */
   private readonly lobbyIds = new Set<string>();
@@ -361,7 +361,7 @@ export class GameClient {
       return;
     }
     const starting = this.state.phase === "entering" || this.state.phase === "loading";
-    // Mientras el servidor despierta (F12g), `unavailable` no corta la entrada: el plazo es otro.
+    // Mientras el servidor despierta, `unavailable` no corta la entrada: el plazo es otro.
     if (status === "unavailable" && starting && !this.inRoom() && this.openedSinceEntry)
       this.failStart();
   }
@@ -564,7 +564,7 @@ export class GameClient {
   // --- Acciones de la interfaz ---
 
   /**
-   * Arranque directo (el inicio mínimo de F8, que siguen usando las pruebas): crea la sala, elige la
+   * Arranque directo (el inicio mínimo que usan las pruebas): crea la sala, elige la
    * dificultad e inicia la partida, sin pasar por el lobby.
    */
   start(nickname: string, difficulty: Difficulty): void {
@@ -610,7 +610,7 @@ export class GameClient {
     }, ms);
   }
 
-  /** La conexión abrió por primera vez en esta entrada: el servidor está despierto (F12g). */
+  /** La conexión abrió por primera vez en esta entrada: el servidor está despierto. */
   private awake(): void {
     this.openedSinceEntry = true;
     if (this.wakeTimer !== null) clearTimeout(this.wakeTimer);
@@ -654,7 +654,7 @@ export class GameClient {
     this.set({ starting: true });
   }
 
-  /** «Ver resultados» (decisión del plan de F10: el paso a Resultados nunca es automático). */
+  /** «Ver resultados» (decisión de diseño: el paso a Resultados nunca es automático). */
   viewResults(): void {
     if (this.state.phase === "ended") this.set({ showResults: true });
   }

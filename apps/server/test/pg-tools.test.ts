@@ -1,6 +1,6 @@
 // La cadena de conexión con `sslmode=verify-full` vale a la vez para node-postgres (el servidor y los
 // recuentos del respaldo) y para libpq (`pg_dump` en `backup.yml`), que recibe `sslrootcert=system`
-// (F12, `docs/seguridad.md` §3). Las URL son de ejemplo: ninguna apunta a una base real.
+// (`docs/seguridad.md` §3). Las URL son de ejemplo: ninguna apunta a una base real.
 import pg from "pg";
 import { describe, expect, it } from "vitest";
 import { libpqUrl } from "../scripts/db/pg-tools.ts";

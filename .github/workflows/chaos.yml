@@ -1,6 +1,6 @@
 name: Caos
 
-# Caos E2E (F11c, SPEC §8.1): la partida de tres personas con cortes reales de `e2e/chaos.spec.ts`,
+# Caos E2E (SPEC §8.1): la partida de tres personas con cortes reales de `e2e/chaos.spec.ts`,
 # con semillas nuevas. En cada push, la CI corre la semilla fija y las regresiones (job `e2e`); este
 # workflow suma cada semana `count` semillas desde `run_number × 100`, y la ejecución manual permite
 # elegirlas. Cada fallo imprime su semilla (`SK_CHAOS_SEED=…`); al final se listan las que fallaron,

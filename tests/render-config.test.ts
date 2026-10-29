@@ -1,4 +1,4 @@
-// `render.yaml` (F12, ADR 0007): sin secretos en el repositorio, despliegue desde `main` solo con
+// `render.yaml` (ADR 0007): sin secretos en el repositorio, despliegue desde `main` solo con
 // los checks en verde, el servidor gratuito en Virginia con su chequeo de salud, y la web y el
 // servidor apuntándose entre sí (origen permitido y `wss://`).
 import { readFileSync } from "node:fs";

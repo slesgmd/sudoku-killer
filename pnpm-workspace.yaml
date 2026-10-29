@@ -3,6 +3,6 @@ packages:
   - packages/*
 
 # esbuild (de drizzle-kit) trae su binario como dependencia opcional: su script de instalación no
-# hace falta (F5).
+# hace falta.
 allowBuilds:
   esbuild: false

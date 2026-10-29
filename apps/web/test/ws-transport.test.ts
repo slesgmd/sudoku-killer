@@ -1,7 +1,7 @@
 // Transporte WebSocket del cliente (ADR 0002) con un WebSocket y un reloj falsos: espera
 // exponencial con jitter, `unavailable` a los 10 s, códigos de cierre 4000, 4001 y 4002, validación
 // de los mensajes entrantes y reconexión inmediata al volver a primer plano, al restaurar la página
-// desde la caché o al recuperar la red (pedido del usuario al aprobar F10).
+// desde la caché o al recuperar la red.
 import { ACCESS_KEY_HEADER, encodeAccessKey, type ServerEnvelope } from "@sudoku-killer/protocol";
 import { describe, expect, it } from "vitest";
 import type { TransportStatus } from "../src/transport/types.ts";

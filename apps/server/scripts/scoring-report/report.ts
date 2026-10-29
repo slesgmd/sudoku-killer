@@ -1,6 +1,6 @@
-// `scoring:report` (F11h): analiza las partidas terminadas de la base (`DATABASE_URL`) para la
+// `scoring:report`: analiza las partidas terminadas de la base (`DATABASE_URL`) para la
 // recalibración de la puntuación (`docs/puntuacion.md`, sección 11). Solo lee: no cambia parámetros
-// ni filas. La decisión sobre P y una versión nueva de los parámetros son de F13.
+// ni filas: una versión nueva de los parámetros sería un archivo nuevo.
 //
 // Uso: pnpm --filter @sudoku-killer/server scoring:report [--since 2026-10-25] [--limit 500]
 //        [--out informe.json]

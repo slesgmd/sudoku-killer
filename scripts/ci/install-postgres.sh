@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # PostgreSQL 18 (servidor y cliente, del repositorio de PGDG), unzip y age en el runner de Actions
-# (F12i). El cliente 18 vuelca cualquier servidor de una versión igual o anterior (Neon). Corre con
+#. El cliente 18 vuelca cualquier servidor de una versión igual o anterior (Neon). Corre con
 # scripts/ci/quiet.ts: su salida no se publica.
 set -euo pipefail
 sudo install -d /usr/share/postgresql-common/pgdg

@@ -61,7 +61,7 @@ function deferred(): { promise: Promise<void>; resolve: () => void } {
   return { promise, resolve };
 }
 
-/** Lo que tardaron las escrituras en la base desde la última lectura (métricas, F12h). */
+/** Lo que tardaron las escrituras en la base desde la última lectura (métricas). */
 export interface CommitStats {
   readonly commits: number;
   readonly events: number;

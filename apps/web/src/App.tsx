@@ -25,10 +25,10 @@ const initial = () => INITIAL_STATE;
 const IN_ROOM = new Set<Phase>(["lobby", "loading", "playing", "ended"]);
 
 /**
- * Las pantallas según la ruta y el estado del cliente (F10). La sala tiene una sola ruta y la
+ * Las pantallas según la ruta y el estado del cliente. La sala tiene una sola ruta y la
  * pantalla sale del estado de la sala: lobby, partida o Resultados (decisión 3). Al abrir el enlace
  * de una sala con la ficha guardada, la sesión se reanuda sola; sin ficha, se abre Entrar con el
- * código (plan de F10).
+ * código.
  */
 export function Screens({
   client,
@@ -218,7 +218,7 @@ export function App() {
     takeInvitation(window.location, window.history, (key) => {
       invitation = key;
     });
-    // El servidor dormido empieza a despertar apenas abre la página (F12g); la respuesta no importa.
+    // El servidor dormido empieza a despertar apenas abre la página; la respuesta no importa.
     const warm = prewarmUrl(import.meta.env.VITE_SERVER_URL);
     if (warm !== null)
       void fetch(warm, { mode: "no-cors", cache: "no-store" }).catch(() => undefined);

@@ -1,5 +1,5 @@
 // Ayudas de las pruebas del reductor: partidas sobre puzzles regenerados del banco y un "servidor en
-// vivo" mínimo que decide, aplica y proyecta como lo harán el simulador y F9.
+// vivo" mínimo que decide, aplica y proyecta como lo hacen el simulador y el servidor de salas.
 import { regenerateSeed } from "@sudoku-killer/bank";
 import { PARAMS_V1 } from "@sudoku-killer/scoring";
 import type { ClientMessage, PublicPuzzle, ServerEnvelope } from "@sudoku-killer/protocol";

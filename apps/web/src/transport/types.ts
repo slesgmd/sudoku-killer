@@ -1,5 +1,5 @@
 // Interfaz `Transport` del cliente (PLAN §3.5, SPEC §8.2): el cliente habla el protocolo v1 sin
-// saber si del otro lado está el servidor real (F10) o el simulado de desarrollo (F8).
+// saber si del otro lado está el servidor real o el simulado de desarrollo.
 import type { ClientEnvelope, ServerEnvelope } from "@sudoku-killer/protocol";
 
 /**

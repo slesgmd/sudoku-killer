@@ -1,4 +1,4 @@
-// Las acciones de los workflows corren con Node 24 (F12): GitHub avisa en cada ejecución por las que
+// Las acciones de los workflows corren con Node 24: GitHub avisa en cada ejecución por las que
 // todavía usan Node 20 (`actions/upload-artifact@v5` en `backup.yml` y `load.yml`). La tabla dice
 // desde qué versión mayor cada acción declara `runs.using: node24` en su `action.yml`; una acción
 // nueva tiene que entrar en la tabla.

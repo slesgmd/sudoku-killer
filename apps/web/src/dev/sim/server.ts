@@ -1,7 +1,7 @@
-// Servidor simulado en memoria (solo desarrollo, F8): una sala mínima que habla el protocolo v1 real,
-// con los mismos esquemas Zod y el mismo reductor que usará el servidor de F9 (`@sudoku-killer/game`).
-// Las salas completas (fichas, plazos de gracia, cola con idempotencia) son de F9: aquí hay lo justo
-// para jugar una partida con uno o varios clientes (el bot de F8f entra con `room.join`).
+// Servidor simulado en memoria (solo desarrollo): una sala mínima que habla el protocolo v1 real,
+// con los mismos esquemas Zod y el mismo reductor que usa el servidor de salas (`@sudoku-killer/game`).
+// Las salas completas (fichas, plazos de gracia, cola con idempotencia) son del servidor real: aquí hay lo justo
+// para jugar una partida con uno o varios clientes (el bot compañero entra con `room.join`).
 import {
   GAME_COMMAND_TYPES,
   applyWithEffects,
@@ -63,7 +63,7 @@ export interface SimServerOptions {
   readonly randomId: () => string;
   /** Un entero en `0..bound − 1`, para el código de sala. */
   readonly randomInt: (bound: number) => number;
-  /** Se llama al crear la sala (después de la bienvenida): ahí entran los bots de F8f. */
+  /** Se llama al crear la sala (después de la bienvenida): ahí entran los bots compañeros. */
   readonly onRoomCreated?: (code: string) => void;
 }
 

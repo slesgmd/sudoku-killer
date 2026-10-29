@@ -1,4 +1,4 @@
-// Ejecución del simulador (F6): reparte los puzzles del banco en tareas, las simula en hilos de
+// Ejecución del simulador: reparte los puzzles del banco en tareas, las simula en hilos de
 // trabajo (o en el hilo actual) y junta los registros en orden de partida. Cada partida sale solo de
 // su semilla, así que el resultado no depende de cuántos hilos haya ni del orden de las tareas.
 import { Worker } from "node:worker_threads";

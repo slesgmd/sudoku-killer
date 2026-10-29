@@ -1,4 +1,4 @@
-// Secretos del despliegue (F12c): el proceso real del servidor (`src/index.ts`), con la cadena de
+// Secretos del despliegue: el proceso real del servidor (`src/index.ts`), con la cadena de
 // conexión y el hash de la clave definidos como en el panel del hosting, nunca los escribe en su
 // salida, ni al arrancar ni al fallar.
 import { spawn } from "node:child_process";

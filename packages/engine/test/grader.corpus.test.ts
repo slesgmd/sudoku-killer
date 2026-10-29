@@ -1,6 +1,6 @@
-// Corpus del calificador (F4e y F4f, T-35.4 y T-35.5): califica los puzzles 9×9 del corpus del generador
-// y comprueba cada deducción contra la solución única. Una deducción que la contradiga bloquea F4.
-// Imprime la distribución de niveles y el informe por técnica (datos para F5), el tiempo de `grade` y
+// Corpus del calificador (T-35.4 y T-35.5): califica los puzzles 9×9 del corpus del generador
+// y comprueba cada deducción contra la solución única. Una deducción que la contradiga es un error del calificador.
+// Imprime la distribución de niveles y el informe por técnica (datos para la equivalencia de dificultades), el tiempo de `grade` y
 // de `levelToDeduce`, y comprueba la monotonía de `levelToDeduce` en 9000 comparaciones.
 // No corre en la CI de cada push: `pnpm test:corpus` y el workflow programado `corpus.yml`.
 // Semillas: de CORPUS_BASE_SEED (por defecto 1) en adelante; CORPUS_SIZE cambia la cantidad.
@@ -65,7 +65,7 @@ interface LevelFivePuzzle {
 }
 
 /**
- * Informe de `unitCombination` para F5, sin cambiar el calificador: qué pasa con los puzzles de
+ * Informe de `unitCombination` para la equivalencia de dificultades, sin cambiar el calificador: qué pasa con los puzzles de
  * nivel 5 si se desactiva, el tamaño de la unidad que justifica cada deducción y cuántas
  * deducciones y puzzles quedan dentro de cada cota de jaulas y de combinaciones.
  */

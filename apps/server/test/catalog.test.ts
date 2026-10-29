@@ -1,4 +1,4 @@
-// Caché del catálogo de puzzles (F11f, `docs/carga.md` §6): está acotada. Antes guardaba cada puzzle
+// Caché del catálogo de puzzles (`docs/carga.md` §6): está acotada. Antes guardaba cada puzzle
 // jugado para siempre, y con él el contexto del calificador (un `WeakMap` por puzzle en el motor):
 // la memoria crecía con los puzzles distintos jugados hasta cubrir el banco. Las partidas en curso
 // conservan su puzzle; lo que sale de la caché se vuelve a leer de la base si hace falta (R-21, E-15).

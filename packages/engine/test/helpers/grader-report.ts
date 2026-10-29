@@ -1,4 +1,4 @@
-// Mediciones del calificador para F5 (informe del corpus). Solo miden: no cambian `grade` ni las
+// Mediciones del calificador para la equivalencia de dificultades (informe del corpus). Solo miden: no cambian `grade` ni las
 // técnicas. `gradeWithout` repite el bucle de `grade` sin una técnica; `unitCombinationCosts` dice
 // qué tan grande es la unidad que justifica cada deducción de `unitCombination`.
 import {

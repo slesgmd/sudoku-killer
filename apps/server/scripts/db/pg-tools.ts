@@ -1,4 +1,4 @@
-// Herramientas de PostgreSQL y de `age` para el respaldo y el simulacro (F12i). La salida de cada
+// Herramientas de PostgreSQL y de `age` para el respaldo y el simulacro. La salida de cada
 // herramienta se descarta (nunca se imprime: podría traer la cadena de conexión o filas), y un fallo
 // solo dice qué paso falló.
 import { spawn } from "node:child_process";

@@ -15,7 +15,7 @@ export const devAliases = {
 
 /**
  * El WebSocket del juego (`/ws`) y la comprobación de la clave (`/access`, T-39.12) se reenvían al
- * servidor de salas, que sigue escuchando solo en 127.0.0.1 (F10). El `Origin` del navegador llega
+ * servidor de salas, que sigue escuchando solo en 127.0.0.1. El `Origin` del navegador llega
  * tal cual: el servidor lo compara con su lista de orígenes permitidos (con `pnpm dev:lan`, también
  * las IP de la red local). `SK_WS_TARGET` cambia el destino (las pruebas E2E usan otro puerto).
  */
@@ -37,7 +37,7 @@ function moduleReport(): Plugin {
 }
 
 export default defineConfig(({ command, mode }) => {
-  // F12: un `VITE_SERVER_URL` que no sea `wss://…/ws` detiene el build (TLS obligatorio).
+  // Un `VITE_SERVER_URL` que no sea `wss://…/ws` detiene el build (TLS obligatorio).
   checkServerUrl(loadEnv(mode, process.cwd(), "VITE_")["VITE_SERVER_URL"]);
   return config(command);
 });
@@ -60,7 +60,7 @@ function config(command: "build" | "serve") {
       headers: Object.fromEntries(securityHeaders(null).map((h) => [h.name, h.value])),
     },
     build: {
-      // Nada se incrusta en base64: las fuentes van como archivos woff2 (entrega-f8.md §5).
+      // Nada se incrusta en base64: las fuentes van como archivos woff2 (docs/diseno.md §3).
       assetsInlineLimit: 0,
     },
   };

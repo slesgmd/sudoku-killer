@@ -1,7 +1,7 @@
 // T-16.2 (R-16, ADR 0005, SPEC §8.4): con operaciones concurrentes de notas grupales de varios
 // clientes, entregas en un orden cualquiera (FIFO por conexión, como TCP) y cortes de conexión en
 // medio, todos convergen al estado que define el orden del servidor.
-// Los clientes son `GameClient` reales; el servidor es un modelo mínimo del de F9: ordena las
+// Los clientes son `GameClient` reales; el servidor es un modelo mínimo del servidor de salas: ordena las
 // operaciones con `seq`, responde `ack{applied:false}` a las que no cambian nada, guarda la respuesta
 // de cada `id` (idempotencia, E-07) y, al volver, envía un snapshot con `atSeq`.
 // En cada paso, lo confirmado de cada cliente es el estado del servidor en el último `seq` que le

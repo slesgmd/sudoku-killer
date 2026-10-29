@@ -1,4 +1,4 @@
-// «Compartir» y «Copiar código» del lobby (decisión del plan de F10): la hoja de compartir del
+// «Compartir» y «Copiar código» del lobby (decisión de diseño): la hoja de compartir del
 // sistema con el enlace `…/#/sala/CODIGO` (nunca con la ficha); sin hoja, se copia el enlace; sin
 // portapapeles (por ejemplo, en HTTP dentro de la red local), un diálogo con el texto seleccionado.
 

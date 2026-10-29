@@ -1,6 +1,6 @@
 // T-35.1 (parte del solver B): la poda propia de B no pierde ni agrega soluciones. B con poda y B sin
 // ella (Dancing Links puro) dan el mismo `count` con `limit: 2` y el mismo conjunto de soluciones.
-// Una diferencia bloquea F4.
+// Una diferencia es un error de un solver.
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { solveB, type Geometry, type KillerPuzzle } from "@sudoku-killer/engine";

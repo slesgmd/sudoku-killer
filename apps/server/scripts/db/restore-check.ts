@@ -1,4 +1,4 @@
-// Comprobación de una base restaurada (F12i): los recuentos de cada tabla y el arranque real del
+// Comprobación de una base restaurada: los recuentos de cada tabla y el arranque real del
 // servidor sobre ella (migraciones con la guarda, banco de cada dificultad y reconstrucción de las
 // partidas en curso, ADR 0003). Lo usan el respaldo semanal y el simulacro de restauración.
 import { count, isNull } from "drizzle-orm";

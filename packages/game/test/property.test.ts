@@ -1,8 +1,8 @@
 // Propiedades del reductor sobre partidas aleatorias de varios jugadores (aciertos, errores, pistas,
 // notas, deshacer, ajustes, entradas y desconexiones).
 // - T-15.1: una celda `locked` nunca cambia de valor ni vuelve a `empty`.
-// - T-32.1 (base, F8): el estado en vivo (`decide` + `applyWithEffects` paso a paso) es igual a
-//   `replay(registro)`, y los puntajes coinciden con `scoreLog` sobre los hechos. En F9 se repite
+// - T-32.1 (base): el estado en vivo (`decide` + `applyWithEffects` paso a paso) es igual a
+//   `replay(registro)`, y los puntajes coinciden con `scoreLog` sobre los hechos. Se repite
 //   contra el servidor real.
 import fc from "fast-check";
 import { PARAMS_V1, scoreLog, type ScoringEvent } from "@sudoku-killer/scoring";

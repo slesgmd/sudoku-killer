@@ -1,4 +1,4 @@
-// Manifiesto del banco (F5, ADR 0006): las semillas del banco con lo necesario para regenerar cada
+// Manifiesto del banco (ADR 0006): las semillas del banco con lo necesario para regenerar cada
 // puzzle y comprobar que sigue siendo el mismo (versiones y hash), y su calificación.
 import { GENERATOR_VERSION, GRADER_VERSION, UNIT_COMBINATION_BOUND } from "@sudoku-killer/engine";
 import { DIFFICULTIES, difficultySchema } from "@sudoku-killer/protocol";

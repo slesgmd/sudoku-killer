@@ -1,4 +1,4 @@
-// Respaldo de la base (F12i, ADR 0007; `backup.yml`, semanal y a mano). Vuelca la base de
+// Respaldo de la base (ADR 0007; `backup.yml`, semanal y a mano). Vuelca la base de
 // DATABASE_URL, lo restaura en un PostgreSQL efímero (RESTORE_DATABASE_URL), lo comprueba (recuentos
 // y arranque del servidor con la reconstrucción) y lo cifra con `age` para BACKUP_AGE_RECIPIENT en
 // BACKUP_OUT; el volcado sin cifrar se borra. El repositorio es público, y con él los logs y los

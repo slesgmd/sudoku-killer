@@ -1,4 +1,4 @@
-// `scoring:report` (F11h, R-36 y `docs/puntuacion.md` §11): sobre el registro de una partida jugada
+// `scoring:report` (R-36 y `docs/puntuacion.md` §11): sobre el registro de una partida jugada
 // contra el servidor real, el análisis cuenta exactamente los errores y sus señales, «probar hasta
 // acertar», las pistas y la parte de los puntos que viene del cierre de unidades, y no cambia los
 // parámetros.

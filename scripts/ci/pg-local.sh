@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Un PostgreSQL efímero para restaurar y comprobar un respaldo (F12i): datos en un directorio
+# Un PostgreSQL efímero para restaurar y comprobar un respaldo: datos en un directorio
 # temporal, solo en 127.0.0.1:54329, sin contraseña y con su log en un archivo que nunca se imprime
 # (un contenedor de servicio de Actions publicaría su log). Corre con scripts/ci/quiet.ts.
 set -euo pipefail

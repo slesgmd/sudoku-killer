@@ -1,4 +1,4 @@
-// Una partida simulada (F6): eventos discretos en tiempo virtual, con las reglas del modo Normal que
+// Una partida simulada: eventos discretos en tiempo virtual, con las reglas del modo Normal que
 // tocan la puntuación. Vidas y espectadores (R-03), derrota si no queda ningún activo (R-01), celdas
 // bloqueadas y jugadas simultáneas (R-05), pistas compartidas (R-19) y descartes públicos de los
 // errores. El resultado es el registro de hechos puntuables: se puntúa después con cualquier

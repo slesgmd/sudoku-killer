@@ -1,4 +1,4 @@
-// Generador (F4d). T-35.6: la misma semilla y las mismas opciones dan el mismo puzzle. T-20.1: todo
+// Generador. T-35.6: la misma semilla y las mismas opciones dan el mismo puzzle. T-20.1: todo
 // puzzle generado tiene una estructura válida y solución única según A y B. T-20.2: hay números
 // iniciales solo si `givensReason` es `difficulty` o `uniqueness`; `addGivens` los toma de la solución,
 // repartidos por cajas y con su guarda. Versión rápida para la CI; el corpus de 1000 puzzles está en
@@ -129,7 +129,7 @@ function addedPerBox(before: GeneratedPuzzle, after: GeneratedPuzzle): number[] 
   return counts;
 }
 
-/** Piso de la dificultad difícil (F5): algún paso de nivel 3 si se resuelve. */
+/** Piso de la dificultad difícil: algún paso de nivel 3 si se resuelve. */
 const needsLevelThree = (result: GradeResult): boolean =>
   result.status !== "solved" || (result.stepsByLevel[3] ?? 0) > 0;
 

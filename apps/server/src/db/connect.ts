@@ -27,7 +27,7 @@ export function connect(databaseUrl: string): Connection {
 }
 
 export interface MigrateOptions {
-  /** Con `true`, una migración destructiva pendiente que no está en `allow` no se aplica (F12f). */
+  /** Con `true`, una migración destructiva pendiente que no está en `allow` no se aplica. */
   readonly guard?: boolean;
   /** Las migraciones destructivas permitidas (`MIGRATIONS_ALLOW`). */
   readonly allow?: readonly string[];

@@ -28,8 +28,8 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
-  # E2E con Playwright contra el servidor real (F10g). Sin reintentos: un fallo intermitente se
-  # investiga (plan de F10).
+  # E2E con Playwright contra el servidor real. Sin reintentos: un fallo intermitente se
+  # investiga.
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20

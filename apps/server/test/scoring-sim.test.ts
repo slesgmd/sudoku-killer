@@ -1,4 +1,4 @@
-// Simulador de la puntuación (F6, `docs/puntuacion.md`), versión chica para la CI. La simulación es
+// Simulador de la puntuación (`docs/puntuacion.md`), versión chica para la CI. La simulación es
 // determinista: da lo mismo en el hilo actual, en otro orden y en 2 hilos (T-36.6). Las partidas
 // cumplen las reglas que tocan la puntuación: vidas y espectadores (R-03), una sola jugada por celda
 // (R-05), a lo sumo 3 pistas (R-19) y niveles entre 1 y 5 (T-20.5). T-19.6, versión reducida: con

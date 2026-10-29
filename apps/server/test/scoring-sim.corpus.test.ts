@@ -1,4 +1,4 @@
-// Simulador de la puntuación (F6, `docs/puntuacion.md`): repite la validación de los parámetros
+// Simulador de la puntuación (`docs/puntuacion.md`): repite la validación de los parámetros
 // vigentes, 10 000 partidas sobre los 2000 puzzles del banco con la semilla base 2, y exige las metas.
 // T-19.6: pedir una pista no da más puntos que no pedirla (efecto neto frente al placebo ≤ 0), y
 // tampoco compensa quitarle a otro su celda. T-36.6: adivinar tiene EV negativo frente a deducir (el
@@ -18,7 +18,7 @@ import { runSimulation } from "../scripts/scoring-sim/run.ts";
 import { checkTargets } from "../scripts/scoring-sim/targets.ts";
 import { readManifest } from "./helpers/bank.ts";
 
-/** La validación de F6 (`docs/puntuacion.md`): semilla base 2 y 10 000 partidas. */
+/** La validación de la puntuación (`docs/puntuacion.md`, sección 9): semilla base 2 y 10 000 partidas. */
 const VALIDATION = { baseSeed: 2, games: 10_000 } as const;
 
 describe("scoring simulation corpus", () => {

@@ -1,4 +1,4 @@
-// Ajustes del punto de control de F8: la preferencia local «Usar notas» (T-06.3) y la jugada
+// Ajustes de la prueba en celular: la preferencia local «Usar notas» (T-06.3) y la jugada
 // inmediata (el dígito pendiente se ve en el mismo ciclo del evento, sin optimismo sobre el
 // resultado).
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";

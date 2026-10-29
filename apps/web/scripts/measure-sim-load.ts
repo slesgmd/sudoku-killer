@@ -1,4 +1,4 @@
-// Tiempo de carga de un puzzle en el servidor simulado (F8): regenerar la semilla del manifiesto
+// Tiempo de carga de un puzzle en el servidor simulado: regenerar la semilla del manifiesto
 // (`regenerateSeed`) y calcular su hash, por dificultad. Mide en Node; en el navegador, el simulador
 // escribe el tiempo de cada carga en la consola.
 // Uso: `pnpm --filter @sudoku-killer/web sim:measure [semillas por dificultad]` (por defecto 50).

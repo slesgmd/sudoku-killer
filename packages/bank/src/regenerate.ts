@@ -1,6 +1,6 @@
-// Regeneración de una semilla del banco (F5, ADR 0006): el generador es determinista, así que la
+// Regeneración de una semilla del banco (ADR 0006): el generador es determinista, así que la
 // semilla y las reglas de su dificultad bastan para obtener el mismo puzzle. La usan el servidor
-// (carga y verificación del banco) y el servidor simulado del cliente en desarrollo (F8).
+// (carga y verificación del banco) y el servidor simulado del cliente en desarrollo.
 import {
   addGivens,
   generatePuzzle,

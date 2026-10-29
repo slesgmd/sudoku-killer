@@ -1,5 +1,5 @@
-// F10f: los estados de red dentro de una sala (docs/diseno.md §9) y las transiciones que el prototipo
-// no dibuja (entrega-f8.md §4): reconectando, servidor no disponible, otra pestaña, versión
+// Los estados de red dentro de una sala (docs/diseno.md §9) y las transiciones que el prototipo
+// no dibuja (design/pantallas.md §2): reconectando, servidor no disponible, otra pestaña, versión
 // incompatible, demasiadas acciones, acción no permitida, no se pudo deshacer, notas recuperadas,
 // llegada directa a una partida en curso, vuelta con ficha a una sala llena, regreso al estado
 // normal y la decisión 3.

@@ -1,4 +1,4 @@
-// Simulación Monte Carlo de la puntuación (F6, `docs/puntuacion.md`): juega partidas con bots sobre
+// Simulación Monte Carlo de la puntuación (`docs/puntuacion.md`): juega partidas con bots sobre
 // los puzzles del banco, las puntúa con los parámetros vigentes y con el modelo de velocidad, e
 // imprime las métricas objetivo. Escribe el informe completo en JSON.
 //

@@ -1,4 +1,4 @@
-// «Clave del grupo» (F12, R-39): aparece antes de abrir ningún WebSocket cuando `POST /access` dice
+// «Clave del grupo» (R-39): aparece antes de abrir ningún WebSocket cuando `POST /access` dice
 // que falta la clave o que la guardada no vale (o, de respaldo, con el cierre 4003). La clave se
 // escribe una sola vez; al continuar se comprueba y, solo si vale, queda en el dispositivo y se
 // repite lo que se estaba haciendo (T-39.14). El enlace de invitación (`#k=`) evita escribirla y

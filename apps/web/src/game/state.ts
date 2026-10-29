@@ -21,8 +21,8 @@ export type { PendingNote } from "./notes.ts";
 /**
  * - `home`: fuera de una sala (Inicio, Entrar o Ayuda).
  * - `entering`: esperando el `room.welcome`.
- * - `lobby`: en la sala, con la sala en `waiting` (F10).
- * - `loading`: la partida está por empezar (el arranque directo de F8 y de las pruebas).
+ * - `lobby`: en la sala, con la sala en `waiting`.
+ * - `loading`: la partida está por empezar (el arranque directo de las pruebas).
  * - `playing` y `ended`: la partida en curso o terminada (`finished`).
  */
 export type Phase = "home" | "entering" | "lobby" | "loading" | "playing" | "ended";
@@ -154,7 +154,7 @@ export interface ClientState {
    * respondió.
    */
   readonly accessCheck: "checking" | "wrong" | "unreachable" | null;
-  /** «Despertando el servidor…»: la entrada lleva 3 s sin conexión (F12g). */
+  /** «Despertando el servidor…»: la entrada lleva 3 s sin conexión. */
   readonly waking: boolean;
 }
 

@@ -1,5 +1,5 @@
 /* Pantallas fuera de la partida (design/pantallas.md §1.1–1.6; screens.css del prototipo con los
-   tokens). Sin fotos en la v1 (plan de F10): una columna centrada en móvil y entre 600 y 1023 px;
+   tokens). Sin fotos en la v1: una columna centrada en móvil y entre 600 y 1023 px;
    desde 1024 px, el lobby y Ayuda usan dos columnas. */
 
 .scr {
@@ -599,7 +599,7 @@ fieldset > legend.h-sec {
   margin-right: var(--s-1);
 }
 
-/* Entre 600 y 1023 px: una columna centrada (pendiente de entrega-f8.md §4, plan de F10). */
+/* Entre 600 y 1023 px, que el prototipo no dibuja: una columna centrada (docs/diseno.md §8). */
 @media (max-width: 1023px) {
   .lobby-grid {
     grid-template-columns: minmax(0, 1fr);

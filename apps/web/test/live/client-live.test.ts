@@ -1,4 +1,4 @@
-// El cliente contra el servidor real (F10): `GameClient` + el transporte WebSocket (con la
+// El cliente contra el servidor real: `GameClient` + el transporte WebSocket (con la
 // implementación de `ws`) frente al servidor de salas sobre `ws`, con PGlite y el inspector de
 // filtración (SPEC §8.3) sobre todo lo que reciben los clientes.
 // - E-07 y base de T-13.5: la conexión cae con una nota y una jugada en vuelo; el cliente vuelve con

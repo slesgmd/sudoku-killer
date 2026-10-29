@@ -11,7 +11,7 @@
 //   que un servidor dormido. Tras un intento que no llegó a abrir, `probe` pregunta por HTTP qué
 //   recibe el handshake (`GET /ws`, T-39.9): 429 deja `locked` y 403, `refused`, sin reintentar solos;
 //   cualquier otra respuesta, o ninguna, sigue con la espera exponencial (T-39.10).
-// - Cada intento ofrece los subprotocolos de `protocols` (`sk.v1` y la clave del grupo, F12), que se
+// - Cada intento ofrece los subprotocolos de `protocols` (`sk.v1` y la clave del grupo), que se
 //   leen en el momento: una clave recién escrita vale en el intento siguiente.
 // - Con `access`, antes de abrir cada WebSocket se comprueba la clave guardada por HTTP
 //   (`POST /access`, T-39.13): 204 abre el WebSocket, y también 404 (un servidor sin esa ruta); 401

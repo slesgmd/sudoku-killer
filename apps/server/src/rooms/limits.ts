@@ -1,5 +1,5 @@
-// Límites y plazos del servidor (SPEC §3, §4.6 y §4.8; ADR 0002). Son valores iniciales: se calibran
-// con la prueba de carga de F11.
+// Límites y plazos del servidor (SPEC §3, §4.6 y §4.8; ADR 0002). La prueba de carga los confirmó
+// (`docs/carga.md`).
 import { NORMAL_RULES } from "@sudoku-killer/game";
 import type { BucketSpec } from "./token-bucket.ts";
 
@@ -13,7 +13,7 @@ export const PRESENCE_WINDOW_MS = 100;
 export const IDEMPOTENCY_ENTRIES = 256;
 
 /**
- * Tope de salas a la vez en una instancia (F11, `docs/seguridad.md` S-01): sin él, conexiones sin
+ * Tope de salas a la vez en una instancia (`docs/seguridad.md` S-01): sin él, conexiones sin
  * autenticar podían crear salas sin límite. Diez veces las 50 de la prueba de carga; `room.create`
  * por encima recibe `server.unavailable`.
  */

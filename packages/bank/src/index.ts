@@ -1,4 +1,4 @@
-// Banco de puzzles, parte pura (F5 y F8): equivalencia de dificultades, manifiesto y regeneración de
+// Banco de puzzles, parte pura: equivalencia de dificultades, manifiesto y regeneración de
 // semillas. Sin E/S: el hash y la carga en la base de datos quedan en `apps/server`.
 export {
   DIFFICULTY_MAPPING_VERSION,

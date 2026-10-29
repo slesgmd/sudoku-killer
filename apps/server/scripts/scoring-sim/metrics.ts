@@ -1,4 +1,4 @@
-// Métricas de la simulación (F6, `docs/puntuacion.md`, sección de métricas). Todas se calculan
+// Métricas de la simulación (`docs/puntuacion.md`, sección de métricas). Todas se calculan
 // puntuando los registros, así que cambiar los parámetros no exige volver a simular.
 import { DIFFICULTIES, type Difficulty } from "@sudoku-killer/protocol";
 import { pointsFor, type ScoringParams } from "@sudoku-killer/scoring";

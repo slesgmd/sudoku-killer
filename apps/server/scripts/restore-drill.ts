@@ -1,4 +1,4 @@
-// Simulacro de restauración (F12i; `restore-drill.yml`, a mano): baja el último respaldo cifrado
+// Simulacro de restauración (`restore-drill.yml`, a mano): baja el último respaldo cifrado
 // (artefacto `db-backup` de `backup.yml`), lo descifra con la clave privada de `age`
 // (BACKUP_AGE_KEY, secreto de Actions), lo restaura en un PostgreSQL efímero
 // (RESTORE_DATABASE_URL) y lo comprueba: recuentos y arranque del servidor con la reconstrucción de

@@ -1,4 +1,4 @@
-// Migraciones al arrancar (F12f): el servidor aplica las pendientes de `drizzle/` antes de escuchar,
+// Migraciones al arrancar: el servidor aplica las pendientes de `drizzle/` antes de escuchar,
 // pero en producción una migración destructiva no se aplica sola. Una migración es destructiva si
 // puede perder o reescribir datos, o romper el código que está corriendo: borra una tabla, una
 // columna, un tipo, una vista, una función o un disparador; vacía o borra filas; reescribe filas con

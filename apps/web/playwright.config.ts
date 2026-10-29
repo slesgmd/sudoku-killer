@@ -1,6 +1,6 @@
-// E2E con Playwright (F10g): el build de producción servido con `vite preview`, que reenvía `/ws` al
+// E2E con Playwright: el build de producción servido con `vite preview`, que reenvía `/ws` al
 // servidor de salas real que arranca cada worker (e2e/fixtures.ts) en el puerto `E2E_WS_PORT`.
-// Sin reintentos, también en la CI: un fallo intermitente se investiga (plan de F10).
+// Sin reintentos, también en la CI: un fallo intermitente se investiga.
 import { defineConfig, devices } from "@playwright/test";
 
 export const E2E_WEB_PORT = 4173;

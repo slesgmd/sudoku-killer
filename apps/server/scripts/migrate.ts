@@ -1,5 +1,5 @@
 // Aplica las migraciones de `drizzle/` a la base de `DATABASE_URL` (apps/server/.env, o el secreto
-// de `db-admin.yml`). Como el servidor en producción (F12f), una migración destructiva pendiente no
+// de `db-admin.yml`). Como el servidor en producción, una migración destructiva pendiente no
 // se aplica salvo que esté en MIGRATIONS_ALLOW. Escribe solo recuentos (`db.migrations_*`), que los
 // logs públicos de Actions dejan pasar (`scripts/ci/quiet.ts`), y nunca la cadena de conexión.
 //

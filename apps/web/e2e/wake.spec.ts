@@ -1,4 +1,4 @@
-// E2E del servidor dormido (F12g, ADR 0007): con el servidor sin escuchar al entrar, Entrar avisa
+// E2E del servidor dormido (ADR 0007): con el servidor sin escuchar al entrar, Entrar avisa
 // «Despertando el servidor…» y, cuando el servidor arranca, entra a la sala sin que la persona haga
 // nada. Las demás ramas (plazo de 2 min y «Reintentar») están en `test/wake.test.tsx`.
 import { expect, test } from "./fixtures.ts";

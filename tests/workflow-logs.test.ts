@@ -1,6 +1,6 @@
-// Los logs de Actions son públicos (F12, docs/seguridad.md §3): ningún workflow nuevo imprime cadenas
+// Los logs de Actions son públicos (docs/seguridad.md §3): ningún workflow nuevo imprime cadenas
 // de conexión, claves, hashes, apodos ni contenido de la base, solo recuentos. Todo workflow que no
-// sea de los anteriores a F12 cumple estas reglas, y `scripts/ci/quiet.ts` solo deja pasar las
+// sea de los anteriores al despliegue cumple estas reglas, y `scripts/ci/quiet.ts` solo deja pasar las
 // líneas de recuento o de estado.
 import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -9,7 +9,7 @@ import { PUBLIC_LINE, filterOutput } from "../scripts/ci/quiet.ts";
 
 const DIR = new URL("../.github/workflows/", import.meta.url);
 
-/** Los workflows anteriores a F12: solo usan bases efímeras del job, sin datos reales. */
+/** Los workflows anteriores al despliegue: solo usan bases efímeras del job, sin datos reales. */
 const BEFORE_F12 = new Set(["ci.yml", "chaos.yml", "corpus.yml", "load.yml"]);
 
 /** Las acciones permitidas en un workflow con secretos o con la base. */

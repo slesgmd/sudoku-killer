@@ -1,4 +1,4 @@
-// E2E de F10 contra el servidor real, en Chromium (SPEC §9, nivel E):
+// E2E contra el servidor real, en Chromium (SPEC §9, nivel E):
 // - seis pestañas juegan una partida completa, y seis clics simultáneos en la misma celda dan un
 //   solo acierto y ninguna penalización (T-05.4);
 // - con el reloj del cliente 10 minutos adelantado, el cronómetro coincide con el del servidor (T-07.2);

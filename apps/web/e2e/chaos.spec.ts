@@ -1,4 +1,4 @@
-// Caos (F11c, SPEC §8.1): una partida de tres personas con cortes de conexión reales en momentos que
+// Caos (SPEC §8.1): una partida de tres personas con cortes de conexión reales en momentos que
 // salen de una semilla. Cada corte cierra el socket de verdad (nunca el modo sin conexión de
 // Chromium, que no cierra los WebSocket abiertos), y la prueba comprueba en el registro que el
 // servidor anotó cada desconexión:

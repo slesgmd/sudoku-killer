@@ -1,6 +1,6 @@
 // Resultados (design/pantallas.md §1.5): el resultado del equipo, el tiempo, las pistas y el ranking
 // de aporte con empates y «Salió». Quien inicia vuelve al lobby; los demás esperan. Sin foto de
-// fondo en la v1: el panel va sobre el lienzo (plan de F10).
+// fondo en la v1: el panel va sobre el lienzo.
 import { useState, type CSSProperties } from "react";
 import type { DefeatCause, RankingEntry } from "@sudoku-killer/protocol";
 import { AppHeader } from "../components/AppHeader.tsx";

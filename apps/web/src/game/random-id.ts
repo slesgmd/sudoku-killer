@@ -1,6 +1,6 @@
 // Identificadores al azar con `crypto.getRandomValues`, que existe también fuera de un contexto
 // seguro. `crypto.randomUUID` y `crypto.subtle` no: por `http://<IP>` de la red local el navegador
-// no los expone, y la partida se quedaba en «Entrando…» (F8, prueba en el celular).
+// no los expone, y la partida se quedaba en «Entrando…» (prueba en el celular).
 const HEX = Array.from({ length: 256 }, (_, byte) => byte.toString(16).padStart(2, "0"));
 
 /** Un UUID versión 4 (RFC 9562), como el de `crypto.randomUUID`. */

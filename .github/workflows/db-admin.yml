@@ -1,7 +1,7 @@
 name: Administración de la base
 
-# Administración de la base de producción (F12i), a mano: `status` (recuentos y migraciones
-# pendientes), `migrate` (con la guarda de F12f: una migración destructiva necesita su nombre en
+# Administración de la base de producción, a mano: `status` (recuentos y migraciones
+# pendientes), `migrate` (con la guarda de migraciones: una migración destructiva necesita su nombre en
 # «allow_destructive») y `bank-load` (migra y carga el banco del manifiesto, unos minutos; se usa en
 # el primer despliegue). Cada paso corre con `scripts/ci/quiet.ts`, que solo publica recuentos
 # (docs/seguridad.md §3; tests/workflow-logs.test.ts).

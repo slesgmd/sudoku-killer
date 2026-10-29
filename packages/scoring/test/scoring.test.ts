@@ -1,4 +1,4 @@
-// Puntuación (F6, `docs/puntuacion.md`). T-02.1 a T-02.3: orden del ranking. T-19.5: una pista no da
+// Puntuación (`docs/puntuacion.md`). T-02.1 a T-02.3: orden del ranking. T-19.5: una pista no da
 // β. T-32.4: recalcular con otros parámetros no toca el registro. T-36.1 a T-36.5: determinismo,
 // cotas, monotonía, independencia del orden de los hechos que no se afectan y firmas de GameMode.
 import fc from "fast-check";
@@ -292,7 +292,7 @@ describe("ranking", () => {
 
 describe("T-36.5: the GameMode signatures of SPEC §5", () => {
   // Copia literal de los tipos de la SPEC §5 que tocan la puntuación. `MatchState` y `PlayerId`
-  // llegan en F9; aquí son marcadores.
+  // son de `packages/game`; aquí son marcadores.
   type PlayerId = string & { readonly __brand: "PlayerId" };
   interface MatchState {
     readonly cells: readonly unknown[];

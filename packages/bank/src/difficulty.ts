@@ -1,4 +1,4 @@
-// Dificultades del juego (F5, docs/dificultad.md): cuántos números iniciales lleva cada una, la
+// Dificultades del juego (docs/dificultad.md): cuántos números iniciales lleva cada una, la
 // guarda con que se agregan y la banda de niveles que tiene que cumplir el puzzle, calificado con
 // sus números. Las bandas no se solapan: cada dificultad sube un nivel de técnica.
 import type { GradeResult } from "@sudoku-killer/engine";

@@ -1,4 +1,4 @@
-// La clave de acceso en el handshake (F12, R-39): normalización, ida y vuelta por el subprotocolo
+// La clave de acceso en el handshake (R-39): normalización, ida y vuelta por el subprotocolo
 // (con caracteres fuera de ASCII) y rechazo de lo que no es una clave.
 import { describe, expect, it } from "vitest";
 import {

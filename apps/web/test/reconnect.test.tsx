@@ -1,4 +1,4 @@
-// Reconexión del cliente (F10, ADR 0002 y 0005, E-07): con la conexión caída, los números y la pista
+// Reconexión del cliente (ADR 0002 y 0005, E-07): con la conexión caída, los números y la pista
 // se bloquean y las notas se encolan; al volver, el cliente presenta su ficha, reemplaza lo
 // confirmado con el snapshot y reenvía lo pendiente con el mismo `id`. La respuesta guardada a un
 // comando que el servidor ya había aplicado (con `seq` dentro del snapshot) no se aplica dos veces.

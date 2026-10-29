@@ -1,9 +1,9 @@
-// Prueba de carga (F11e, SPEC §8.1): muchas salas simultáneas contra una instancia del servidor real
+// Prueba de carga (SPEC §8.1): muchas salas simultáneas contra una instancia del servidor real
 // sobre PostgreSQL (`DATABASE_URL`). Mide la latencia de una jugada (de enviar `cell.place` a recibir
 // su respuesta, en el cliente) y la memoria y la CPU del proceso del servidor.
 // - El servidor corre en un proceso hijo (`src/index.ts`, el mismo punto de entrada de `pnpm dev`),
 //   y los clientes, en este proceso, con `ws`. Los dos comparten la máquina: la cifra no es la de
-//   producción (se mide otra vez en F12, en el hosting).
+//   producción (`docs/carga.md`, sección 8).
 // - Los parámetros están en `params.json` (versionados); los argumentos los reemplazan. El azar de
 //   los clientes (ritmo, celdas, acciones) sale de la semilla; el puzzle de cada partida lo elige el
 //   servidor con su propio azar.
@@ -12,14 +12,14 @@
 // - Al terminar una partida, quien inicia vuelve al lobby y empieza otra: la carga no decae.
 // - `--reset-matches` vacía `matches` y `match_events` antes de empezar (para no reconstruir las
 //   partidas de una corrida anterior). Solo se acepta con una base cuyo nombre termina en `_load`.
-// - Cada sala entra desde su propia IP simulada: el servidor admite 40 conexiones por IP (F12) y las
+// - Cada sala entra desde su propia IP simulada: el servidor admite 40 conexiones por IP y las
 //   300 desde 127.0.0.1 no caben. Corre con `TRUST_PROXY_HOPS=1` y los clientes envían la IP de su
 //   sala en `X-Forwarded-For`, como detrás del proxy de Render.
 //
 // Uso: pnpm --filter @sudoku-killer/server load --scenario realistic|stress [--rooms 50]
 //        [--players 6] [--duration 60] [--warmup 15] [--seed N] [--port 8090] [--reset-matches]
 //        [--out archivo.json] [--memory [--drain 130]]
-// - `--memory` (F11f): el servidor corre con `--expose-gc` y el inspector de Node en 127.0.0.1, y el
+// - `--memory`: el servidor corre con `--expose-gc` y el inspector de Node en 127.0.0.1, y el
 //   script lee `process.memoryUsage()` del servidor por el protocolo del inspector: el heap base
 //   (tras una recolección, sin salas), RSS y heap cada 10 s durante la medición, y, después de
 //   cerrar todos los clientes y esperar `--drain` segundos a que se borren las salas (R-14, 120 s),

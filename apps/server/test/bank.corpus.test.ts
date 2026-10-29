@@ -1,4 +1,4 @@
-// Banco completo (F5): carga todo el manifiesto en PGlite, lo que regenera y verifica cada semilla
+// Banco completo: carga todo el manifiesto en PGlite, lo que regenera y verifica cada semilla
 // (T-20.4), y juega una partida simulada sobre cada puzzle leído de la base de datos (T-20.5):
 // `levelToDeduce` nunca devuelve `UNRATED`. No corre en la CI de cada push: `pnpm test:corpus`.
 import { DIFFICULTIES } from "@sudoku-killer/protocol";

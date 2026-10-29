@@ -1,6 +1,6 @@
-// Servidor de salas (F9): configuración desde el entorno, migraciones, comprobación del banco,
+// Servidor de salas: configuración desde el entorno, migraciones, comprobación del banco,
 // reconstrucción de las partidas en curso y WebSocket en /ws. Apagado ordenado con SIGINT y SIGTERM.
-// Con `--lan` (`pnpm dev:lan`), acepta también la web servida en las IP de la red local (F10).
+// Con `--lan` (`pnpm dev:lan`), acepta también la web servida en las IP de la red local.
 import { startApp } from "./app.ts";
 import { ConfigError, loadConfig } from "./config/config.ts";
 import { connect, migrateDatabase } from "./db/connect.ts";
@@ -26,7 +26,7 @@ const logger = createLogger({ level: config.logLevel });
 const connection = connect(config.databaseUrl);
 
 try {
-  // En producción, una migración destructiva no se aplica sola (F12f, MIGRATIONS_ALLOW).
+  // En producción, una migración destructiva no se aplica sola (MIGRATIONS_ALLOW).
   const migrations = await migrateDatabase(connection.db, {
     guard: config.production,
     allow: config.migrationsAllow,

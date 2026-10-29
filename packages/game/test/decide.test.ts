@@ -1,4 +1,4 @@
-// Reglas del modo Normal sobre el reductor y `decide` (SPEC §6). Son la base U de pruebas que en F9
+// Reglas del modo Normal sobre el reductor y `decide` (SPEC §6). Son la base U de pruebas que en el servidor
 // se repiten como integración (I) con el servidor real; cada una cita su T.
 import { GRADER_VERSION, digitBit, layoutOf, peersWithCage } from "@sudoku-killer/engine";
 import { PARAMS_V1 } from "@sudoku-killer/scoring";

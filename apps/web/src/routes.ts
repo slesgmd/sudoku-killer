@@ -1,4 +1,4 @@
-// Rutas por hash (F10, design/pantallas.md): Inicio, Entrar o crear, la sala y Ayuda. La sala tiene
+// Rutas por hash (design/pantallas.md): Inicio, Entrar o crear, la sala y Ayuda. La sala tiene
 // una sola ruta, `#/sala/CODIGO`: el lobby, la partida o Resultados salen del estado de la sala
 // (decisión 3). La ficha nunca va en la URL (SPEC §2.4): el enlace solo lleva el código. El enlace de
 // invitación del grupo (`#k=CLAVE`, R-39) es aparte: la clave sale de la URL al abrirlo y se guarda
