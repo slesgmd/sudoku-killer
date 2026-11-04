@@ -40,6 +40,8 @@ export interface WsServerOptions {
   readonly httpTimeoutMs?: number;
   /** Límites por IP (R-40), con su reloj. */
   readonly limits?: (clock: FakeClock) => IpLimits;
+  /** Por defecto, solo `TEST_ORIGIN`. */
+  readonly allowedOrigins?: readonly string[];
 }
 
 export async function startWsServer({
@@ -50,6 +52,7 @@ export async function startWsServer({
   maxConnectionsPerIp,
   httpTimeoutMs,
   limits,
+  allowedOrigins = [TEST_ORIGIN],
 }: WsServerOptions = {}): Promise<RunningWsServer> {
   const { db, client, catalog, solutions } = await testBank();
   await client.query("TRUNCATE match_events, matches");
@@ -64,7 +67,7 @@ export async function startWsServer({
     access,
     host: "127.0.0.1",
     port: 0,
-    allowedOrigins: [TEST_ORIGIN],
+    allowedOrigins,
     clock,
     logger: silentLogger,
     ...(maxConnections === undefined ? {} : { maxConnections }),

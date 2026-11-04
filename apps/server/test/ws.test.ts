@@ -634,6 +634,34 @@ describe("F12 behind a proxy that loses the close, the HTTP check still works (T
   });
 });
 
+describe("T-41.3 the web can be served from several origins", () => {
+  const OTHER = "https://xn--espaol-zwa.example";
+
+  it("the handshake and POST and OPTIONS /access work from each origin, with CORS only for that one", async () => {
+    const r = await start({ allowedOrigins: [ORIGIN, OTHER] });
+    for (const origin of [ORIGIN, OTHER]) {
+      expect(await handshake(r, { origin }), origin).toBe("open");
+      for (const method of ["POST", "OPTIONS"]) {
+        const response = await postAccess(r.port, { origin, method });
+        expect(response.status, `${method} ${origin}`).toBe(204);
+        expect(response.headers.get("access-control-allow-origin")).toBe(origin);
+      }
+    }
+  });
+
+  it("negative check: a foreign origin and the Unicode form of an allowed one get 403 without CORS", async () => {
+    const r = await start({ allowedOrigins: [ORIGIN, OTHER] });
+    for (const origin of ["https://otro-sitio.example", "https://español.example"]) {
+      expect(await handshake(r, { origin }), origin).toBe("HTTP 403");
+      for (const method of ["POST", "OPTIONS"]) {
+        const response = await postAccess(r.port, { origin, method });
+        expect(response.status, `${method} ${origin}`).toBe(403);
+        expect(response.headers.get("access-control-allow-origin")).toBeNull();
+      }
+    }
+  });
+});
+
 describe("F12 health check", () => {
   it("GET and HEAD /healthz get 204 without a body; any other path gets 404", async () => {
     const r = await start();

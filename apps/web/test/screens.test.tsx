@@ -119,6 +119,18 @@ describe("F10e hash routes", () => {
       "https://sk.example/#/sala/HPQ6NZ",
     );
   });
+
+  it("T-41.8 the link keeps the origin the page was opened from, punycode included", () => {
+    const at = (origin: string) => roomLink(CODE, { origin, pathname: "/", search: "" });
+    const links = ["https://web.example", "https://xn--espaol-zwa.example"].map(at);
+    expect(links).toEqual([
+      "https://web.example/#/sala/HPQ6NZ",
+      "https://xn--espaol-zwa.example/#/sala/HPQ6NZ",
+    ]);
+    // Verificación negativa: ninguno lleva el origen del otro.
+    expect(links[0]).not.toContain("xn--");
+    expect(links[1]).not.toContain("web.example");
+  });
 });
 
 describe("F10e Inicio (pantallas.md §1.1)", () => {
