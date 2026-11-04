@@ -104,7 +104,7 @@ Medidos con la fórmula de luminancia relativa de WCAG 2.2. Mínimos: texto 4,5:
 
 **Límites conocidos de las notas en teléfonos estrechos.** Las notas siguen en 8 px y en 3 × 3. Por debajo de 48 px de celda la raya va pegada a su nota, y por debajo de 40 px la cuadrícula sube 3 px y la nota va encima de la suma.
 
-- **Suma a 360 px:** la nota entra 1 px en la suma, solo en la primera fila y abajo de caja, y tapa hasta el 3,35 % de su tinta sin negrita y el 4,58 % con negrita a escala 3, y hasta el 3,54 % y el 5,79 % a escala 2 (medido en 72 de las 81 celdas). A 375 px no tapa nada.
+- **Suma a 360 px:** la nota entra 1 px en la suma, solo en la primera fila y abajo de caja, y tapa hasta el 3,35 % de su tinta sin negrita y el 4,58 % con negrita a escala 3, y hasta el 3,54 % y el 5,79 % a escala 2 (medido en las 81 celdas). A 375 px no tapa nada. Una medición anterior dio 3,8 %; era errónea porque solo cubría tres celdas, y el resultado depende de la posición en el tablero.
 - **Umbral de 48 px:** la raya salta 1,26 px y la nota 0,08 px; solo se vería al redimensionar una ventana de escritorio.
 - **Raya punteada** («en ambas capas» con el mismo color): solo está medida en píxeles, sin verla en un teléfono real.
 
