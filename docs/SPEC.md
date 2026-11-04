@@ -1,6 +1,6 @@
 # SPEC — Sudoku Killer Multijugador · v1
 
-- Versión del documento: 1.16 (2026-11-04), la de los orígenes de la web (R-41). Los cambios desde la 1.0 (2026-10-22) están en el historial de git de este archivo.
+- Versión del documento: 1.17 (2026-11-04), la de las preferencias visuales locales, Aleatorio, la negrita y el icono del sitio (R-42 a R-45). Los cambios desde la 1.0 (2026-10-22) están en el historial de git de este archivo.
 - Versión del protocolo: **1**
 - Fuente de las reglas: la visión, las reglas y las decisiones de producto de la v1 (sección 1 de este documento).
 - Decisiones técnicas: `docs/adr/0001`–`0007`.
@@ -536,6 +536,7 @@ Entre corchetes va el nivel de cada prueba.
 - T-06.2 Un `note.add` personal llega solo al dueño; uno grupal llega a todos. [I]
 - **Preferencia local del cliente, «Usar notas»:** cada jugador puede desactivar las notas en Ajustes. Se guarda solo en su navegador, no cambia el protocolo ni `settings.update` y no afecta a los demás. Desactivada, el cliente oculta los controles de notas y no dibuja notas; las notas existentes no se borran.
 - T-06.3 Con «Usar notas» desactivado no se ve ningún control de notas, y N, G y Supr no envían mensajes; las teclas 1–9 solo colocan números. El ajuste no se envía al servidor. [C]
+- **Preferencia local «Notas personales» y capa oculta (R-42):** la preferencia es distinta del ojo de cada capa. Apagada, solo se ven y se escriben notas grupales, y las personales no se borran. Además, si la capa en la que se va a escribir está oculta, la nota no se escribe, «Borrar» no borra y aparece un aviso. Las pruebas están en T-42.10 a T-42.18; T-06.1 y T-06.3 no cambian.
 
 **R-07 Temporizador común.** Lo controla el servidor, no se pausa y no tiene límite (P9).
 - T-07.1 `match.started` y el snapshot incluyen `startedAt` y `serverNow`. No existe ningún comando de pausa: el esquema rechaza `match.pause` con `bad_request`. [U (esquema); I]
@@ -775,10 +776,47 @@ Entre corchetes va el nivel de cada prueba.
 - T-41.8 El enlace de «Compartir» conserva el origen abierto, también en punycode. Verificación negativa: no lleva el otro origen. [C]
 - T-41.9 En una ventana privada, dos personas juegan la misma sala, una desde cada origen; «Compartir» y un enlace antiguo funcionan, en Android, iPhone, Brave y una red de universidad o trabajo. [M]
 
-**R-42 Colores personales.** Cada jugador elige en Ajustes los colores de su tablero, entre 9 de una paleta fija. Se guardan solo en su navegador.
+**R-42 Preferencias visuales locales.** Cada jugador elige en Ajustes los colores de su tablero y si usa notas personales. Todo se guarda solo en su navegador (`sk:pref:colors` y `sk:pref:personalNotes`), no cambia el protocolo ni `settings.update` y no afecta a los demás. Los datos son de cada origen (R-41) y no se sincronizan.
+- **Colores:** hay cuatro selectores, Jaula, Suma, Personal y Grupal, cada uno con Predeterminado y 9 colores de una paleta fija. «Restablecer» solo afecta a los colores.
+- **«Notas personales»:** encendida por defecto. Apagada, la capa personal no se dibuja ni se escribe, sus notas no se borran y desaparecen el ojo personal, el botón «Personal» y la marca «G»; las teclas 1–9 y «Borrar» actúan en la capa grupal, y la tecla G no hace nada. Al reencenderla se vuelve a la capa que había. «Limpiar notas personales automáticamente» sigue activo. Con «Usar notas» desactivado, manda «Usar notas».
+- **Ojos:** el de cada capa dura solo la sesión y no se guarda.
+- **Capa oculta:** si la capa de escritura efectiva no está visible y hay una celda editable seleccionada, la nota no se escribe, «Borrar», Supr y Retroceso no borran y aparece el aviso «Las notas personales están ocultas. Muéstralas con el ojo para escribir.» (o «grupales»), sin repetirse mientras siga en pantalla. Deshacer y la limpieza automática no cambian.
+- T-42.1 Un JSON corrupto, una versión o un color desconocidos y un almacenamiento sin acceso vuelven a Predeterminado, sin errores. Verificación negativa: un valor válido se conserva. [U]
+- T-42.2 `tokens.css` tiene exactamente los 9 colores elegidos, y cada uno alcanza 4,5:1 y 3:1 sobre los cuatro fondos de celda. Verificación negativa: el detector marca un color de 4,4:1. [U]
 - T-42.3 La distancia ΔE00 en deuteranopía es ≥ 10 entre colores de la paleta y contra ink; en visión normal, ≥ 15 entre ellos y ≥ 12 con ink, accent y danger; en protanopía, ≥ 5 entre ellos. Es una regla entre colores de la paleta y contra ink, no con el resto de colores reservados. Límite conocido en deuteranopía, con ΔE00 < 10: Frambuesa frente a accent (2,9931), Frambuesa frente a danger (7,9576) y Cobre frente a danger (8,0205). [U]
+- T-42.4 Los selectores funcionan con flechas y Tab, y cada color tiene `aria-label` y `title`; el elegido lleva anillo y marca. Verificación negativa: una flecha no sale del grupo. [C y E]
+- T-42.5 La vista previa cambia en vivo y «Restablecer» vuelve a Predeterminado. Verificación negativa: «Restablecer» no toca los interruptores. [C]
+- T-42.6 El color se ve en el tablero real. Verificación negativa: no cambia para otro jugador y no sale ningún mensaje nuevo. [E]
+- T-42.7 Personal, grupal y «en ambas» se distinguen con colores distintos y con el mismo, con y sin negrita. Con el mismo color, «en ambas» lleva raya punteada de 1 px y «personal», continua de 1 px. Verificación negativa: con colores distintos las dos son continuas, y Predeterminado conserva su aspecto. [E]
+- T-42.8 Con cada color, la jaula seleccionada mide 3 px, el anillo sigue en ink, el error en danger y la selección en accent. Verificación negativa: un color elegido no los altera. [E]
+- T-42.9 Los objetivos miden al menos 44 px y no hay desplazamiento horizontal a 360, 1280 y 640 × 360, también con la preferencia apagada, y «Cerrar» siempre se alcanza. Verificación negativa: los otros diálogos siguen en 440 px. [E]
+- T-42.10 La preferencia y el ojo son independientes: apagar uno no cambia el otro. Verificación negativa: no se envía ningún mensaje, tampoco `settings.update`. [C]
+- T-42.11 La preferencia se conserva al recargar, al entrar en una sala, al volver al inicio y al volver al lobby, y un valor corrupto la deja encendida. Verificación negativa: los ojos no se guardan. [U]
+- T-42.12 Con la preferencia apagada, las teclas 1–9 y «Borrar» envían `layer: "group"`; al reencenderla se vuelve a la capa anterior. Verificación negativa: la tecla G no cambia la capa mientras está apagada y no sale ningún mensaje de la capa personal. [C]
+- T-42.13 Con la preferencia apagada, el selector personal está deshabilitado y el grupal activo, tablero y vista previa no tienen personales, y la limpieza automática sigue activa. Verificación negativa: no sale ningún `note.remove`; al encender, las notas y el color elegido siguen ahí. [C]
+- T-42.14 Con «Usar notas» desactivado no hay notas ni avisos, y el interruptor y los selectores de notas están deshabilitados. Verificación negativa: pulsar el interruptor no cambia la preferencia, y al reactivar vuelve todo como estaba. [C]
+- T-42.15 Con la preferencia apagada, el ojo personal y el botón «Personal» no están en la página, en ninguna disposición, y los grupales sí. Verificación negativa: con la preferencia encendida aparecen los cuatro. [C]
+- T-42.16 Con la preferencia encendida y el ojo de la capa activa apagado, una tecla de nota no envía nada, no deja nota pendiente y muestra el aviso de esa capa, sin repetirlo. Verificación negativa: con el ojo de la otra capa apagado se escribe sin aviso; sin celda editable no hay aviso; Deshacer sigue funcionando. [C]
+- T-42.17 Lo mismo con la preferencia apagada y el ojo grupal apagado, con el aviso de la capa grupal. Verificación negativa: con el ojo grupal encendido se escribe en grupal sin aviso, aunque el ojo personal esté apagado. [C]
+- T-42.18 «Borrar», Supr y Retroceso, con la capa de escritura oculta, no envían `note.remove` y muestran el mismo aviso. Un dígito erróneo en destello no bloquea la celda, así que se trata como celda vacía. Verificación negativa: con la capa visible se borra sin aviso; con «Usar notas» desactivado no pasa nada; con un dígito bloqueado o pendiente no se envía nada y no hay aviso. [C]
+- T-42.19 Las transiciones de 180 ms viven solo en Ajustes. Verificación negativa: con movimiento reducido no hay ninguna, y fuera de Ajustes tampoco. [E]
 - T-42.20 La raya de una nota personal no entra en la nota de abajo, de 360 a 430 px, con cuadrícula 3 × 3 y notas de 8 px o más. Por debajo de 48 px de celda la raya va pegada a su nota; por debajo de 40 px la cuadrícula sube 3 px y la nota va encima de la suma, tapando como mucho el 4,6 % de su tinta a 360 px y escala 3, el 5,8 % a escala 2, y nada a 375 px. A 768 y 1280 px no cambia nada. Límites conocidos de las notas a 360 px: la nota entra 1 px en la suma, solo en la primera fila y abajo de caja, y tapa hasta el 3,35 % de su tinta sin negrita y el 4,58 % con negrita a escala 3, y hasta el 3,54 % y el 5,79 % a escala 2 (medido en las 81 celdas). A 375 px no tapa nada. Una medición anterior dio 3,8 %; era errónea porque solo cubría tres celdas, y el resultado depende de la posición en el tablero. Al pasar por 48 px de celda, la raya salta 1,26 px y la nota 0,08 px; solo se vería al redimensionar una ventana de escritorio. La raya punteada solo está medida en píxeles. [E]
 - T-42.21 En un teléfono real y en una ventana de escritorio se revisan la suma a 360 px, el salto de la raya al redimensionar la ventana y la raya punteada. [M]
+
+**R-43 Aleatorio.** Un interruptor de Ajustes da un color a cada jaula, para su línea y su suma, y no afecta a las notas. Dos jaulas que comparten lado nunca tienen el mismo color. La asignación sale del `id` del puzzle, así que es la misma tras reconectar y cambia con cada puzzle. Jaula y Suma quedan deshabilitadas y conservan lo elegido. Bastan 6 colores de los 9, porque el grafo de jaulas es plano; si alguna vez faltaran, el tablero usaría Predeterminado en lugar de fallar.
+- T-43.1 El mismo `id` da los mismos colores, sin vecinas iguales y sin que falten colores: cada jaula tiene el suyo y se usan 6 como máximo. Corre con una muestra fija y, en el corpus, con las 2 000 semillas. Verificación negativa: un grafo K10 artificial no se puede colorear, y el detector marca una asignación con vecinas iguales. [U]
+- T-43.2 Los colores son los mismos tras reconectar. Verificación negativa: otro `id` da otra asignación. [C]
+- T-43.3 Jaula y Suma están deshabilitadas y las notas no cambian. Verificación negativa: al apagar Aleatorio vuelve lo elegido. [C]
+
+**R-44 Negrita de las notas.** Al seleccionar un dígito colocado, las notas visibles de ese dígito pasan a peso 800. Las demás no cambian de peso ni de sitio. La lupa no la muestra: una celda con dígito no tiene notas, y una sin dígito no activa la negrita.
+- T-44.1 Hay negrita solo al seleccionar un dígito colocado, y se va al cambiar la selección. Verificación negativa: una celda vacía seleccionada no activa nada. [C]
+- T-44.2 Solo reciben negrita las notas visibles. Verificación negativa: con «Usar notas» desactivado no hay ninguna. [C]
+- T-44.3 Las 9 casillas no se mueven con la negrita ni con la raya punteada, y siguen en 3 filas y 3 columnas, a 360 y 1280 px. A 360 px la cuadrícula está subida 3 px. Verificación negativa: a 1280 px la posición y la raya son las de antes. [E]
+- T-44.4 La negrita usa el peso real de la fuente, sin negrita sintética. Verificación negativa: el ancho medido a 800 difiere del de 600. [E]
+
+**R-45 Icono del sitio.** La web enlaza desde su propio origen `favicon.ico` (16, 32 y 48 px), PNG de 16, 32 y 180 px y un manifiesto con un PNG de 192 px. El manifiesto lleva el nombre y el color de fondo del juego, y `display: browser`: no convierte la web en una app instalada. Los archivos no llevan texto, metadatos ni un dominio propio.
+- T-45.1 `index.html` enlaza exactamente esos archivos, con sus tamaños reales y solo con bloques de imagen, y el manifiesto tiene el nombre y los colores del juego. Verificación negativa: los detectores marcan texto en un PNG, un tamaño equivocado y un enlace externo. [U]
+- T-45.2 El icono y el manifiesto cargan bajo la CSP real. [E]
 
 ---
 
@@ -862,5 +900,9 @@ El inspector está activo por defecto en todas las pruebas I. Las pruebas E2E us
 | Notas grupales | R-16 | T-16.1–3 |
 | Limpieza automática | R-17 | T-17.1–5 |
 | Diseño visual | R-18 | T-18.1 |
+| Preferencias visuales locales | R-42 | T-42.1–21 |
+| Aleatorio | R-43 | T-43.1–3 |
+| Negrita de las notas | R-44 | T-44.1–4 |
+| Icono del sitio | R-45 | T-45.1–2 |
 
 Los límites por IP y los topes de eventos (R-40) tienen sus pruebas T-40.1 a T-40.22 junto a la regla, y los orígenes de la web (R-41), T-41.1 a T-41.9. Todas las reglas de la visión (R-01 a R-07), las decisiones de producto (R-19 a R-34), el motor (R-35), la puntuación (R-36) y el arranque del cliente (R-37) y la actividad tras una reconexión (R-38) tienen también sus pruebas en la sección 6.

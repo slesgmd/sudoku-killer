@@ -114,7 +114,17 @@ Todas las pantallas fuera de la partida comparten la **cabecera** (`.apphead`): 
 
 **Objetivo:** las preferencias personales, que se aplican al momento y solo a quien las cambia.
 
-**Contenido:** un interruptor, «Limpiar notas personales automáticamente» (activado por defecto), con la explicación «Cuando alguien acierta un número, ese número se quita de tus notas personales en su fila, columna, caja y jaula. Las notas grupales se limpian siempre.»; la nota «El movimiento reducido sigue la preferencia de tu sistema.»; «Cerrar» y la X. Esc cierra.
+**Contenido:**
+- Tres interruptores: «Usar notas», con el foco inicial; «Notas personales», con la ayuda «Si lo apagas, solo verás y escribirás notas grupales. Tus notas personales no se borran.»; y «Limpiar notas personales automáticamente» (activado por defecto), con la explicación «Cuando alguien acierta un número, ese número se quita de tus notas personales en su fila, columna, caja y jaula. Las notas grupales se limpian siempre.».
+- La nota «El movimiento reducido sigue la preferencia de tu sistema.».
+- **Colores:** vista previa en vivo, interruptor «Aleatorio» y cuatro selectores (Jaula, Suma, Personal y Grupal), cada uno con Predeterminado y 9 colores.
+- «Restablecer», que solo afecta a los colores, «Cerrar» y la X. Esc cierra.
+
+**Distribución:** panel de hasta 520 px con desplazamiento interno; los demás diálogos siguen en 440 px. En escritorio, cada selector lleva el nombre encima y 10 círculos en una fila. A 360 px, dos filas de cinco, la vista previa primero y fija al desplazar, salvo en pantallas bajas, y las acciones apiladas a todo el ancho. Detalle en `docs/diseno.md`, sección 5.7.
+
+**Estados:** con «Aleatorio», Jaula y Suma atenuadas y con su valor conservado. Con «Notas personales» apagada, el selector Personal atenuado. Con «Usar notas» desactivado, «Notas personales» y los dos selectores de notas atenuados. Estos estados no están en el prototipo: la aplicación los añade.
+
+**Sin artboard propio:** el prototipo solo dibuja «Limpiar notas personales automáticamente». El resto del panel se revisó en la aplicación, a 360 y 1280 px y a 640 × 360.
 
 **Disponibilidad:** solo dentro de una sala (lobby, partida y resultados), porque `settings.update` exige ser miembro (decisión 1). El prototipo también lo ofrece en Inicio, Entrar y Ayuda: la aplicación lo quita de ahí (en Ayuda, solo si se abrió fuera de una sala).
 
@@ -155,7 +165,8 @@ Seleccionar una celda (clic, toque o flechas; en móvil, la lupa la muestra ampl
 
 ### 2.6 Notas
 Modo Notas (N) → capa Personal o Grupal (G) → teclas 1–9 alternan la nota en la celda; se aplican al momento.
-- Visibilidad de cada capa con el ojo.
+- Visibilidad de cada capa con el ojo. Si la capa de escritura está oculta, no se escribe ni se borra y aparece un aviso (`docs/diseno.md`, sección 9).
+- Con «Notas personales» apagada en Ajustes, solo existen la capa grupal y su ojo, y la tecla G no hace nada; a 360 px ocupan una sola fila.
 - «Borrar» (Supr) quita las notas de la capa activa en la celda.
 - «Deshacer» (Ctrl+Z) revierte tus últimas notas; si otra persona cambió la nota grupal después, «No se pudo deshacer…». Deshacer un «Borrar notas» agrupa varios `note.undo` y resume «Se recuperaron X de Y notas» (decisión 5).
 - Limpieza automática al acertar: siempre en las grupales; en las personales, según Ajustes.
