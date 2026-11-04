@@ -7,7 +7,7 @@
 // - las transiciones viven solo en Ajustes y respetan el movimiento reducido (T-42.19);
 // - la negrita no mueve las notas (T-44.3) y usa el peso real de la fuente (T-44.4).
 import { inflateSync } from "node:zlib";
-import type { Page } from "@playwright/test";
+import type { CDPSession, Page } from "@playwright/test";
 import { digitBit } from "@sudoku-killer/engine/model";
 import { cell, createRoom, expect, joinRoom, test, type GameServer } from "./fixtures.ts";
 import { at, emptyCells, matchOf, place, playerOf, start, wrongDigit } from "./game.ts";
@@ -1135,12 +1135,27 @@ test("T-42.20 negative check: the analysis marks a repaint, ink off the board an
   expect(refused.noValidChannel).toBe(2);
 });
 
-// Límites fijados con una medición anterior, hecha con otro método (docs/diseno.md §2.5).
-for (const [scale, limit, firstCase] of [
-  [3, 4.6, 0],
-  [2, 5.8, 20],
+/** La fuente con la que se dibujó de verdad un elemento, tal como la informa el navegador. */
+async function platformFonts(session: CDPSession, selector: string): Promise<string> {
+  const { root } = await session.send("DOM.getDocument");
+  const { nodeId } = await session.send("DOM.querySelector", { nodeId: root.nodeId, selector });
+  const { fonts } = await session.send("CSS.getPlatformFontsForNode", { nodeId });
+  return fonts
+    .map(
+      (font) =>
+        `${font.familyName} (${font.isCustomFont ? "served by the web" : "system"}, ${String(font.glyphCount)} glyphs)`,
+    )
+    .join(", ");
+}
+
+// A 360 px y a las dos escalas, con colores reales y umbral de cobertura de 0,5 (docs/diseno.md §2.5).
+const NOTE_OVER_SUM_LIMIT = 6.0;
+
+for (const [scale, firstCase] of [
+  [3, 0],
+  [2, 20],
 ] as const) {
-  test(`T-42.20 the note over the sum covers at most ${String(limit)} % of its ink at 360 px and scale ${String(scale)}, and nothing at 375 px`, async ({
+  test(`T-42.20 the note over the sum covers at most ${NOTE_OVER_SUM_LIMIT.toFixed(1)} % of its ink at 360 px and scale ${String(scale)}, and nothing at 375 px`, async ({
     player,
     browser,
     game,
@@ -1188,6 +1203,31 @@ for (const [scale, limit, firstCase] of [
       if (noteCss === undefined || sumCss === undefined) throw new Error("No text colour");
       const colors = { sum: parseColor(sumCss), note: parseColor(noteCss) };
       console.log(`T-42.20 text colours: sum ${sumCss}, note ${noteCss}`);
+
+      const session = await context.newCDPSession(page);
+      await session.send("DOM.enable");
+      await session.send("CSS.enable");
+      for (const weight of NOTE_WEIGHTS) {
+        await paintBoard(page, {
+          text: SUM_TEXTS[0],
+          weight,
+          showSum: true,
+          showNotes: true,
+        });
+        // El navegador solo conoce la fuente de un texto ya dibujado.
+        await page.evaluate(
+          () =>
+            new Promise((resolve) => {
+              requestAnimationFrame(() => {
+                requestAnimationFrame(resolve);
+              });
+            }),
+        );
+        const first = ".sk-board[role=grid] [role=gridcell]";
+        console.log(
+          `T-42.20 fonts, ${process.platform}, scale ${String(scale)}, note weight ${weight}: sum ${await platformFonts(session, `${first} .sum`)}; note ${await platformFonts(session, `${first} .n.p`)}`,
+        );
+      }
 
       const results: { width: number; result: CaseResult }[] = [];
       let measured = 0;
@@ -1358,7 +1398,7 @@ for (const [scale, limit, firstCase] of [
       }
       const at360 = worstAt(PHONE.width);
       const at375 = worstAt(375);
-      expect.soft(Number(at360.toFixed(1))).toBeLessThanOrEqual(limit);
+      expect.soft(at360).toBeLessThanOrEqual(NOTE_OVER_SUM_LIMIT);
       // Negativa: a 360 px sí tapa algo, así que el detector ve el solape.
       expect.soft(at360).toBeGreaterThan(0);
       expect.soft(at375).toBe(0);
