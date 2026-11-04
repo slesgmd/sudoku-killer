@@ -6,6 +6,9 @@ name: Humo del despliegue
 # acceso esperado (T-39.17 y T-39.22). Los logs de Actions son
 # públicos: todo paso corre con `scripts/ci/quiet.ts`, que solo deja pasar `smoke.<prueba>: ok|fail`
 # (docs/seguridad.md §3; lo comprueba tests/workflow-logs.test.ts).
+# Con `custom_domain`, repite la prueba desde el dominio propio de la web (R-41). Su dirección viene
+# de un secreto, no de una variable ni de una entrada: los logs muestran el `env` de cada paso, y solo
+# un secreto sale enmascarado. Sin el secreto, la prueba falla; nunca se omite en silencio.
 
 on:
   workflow_dispatch:
@@ -26,6 +29,11 @@ on:
         options:
           - open
           - closed
+      custom_domain:
+        description: "Probar también el dominio propio de la web"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -46,5 +54,12 @@ jobs:
         run: node scripts/ci/quiet.ts -- pnpm --filter @sudoku-killer/server smoke
         env:
           SMOKE_WEB_URL: ${{ inputs.web_url }}
+          SMOKE_SERVER_URL: ${{ inputs.server_url }}
+          SMOKE_ACCESS: ${{ inputs.access }}
+      - name: Smoke from the custom domain
+        if: ${{ !cancelled() && inputs.custom_domain }}
+        run: node scripts/ci/quiet.ts -- pnpm --filter @sudoku-killer/server smoke
+        env:
+          SMOKE_WEB_URL: ${{ secrets.SMOKE_CUSTOM_WEB_URL }}
           SMOKE_SERVER_URL: ${{ inputs.server_url }}
           SMOKE_ACCESS: ${{ inputs.access }}

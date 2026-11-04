@@ -25,6 +25,7 @@ const QUIET = "node scripts/ci/quiet.ts -- ";
 
 interface Step {
   readonly name?: string;
+  readonly if?: string;
   readonly run?: string;
   readonly uses?: string;
   readonly with?: Record<string, unknown>;
@@ -89,6 +90,62 @@ export function violations(workflow: Workflow, text: string): string[] {
   }
   return found;
 }
+
+/**
+ * Lo que publicaría en los logs el dominio propio de la web, o daría por buena una prueba que no
+ * corrió (R-41): su dirección solo puede venir del secreto, y el paso solo corre cuando se pide.
+ */
+export function customDomainSmokeViolations(workflow: Workflow, text: string): string[] {
+  const found: string[] = [];
+  if (/\bvars\./.test(text)) found.push("repository variable");
+  if (/\bxn--/.test(text)) found.push("punycode host in the workflow");
+  const trigger = workflow.on?.["workflow_dispatch"] as
+    { inputs?: Record<string, { type?: string; default?: unknown }> } | undefined;
+  const input = trigger?.inputs?.["custom_domain"];
+  if (input?.type !== "boolean" || input.default !== false)
+    found.push("custom_domain is not an opt-in boolean");
+  const steps = Object.values(workflow.jobs ?? {}).flatMap((job) => job.steps ?? []);
+  const smokes = steps.filter((step) => step.env?.["SMOKE_WEB_URL"] !== undefined);
+  const web = (step: Step) => String(step.env?.["SMOKE_WEB_URL"]);
+  if (!smokes.some((step) => web(step) === "${{ inputs.web_url }}" && step.if === undefined))
+    found.push("the default smoke step does not always run");
+  const custom = smokes.filter((step) => web(step) !== "${{ inputs.web_url }}");
+  if (custom.length !== 1) found.push("expected one custom domain step");
+  for (const step of custom) {
+    if (web(step) !== "${{ secrets.SMOKE_CUSTOM_WEB_URL }}")
+      found.push("address is not the secret");
+    if (step.if !== "${{ !cancelled() && inputs.custom_domain }}")
+      found.push("step does not depend on the input");
+    if (!step.run?.startsWith(QUIET)) found.push("step without quiet.ts");
+  }
+  return found;
+}
+
+describe("T-41.6 smoke test from the custom domain of the web", () => {
+  const read = (text: string) => parse(text) as Workflow;
+
+  it("reads the address only from the secret, behind quiet.ts and an opt-in input", () => {
+    const text = readFileSync(new URL("smoke.yml", DIR), "utf8");
+    expect(customDomainSmokeViolations(read(text), text)).toEqual([]);
+  });
+
+  it("negative check: the detector flags a literal, a variable and a step that always runs", () => {
+    const text = readFileSync(new URL("smoke.yml", DIR), "utf8");
+    const secret = "${{ secrets.SMOKE_CUSTOM_WEB_URL }}";
+    const mutated: [string, string][] = [
+      [text.replace(secret, "https://xn--espaol-zwa.example"), "punycode host"],
+      [text.replace(secret, "${{ vars.SMOKE_CUSTOM_WEB_URL }}"), "repository variable"],
+      [text.replace("!cancelled() && inputs.custom_domain", "!cancelled()"), "does not depend"],
+      [text.replace("default: false", "default: true"), "opt-in"],
+      [text.replace(/(if: .*\n\s+run: )node scripts\/ci\/quiet\.ts -- /, "$1"), "without quiet.ts"],
+    ];
+    for (const [version, expected] of mutated) {
+      expect(version, expected).not.toBe(text);
+      const found = customDomainSmokeViolations(read(version), version);
+      expect(found.some((message) => message.includes(expected))).toBe(true);
+    }
+  });
+});
 
 describe("F12 public Actions logs (docs/seguridad.md §3)", () => {
   it("every workflow added since F12 follows the rules", () => {
