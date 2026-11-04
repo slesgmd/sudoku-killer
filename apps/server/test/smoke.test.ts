@@ -5,7 +5,13 @@
 import { ACCESS_PROTOCOL, CLOSE_ACCESS_DENIED, accessProtocols } from "@sudoku-killer/protocol";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { securityHeaders } from "../../web/scripts/security-headers.ts";
-import { checkAccess, checkSecurityHeaders, smokeAccess, tryWebSocket } from "../scripts/smoke.ts";
+import {
+  checkAccess,
+  checkSecurityHeaders,
+  smoke,
+  smokeAccess,
+  tryWebSocket,
+} from "../scripts/smoke.ts";
 import { lossyProxy } from "./helpers/lossy-proxy.ts";
 import { testBank } from "./helpers/server.ts";
 import { TEST_ORIGIN, startWsServer, type RunningWsServer } from "./helpers/ws-server.ts";
@@ -68,6 +74,47 @@ describe("F12 smoke test", () => {
       ["access_wrong_key_401", false],
       ["access_foreign_origin_403", true],
     ]);
+  });
+});
+
+describe("T-41.7 smoke test from each origin of the web", () => {
+  const OTHER = "https://xn--espaol-zwa.example";
+
+  it("passes from any allowed origin", async () => {
+    running = await startWsServer({ allowedOrigins: [TEST_ORIGIN, OTHER] });
+    const url = `ws://127.0.0.1:${String(running.port)}/ws`;
+    for (const origin of [TEST_ORIGIN, OTHER]) {
+      expect((await tryWebSocket(url, origin)).opened, origin).toBe(true);
+      expect(await checkAccess(url, origin, "open"), origin).toEqual([
+        ["access_keyless_204", true],
+        ["access_wrong_key_204", true],
+        ["access_foreign_origin_403", true],
+      ]);
+    }
+  });
+
+  it("negative check: from an origin missing in ALLOWED_ORIGINS, the handshake and the access checks fail", async () => {
+    running = await startWsServer();
+    const url = `ws://127.0.0.1:${String(running.port)}/ws`;
+    expect(await tryWebSocket(url, OTHER)).toEqual({ opened: false, status: 403 });
+    expect(await checkAccess(url, OTHER, "open")).toEqual([
+      ["access_keyless_204", false],
+      ["access_wrong_key_204", false],
+      ["access_foreign_origin_403", true],
+    ]);
+  });
+});
+
+describe("T-41.6 smoke test without its web address", () => {
+  const saved = process.env["SMOKE_WEB_URL"];
+  afterEach(() => {
+    if (saved === undefined) delete process.env["SMOKE_WEB_URL"];
+    else process.env["SMOKE_WEB_URL"] = saved;
+  });
+
+  it("negative check: a missing secret arrives empty and fails, it is never skipped", async () => {
+    process.env["SMOKE_WEB_URL"] = "";
+    await expect(smoke()).rejects.toThrow("falta SMOKE_WEB_URL");
   });
 });
 
