@@ -16,6 +16,8 @@ import type { ClientEnvelope, ServerEnvelope } from "@sudoku-killer/protocol";
  *   red, T-39.10);
  *   no se reconecta solo.
  * - `refused`: el handshake recibió 403 (la página no es de un origen permitido); no se reconecta.
+ * - `throttled`: demasiadas aperturas de conexión desde esta red (503 con `Retry-After`, R-40); se
+ *   reintenta solo cuando pasa la espera (`throttledUntil`).
  */
 export type TransportStatus =
   | "idle"
@@ -27,7 +29,11 @@ export type TransportStatus =
   | "incompatible"
   | "denied"
   | "locked"
-  | "refused";
+  | "refused"
+  | "throttled";
+
+/** Lo que se pide al entrar a una sala: entrar a una que existe o crear una nueva. */
+export type EntryKind = "join" | "create";
 
 export interface Transport {
   /** Envía un mensaje ya armado. Sin conexión abierta, se descarta: el cliente decide qué reenviar. */
@@ -42,6 +48,13 @@ export interface Transport {
    * pide clave.
    */
   checkAccess?(key: string): Promise<number | null>;
+  /** Con `throttled`, hasta cuándo se espera (hora de este dispositivo, en ms). */
+  readonly throttledUntil?: number | null;
+  /**
+   * Cuánto falta (en ms) para poder repetir una entrada rechazada con `rate_limited`, o `null` si no
+   * se pudo saber (`GET /ws?entry=`, R-40). Nunca rechaza.
+   */
+  entryWait?(kind: EntryKind): Promise<number | null>;
   /** Abre la conexión si no está abierta ni intentándose. */
   connect(): void;
   /** Descarta la conexión actual y abre otra ya, sin espera («Jugar en esta pestaña», pong vencido). */

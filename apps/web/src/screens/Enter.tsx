@@ -1,6 +1,7 @@
 // Entrar o crear sala (design/pantallas.md §1.2), con los estados de su hoja: apodo no válido,
 // carácter rechazado, sala inexistente, sala llena, apodo en uso, fallo de conexión con «Reintentar»
-// (T-37.1) y cargando. Los datos escritos se conservan en todos los errores.
+// (T-37.1), espera por los límites por IP (R-40) y cargando. Los datos escritos se conservan en todos
+// los errores.
 import { useRef, useState } from "react";
 import {
   ROOM_CODE_ALPHABET,
@@ -9,6 +10,7 @@ import {
   normalizeNickname,
 } from "@sudoku-killer/protocol";
 import { AppHeader } from "../components/AppHeader.tsx";
+import { Countdown, useSecondsLeft } from "../components/Countdown.tsx";
 import { Icon } from "../components/Icon.tsx";
 import type { ClientState, EntryRequest } from "../game/state.ts";
 import { t } from "../i18n/index.ts";
@@ -64,6 +66,8 @@ export function Enter({ state, code, savedNickname, onJoin, onCreate, onRetry }:
   const codeServer = error === "room.not_found" && editedCode !== last;
   const full = error === "room.full";
   const offline = state.startFailed && !entering;
+  const joinWait = useSecondsLeft(state.enterWaits.join) > 0;
+  const createWait = useSecondsLeft(state.enterWaits.create) > 0;
   const nicknameError = invalid.nickname
     ? t("enter.nicknameInvalid")
     : nicknameServer
@@ -120,7 +124,7 @@ export function Enter({ state, code, savedNickname, onJoin, onCreate, onRetry }:
             aria-busy={entering || undefined}
             onSubmit={(event) => {
               event.preventDefault();
-              if (entering) return;
+              if (entering || joinWait) return;
               const valid = check(true);
               if (valid !== null) onJoin(roomCode, valid);
             }}
@@ -131,6 +135,36 @@ export function Enter({ state, code, savedNickname, onJoin, onCreate, onRetry }:
                 <span className="formerr-body">
                   <span>
                     <span className="tkind">{t("enter.wakingTitle")}</span> {t("enter.wakingText")}
+                  </span>
+                </span>
+              </div>
+            ) : null}
+            {entering && state.connection === "throttled" ? (
+              <div className="toast formerr" role="status">
+                <Icon name="info" />
+                <span className="formerr-body">
+                  <span>
+                    <span className="tkind">{t("enter.throttledTitle")}</span>{" "}
+                    {t("enter.throttledText")} <Countdown until={state.throttledUntil ?? 0} />
+                  </span>
+                </span>
+              </div>
+            ) : null}
+            {joinWait || createWait ? (
+              <div className="toast err formerr" role="alert">
+                <Icon name="alert" />
+                <span className="formerr-body">
+                  <span>
+                    <span className="tkind">{t("enter.limitTitle")}</span>{" "}
+                    {joinWait ? (
+                      <>
+                        {t("enter.limitJoin")} <Countdown until={state.enterWaits.join} />
+                      </>
+                    ) : (
+                      <>
+                        {t("enter.limitCreate")} <Countdown until={state.enterWaits.create} />
+                      </>
+                    )}
                   </span>
                 </span>
               </div>
@@ -233,7 +267,8 @@ export function Enter({ state, code, savedNickname, onJoin, onCreate, onRetry }:
               <button
                 className="btn primary lg block"
                 type="submit"
-                aria-disabled={entering ? "true" : undefined}
+                aria-disabled={entering || joinWait ? "true" : undefined}
+                aria-label={joinWait ? t("enter.joinWaiting") : undefined}
               >
                 {entering && last?.kind === "join" ? (
                   <>
@@ -256,9 +291,10 @@ export function Enter({ state, code, savedNickname, onJoin, onCreate, onRetry }:
               <button
                 className="btn secondary lg block"
                 type="button"
-                aria-disabled={entering ? "true" : undefined}
+                aria-disabled={entering || createWait ? "true" : undefined}
+                aria-label={createWait ? t("enter.createWaiting") : undefined}
                 onClick={() => {
-                  if (entering) return;
+                  if (entering || createWait) return;
                   const valid = check(false);
                   if (valid !== null) onCreate(valid);
                 }}

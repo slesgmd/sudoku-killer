@@ -249,7 +249,7 @@ describe("WebSocket transport (ADR 0002)", () => {
         document: null,
         probe: () => {
           asked++;
-          return answer();
+          return answer().then((status) => (status === null ? null : { status, waitMs: null }));
         },
       });
       const last = () => sockets.at(-1) ?? new FakeSocket();
@@ -316,7 +316,7 @@ describe("WebSocket transport (ADR 0002)", () => {
         urls.push(input instanceof Request ? input.url : input.toString());
         return Promise.resolve(new Response(null, { status: 429 }));
       });
-      expect(await ok()).toBe(429);
+      expect(await ok()).toEqual({ status: 429, waitMs: null });
       expect(urls).toEqual(["https://sk.example/ws"]);
       const down = httpProbe("ws://127.0.0.1:5173/ws", () => Promise.reject(new TypeError("down")));
       expect(await down()).toBeNull();

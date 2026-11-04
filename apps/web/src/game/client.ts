@@ -55,6 +55,8 @@ export const WAKE_NOTICE_MS = 3_000;
 export const WAKE_TIMEOUT_MS = 120_000;
 /** Sin respuesta de `POST /access`, se vuelve a preguntar tras esta espera, hasta `WAKE_TIMEOUT_MS`. */
 export const ACCESS_RETRY_MS = 2_000;
+/** Espera al repetir una entrada rechazada si el servidor no dice cuánta (R-40). */
+export const ENTRY_WAIT_DEFAULT_MS = 30_000;
 /** Grupos de deshacer guardados (ADR 0005). */
 const UNDO_LIMIT = 50;
 /**
@@ -325,6 +327,19 @@ export class GameClient {
       this.welcomed = false;
       this.stopPing();
     }
+    if (status === "throttled") {
+      // Demasiadas aperturas desde esta red (R-40): el transporte reintenta solo. No es el servidor
+      // dormido, y el plazo de la entrada sigue corriendo.
+      if (this.wakeTimer !== null) clearTimeout(this.wakeTimer);
+      this.wakeTimer = null;
+      this.set({
+        connection: status,
+        throttledUntil: this.transport.throttledUntil ?? this.now() + ENTRY_WAIT_DEFAULT_MS,
+        waking: false,
+      });
+      return;
+    }
+    if (this.state.throttledUntil !== null) this.set({ throttledUntil: null });
     if (status === "denied") {
       // Falta la clave del grupo o no valió (401 o 4003, R-39): se olvida la guardada y se pide otra
       // (T-39.15).
@@ -417,6 +432,7 @@ export class GameClient {
       notesEnabled: this.state.notesEnabled,
       connection: this.transport.status,
       lastStart: this.state.lastStart,
+      enterWaits: this.state.enterWaits,
       lastEntry: {
         kind: entry.kind,
         nickname: entry.nickname,
@@ -492,7 +508,7 @@ export class GameClient {
    * «Clave del grupo», y solo se guarda si vale.
    */
   acceptInvitation(key: string): void {
-    this.set({ accessDenied: "missing" });
+    this.set({ accessDenied: "verifying" });
     void this.verifyKey(key);
   }
 
@@ -519,11 +535,18 @@ export class GameClient {
       this.set({ accessCheck: null });
       this.retryAccess();
     } else if (answer === 401) {
-      this.set({ accessCheck: "wrong" });
+      // Recién aquí se sabe que el servidor pide clave: un enlace viejo no la pide si está abierto.
+      this.set({
+        accessDenied: this.state.accessDenied === "verifying" ? "missing" : this.state.accessDenied,
+        accessCheck: "wrong",
+      });
     } else if (answer === 429) {
       this.set({ accessDenied: "locked", accessCheck: null });
     } else {
-      this.set({ accessCheck: "unreachable" });
+      this.set({
+        accessDenied: this.state.accessDenied === "verifying" ? "missing" : this.state.accessDenied,
+        accessCheck: "unreachable",
+      });
     }
   }
 
@@ -630,6 +653,7 @@ export class GameClient {
       notesEnabled: this.state.notesEnabled,
       lastStart: this.state.lastStart,
       lastEntry: this.state.lastEntry,
+      enterWaits: this.state.enterWaits,
       connection: this.transport.status,
     });
   }
@@ -1322,6 +1346,10 @@ export class GameClient {
       return;
     }
     const starting = this.state.phase === "entering" || this.state.phase === "loading";
+    if (starting && replyTo === this.entryId && code === "rate_limited") {
+      this.onEntryLimited();
+      return;
+    }
     if (
       starting &&
       replyTo === this.entryId &&
@@ -1387,6 +1415,24 @@ export class GameClient {
       else if (code === "rate_limited") this.toast("status", t("state.rateLimited"));
       else this.toast("alert", t("state.error", { code }));
     }
+  }
+
+  /**
+   * Demasiados intentos desde esta red (R-40): vuelve a Entrar con una cuenta atrás. El mensaje del
+   * protocolo no trae la espera; se pregunta por HTTP y, mientras tanto o si no se puede saber, vale
+   * la de una ráfaga.
+   */
+  private onEntryLimited(): void {
+    const kind = this.entry?.kind ?? this.state.lastEntry?.kind ?? "join";
+    const until = (waitMs: number) => ({ ...this.state.enterWaits, [kind]: this.now() + waitMs });
+    this.stopStartTimer();
+    this.startRequest = null;
+    this.resetRoomSession();
+    this.transport.disconnect();
+    this.set({ phase: "home", enterWaits: until(ENTRY_WAIT_DEFAULT_MS) });
+    void this.transport.entryWait?.(kind).then((waitMs) => {
+      if (waitMs !== null) this.set({ enterWaits: until(waitMs) });
+    });
   }
 
   /** La vuelta con ficha falló: la sala ya no existe, está llena o se está reconstruyendo. */

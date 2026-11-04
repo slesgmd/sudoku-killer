@@ -145,9 +145,10 @@ export interface ClientState {
   /**
    * El servidor pidió la clave de acceso del grupo (401 en `POST /access` o 4003, R-39): `missing`
    * si no había una guardada, `invalid` si la guardada no valió (se olvida); `locked` si llegó un
-   * 429 por demasiadas claves que no valen desde esta red (T-39.10; la guardada se conserva).
+   * 429 por demasiadas claves que no valen desde esta red (T-39.10; la guardada se conserva);
+   * `verifying` mientras se comprueba un enlace de invitación, sin pedir nada (T-39.21).
    */
-  readonly accessDenied: "missing" | "invalid" | "locked" | null;
+  readonly accessDenied: "missing" | "invalid" | "locked" | "verifying" | null;
   /**
    * La comprobación de una clave escrita o de una invitación (T-39.14): `checking` mientras se
    * espera `POST /access`, `wrong` si recibió 401 (no se guardó) y `unreachable` si el servidor no
@@ -156,6 +157,10 @@ export interface ClientState {
   readonly accessCheck: "checking" | "wrong" | "unreachable" | null;
   /** «Despertando el servidor…»: la entrada lleva 3 s sin conexión. */
   readonly waking: boolean;
+  /** Con `connection: "throttled"`, hasta cuándo se espera antes de reintentar solo (R-40). */
+  readonly throttledUntil: number | null;
+  /** Hasta cuándo no se puede repetir cada tipo de entrada (hora de este dispositivo; 0 sin espera). */
+  readonly enterWaits: { readonly join: number; readonly create: number };
 }
 
 export const INITIAL_STATE: ClientState = {
@@ -193,6 +198,8 @@ export const INITIAL_STATE: ClientState = {
   accessDenied: null,
   accessCheck: null,
   waking: false,
+  throttledUntil: null,
+  enterWaits: { join: 0, create: 0 },
 };
 
 /** Notas de una capa tal como se ven: lo confirmado más las pendientes, en orden (ADR 0005). */
