@@ -101,14 +101,8 @@ export function Screens({
   };
   const settingsDialog = settings ? (
     <SettingsDialog
-      autoClean={state.settings.autoCleanPersonalNotes}
-      useNotes={state.notesEnabled}
-      onUseNotes={(value) => {
-        client.setNotesEnabled(value);
-      }}
-      onChange={(value) => {
-        client.setAutoClean(value);
-      }}
+      client={client}
+      state={state}
       onClose={() => {
         setSettings(false);
       }}

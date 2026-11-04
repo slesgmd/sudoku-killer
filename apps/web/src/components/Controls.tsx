@@ -3,7 +3,7 @@
 import { flushSync } from "react-dom";
 import type { NoteLayer } from "@sudoku-killer/protocol";
 import type { GameClient } from "../game/client.ts";
-import { remainingByDigit, type ClientState } from "../game/state.ts";
+import { remainingByDigit, writeLayer, type ClientState } from "../game/state.ts";
 import { t } from "../i18n/index.ts";
 import { Icon } from "./Icon.tsx";
 
@@ -16,6 +16,11 @@ export interface ControlProps {
 }
 
 const press = (pressed: boolean) => (pressed ? "true" : "false");
+
+/** Las capas con controles: con «Notas personales» apagada, solo la grupal (R-42). */
+function layersOf(state: ClientState): readonly NoteLayer[] {
+  return state.personalNotesEnabled ? ["personal", "group"] : ["group"];
+}
 
 export function ModeSeg({
   state,
@@ -64,22 +69,26 @@ export function ModeSeg({
 /** Escritorio: capa de escritura (solo en modo Notas) y visibilidad con etiquetas. */
 export function LayersWide({ state, client, disabled, canPlace }: ControlProps) {
   const notesMode = !canPlace || state.mode === "notes";
+  const layers = layersOf(state);
+  const active = writeLayer(state);
   return (
     <>
       {notesMode ? (
         <div className="ctlgroup">
           <span className="lbl" id="layer-title">
             {t("layer.label")}{" "}
-            <span className="kbd" aria-hidden="true">
-              G
-            </span>
+            {layers.length > 1 ? (
+              <span className="kbd" aria-hidden="true">
+                G
+              </span>
+            ) : null}
           </span>
           <div className="seg" role="group" aria-labelledby="layer-title">
-            {(["personal", "group"] as const).map((layer) => (
+            {layers.map((layer) => (
               <button
                 key={layer}
                 type="button"
-                aria-pressed={press(state.layer === layer)}
+                aria-pressed={press(active === layer)}
                 aria-disabled={disabled ? "true" : undefined}
                 onClick={() => {
                   if (!disabled) client.setLayer(layer);
@@ -95,8 +104,12 @@ export function LayersWide({ state, client, disabled, canPlace }: ControlProps) 
         <span className="lbl" id="vis-title">
           {t("visibility.label")}
         </span>
-        <div className="visrow" role="group" aria-labelledby="vis-title">
-          {(["personal", "group"] as const).map((layer) => (
+        <div
+          className={`visrow${layers.length > 1 ? "" : " one"}`}
+          role="group"
+          aria-labelledby="vis-title"
+        >
+          {layers.map((layer) => (
             <VisButton key={layer} state={state} client={client} layer={layer} wide />
           ))}
         </div>
@@ -140,18 +153,20 @@ function VisButton({
 /** Tableta, móvil y horizontal: capa de escritura y su ojo en una fila. */
 export function LayersCompact({ state, client, disabled, canPlace }: ControlProps) {
   const notesMode = !canPlace || state.mode === "notes";
+  const layers = layersOf(state);
+  const active = writeLayer(state);
   return (
     <div
-      className="layers"
+      className={`layers${layers.length > 1 ? "" : " one"}`}
       role="group"
       aria-label={`${t("layer.label")} · ${t("visibility.label")}`}
     >
-      {(["personal", "group"] as const).map((layer) => (
+      {layers.map((layer) => (
         <div key={layer}>
           <button
             className="btn"
             type="button"
-            aria-pressed={press(notesMode && state.layer === layer)}
+            aria-pressed={press(notesMode && active === layer)}
             aria-disabled={disabled || !notesMode ? "true" : undefined}
             onClick={() => {
               if (!disabled && notesMode) client.setLayer(layer);
@@ -186,7 +201,9 @@ export function Tools({ state, client, disabled, canPlace, onHint, stack }: Tool
   const hintsLeft = state.match?.hintsLeft ?? 0;
   const blocked = disabled ? t("tool.hintPickEmpty") : hintBlock(state, canPlace);
   const cls = `btn${stack ? " stack" : ""}`;
-  const layerName = t(state.layer === "personal" ? "layer.personal" : "layer.group").toLowerCase();
+  const layerName = t(
+    writeLayer(state) === "personal" ? "layer.personal" : "layer.group",
+  ).toLowerCase();
   return (
     <div className="pg-tools">
       {notesMode ? (

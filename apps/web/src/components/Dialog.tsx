@@ -16,6 +16,8 @@ export interface DialogProps {
   /** Control que recibe el foco al abrir. */
   readonly initialFocus: RefObject<HTMLElement | null>;
   readonly role?: "dialog" | "alertdialog";
+  /** Más ancho, con altura máxima y desplazamiento interno (Ajustes). Su cuerpo no es una descripción. */
+  readonly wide?: boolean;
 }
 
 export function Dialog({
@@ -26,6 +28,7 @@ export function Dialog({
   onCancel,
   initialFocus,
   role = "dialog",
+  wide = false,
 }: DialogProps) {
   const panel = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -64,11 +67,11 @@ export function Dialog({
     <div className="scrim" onKeyDown={onKeyDown}>
       <div
         ref={panel}
-        className="dialog"
+        className={`dialog${wide ? " wide" : ""}`}
         role={role}
         aria-modal="true"
         aria-labelledby={titleId}
-        aria-describedby={bodyId}
+        aria-describedby={wide ? undefined : bodyId}
       >
         <div className="dhead">
           <h2 id={titleId}>{title}</h2>

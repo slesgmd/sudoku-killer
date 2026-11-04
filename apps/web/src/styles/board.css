@@ -3,6 +3,9 @@
    --badge, --badge-fs y --ear según el tamaño del tablero. */
 
 .sk-board {
+  --sum-color: var(--ink);
+  --note-group: var(--ink);
+  --note-personal: var(--accent);
   display: grid;
   grid-template-rows: repeat(9, minmax(0, 1fr));
   width: 100%;
@@ -240,7 +243,7 @@
   font-size: var(--sum-fs);
   line-height: 1;
   font-weight: var(--fw-semibold);
-  color: var(--ink);
+  color: var(--sum-color);
   border-bottom-right-radius: 2px;
 }
 
@@ -409,23 +412,31 @@
   min-height: 0;
 }
 .n.g {
-  color: var(--ink);
+  color: var(--note-group);
   font-weight: var(--fw-semibold);
 }
 .n.p {
-  color: var(--accent);
+  color: var(--note-personal);
   font-weight: var(--fw-regular);
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: max(1px, calc(var(--n-fs) * 0.14));
 }
 .n.gp {
-  color: var(--ink);
+  color: var(--note-group);
   font-weight: var(--fw-semibold);
   text-decoration: underline;
-  text-decoration-color: var(--accent);
+  text-decoration-color: var(--note-personal);
   text-decoration-thickness: 1px;
   text-underline-offset: max(1px, calc(var(--n-fs) * 0.14));
+}
+/* Mismo color en las dos capas: en ambas, el subrayado pasa a 2 px para distinguirla de la personal. */
+.sk-board[data-notes-same] .n.gp {
+  text-decoration-thickness: 2px;
+}
+/* Notas del dígito colocado que está seleccionado (R-44). */
+.n.strong {
+  font-weight: var(--fw-note-strong);
 }
 
 @keyframes sk-shake {

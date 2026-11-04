@@ -36,6 +36,17 @@
   --player-5: #3f6b5b; /* pino */
   --player-6: #585a85; /* índigo */
 
+  /* Colores personales (SPEC, R-42): ≥ 4,5:1 sobre los cuatro fondos de celda (T-42.2 y T-42.3) */
+  --pal-1: #b41955; /* frambuesa */
+  --pal-2: #a04b00; /* cobre */
+  --pal-3: #5f460f; /* bronce */
+  --pal-4: #0f3714; /* bosque */
+  --pal-5: #00695a; /* jade */
+  --pal-6: #2d5fb4; /* azul */
+  --pal-7: #00286e; /* marino */
+  --pal-8: #7d467d; /* ciruela */
+  --pal-9: #5f003c; /* vino */
+
   /* Foco */
   --focus: var(--ink);
   --focus-width: 2px;
@@ -62,6 +73,7 @@
   --fw-regular: 400;
   --fw-medium: 500;
   --fw-semibold: 600;
+  --fw-note-strong: 800; /* Notas del dígito seleccionado (R-44) */
 
   /* Espaciado: escala de 4 px */
   --s-1: 4px;

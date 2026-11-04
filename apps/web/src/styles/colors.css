@@ -1,0 +1,178 @@
+/* Colores personales (SPEC, R-42 y R-43): cada elección es un atributo data-* en el tablero o en la
+   celda, y las variables se redefinen solo dentro de él, para que --cage-line no cambie los bordes de
+   los formularios. Sin atributo, los colores de board.css (Predeterminado). */
+.sk-board[data-cage="1"] {
+  --cage-line: var(--pal-1);
+}
+.sk-board[data-cage="2"] {
+  --cage-line: var(--pal-2);
+}
+.sk-board[data-cage="3"] {
+  --cage-line: var(--pal-3);
+}
+.sk-board[data-cage="4"] {
+  --cage-line: var(--pal-4);
+}
+.sk-board[data-cage="5"] {
+  --cage-line: var(--pal-5);
+}
+.sk-board[data-cage="6"] {
+  --cage-line: var(--pal-6);
+}
+.sk-board[data-cage="7"] {
+  --cage-line: var(--pal-7);
+}
+.sk-board[data-cage="8"] {
+  --cage-line: var(--pal-8);
+}
+.sk-board[data-cage="9"] {
+  --cage-line: var(--pal-9);
+}
+.sk-board[data-sum="1"] {
+  --sum-color: var(--pal-1);
+}
+.sk-board[data-sum="2"] {
+  --sum-color: var(--pal-2);
+}
+.sk-board[data-sum="3"] {
+  --sum-color: var(--pal-3);
+}
+.sk-board[data-sum="4"] {
+  --sum-color: var(--pal-4);
+}
+.sk-board[data-sum="5"] {
+  --sum-color: var(--pal-5);
+}
+.sk-board[data-sum="6"] {
+  --sum-color: var(--pal-6);
+}
+.sk-board[data-sum="7"] {
+  --sum-color: var(--pal-7);
+}
+.sk-board[data-sum="8"] {
+  --sum-color: var(--pal-8);
+}
+.sk-board[data-sum="9"] {
+  --sum-color: var(--pal-9);
+}
+.sk-board[data-note-personal="1"] {
+  --note-personal: var(--pal-1);
+}
+.sk-board[data-note-personal="2"] {
+  --note-personal: var(--pal-2);
+}
+.sk-board[data-note-personal="3"] {
+  --note-personal: var(--pal-3);
+}
+.sk-board[data-note-personal="4"] {
+  --note-personal: var(--pal-4);
+}
+.sk-board[data-note-personal="5"] {
+  --note-personal: var(--pal-5);
+}
+.sk-board[data-note-personal="6"] {
+  --note-personal: var(--pal-6);
+}
+.sk-board[data-note-personal="7"] {
+  --note-personal: var(--pal-7);
+}
+.sk-board[data-note-personal="8"] {
+  --note-personal: var(--pal-8);
+}
+.sk-board[data-note-personal="9"] {
+  --note-personal: var(--pal-9);
+}
+.sk-board[data-note-group="1"] {
+  --note-group: var(--pal-1);
+}
+.sk-board[data-note-group="2"] {
+  --note-group: var(--pal-2);
+}
+.sk-board[data-note-group="3"] {
+  --note-group: var(--pal-3);
+}
+.sk-board[data-note-group="4"] {
+  --note-group: var(--pal-4);
+}
+.sk-board[data-note-group="5"] {
+  --note-group: var(--pal-5);
+}
+.sk-board[data-note-group="6"] {
+  --note-group: var(--pal-6);
+}
+.sk-board[data-note-group="7"] {
+  --note-group: var(--pal-7);
+}
+.sk-board[data-note-group="8"] {
+  --note-group: var(--pal-8);
+}
+.sk-board[data-note-group="9"] {
+  --note-group: var(--pal-9);
+}
+
+/* Aleatorio: un color por jaula, para su línea y su suma (R-43). */
+.sk-gc[data-cage-color="1"] {
+  --cage-line: var(--pal-1);
+  --sum-color: var(--pal-1);
+}
+.sk-gc[data-cage-color="2"] {
+  --cage-line: var(--pal-2);
+  --sum-color: var(--pal-2);
+}
+.sk-gc[data-cage-color="3"] {
+  --cage-line: var(--pal-3);
+  --sum-color: var(--pal-3);
+}
+.sk-gc[data-cage-color="4"] {
+  --cage-line: var(--pal-4);
+  --sum-color: var(--pal-4);
+}
+.sk-gc[data-cage-color="5"] {
+  --cage-line: var(--pal-5);
+  --sum-color: var(--pal-5);
+}
+.sk-gc[data-cage-color="6"] {
+  --cage-line: var(--pal-6);
+  --sum-color: var(--pal-6);
+}
+.sk-gc[data-cage-color="7"] {
+  --cage-line: var(--pal-7);
+  --sum-color: var(--pal-7);
+}
+.sk-gc[data-cage-color="8"] {
+  --cage-line: var(--pal-8);
+  --sum-color: var(--pal-8);
+}
+.sk-gc[data-cage-color="9"] {
+  --cage-line: var(--pal-9);
+  --sum-color: var(--pal-9);
+}
+
+/* Muestras del panel de Ajustes. */
+.swatch[data-color="1"] {
+  --swatch: var(--pal-1);
+}
+.swatch[data-color="2"] {
+  --swatch: var(--pal-2);
+}
+.swatch[data-color="3"] {
+  --swatch: var(--pal-3);
+}
+.swatch[data-color="4"] {
+  --swatch: var(--pal-4);
+}
+.swatch[data-color="5"] {
+  --swatch: var(--pal-5);
+}
+.swatch[data-color="6"] {
+  --swatch: var(--pal-6);
+}
+.swatch[data-color="7"] {
+  --swatch: var(--pal-7);
+}
+.swatch[data-color="8"] {
+  --swatch: var(--pal-8);
+}
+.swatch[data-color="9"] {
+  --swatch: var(--pal-9);
+}

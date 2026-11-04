@@ -9,6 +9,9 @@ export interface Prefs {
 /** «Usar notas»: "1" o "0"; activado por defecto. */
 export const USE_NOTES_KEY = "sk:pref:useNotes";
 
+/** «Notas personales»: solo "0" la apaga; activada por defecto (SPEC, R-42). */
+export const PERSONAL_NOTES_KEY = "sk:pref:personalNotes";
+
 export const browserPrefs: Prefs = {
   get(key) {
     try {

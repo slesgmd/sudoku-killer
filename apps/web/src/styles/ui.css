@@ -441,6 +441,10 @@ fieldset {
   cursor: pointer;
   color: inherit;
 }
+.switch[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 .switch .stext {
   flex: 1;
   display: flex;
@@ -494,6 +498,165 @@ fieldset {
   font-size: var(--fs-caption);
   line-height: var(--lh-caption);
   font-weight: var(--fw-semibold);
+}
+
+/* Ajustes: más ancho y con desplazamiento interno; los demás diálogos siguen en 440 px */
+.dialog.wide {
+  max-width: 520px;
+  max-height: calc(100vh - 2 * var(--s-4));
+  max-height: calc(100dvh - 2 * var(--s-4));
+}
+.dialog.wide .dbody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* Cada elemento conserva su altura: el que desplaza es el cuerpo, nada se encoge ni se solapa. */
+.dialog.wide .dbody > * {
+  flex: none;
+}
+.dialog .dactions .btn.push {
+  margin-right: auto;
+}
+
+/* Colores personales (SPEC, R-42) */
+.settings-h {
+  margin-top: var(--s-2);
+  padding-top: var(--s-3);
+  border-top: var(--bw) solid var(--border);
+  font-size: var(--fs-body);
+  line-height: 20px;
+  font-weight: var(--fw-semibold);
+}
+.cpreview {
+  z-index: 9;
+  display: flex;
+  justify-content: center;
+  padding: var(--s-2) 0;
+  background: var(--paper);
+}
+.sk-board.preview {
+  flex: none;
+  width: 168px;
+  aspect-ratio: 3 / 2;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  border: var(--bw) solid var(--border);
+}
+.sk-board.preview .sk-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.colorfield {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+.colorfield legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  font-size: var(--fs-label);
+  line-height: var(--lh-label);
+  font-weight: var(--fw-medium);
+}
+.colorfield legend svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.colorfield:disabled {
+  opacity: 0.45;
+}
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(10, var(--target));
+}
+.swatch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--target);
+  height: var(--target);
+  cursor: pointer;
+}
+.colorfield:disabled .swatch {
+  cursor: not-allowed;
+}
+.swatch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+.swatch .dot {
+  position: relative;
+  pointer-events: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--swatch);
+}
+.swatch[data-color="0"] .dot {
+  background: var(--paper);
+  border: 1.5px dashed var(--muted);
+}
+.swatch input:checked + .dot {
+  box-shadow:
+    0 0 0 2px var(--paper),
+    0 0 0 4px var(--ink);
+}
+.swatch input:checked + .dot::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 11px;
+  border: solid var(--paper);
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -60%) rotate(45deg);
+}
+.swatch[data-color="0"] input:checked + .dot::after {
+  border-color: var(--ink);
+}
+.swatch input:focus-visible + .dot {
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: 5px;
+}
+@media (max-width: 599px) {
+  .swatches {
+    grid-template-columns: repeat(5, var(--target));
+  }
+  /* La vista previa va primero y queda fija al desplazar, salvo en pantallas bajas. */
+  .cpreview {
+    order: -1;
+  }
+}
+@media (max-width: 599px) and (min-height: 480px) {
+  .cpreview {
+    position: sticky;
+    top: 0;
+  }
+  /* Un control enfocado no queda debajo de la vista previa fija. */
+  .dialog.wide .dbody {
+    scroll-padding-top: 140px;
+  }
+}
+@media (max-height: 479px) {
+  .dialog.wide .dactions {
+    flex-wrap: nowrap;
+  }
+  .dialog.wide .dactions .btn {
+    width: auto;
+    flex: 1;
+  }
+  .dialog.wide .dactions .btn.push {
+    margin-right: 0;
+  }
 }
 
 /* Formularios (§5.8) */

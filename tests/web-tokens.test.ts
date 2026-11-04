@@ -67,7 +67,11 @@ describe("F8 checklist: tokens.css is the only source of colors and fonts", () =
     // Agregados al implementar, tras la prueba en celular (docs/diseno.md §2.3).
     const added = ["--cage-width: 2px", "--cage-width-selected: 3px"];
     const current = declarations(TOKENS);
-    expect(current.filter((d) => !added.includes(d))).toEqual(declarations(prototype));
+    // Agregados para los colores personales y la negrita de las notas (SPEC, R-42 a R-44).
+    const personal = /^--(pal-[1-9]: #[0-9a-f]{6}|fw-note-strong: 800)$/;
+    expect(current.filter((d) => !added.includes(d) && !personal.test(d))).toEqual(
+      declarations(prototype),
+    );
     for (const token of added) expect(current).toContain(token);
   });
 
