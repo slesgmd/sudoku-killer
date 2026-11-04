@@ -1,10 +1,14 @@
 // Diálogos (docs/diseno.md §9): confirmación de pista, de salida, Ajustes y el enlace para copiarlo a
 // mano cuando no hay portapapeles.
-import { useEffect, useId, useRef, type RefObject } from "react";
+import { useEffect, useId, useRef } from "react";
 import { PARAMS_V1 } from "@sudoku-killer/scoring";
 import type { PublicPlayer } from "@sudoku-killer/protocol";
+import type { GameClient } from "../game/client.ts";
+import type { ClientState } from "../game/state.ts";
 import { t } from "../i18n/index.ts";
+import { ColorSettings } from "./ColorSettings.tsx";
 import { Dialog } from "./Dialog.tsx";
+import { Switch } from "./Switch.tsx";
 
 export function HintDialog({
   cell,
@@ -91,58 +95,18 @@ export function LeaveDialog({
   );
 }
 
-/** Un interruptor de Ajustes (§5.8): etiqueta, ayuda y «Sí» / «No» bajo la pista. */
-function Switch({
-  label,
-  help,
-  checked,
-  onChange,
-  switchRef,
-}: {
-  readonly label: string;
-  readonly help: string;
-  readonly checked: boolean;
-  readonly onChange: (value: boolean) => void;
-  readonly switchRef?: RefObject<HTMLButtonElement | null>;
-}) {
-  return (
-    <button
-      ref={switchRef}
-      className="switch"
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => {
-        onChange(!checked);
-      }}
-    >
-      <span className="stext">
-        <span className="slabel">{label}</span>
-        <span className="shelp">{help}</span>
-      </span>
-      <span className="sside" aria-hidden="true">
-        <span className="track" />
-        <span className="sstate">{checked ? t("settings.on") : t("settings.off")}</span>
-      </span>
-    </button>
-  );
-}
-
 /**
- * Ajustes: el foco inicial va al primer interruptor (docs/diseno.md §7). «Usar notas» es una
- * preferencia local del navegador; la limpieza automática se guarda en el servidor.
+ * Ajustes: el foco inicial va al primer interruptor (docs/diseno.md §7). «Usar notas», «Notas
+ * personales» y los colores son preferencias locales del navegador; la limpieza automática se guarda
+ * en el servidor. Sin «Usar notas» no hay notas que mostrar ni que colorear.
  */
 export function SettingsDialog({
-  useNotes,
-  onUseNotes,
-  autoClean,
-  onChange,
+  client,
+  state,
   onClose,
 }: {
-  readonly useNotes: boolean;
-  readonly onUseNotes: (value: boolean) => void;
-  readonly autoClean: boolean;
-  readonly onChange: (value: boolean) => void;
+  readonly client: GameClient;
+  readonly state: ClientState;
   readonly onClose: () => void;
 }) {
   const first = useRef<HTMLButtonElement>(null);
@@ -152,26 +116,52 @@ export function SettingsDialog({
       closeLabel={t("dialog.close")}
       onCancel={onClose}
       initialFocus={first}
+      wide
       actions={
-        <button className="btn secondary" type="button" onClick={onClose}>
-          {t("dialog.close")}
-        </button>
+        <>
+          <button
+            className="btn secondary push"
+            type="button"
+            onClick={() => {
+              client.resetColors();
+            }}
+          >
+            {t("settings.reset")}
+          </button>
+          <button className="btn secondary" type="button" onClick={onClose}>
+            {t("dialog.close")}
+          </button>
+        </>
       }
     >
       <Switch
         switchRef={first}
         label={t("settings.useNotes")}
         help={t("settings.useNotesHelp")}
-        checked={useNotes}
-        onChange={onUseNotes}
+        checked={state.notesEnabled}
+        onChange={(value) => {
+          client.setNotesEnabled(value);
+        }}
+      />
+      <Switch
+        label={t("settings.personalNotes")}
+        help={t("settings.personalNotesHelp")}
+        checked={state.personalNotesEnabled}
+        disabled={!state.notesEnabled}
+        onChange={(value) => {
+          client.setPersonalNotesEnabled(value);
+        }}
       />
       <Switch
         label={t("settings.autoClean")}
         help={t("settings.autoCleanHelp")}
-        checked={autoClean}
-        onChange={onChange}
+        checked={state.settings.autoCleanPersonalNotes}
+        onChange={(value) => {
+          client.setAutoClean(value);
+        }}
       />
       <p className="small muted">{t("settings.motion")}</p>
+      <ColorSettings client={client} state={state} />
     </Dialog>
   );
 }

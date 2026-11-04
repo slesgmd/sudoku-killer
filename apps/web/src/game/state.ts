@@ -14,6 +14,7 @@ import type {
   Settings,
 } from "@sudoku-killer/protocol";
 import type { TransportStatus } from "../transport/types.ts";
+import { DEFAULT_COLORS, type ColorPrefs } from "./color-prefs.ts";
 import { visibleNotes, type PendingNote } from "./notes.ts";
 
 export type { PendingNote } from "./notes.ts";
@@ -127,6 +128,13 @@ export interface ClientState {
   readonly visible: { readonly personal: boolean; readonly group: boolean };
   /** «Usar notas»: preferencia local del cliente (prefs.ts). Sin notas no hay controles ni notas. */
   readonly notesEnabled: boolean;
+  /**
+   * «Notas personales»: preferencia local (prefs.ts), distinta del ojo de la capa, que dura solo la
+   * sesión. Apagada, la capa personal no se dibuja ni se escribe, y sus notas no se borran.
+   */
+  readonly personalNotesEnabled: boolean;
+  /** Colores personales: preferencia local (color-prefs.ts). */
+  readonly colors: ColorPrefs;
   /** Hora del servidor − hora del cliente, medida con `sys.ping` (T-07.2). */
   readonly clockOffset: number;
   readonly canUndo: boolean;
@@ -186,6 +194,8 @@ export const INITIAL_STATE: ClientState = {
   layer: "personal",
   visible: { personal: true, group: true },
   notesEnabled: true,
+  personalNotesEnabled: true,
+  colors: DEFAULT_COLORS,
   clockOffset: 0,
   canUndo: false,
   enterError: null,
@@ -206,6 +216,17 @@ export const INITIAL_STATE: ClientState = {
 export function viewNotes(state: ClientState, layer: NoteLayer): Uint16Array {
   const confirmed = layer === "group" ? state.groupNotes : state.personalNotes;
   return visibleNotes(confirmed, state.pendingNotes, layer);
+}
+
+/** La capa en la que se escribe de verdad: con «Notas personales» apagada, siempre la grupal. */
+export function writeLayer(state: ClientState): NoteLayer {
+  return state.personalNotesEnabled ? state.layer : "group";
+}
+
+/** Si una capa se dibuja: «Usar notas», su ojo y, en la personal, «Notas personales». */
+export function layerShown(state: ClientState, layer: NoteLayer): boolean {
+  if (!state.notesEnabled || !state.visible[layer]) return false;
+  return layer === "group" || state.personalNotesEnabled;
 }
 
 export function me(state: ClientState): PublicPlayer | undefined {

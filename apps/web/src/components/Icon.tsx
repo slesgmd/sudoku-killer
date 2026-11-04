@@ -53,6 +53,15 @@ const PATHS = {
     </>
   ),
   share: <path d="M8 10V2M5 5l3-3 3 3M3 9v4.5h10V9" />,
+  cage: <rect x="2.5" y="2.5" width="11" height="11" rx="1" strokeDasharray="2.5 2" />,
+  sum: <path d="M12 3H4l4.5 5L4 13h8" />,
+  note: <path d="M3 13l.7-3L10.5 3.2l2.3 2.3L6 12.3zM9.2 4.5l2.3 2.3" />,
+  dice: (
+    <>
+      <rect x="2.5" y="2.5" width="11" height="11" rx="2" />
+      <path d="M5.5 5.5v.01M10.5 5.5v.01M8 8v.01M5.5 10.5v.01M10.5 10.5v.01" />
+    </>
+  ),
 } as const;
 
 export type IconName = keyof typeof PATHS | "dots";

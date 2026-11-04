@@ -4,7 +4,7 @@
 @font-face {
   font-family: "Inter";
   font-style: normal;
-  font-weight: 400 600;
+  font-weight: 400 800;
   font-display: swap;
   src: url("/fonts/inter-latin-ext.woff2") format("woff2");
   unicode-range:
@@ -15,7 +15,7 @@
 @font-face {
   font-family: "Inter";
   font-style: normal;
-  font-weight: 400 600;
+  font-weight: 400 800;
   font-display: swap;
   src: url("/fonts/inter-latin.woff2") format("woff2");
   unicode-range:

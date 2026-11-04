@@ -15,15 +15,18 @@ import type {
 import { isValidAccessKey, normalizeAccessKey } from "@sudoku-killer/protocol";
 import { t } from "../i18n/index.ts";
 import type { Transport, TransportStatus } from "../transport/types.ts";
-import { USE_NOTES_KEY, browserPrefs, type Prefs } from "./prefs.ts";
+import { DEFAULT_COLORS, loadColors, saveColors, type ColorChange } from "./color-prefs.ts";
+import { PERSONAL_NOTES_KEY, USE_NOTES_KEY, browserPrefs, type Prefs } from "./prefs.ts";
 import { randomId } from "./random-id.ts";
 import { applyNoteOp, withoutPending } from "./notes.ts";
 import { browserSession, type SessionStore } from "./session.ts";
 import {
   INITIAL_STATE,
+  layerShown,
   me,
   playerName,
   viewNotes,
+  writeLayer,
   type ActivityKind,
   type ClientState,
   type InputMode,
@@ -190,6 +193,8 @@ export class GameClient {
     this.state = {
       ...INITIAL_STATE,
       notesEnabled: prefs.get(USE_NOTES_KEY) !== "0",
+      personalNotesEnabled: prefs.get(PERSONAL_NOTES_KEY) !== "0",
+      colors: loadColors(prefs),
       connection: transport.status,
     };
     this.idPrefix = randomId().slice(0, 8);
@@ -424,12 +429,18 @@ export class GameClient {
     this.startIds.add(this.entryId);
   }
 
+  /** Las preferencias locales: sobreviven a cada vuelta a `INITIAL_STATE`. Los ojos no (R-42). */
+  private localPrefs() {
+    const { notesEnabled, personalNotesEnabled, colors } = this.state;
+    return { notesEnabled, personalNotesEnabled, colors };
+  }
+
   /** Empieza una entrada: abre la conexión y, cuando abre, envía `room.create` o `room.join`. */
   private enter(entry: Entry): void {
     this.set({
       ...INITIAL_STATE,
       phase: "entering",
-      notesEnabled: this.state.notesEnabled,
+      ...this.localPrefs(),
       connection: this.transport.status,
       lastStart: this.state.lastStart,
       enterWaits: this.state.enterWaits,
@@ -650,7 +661,7 @@ export class GameClient {
     this.set({
       ...INITIAL_STATE,
       settings: this.state.settings,
-      notesEnabled: this.state.notesEnabled,
+      ...this.localPrefs(),
       lastStart: this.state.lastStart,
       lastEntry: this.state.lastEntry,
       enterWaits: this.state.enterWaits,
@@ -748,12 +759,14 @@ export class GameClient {
     this.set({ mode: this.state.mode === "number" ? "notes" : "number" });
   }
 
+  /** Con «Notas personales» apagada, `state.layer` no se toca: al reencenderla vuelve la que había. */
   setLayer(layer: NoteLayer): void {
+    if (!this.state.personalNotesEnabled) return;
     this.set({ layer });
   }
 
   toggleLayer(): void {
-    if (!this.state.notesEnabled) return;
+    if (!this.state.notesEnabled || !this.state.personalNotesEnabled) return;
     this.set({ layer: this.state.layer === "personal" ? "group" : "personal" });
   }
 
@@ -769,6 +782,25 @@ export class GameClient {
   setNotesEnabled(notesEnabled: boolean): void {
     this.prefs.set(USE_NOTES_KEY, notesEnabled ? "1" : "0");
     this.set(notesEnabled ? { notesEnabled } : { notesEnabled, mode: "number" });
+  }
+
+  /** «Notas personales» (preferencia local, sin protocolo). Independiente del ojo de la capa. */
+  setPersonalNotesEnabled(personalNotesEnabled: boolean): void {
+    this.prefs.set(PERSONAL_NOTES_KEY, personalNotesEnabled ? "1" : "0");
+    this.set({ personalNotesEnabled });
+  }
+
+  /** Colores personales (preferencia local, sin protocolo). */
+  setColors(change: ColorChange): void {
+    const colors = { ...this.state.colors, ...change };
+    saveColors(this.prefs, colors);
+    this.set({ colors });
+  }
+
+  /** «Restablecer»: solo los colores, no los interruptores. */
+  resetColors(): void {
+    saveColors(this.prefs, DEFAULT_COLORS);
+    this.set({ colors: DEFAULT_COLORS });
   }
 
   setAutoClean(autoCleanPersonalNotes: boolean): void {
@@ -807,7 +839,8 @@ export class GameClient {
       return;
     }
     if (this.state.notesEnabled && (this.state.mode === "notes" || !this.canPlace())) {
-      const layer = this.state.layer;
+      const layer = writeLayer(this.state);
+      if (this.blockedByHiddenLayer(layer)) return;
       const present = ((viewNotes(this.state, layer)[cell] ?? 0) & digitBit(digit)) !== 0;
       this.noteOps([{ layer, op: present ? "remove" : "add", cell, digit }]);
     }
@@ -817,13 +850,25 @@ export class GameClient {
   clearNotes(): void {
     const cell = this.editableCell();
     if (cell === null || !this.state.notesEnabled) return;
-    const layer = this.state.layer;
+    const layer = writeLayer(this.state);
+    if (this.blockedByHiddenLayer(layer)) return;
     const mask = viewNotes(this.state, layer)[cell] ?? 0;
     const ops: Omit<PendingNote, "id">[] = [];
     for (let digit = 1; digit <= (this.state.match?.puzzle.size ?? 9); digit++) {
       if (mask & digitBit(digit)) ops.push({ layer, op: "remove", cell, digit });
     }
     if (ops.length > 0) this.noteOps(ops);
+  }
+
+  /**
+   * No se escribe ni se borra en una capa que no se ve (SPEC, R-42). El aviso dice cómo mostrarla, y
+   * no se repite mientras siga en pantalla: cada aviso también escribe en la actividad.
+   */
+  private blockedByHiddenLayer(layer: NoteLayer): boolean {
+    if (layerShown(this.state, layer)) return false;
+    const text = t(layer === "personal" ? "notes.hiddenPersonal" : "notes.hiddenGroup");
+    if (!this.state.toasts.some((toast) => toast.text === text)) this.toast("status", text);
+    return true;
   }
 
   private noteOps(ops: readonly Omit<PendingNote, "id">[]): void {

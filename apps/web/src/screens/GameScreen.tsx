@@ -460,17 +460,7 @@ export function GameScreen({
         />
       ) : null}
       {dialog === "settings" ? (
-        <SettingsDialog
-          autoClean={state.settings.autoCleanPersonalNotes}
-          useNotes={notes}
-          onUseNotes={(value) => {
-            client.setNotesEnabled(value);
-          }}
-          onChange={(value) => {
-            client.setAutoClean(value);
-          }}
-          onClose={close}
-        />
+        <SettingsDialog client={client} state={state} onClose={close} />
       ) : null}
     </div>
   );

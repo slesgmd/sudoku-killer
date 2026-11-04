@@ -391,12 +391,38 @@ export const es = {
   "settings.useNotes": "Usar notas",
   "settings.useNotesHelp":
     "Si lo desactivas, se ocultan las notas y sus controles, y solo colocas números. Se guarda solo en este navegador.",
+  "settings.personalNotes": "Notas personales",
+  "settings.personalNotesHelp":
+    "Si lo apagas, solo verás y escribirás notas grupales. Tus notas personales no se borran.",
   "settings.autoClean": "Limpiar notas personales automáticamente",
   "settings.autoCleanHelp":
     "Cuando alguien acierta un número, ese número se quita de tus notas personales en su fila, columna, caja y jaula. Las notas grupales se limpian siempre.",
   "settings.on": "Sí",
   "settings.off": "No",
   "settings.motion": "El movimiento reducido sigue la preferencia de tu sistema.",
+  "settings.colors": "Colores",
+  "settings.preview": "Vista previa de los colores",
+  "settings.random": "Aleatorio",
+  "settings.randomHelp":
+    "Un color por jaula, para su línea y su suma. Cambia con cada puzzle y no afecta a las notas.",
+  "settings.cage": "Jaula",
+  "settings.sum": "Suma",
+  "settings.notePersonal": "Personal",
+  "settings.noteGroup": "Grupal",
+  "settings.reset": "Restablecer",
+  "color.0": "Predeterminado",
+  "color.1": "Frambuesa",
+  "color.2": "Cobre",
+  "color.3": "Bronce",
+  "color.4": "Bosque",
+  "color.5": "Jade",
+  "color.6": "Azul",
+  "color.7": "Marino",
+  "color.8": "Ciruela",
+  "color.9": "Vino",
+  "notes.hiddenPersonal":
+    "Las notas personales están ocultas. Muéstralas con el ojo para escribir.",
+  "notes.hiddenGroup": "Las notas grupales están ocultas. Muéstralas con el ojo para escribir.",
 } as const satisfies Record<string, Message>;
 
 export type MessageKey = keyof typeof es;

@@ -211,17 +211,7 @@ export function Results({ client, state, onLeave }: ResultsProps) {
         />
       ) : null}
       {dialog === "settings" ? (
-        <SettingsDialog
-          autoClean={state.settings.autoCleanPersonalNotes}
-          useNotes={state.notesEnabled}
-          onUseNotes={(value) => {
-            client.setNotesEnabled(value);
-          }}
-          onChange={(value) => {
-            client.setAutoClean(value);
-          }}
-          onClose={close}
-        />
+        <SettingsDialog client={client} state={state} onClose={close} />
       ) : null}
     </div>
   );

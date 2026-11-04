@@ -4,7 +4,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { cageIndexByCell, digitBit, layoutOf } from "@sudoku-killer/engine/model";
 import type { PublicPuzzle } from "@sudoku-killer/protocol";
-import { me, playerName, viewNotes, type ClientState } from "../game/state.ts";
+import { cageColors } from "../game/cage-colors.ts";
+import type { ColorPrefs } from "../game/color-prefs.ts";
+import { layerShown, me, playerName, viewNotes, type ClientState } from "../game/state.ts";
 import { joinNames, t } from "../i18n/index.ts";
 
 /** Medidas que salen de la celda (§3, «Tablero»; mismas fórmulas que el prototipo). */
@@ -27,6 +29,21 @@ export function cellVars(cellPx: number): CSSProperties {
     "--badge-fs": px(Math.max(9, Math.round(badge * 0.68))),
     "--ear": px(Math.max(7, Math.round(cellPx * 0.18))),
   } as CSSProperties;
+}
+
+/**
+ * Los colores personales como atributos del tablero (styles/colors.css). Sin atributo, Predeterminado.
+ * Con Aleatorio, la jaula y la suma las decide cada celda (R-43).
+ */
+export function colorAttrs(colors: ColorPrefs) {
+  const option = (value: number) => (value === 0 ? undefined : value);
+  return {
+    "data-cage": colors.random ? undefined : option(colors.cage),
+    "data-sum": colors.random ? undefined : option(colors.sum),
+    "data-note-personal": option(colors.personal),
+    "data-note-group": option(colors.group),
+    "data-notes-same": colors.personal !== 0 && colors.personal === colors.group ? "" : undefined,
+  };
 }
 
 /** Ancho de un elemento, medido (en las pruebas, sin `ResizeObserver`, usa `fallback`). */
@@ -57,17 +74,18 @@ interface Geometry {
   readonly boxOf: Uint8Array;
 }
 
-function geometryOf(puzzle: PublicPuzzle): Geometry {
-  const layout = layoutOf(puzzle);
-  const size = puzzle.size;
-  const cageOf = cageIndexByCell(layout.cellCount, puzzle.cages);
-  const anchors = new Set(puzzle.cages.map((cage) => Math.min(...cage.cells)));
+/** Los segmentos de línea de jaula de cada celda de una cuadrícula de `rows` por `cols`. */
+export function cageSegments(
+  rows: number,
+  cols: number,
+  cageOf: ArrayLike<number>,
+): readonly (readonly string[])[] {
   const same = (cell: number, dr: number, dc: number) => {
-    const r = Math.floor(cell / size) + dr;
-    const c = (cell % size) + dc;
-    return r >= 0 && r < size && c >= 0 && c < size && cageOf[r * size + c] === cageOf[cell];
+    const r = Math.floor(cell / cols) + dr;
+    const c = (cell % cols) + dc;
+    return r >= 0 && r < rows && c >= 0 && c < cols && cageOf[r * cols + c] === cageOf[cell];
   };
-  const segments = Array.from({ length: layout.cellCount }, (_, i) => {
+  return Array.from({ length: rows * cols }, (_, i) => {
     const up = same(i, -1, 0);
     const down = same(i, 1, 0);
     const left = same(i, 0, -1);
@@ -83,6 +101,14 @@ function geometryOf(puzzle: PublicPuzzle): Geometry {
     if (down && left && !same(i, 1, -1)) segs.push("kbl-h", "kbl-v");
     return segs;
   });
+}
+
+function geometryOf(puzzle: PublicPuzzle): Geometry {
+  const layout = layoutOf(puzzle);
+  const size = puzzle.size;
+  const cageOf = cageIndexByCell(layout.cellCount, puzzle.cages);
+  const anchors = new Set(puzzle.cages.map((cage) => Math.min(...cage.cells)));
+  const segments = cageSegments(size, size, cageOf);
   return { size, cageOf, anchors, segments, boxOf: layout.boxOf };
 }
 
@@ -117,10 +143,14 @@ export function Board({ state, colorOf, onSelect, single = false }: BoardProps) 
   }, [selected, single]);
 
   const size = geometry?.size ?? 9;
-  // Sin «Usar notas» no se dibuja ninguna nota (preferencia local, R-06).
-  const group = state.notesEnabled && state.visible.group ? viewNotes(state, "group") : null;
-  const personal =
-    state.notesEnabled && state.visible.personal ? viewNotes(state, "personal") : null;
+  // Sin «Usar notas» no se dibuja ninguna nota (preferencia local, R-06); una capa oculta tampoco.
+  const group = layerShown(state, "group") ? viewNotes(state, "group") : null;
+  const personal = layerShown(state, "personal") ? viewNotes(state, "personal") : null;
+  const random = state.colors.random;
+  const randomColors = useMemo(
+    () => (random && puzzle ? cageColors(puzzle) : null),
+    [random, puzzle],
+  );
   const myId = me(state)?.id ?? null;
   const selLocked = selected === null ? null : (state.locked[selected]?.value ?? null);
   const presenceAt = new Map<number, string[]>();
@@ -212,6 +242,7 @@ export function Board({ state, colorOf, onSelect, single = false }: BoardProps) 
         role={single ? "presentation" : "gridcell"}
         aria-selected={single ? undefined : isSel}
         data-related={isRelated || undefined}
+        data-cage-color={randomColors?.[cageIndex]}
       >
         {loading
           ? null
@@ -230,8 +261,10 @@ export function Board({ state, colorOf, onSelect, single = false }: BoardProps) 
               const inG = (g & bit) !== 0;
               const inP = (p & bit) !== 0;
               const cls = inG && inP ? "gp" : inG ? "g" : inP ? "p" : "";
+              // Las notas visibles del dígito colocado que está seleccionado (R-44).
+              const strong = selLocked === d + 1 && cls !== "" ? " strong" : "";
               return (
-                <span key={d} className={`n ${cls}`}>
+                <span key={d} className={`n ${cls}${strong}`}>
                   {inG || inP ? d + 1 : ""}
                 </span>
               );
@@ -295,7 +328,7 @@ export function Board({ state, colorOf, onSelect, single = false }: BoardProps) 
     const cell = state.selected ?? 0;
     return (
       <div ref={ref} style={{ width: "100%" }} aria-hidden="true">
-        <div className="sk-board one" style={cellVars(width)}>
+        <div className="sk-board one" style={cellVars(width)} {...colorAttrs(state.colors)}>
           <div className="sk-row" role="presentation">
             {renderCell(cell)}
           </div>
@@ -313,6 +346,7 @@ export function Board({ state, colorOf, onSelect, single = false }: BoardProps) 
         aria-label={t("board.label")}
         aria-busy={loading || undefined}
         style={cellVars(width / size)}
+        {...colorAttrs(state.colors)}
       >
         {Array.from({ length: size }, (_, row) => (
           <div key={row} className="sk-row" role="row">
