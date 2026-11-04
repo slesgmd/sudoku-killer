@@ -15,6 +15,7 @@ import { createTestServer, testBank } from "./helpers/server.ts";
 
 const URL_WITH_SECRET = "postgres://sudoku_killer:s3cr3t-value@127.0.0.1:5432/sudoku_killer";
 const HASH = `sha256:${"ab".repeat(32)}`;
+const WEB_ORIGIN = "https://sk.example";
 
 beforeAll(async () => {
   await testBank();
@@ -48,7 +49,11 @@ describe("server configuration", () => {
   });
 
   it("F12 production requires ACCESS_KEY_HASH, and reports a bad one by name, never by value", () => {
-    const production = { DATABASE_URL: URL_WITH_SECRET, NODE_ENV: "production" };
+    const production = {
+      DATABASE_URL: URL_WITH_SECRET,
+      NODE_ENV: "production",
+      ALLOWED_ORIGINS: WEB_ORIGIN,
+    };
     expect(() => loadConfig(production)).toThrow(/falta ACCESS_KEY_HASH/);
     const config = loadConfig({ ...production, ACCESS_KEY_HASH: HASH, TRUST_PROXY_HOPS: "1" });
     expect(config).toMatchObject({ production: true, accessKeyHash: HASH, trustProxyHops: 1 });
@@ -64,7 +69,11 @@ describe("server configuration", () => {
   });
 
   it("T-39.18 production without a key needs ACCESS_OPEN=true; with both, the key wins", () => {
-    const production = { DATABASE_URL: URL_WITH_SECRET, NODE_ENV: "production" };
+    const production = {
+      DATABASE_URL: URL_WITH_SECRET,
+      NODE_ENV: "production",
+      ALLOWED_ORIGINS: WEB_ORIGIN,
+    };
     // Una variable olvidada no abre el servidor.
     expect(() => loadConfig(production)).toThrow(/falta ACCESS_KEY_HASH/);
     expect(() => loadConfig({ ...production, ACCESS_OPEN: "false" })).toThrow(
@@ -132,6 +141,51 @@ describe("server configuration", () => {
     expect(() =>
       loadConfig({ DATABASE_URL: URL_WITH_SECRET, ALLOWED_ORIGINS: "javascript:alert(1)" }),
     ).toThrow(/ALLOWED_ORIGINS no es válida/);
+  });
+
+  it("T-41.1 production requires ALLOWED_ORIGINS, without falling back to the development origin", () => {
+    const production = {
+      DATABASE_URL: URL_WITH_SECRET,
+      NODE_ENV: "production",
+      ACCESS_OPEN: "true",
+    };
+    expect(() => loadConfig(production)).toThrow(/falta ALLOWED_ORIGINS/);
+    expect(() => loadConfig({ ...production, ALLOWED_ORIGINS: "" })).toThrow(
+      /falta ALLOWED_ORIGINS/,
+    );
+    expect(loadConfig({ ...production, ALLOWED_ORIGINS: WEB_ORIGIN }).allowedOrigins).toEqual([
+      WEB_ORIGIN,
+    ]);
+    // Verificación negativa: fuera de producción sigue el origen de desarrollo.
+    expect(loadConfig({ DATABASE_URL: URL_WITH_SECRET }).allowedOrigins).toEqual([DEV_ORIGIN]);
+  });
+
+  it("T-41.2 accepts several origins, punycode included, and refuses any that is not canonical ASCII", () => {
+    const env = { DATABASE_URL: URL_WITH_SECRET };
+    expect(
+      loadConfig({
+        ...env,
+        ALLOWED_ORIGINS: "https://web.example,https://xn--espaol-zwa.example",
+      }).allowedOrigins,
+    ).toEqual(["https://web.example", "https://xn--espaol-zwa.example"]);
+    // Verificación negativa: un navegador nunca enviaría estos valores como `Origin`, así que el
+    // servidor arrancaría y daría 403 a todos. El error nombra la variable, nunca el valor.
+    for (const bad of [
+      "https://español.example",
+      "https://web.example/sala",
+      "https://web.example?x=1",
+      "https://usuario:clave@web.example",
+      "https://web.example,https://español.example",
+    ]) {
+      let message = "";
+      try {
+        loadConfig({ ...env, ALLOWED_ORIGINS: bad });
+      } catch (error) {
+        message = error instanceof Error ? error.message : "";
+      }
+      expect(message, bad).toMatch(/ALLOWED_ORIGINS no es válida/);
+      for (const part of ["español", "sala", "clave"]) expect(message, bad).not.toContain(part);
+    }
   });
 });
 
@@ -204,7 +258,7 @@ describe("dev:lan origins (F10, only in development)", () => {
   it("--lan is refused in production", () => {
     expect(() =>
       loadConfig(
-        { DATABASE_URL: URL_WITH_SECRET, NODE_ENV: "production" },
+        { DATABASE_URL: URL_WITH_SECRET, NODE_ENV: "production", ALLOWED_ORIGINS: WEB_ORIGIN },
         { lan: true, interfaces: INTERFACES },
       ),
     ).toThrow(/solo para desarrollo/);

@@ -64,6 +64,19 @@ export function lanOrigins(
   return [...origins];
 }
 
+/**
+ * Si el valor es exactamente lo que un navegador envía como `Origin` (R-41): sin ruta ni credenciales
+ * y con el host en ASCII. Un dominio con «ñ» se escribe en punycode; con la «ñ» nunca coincidiría, y
+ * el servidor rechazaría a todos con 403.
+ */
+function isCanonicalOrigin(value: string): boolean {
+  try {
+    return new URL(value).origin === value;
+  } catch {
+    return false;
+  }
+}
+
 const originList = z
   .string()
   .transform((value) =>
@@ -72,7 +85,7 @@ const originList = z
       .map(normalizeOrigin)
       .filter((o) => o !== ""),
   )
-  .pipe(z.array(z.url({ protocol: /^https?$/ })).min(1));
+  .pipe(z.array(z.url({ protocol: /^https?$/ }).refine(isCanonicalOrigin)).min(1));
 
 const schema = z.object({
   DATABASE_URL: z.string().regex(/^postgres(?:ql)?:\/\/.+/),
@@ -145,6 +158,12 @@ export function loadConfig(
   if (production && ACCESS_KEY_HASH === undefined && ACCESS_OPEN !== "true") {
     throw new ConfigError(
       "Configuración inválida: falta ACCESS_KEY_HASH en producción (la clave de acceso del grupo). Para abrir el acceso a propósito, define ACCESS_OPEN=true (docs/seguridad.md S-02).",
+    );
+  }
+  // Sin la variable, el valor de desarrollo rechazaría a todos los navegadores (R-41).
+  if (production && env["ALLOWED_ORIGINS"] === undefined) {
+    throw new ConfigError(
+      "Configuración inválida: falta ALLOWED_ORIGINS en producción (los orígenes de la web, separados por comas, en punycode si llevan «ñ»).",
     );
   }
   return {
