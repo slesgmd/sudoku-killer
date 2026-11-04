@@ -33,7 +33,7 @@ Revisión del servidor de salas, del cliente y de las dependencias (2026-10-25),
 | S-06 | Baja | **Plazos del HTTP por defecto de Node** (60 s para las cabeceras): conexiones lentas a propósito ocupan sockets antes del handshake. El tope de S-01 acota el daño. | **Corregido:** `headersTimeout` y `requestTimeout` de 10 s (408), revisados cada segundo; no cortan un WebSocket abierto. Pruebas con verificación negativa. |
 | S-07 | Informativa | Sin TLS en desarrollo (`ws://`). | **Resuelto en el despliegue:** HTTPS y WSS con el TLS de Render; el build de producción solo acepta `VITE_SERVER_URL` con `wss://`. |
 | S-08 | Media | **Abuso de recursos del plan gratuito con el acceso abierto.** Sin clave, cualquiera puede abrir conexiones y crear salas, y consumir la CPU (0,1), la memoria (512 MB) y las horas de Render, o agotar el cómputo mensual de Neon (sección 7). | **Mitigado y aceptado:** límites por IP (sección 5) y revisión manual del cómputo la primera semana (sección 7). Frenan, no impiden: con muchas IP se pueden llenar las 500 salas. La salida es volver a acceso cerrado (ADR 0007). |
-| S-09 | Media | **Crecimiento de la base.** El registro solo agrega filas (ADR 0003 y 0004) y no hay purga. Sin topes, un bot con una IP escribiría unos 272 KB/s y llegaría al umbral de 700 MB en unos 41 min. | **Mitigado:** topes de eventos por partida y presupuesto de comandos por IP (sección 6), con aviso por correo al 70 % del plan. La purga queda en `docs/IDEAS_FUTURAS.md`. |
+| S-09 | Media | **Crecimiento de la base.** El registro solo agrega filas (ADR 0003 y 0004) y no hay purga. Sin topes, un bot con una IP escribiría unos 272 KB/s y llegaría a 700 MB de la consola de Neon en unos 41 min. | **Mitigado:** topes de eventos por partida y presupuesto de comandos por IP (sección 6), con aviso por correo según `DB_ALERT_BYTES` (sección 6). La purga queda en `docs/IDEAS_FUTURAS.md`. |
 | S-10 | Baja | **Un extraño que entra a una sala no puede ser expulsado (R-10).** Quien tenga el enlace o el código ocupa un asiento, puede poner notas grupales y fallar a propósito. No hay moderación ni cuentas. | **Limitación aceptada:** el grupo puede crear otra sala con otro código. El tope por jugador evita que agote el de los demás (T-40.17). |
 
 ## 3. Despliegue
@@ -132,13 +132,15 @@ Las redes móviles suelen compartir una IP entre muchos teléfonos. El límite d
 
 Son unos **340 B por evento**, 131 eventos por partida y 44 KB por partida. Son sobre todo las partidas de la beta cerrada, no un uso público. En la base local, una partida tuvo como máximo 17 notas y 21 cambios de conexión, y el escenario realista de la prueba de carga da unas 0,07 notas/s por jugador, unas 260 por hora.
 
-**Plan confirmado en la consola de Neon (2026-11-03):** gratuito, con 1 GB de almacenamiento, 100 horas de cómputo al mes y autoscaling hasta 2 CU. Uso actual: 36,36 MB y 0,78 CU-h. **El umbral de 700 MB (70 %) queda confirmado.**
+**Plan confirmado en la consola de Neon (2026-11-03):** gratuito, con 1 GB de almacenamiento, 100 horas de cómputo al mes y autoscaling hasta 2 CU. Uso actual: 36,36 MB y 0,78 CU-h. La referencia es el 70 % del plan: 700 MB **en la cifra de la consola**.
 
-**Las dos medidas de tamaño no son la misma.** La consola marca 36,36 MB y `db.total_bytes` (`pg_database_size`), 12,36 MB. El límite del plan se mide con la cifra de la consola, y el aviso del respaldo lee `db.total_bytes`. Hoy la diferencia es de unos 24 MB, y no se ha medido cómo crece. Por eso el aviso automático no reemplaza a la revisión de la consola (sección 7). Los tiempos de abajo parten de la cifra de la consola.
+**Las dos medidas de tamaño no son la misma.** La consola marca 36,36 MB y `db.total_bytes` (`pg_database_size`), 12,36 MB. El límite del plan se mide con la cifra de la consola, y el aviso del respaldo compara `DB_ALERT_BYTES` con `db.total_bytes` de ese respaldo, nunca con la consola. Por eso el umbral baja de 700 MB a **262144000 bytes (250 MiB, unos 262 MB decimales)**.
+
+No se ha medido cómo crece esa diferencia. Dos cuentas, solo orientativas: si se mantuviera en unos 24 MB, el aviso saltaría con unos 286 MB en la consola; si se mantuviera la proporción actual de 2,94 veces, con unos 771 MB. Las dos quedan por debajo de 1 GB. El aviso automático no reemplaza a la revisión de la consola (sección 7).
 
 **Modelo de una partida intensa:** rellenar y corregir a mano las notas de un tablero difícil, en las dos capas, da unos 1 500 eventos por jugador. El límite físico (3 teclas/s durante 1 h) son 10 800.
 
-**Capacidad hasta el umbral.** Quedan 663,64 MB (700 − 36,36). Al promedio medido de 44 KB son unas 15 000 partidas; con partidas de 6 intensas (unos 400 eventos, 136 KB), unas 4 900.
+**Capacidad hasta 700 MB de la consola.** Parte de los 36,36 MB de la consola: quedan 663,64 MB. No es el momento en que salta el aviso, que depende de `db.total_bytes`. Al promedio medido de 44 KB son unas 15 000 partidas; con partidas de 6 intensas (unos 400 eventos, 136 KB), unas 4 900.
 
 **Tipos del registro.** De los 10, tienen tope natural `match.started` y `match.ended` (uno), `cell.solved` (uno por celda), `hint.used` (las pistas del equipo), `cell.mistake` (las vidas de cada jugador) y `starter.changed` (una por salida). No lo tienen, y por eso llevan tope por partida:
 
@@ -152,7 +154,7 @@ Se eligió contar eventos por jugador frente a un tope de bytes por sala, que ca
 
 **Presupuesto por IP.** Un tope por partida no basta: con 3 errores, un bot pierde, vuelve al lobby y empieza otra, sin perder ritmo. Por eso, los comandos de quien está en una sala (salvo `sys.ping` y `presence.select`) tienen además un presupuesto: más de 12 000 en 10 min, espera de 5 min; más de 60 000 en 24 h, espera hasta el final de la ventana. Una casa de 6 con 5 partidas intensas al día son unos 45 000.
 
-Tiempo hasta llegar a los 700 MB, a 340 B por evento (la peor mezcla, con entradas y salidas, son unos 2 eventos por comando). Sin el presupuesto, una IP llegaría en unos 41 min (40 conexiones × 20 comandos/s × 340 B ≈ 272 KB/s).
+Tiempo hasta llegar a 700 MB en la cifra de la consola, desde sus 36,36 MB, a 340 B por evento (la peor mezcla, con entradas y salidas, son unos 2 eventos por comando). Sin el presupuesto, una IP llegaría en unos 41 min (40 conexiones × 20 comandos/s × 340 B ≈ 272 KB/s).
 
 | Escenario | Solo con notas | Peor mezcla |
 |---|---|---|
@@ -161,7 +163,7 @@ Tiempo hasta llegar a los 700 MB, a 340 B por evento (la peor mezcla, con entrad
 
 Los límites por IP no detienen a una red de bots; dan tiempo para reaccionar.
 
-**Cómo reaccionar.** Umbral de aviso: **70 % del plan** (700 MB). El respaldo semanal escribe `backup.total_bytes` y, si pasa el umbral, falla después de subir el respaldo, y GitHub avisa por correo (`DB_ALERT_BYTES` lo cambia). Al 85 %, revisar y decidir. Ese aviso es semanal y lee la medida más baja, así que puede llegar tarde en el peor caso; entre tanto se vigilan `events`, `eventsLocked` y `eventsDayLocked` en `metrics` y la consola de Neon. La salida inmediata es volver a acceso cerrado (ADR 0007). No hay purga en esta versión (ADR 0003).
+**Cómo reaccionar.** El umbral de aviso es la variable del repositorio `DB_ALERT_BYTES`, que `backup.yml` pasa al respaldo, hoy en 262144000. Sin ella, vale el valor por defecto del código, 700 000 000. El respaldo semanal escribe `backup.total_bytes` y, si llega al umbral, falla después de subir el respaldo, y GitHub avisa por correo. En la consola, al 70 % del plan (700 MB) se prepara una decisión y al 85 % se toma. El aviso es semanal y lee la medida más baja, así que puede llegar tarde en el peor caso; entre tanto se vigilan `events`, `eventsLocked` y `eventsDayLocked` en `metrics` y la consola de Neon. La salida inmediata es volver a acceso cerrado (ADR 0007). No hay purga en esta versión (ADR 0003).
 
 ## 7. Cómputo de Neon (S-08)
 
@@ -171,7 +173,7 @@ Los límites por IP no detienen a una red de bots; dan tiempo para reaccionar.
 1. En la consola de Neon: almacenamiento y CU-h usados.
 2. `db-admin status` (`db-admin.yml`, solo recuentos): `db.total_bytes`, `db.match_events_bytes`, `db.match_events` y `db.matches`.
 
-Si las CU-h suben mucho más rápido que las partidas (`db.matches`), hay que mirar `metrics` en busca de tráfico anómalo.
+Se anota la diferencia entre el almacenamiento de la consola y `db.total_bytes`: si crece, se revisa `DB_ALERT_BYTES` (sección 6). Si las CU-h suben mucho más rápido que las partidas (`db.matches`), hay que mirar `metrics` en busca de tráfico anómalo.
 
 **Opciones de emergencia.** Ninguna está implementada ni activa:
 - Volver a acceso cerrado poniendo otra vez `ACCESS_KEY_HASH` (ADR 0007). No cuesta nada y corta el tráfico ajeno, pero también deja fuera a quien no tenga la clave.

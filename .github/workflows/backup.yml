@@ -41,6 +41,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
           BACKUP_OUT: ${{ runner.temp }}/sudoku-killer.dump.age
+          DB_ALERT_BYTES: ${{ vars.DB_ALERT_BYTES }}
           RESTORE_DATABASE_URL: postgres://postgres@127.0.0.1:54329/postgres
           PG_BIN: /usr/lib/postgresql/18/bin
       - uses: actions/upload-artifact@v7
