@@ -299,6 +299,9 @@ Cuatro tipos:
 | Sesión en otra pestaña | Diálogo bloqueante | «La sala está abierta en otra pestaña» | `alertdialog` sin cierre; «Jugar en esta pestaña» reconecta y desplaza a la otra. |
 | Versión incompatible | Diálogo bloqueante | «Hay una versión nueva del juego» | Una sola acción, «Recargar»; recuerda que el asiento se conserva 2 minutos. |
 | Servidor no disponible | Banner de error + integrado | «El servidor no responde. Lo que hagas no se registrará hasta que vuelva. Reintentando…» | Bloquea todo lo que se envía. `role=alert` al aparecer. |
+| Demasiadas conexiones desde la red | Banner + integrado | «Demasiadas conexiones desde tu red. Tu asiento se conserva. Se vuelve a intentar solo en 0:27» | Cuenta atrás con cifras tabulares; reintenta solo (R-40). También en Entrar, como aviso del formulario. `role=status`. Nunca lleva a «Clave del grupo». |
+| Demasiados intentos | Aviso de error en el formulario | «Demasiados intentos. Desde tu red se probaron muchos códigos que no existen. Podrás volver a intentarlo en 0:27» (o «… se crearon muchas salas seguidas. Podrás crear otra en 0:27») | En Entrar, con la cuenta atrás; solo se inactiva el botón afectado y los datos se conservan (R-40). `role=alert`. |
+| Comprobando un enlace de invitación | Integrado | «Comprobando el enlace…» | Sin pedir nada hasta saber que el servidor pide clave (T-39.21). `role=status`. |
 | Demasiadas acciones | Aviso | «Vas muy rápido: la última acción no se envió. Espera un momento y repítela.» | Polite. Sin efecto en vidas ni puntos. |
 | Sala borrada | Aviso integrado | «La sala HPQ6NZ ya no existe. Las salas se borran tras 2 minutos sin nadie conectado.» | En Inicio, con ficha caducada: se descarta la ficha. En Entrar, error «sala inexistente». |
 | Acción no permitida | Aviso de error | «No se usó la pista: ya eres espectador y solo puedes escribir notas.» | Assertive. La acción salió antes del cambio de rol; sin efecto. |

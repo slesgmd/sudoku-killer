@@ -65,3 +65,10 @@ Formato de cada entrada: título, descripción breve, origen (fecha y contexto) 
 - **Descripción:** escalar P por dificultad, en proporción al puntaje típico de cada una, para que un descuido honesto pese menos en fácil (hoy un error equivale al 78 % del puntaje mediano de un jugador en fácil y al 41 % en experto). Se mantendría P > B·(w(5) + w(3)) donde haya celdas de nivel 5 que adivinar (`docs/puntuacion.md`, sección 3).
 - **Origen:** 2026-10-28, al cerrar la v1. En la beta nadie reportó problemas con la puntuación, así que la v1 se queda con P = 90.
 - **Notas:** exige una versión nueva de los parámetros (`params.v2.json`); las partidas ya jugadas conservan la suya (T-32.4). `scoring:report` da la tasa de errores y el puntaje por dificultad para decidirlo.
+
+## 10. Purga del registro y filtrado de apodos
+
+- **Descripción:** purgar partidas antiguas de `match_events`, con un tope de eventos más bajo si hace falta; filtrar caracteres invisibles de los apodos (S-03) y ofrecer alguna forma de expulsar a un jugador (S-10).
+- **Origen:** 2026-11-03, al abrir el acceso (`docs/seguridad.md` S-03, S-09 y S-10).
+- **Notas:** la purga cambia la decisión de conservar todo (ADR 0003), de la que depende volver a puntuar partidas pasadas. Filtrar apodos cambia la regla D2.
+

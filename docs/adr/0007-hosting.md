@@ -47,3 +47,13 @@ Fuentes consultadas el 2026-10-25 (resultados de búsqueda sobre las páginas of
   - **Riesgo encadenado:** GitHub desactiva los workflows programados de un repositorio público tras 60 días sin actividad en él. Si eso pasa, quedan 30 días antes de los 90 de Neon. La revisión mensual lo detecta; reactivarlo es un botón en la pestaña Actions.
 - **Despliegue desde `main`:** cada fusión que pase la CI se publica sola.
 - **Confirmado en el despliegue:** los nombres públicos de los dos servicios (en `render.yaml` y en los orígenes) y el número de proxies delante del servidor (`TRUST_PROXY_HOPS`, S-01).
+
+## Nota del 2026-11-03: acceso abierto
+
+El juego pasa a ser público: cualquiera con el enlace de una sala puede entrar. El contexto de arriba (un grupo cerrado) queda como la razón de la decisión original; el hosting no cambia.
+
+- **Variables:** `ACCESS_KEY_HASH` pasa a ser opcional. En producción, arrancar sin ella exige `ACCESS_OPEN=true` (`sync: false`, en el panel), para que una variable olvidada no abra el servidor. Con las dos, gana la clave.
+- **Cómo abrir:** con `ACCESS_OPEN=true` ya puesto, se borra `ACCESS_KEY_HASH` y Render redespliega. Si se borrara sin `ACCESS_OPEN`, el arranque falla y Render conserva el despliegue anterior.
+- **Cómo volver a acceso cerrado:** se pone otra vez `ACCESS_KEY_HASH`. No hace falta quitar `ACCESS_OPEN`.
+- **Prueba de humo:** `smoke.yml` recibe a mano el acceso esperado (`open` o `closed`).
+- **Riesgos del plan gratuito con el acceso abierto:** `docs/seguridad.md` S-08 y S-09.
