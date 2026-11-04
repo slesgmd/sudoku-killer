@@ -112,6 +112,8 @@ El servidor escribe una línea JSON por entrada en la salida estándar, que el p
 | `accessDenied` | Claves ofrecidas que no valen en el período (401 en `POST /access` o 4003, R-39): un número alto es alguien probando claves. La prueba de humo suma una por corrida (T-39.17). |
 | `accessMissing` | Comprobaciones y conexiones sin clave en el período (401 en `POST /access` o 4003, R-39): navegadores que todavía no la tienen; no cuentan para la espera por IP (T-39.7, T-39.11). En el log, cada una deja `websocket access key missing` (nivel info), y cada clave que no vale, `websocket access denied` (warn). |
 | `accessLocked` | Handshakes y `POST /access` con 429 en el período: una red que agotó sus 10 intentos y vuelve a ofrecer una clave (T-39.3). |
+| `joinLocked` / `createLocked` / `connectLocked` | Intentos rechazados en el período por los límites por IP de entradas fallidas, de creación y de aperturas (R-40). Cómo leerlos: `docs/seguridad.md` §5. |
+| `eventsLocked` | Comandos y entradas rechazados en el período por el presupuesto por IP o por los topes de eventos por partida (R-40, S-09): una persona real no debería llegar nunca. |
 | `addressUnknown` | Handshakes en el período cuya IP no se pudo saber (T-39.8): si no es 0, `TRUST_PROXY_HOPS` no coincide con lo que manda el proxy (el primer caso deja en el log `client address unknown` con el número de entradas de `X-Forwarded-For`, nunca su contenido). |
 
 En producción, estas líneas reemplazan la prueba de carga en el hosting (sección 8).
@@ -120,7 +122,7 @@ En producción, estas líneas reemplazan la prueba de carga en el hosting (secci
 
 En Render no se repite la prueba con bots (decisión del 2026-10-25); se observa la línea `metrics` de producción con partidas reales. Motivos:
 - El plan gratuito: 0,1 CPU y 512 MB compartidos con las partidas reales; una carga sintética mide sobre todo ese límite y puede tumbar la instancia del grupo.
-- No exponer la clave del grupo en GitHub: los bots necesitarían un secreto con ella en un repositorio público.
+- Mientras el servidor pida clave, no exponerla en GitHub: los bots necesitarían un secreto con ella en un repositorio público.
 - No mezclar partidas de bots con las reales, que analiza `scoring:report` (el registro de eventos es de solo agregar, ADR 0004).
 
 **Beta cerrada (2026-10-26 a 2026-10-28):** 15 personas jugaron durante tres días desde Android, iPhone, Windows y Linux, sin problemas de rendimiento para los jugadores. La corrida programada de esta prueba falló una vez por el tope por IP (sección 2) y quedó corregida.

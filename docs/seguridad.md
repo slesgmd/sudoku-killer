@@ -26,12 +26,15 @@ Revisión del servidor de salas, del cliente y de las dependencias (2026-10-25),
 | ID | Severidad | Hallazgo | Estado |
 |---|---|---|---|
 | S-01 | Media | **Sin tope de conexiones ni de salas por instancia.** Cualquiera que llegue al puerto podía abrir conexiones sin límite y crear una sala por conexión (cada sala vacía vive 120 s), hasta agotar la memoria del servidor (disponibilidad). | **Corregido:** tope de 2 000 conexiones abiertas (el handshake recibe 503) y de 500 salas (`room.create` recibe `server.unavailable`, un código que ya existía: el protocolo no cambia). Valores en SPEC §4.8. Pruebas S-01 en `ws.test.ts`, con verificación negativa. **Tope por IP** (con el despliegue, porque detrás del proxy del hosting la IP del cliente sale de una cabecera): 40 conexiones por IP (503), con la IP de `X-Forwarded-For` contando `TRUST_PROXY_HOPS` desde la derecha (lo que el cliente escribe a la izquierda no cuenta); `TRUST_PROXY_HOPS=1` en Render, confirmado en producción. Si estuviera mal, todos compartirían la IP del proxy: el tope de 40 sigue alcanzando para el grupo. **Tras el primer despliegue:** en Render, cada intento recibía 429 sin que el navegador hubiera mandado clave. Ahora solo cuenta una clave ofrecida que no vale (sin clave, siempre 4003), una IP que no se puede saber (cabecera ausente o corta, o una entrada que no es una IP) no comparte espera ni tope con nadie, y el 429 lleva `Retry-After` (T-39.7 a T-39.9). La línea `metrics` suma `accessLocked` y `addressUnknown` para confirmar `TRUST_PROXY_HOPS`. |
-| S-02 | Alta en internet; hoy sin exposición | **Sin autenticación: el código de sala es la única barrera.** El `Origin` lo falsifica cualquier script. Con conexiones sin límite por IP, se pueden probar códigos (31⁶ ≈ 887 millones; con 50 salas, uno de cada 18 millones acierta) y entrar a una sala ajena. | **Corregido** antes de exponer el juego: clave de acceso del grupo en el handshake (subprotocolo `sk.k.`), hash SHA-256 en `ACCESS_KEY_HASH` (obligatorio en producción), cierre 4003, 10 intentos por IP cada 10 min (después, 429), pantalla «Clave del grupo» y enlace de invitación `#k=` (SPEC R-39). Tras el despliegue, el cliente comprueba la clave con `POST /access` (cabecera, nunca la URL; CORS solo para `ALLOWED_ORIGINS`; mismos intentos y espera que el handshake) antes de abrir el WebSocket, porque el proxy de Render pierde el 4003 (T-39.12 a T-39.16). La clave tiene 80 bits si la genera `access:key`; una propia, al menos 12 caracteres. |
-| S-03 | Baja | **Apodos con caracteres invisibles o de control.** NFKC no quita los de ancho cero (U+200B) ni los de dirección (U+202E): «Ana» y «Ana​» son apodos distintos en la misma sala y se ven iguales (suplantación visual entre conocidos). | **Aceptado para la v1:** filtrarlos cambia la regla D2 del apodo (decisión de producto), y el juego es para un grupo cerrado de conocidos. React los muestra como texto, sin riesgo de inyección. En la beta cerrada (15 personas, 2026-10-26 a 2026-10-28) no hubo casos. |
+| S-02 | Alta en internet con datos sensibles; **aceptada** con el acceso abierto | **Sin autenticación: el código de sala es la única barrera.** El `Origin` lo falsifica cualquier script. Con conexiones sin límite por IP, se pueden probar códigos (31⁶ ≈ 887 millones; con 50 salas, uno de cada 18 millones acierta) y entrar a una sala ajena. | **Corregido** antes de exponer el juego: clave de acceso del grupo en el handshake (subprotocolo `sk.k.`), hash SHA-256 en `ACCESS_KEY_HASH` (obligatorio en producción), cierre 4003, 10 intentos por IP cada 10 min (después, 429), pantalla «Clave del grupo» y enlace de invitación `#k=` (SPEC R-39). Tras el despliegue, el cliente comprueba la clave con `POST /access` (cabecera, nunca la URL; CORS solo para `ALLOWED_ORIGINS`; mismos intentos y espera que el handshake) antes de abrir el WebSocket, porque el proxy de Render pierde el 4003 (T-39.12 a T-39.16). La clave tiene 80 bits si la genera `access:key`; una propia, al menos 12 caracteres. **Reabierto y aceptado (2026-11-03):** el juego pasa a ser público a propósito, así que la clave es opcional. Se acepta porque una sala no guarda datos personales (apodo sin cuenta) y entrar a una ajena solo permite jugar en ella. Mitigaciones: límites por IP (sección 5), `ACCESS_OPEN=true` obligatorio para arrancar sin clave en producción, y la vuelta a acceso cerrado poniendo otra vez `ACCESS_KEY_HASH` (ADR 0007). |
+| S-03 | Baja | **Apodos con caracteres invisibles o de control.** NFKC no quita los de ancho cero (U+200B) ni los de dirección (U+202E): «Ana» y «Ana​» son apodos distintos en la misma sala y se ven iguales (suplantación visual entre conocidos). | **Aceptado:** filtrarlos cambia la regla D2 del apodo (decisión de producto). React los muestra como texto, sin riesgo de inyección. El motivo original (un grupo cerrado de conocidos) dejó de valer con el acceso abierto; se mantiene porque el apodo no identifica a nadie y una sala dura lo que dura la partida. En la beta cerrada (15 personas, 2026-10-26 a 2026-10-28) no hubo casos. Filtrarlos queda en `docs/IDEAS_FUTURAS.md`. |
 | S-04 | Baja | **`pnpm audit`: esbuild ≤ 0.24.2 (GHSA-67mh-4wv8-2f99, moderada en el aviso)**, por `drizzle-kit > @esbuild-kit/core-utils`. La falla es del servidor de desarrollo de esbuild, que drizzle-kit no levanta; solo se usa en `db:generate`, en la máquina de desarrollo. | **Aceptado:** no afecta a producción ni al build. Se revisa cuando drizzle-kit deje de depender de `@esbuild-kit` (un `override` podría romperlo, porque está abandonado); las alertas de Dependabot avisan si cambia la severidad. |
 | S-05 | Baja | **La ficha vive en `localStorage`**: un XSS la podría leer. Hoy no hay sumideros de HTML ni contenido de terceros. | **Corregido:** el sitio estático sirve una CSP restrictiva (`default-src 'none'`; scripts, estilos, imágenes y fuentes solo del sitio; `connect-src` solo del sitio y del servidor de salas; `frame-ancestors 'none'`, `base-uri` y `form-action` en `'none'`), HSTS (en `onrender.com`, Render la reemplaza por la suya, más estricta: diez años, `includeSubdomains` y `preload`; la prueba de humo acepta una igual o más estricta), `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, COOP y `Permissions-Policy`. Una sola fuente (`apps/web/scripts/security-headers.ts`) para `render.yaml`, `vite preview` y `smoke`; todas las E2E fallan ante una violación de la CSP, con una prueba de control (un script en línea bloqueado). Un XSS no podría leer y enviar la ficha a otro sitio. |
 | S-06 | Baja | **Plazos del HTTP por defecto de Node** (60 s para las cabeceras): conexiones lentas a propósito ocupan sockets antes del handshake. El tope de S-01 acota el daño. | **Corregido:** `headersTimeout` y `requestTimeout` de 10 s (408), revisados cada segundo; no cortan un WebSocket abierto. Pruebas con verificación negativa. |
 | S-07 | Informativa | Sin TLS en desarrollo (`ws://`). | **Resuelto en el despliegue:** HTTPS y WSS con el TLS de Render; el build de producción solo acepta `VITE_SERVER_URL` con `wss://`. |
+| S-08 | Media | **Abuso de recursos del plan gratuito con el acceso abierto.** Sin clave, cualquiera puede abrir conexiones y crear salas, y consumir la CPU (0,1), la memoria (512 MB) y las horas de Render, o agotar el cómputo mensual de Neon. | **Mitigado y aceptado:** límites por IP (sección 5). Frenan, no impiden: con muchas IP se pueden llenar las 500 salas. La salida es volver a acceso cerrado (ADR 0007). |
+| S-09 | Media | **Crecimiento de la base.** El registro solo agrega filas (ADR 0003 y 0004) y no hay purga. Sin topes, un bot con una IP escribiría unos 248 KB/s y llenaría 1 GB en unos 70 min. | **Mitigado:** topes de eventos por partida y presupuesto de comandos por IP (sección 6), con aviso por correo al 70 % del plan. La purga queda en `docs/IDEAS_FUTURAS.md`. |
+| S-10 | Baja | **Un extraño que entra a una sala no puede ser expulsado (R-10).** Quien tenga el enlace o el código ocupa un asiento, puede poner notas grupales y fallar a propósito. No hay moderación ni cuentas. | **Limitación aceptada:** el grupo puede crear otra sala con otro código. El tope por jugador evita que agote el de los demás (T-40.17). |
 
 ## 3. Despliegue
 
@@ -61,4 +64,86 @@ Revisión del servidor de salas, del cliente y de las dependencias (2026-10-25),
 - **Por qué no, por ahora:**
   - Las versiones nuevas pueden romper cosas fijadas a propósito: TypeScript está en 6.0.x porque `typescript-eslint` no admite la 7 (ADR 0001), y `@playwright/test` debe coincidir con el navegador instalado. Hay que ignorar esas dependencias en `dependabot.yml` o revisar cada PR.
   - Un PR automático es una vía de cambios de código de terceros; sin fusión automática, el riesgo es el de cualquier PR revisado.
-- **Costo de no activarlas:** depender de las alertas y de `pnpm audit`, razonable en un proyecto de un grupo cerrado con pocas dependencias de ejecución (`ws`, `pg`, `drizzle-orm`, `zod` y React).
+- **Costo de no activarlas:** depender de las alertas y de `pnpm audit`, razonable en un proyecto pequeño, sin datos personales y con pocas dependencias de ejecución (`ws`, `pg`, `drizzle-orm`, `zod` y React).
+
+## 5. Límites por IP (S-02, S-08)
+
+Valores y reglas en SPEC §4.8 y R-40. Son permisivos a propósito: no deben molestar a personas reales.
+
+| Límite | Umbral | Espera | Por qué ese valor |
+|---|---|---|---|
+| Joins fallidos, ráfaga | Más de 12 en 10 s | 30 s | Con un enlace caducado, 6 personas en una casa fallan y reintentan una vez: 12. Subirlo de 8 a 12 no ayuda a un bot, porque el total lo limita la ventana larga. |
+| Joins fallidos, sostenido | Más de 30 en 10 min | 5 min | Tres fallos por minuto, sostenidos, ya no son un error humano. |
+| `room.create`, ráfaga | Más de 6 en 10 s | 30 s | Seis personas creando sala a la vez no se bloquean. |
+| `room.create`, sostenido | Más de 15 en 10 min | 5 min | Una sala se vuelve a usar con «Volver al lobby»: nadie crea 15 en 10 min. |
+| Aperturas de conexión | Más de 40 en 10 s | 30 s | Una ronda de reconexión son como máximo 40, por el tope de abiertas. |
+
+**Las reconexiones cuentan como aperturas.** El handshake no dice si lo es, y descontarlas después permitiría abusar con una ficha válida. Si ocurriera, el cliente reintenta solo y el asiento dura 120 s, más que los 30 s de espera. Los joins con ficha válida nunca cuentan ni esperan.
+
+### Adivinar códigos
+
+Hay 31⁶ = 887 503 681 códigos. Sin límites, una IP llega a 800 intentos/s (40 conexiones × 20 comandos/s). Con ellos, un ciclo son 31 intentos en unos 360 s (dos esperas de 30 s y una de 5 min): 7 440 intentos al día por IP.
+
+| Escenario | Intentos por acierto | Sin límites | Con límites |
+|---|---|---|---|
+| 1 IP, 50 salas activas | 17,75 millones | 6,2 h | 6,5 años |
+| 1 IP, 500 salas activas | 1,78 millones | 37 min | 239 días |
+| 13 IP, 50 salas activas | 17,75 millones | 28 min | 184 días |
+| 13 IP, 500 salas activas (peor caso de esta tabla) | 1,78 millones | menos de 3 min | **18 días** |
+
+Con muchas más IP baja en proporción: los límites por IP no detienen a una red de bots. Un acierto solo da un asiento en una sala ajena (S-10).
+
+### Llenar las 500 salas
+
+Una IP crea como máximo 15 salas por ciclo (6 + 6 + 3 en unos 20 s, y la 16.ª dispara la espera de 5 min): unos 320 s por ciclo, 2,8 salas/min. Una sala vacía vive 120 s, y una conexión solo sostiene una sala.
+
+| Forma | IP necesarias | Tiempo |
+|---|---|---|
+| Sosteniendo cada sala con su conexión (40 abiertas por IP) | 13 | **Unos 14 min** por IP para llegar a 38 o 39 salas, y sigue llena mientras sostenga las conexiones. |
+| Sin sostenerlas, de golpe | 34 | Llega a 500 en unos 20 s, pero las salas vencen a los 120 s y la siguiente tanda tarda 320 s: el tope se llena solo a ratos. |
+| Sin sostenerlas, siempre lleno | Unas 89 | 500 salas / 120 s = 250 salas/min, a 2,8 por IP. |
+
+Sin límites, 13 IP lo lograban en segundos. Con el tope lleno, `room.create` recibe `server.unavailable` hasta que se libere una sala; las partidas en curso no se ven afectadas.
+
+### Revisión a las 48 h con el servidor abierto
+
+En la línea `metrics` (`docs/carga.md` §7) se revisan `joinLocked`, `createLocked`, `connectLocked` y `addressUnknown`. Los valores son una guía inicial, sin datos reales todavía.
+
+| Campo | Normal | Indica personas reales bloqueadas | Indica un bot | Qué hacer |
+|---|---|---|---|---|
+| `joinLocked` | 0, con algún caso aislado | Valores bajos (1 a 5 por minuto) en varios momentos del día, con `playersConnected` > 0, o alguien avisa | Decenas o cientos por minuto, sostenidos, con `connections` creciendo | Personas: subir la ráfaga en `IP_LIMITS`. Bot: mantener. |
+| `createLocked` | 0 | Cualquier valor repetido a horas de juego: nadie crea tantas salas | Sostenido, con `rooms` subiendo | Igual. |
+| `connectLocked` | 0 | Mayor que 0 con `connections` / `addresses` > 10: muchas personas tras una IP compartida, como una red móvil | Mayor que 0 con pocas conexiones abiertas y aperturas continuas | Personas: subir el umbral **y** el tope de 40 abiertas. |
+| `addressUnknown` | 0 | No aplica: nadie se bloquea, pero esas conexiones **no tienen límites** | No aplica | Revisar `TRUST_PROXY_HOPS`. |
+
+Las redes móviles suelen compartir una IP entre muchos teléfonos. El límite de joins y el de creación solo suman fallos y salas creadas, así que el uso normal no los acerca; el de aperturas y el tope de 40 abiertas son los primeros que notarían una IP muy compartida.
+
+## 6. Crecimiento de la base (S-09)
+
+**Medido (2026-11-03).** En la base local, 406 eventos de 10 partidas: 243 B por fila, unos 310 B con el índice. Esas partidas tienen pocas notas (como máximo 17 notas y 21 cambios de conexión), así que no representan una partida intensa. El escenario realista de la prueba de carga da unas 0,07 notas/s por jugador, unas 260 por hora.
+
+**Modelo de una partida intensa:** rellenar y corregir a mano las notas de un tablero difícil, en las dos capas, da unos 1 500 eventos por jugador. El límite físico (3 teclas/s durante 1 h) son 10 800.
+
+**Capacidad.** Una partida de 6 con unos 400 eventos ocupa unos 124 KB: unas 8 000 partidas por GB. Son cifras preliminares; se reemplazan por las reales con `db-admin status` (`db.total_bytes`, `db.match_events_bytes`, `db.match_events`, `db.matches`).
+
+**Tipos del registro.** De los 10, tienen tope natural `match.started` y `match.ended` (uno), `cell.solved` (uno por celda), `hint.used` (las pistas del equipo), `cell.mistake` (las vidas de cada jugador) y `starter.changed` (una por salida). No lo tienen, y por eso llevan tope por partida:
+
+| Evento | Tope | Frente a lo medido |
+|---|---|---|
+| `note.op` y `settings.changed` | 5 000 por jugador | 3 veces la partida intensa. Hacen falta 28 min seguidos a 3 teclas/s. |
+| `player.joined` | 24 por partida | 4 veces los 6 asientos. |
+| `player.connection` | 500 por jugador | Más de 20 veces lo medido: 250 cortes y vueltas. |
+
+Se eligió contar eventos por jugador frente a un tope de bytes por sala, que castigaría a todos por uno, y no se reconstruye tan fácil tras un reinicio. Los contadores salen del registro al reconstruir la partida (T-40.20); el reductor y la forma del registro no cambian.
+
+**Presupuesto por IP.** Un tope por partida no basta: con 3 errores, un bot pierde, vuelve al lobby y empieza otra, sin perder ritmo. Por eso, los comandos de quien está en una sala (salvo `sys.ping` y `presence.select`) tienen además un presupuesto: más de 12 000 en 10 min, espera de 5 min; más de 60 000 en 24 h, espera hasta el final de la ventana. Una casa de 6 con 5 partidas intensas al día son unos 45 000.
+
+| Escenario | Solo con notas | Peor mezcla (entradas y salidas, ~620 B por comando) |
+|---|---|---|
+| 1 IP | 18,6 MB/día: 1 GB en 54 días | 37 MB/día: 1 GB en 27 días |
+| 13 IP | 242 MB/día: 1 GB en 4 días | 484 MB/día: 1 GB en 2 días |
+
+Los límites por IP no detienen a una red de bots; dan tiempo para reaccionar.
+
+**Cómo reaccionar.** Umbral de aviso: **70 % del plan** (700 MB, con el 1 GB de ADR 0007; se confirma en la consola de Neon). El respaldo semanal escribe `backup.total_bytes` y, si pasa el umbral, falla después de subir el respaldo, y GitHub avisa por correo (`DB_ALERT_BYTES` lo cambia). Al 85 %, revisar y decidir. Un aviso semanal puede llegar tarde en el peor caso; entre tanto se vigilan `events` y `eventsLocked` en `metrics`. La salida inmediata es volver a acceso cerrado (ADR 0007). No hay purga en esta versión (ADR 0003).
+

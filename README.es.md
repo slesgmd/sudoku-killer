@@ -93,6 +93,7 @@ Todas las decisiones están indexadas en [docs/adr/](docs/adr/README.md).
 
 - **El servidor gratuito se duerme** tras 15 minutos sin tráfico y tarda alrededor de un minuto en despertar; la web sigue en pie y muestra el aviso «Despertando el servidor…» ([ADR 0007](docs/adr/0007-hosting.md)).
 - **La puntuación se calibró con simulación** y se mantuvo sin cambios tras la beta cerrada. El jugador veloz todavía gana alrededor del 57 % de los duelos contra un jugador lógico igual de rápido, y escalar la penalización por error según la dificultad queda como trabajo futuro; el registro de eventos permite recalcular las partidas pasadas sin volver a jugarlas ([docs/puntuacion.md](docs/puntuacion.md#10-limitaciones-conocidas)).
+- **El acceso abierto tiene sus límites.** No hay cuentas ni moderación, un extraño que entra a una sala no puede ser expulsado y el código de sala es la única barrera entre salas. Los límites por IP frenan a una sola fuente, no a una red de bots, y un plan gratuito puede quedarse sin almacenamiento o cómputo en la base; volver a acceso cerrado es una sola variable de entorno ([docs/seguridad.md](docs/seguridad.md)).
 - **Una sola instancia.** Las salas vivas están en memoria detrás de la interfaz `RoomStore`; escalar exigiría un almacén compartido y afinidad por sala.
 - **Las cifras de carga son locales.** En producción el servidor se vigila con su línea de métricas en el log, en lugar de una carga sintética sobre la instancia gratuita; la beta cerrada no tuvo problemas de rendimiento, pero la saturación en una red lenta real no se probó ([docs/carga.md](docs/carga.md)).
 - **Interfaz solo en español**, con cada texto detrás de una clave de i18n; todavía sin tema oscuro.
@@ -144,7 +145,7 @@ tests/         pruebas del repositorio (reglas de lint, configuración del despl
 
 ## Despliegue
 
-El juego corre en privado para un grupo cerrado: el servidor de salas en un servicio web gratuito de Render, el sitio estático en Render y PostgreSQL en Neon, todo descrito en [render.yaml](render.yaml). Cada conexión necesita la clave de acceso del grupo (el servidor solo tiene configurado su hash SHA-256); el sitio envía una CSP estricta y cabeceras de seguridad, y los respaldos semanales cifrados se comprueban con un simulacro de restauración ([ADR 0007](docs/adr/0007-hosting.md), [docs/seguridad.md](docs/seguridad.md)). Este README no enlaza a la instancia en producción.
+El servidor de salas corre en un servicio web gratuito de Render, el sitio estático en Render y PostgreSQL en Neon, todo descrito en [render.yaml](render.yaml). El acceso es abierto: cualquiera con el enlace de una sala puede entrar, con límites por IP permisivos contra ráfagas y abusos. Una clave de acceso opcional puede volver a cerrar el servidor (solo tiene configurado su hash SHA-256), y arrancar sin ella en producción exige un `ACCESS_OPEN=true` explícito. El sitio envía una CSP estricta y cabeceras de seguridad, y los respaldos semanales cifrados se comprueban con un simulacro de restauración ([ADR 0007](docs/adr/0007-hosting.md), [docs/seguridad.md](docs/seguridad.md)). Este README no enlaza a la instancia en producción.
 
 ## Documentación
 

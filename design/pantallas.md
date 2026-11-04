@@ -48,6 +48,8 @@ Todas las pantallas fuera de la partida comparten la **cabecera** (`.apphead`): 
 | Sala llena | Aviso de error en el formulario, asertivo (`room.full`); los datos se conservan |
 | Apodo en uso | Error de campo (`nickname.taken`); incluye apodos reservados durante la partida |
 | Fallo de conexión | Aviso en el formulario con «Reintentar»; nada se pierde |
+| Demasiados intentos | Aviso de error con cuenta atrás (`rate_limited`, R-40); solo se inactiva el botón afectado y los datos se conservan |
+| Demasiadas conexiones | Aviso con cuenta atrás; reintenta solo, sin «Reintentar» (503, R-40) |
 | Cargando | Campos y botones inactivos, «Entrando…» con puntos, `aria-busy` |
 
 ### 1.3 Lobby (sala de espera)

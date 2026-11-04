@@ -93,6 +93,7 @@ All decisions are indexed in [docs/adr/](docs/adr/README.md).
 
 - **The free server sleeps** after 15 minutes without traffic and takes about a minute to wake up; the web app stays up and shows a "waking up the server" notice ([ADR 0007](docs/adr/0007-hosting.md)).
 - **Scoring was calibrated by simulation** and kept unchanged after the closed beta. The fast player still wins about 57% of duels against an equally fast logical player, and scaling the mistake penalty by difficulty is listed as future work; the event log allows rescoring past matches without replaying them ([docs/puntuacion.md](docs/puntuacion.md#10-limitaciones-conocidas)).
+- **Open access has limits of its own.** There are no accounts or moderation, a stranger who joins a room cannot be removed, and the room code is the only barrier between rooms. The per-address limits slow down a single source, not a botnet, and a free plan can run out of database storage or compute; going back to closed access takes one environment variable ([docs/seguridad.md](docs/seguridad.md)).
 - **Single instance.** Live rooms are kept in memory behind a `RoomStore` interface; scaling out would need a shared store and room affinity.
 - **Load figures are local.** In production the server is watched through its metrics log line instead of a synthetic load on the free instance; the closed beta ran without performance problems, but saturation on a real slow network has not been tested ([docs/carga.md](docs/carga.md)).
 - **Spanish-only interface**, with every string behind an i18n key; no dark theme yet.
@@ -144,7 +145,7 @@ tests/         repository-level tests (lint rules, deployment config)
 
 ## Deployment
 
-The game runs privately for a closed group: the room server on a free Render web service, the static site on Render, and PostgreSQL on Neon, all described in [render.yaml](render.yaml). Every connection needs the group's access key (only its SHA-256 hash is configured on the server); the site sends a strict CSP and security headers; and weekly encrypted backups are checked with a restore drill ([ADR 0007](docs/adr/0007-hosting.md), [docs/seguridad.md](docs/seguridad.md)). This README does not link to the live instance.
+The room server runs on a free Render web service, the static site on Render, and PostgreSQL on Neon, all described in [render.yaml](render.yaml). Access is open: anyone with a room link can join, with permissive per-address limits against bursts and abuse. An optional access key can close the server again (only its SHA-256 hash is configured on the server), and starting without one in production requires an explicit `ACCESS_OPEN=true`. The site sends a strict CSP and security headers, and weekly encrypted backups are checked with a restore drill ([ADR 0007](docs/adr/0007-hosting.md), [docs/seguridad.md](docs/seguridad.md)). This README does not link to the live instance.
 
 ## Documentation
 
