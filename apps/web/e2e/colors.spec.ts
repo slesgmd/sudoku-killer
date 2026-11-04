@@ -6,9 +6,11 @@
 // - el panel cabe a 360, 640 × 360 y 1280 px (T-42.9), y sus radios funcionan con el teclado (T-42.4);
 // - las transiciones viven solo en Ajustes y respetan el movimiento reducido (T-42.19);
 // - la negrita no mueve las notas (T-44.3) y usa el peso real de la fuente (T-44.4).
+import { inflateSync } from "node:zlib";
 import type { Page } from "@playwright/test";
+import { digitBit } from "@sudoku-killer/engine/model";
 import { cell, createRoom, expect, joinRoom, test, type GameServer } from "./fixtures.ts";
-import { at, emptyCells, matchOf, place, start, wrongDigit } from "./game.ts";
+import { at, emptyCells, matchOf, place, playerOf, start, wrongDigit } from "./game.ts";
 
 const DESKTOP = { width: 1280, height: 720 };
 const PHONE = { width: 360, height: 640 };
@@ -747,39 +749,396 @@ for (const scale of [2, 3]) {
   });
 }
 
-/** Cuántos píxeles de la tinta de la suma tapan las notas 1 y 2 de una celda. */
-async function sumCovered(decoder: Page, sumShot: Buffer, noteShot: Buffer) {
-  return decoder.evaluate(
-    async ([sumData, noteData]) => {
-      const mask = async (data: string) => {
-        const response = await fetch(`data:image/png;base64,${data}`);
-        const image = await createImageBitmap(await response.blob());
-        const canvas = new OffscreenCanvas(image.width, image.height);
-        const context = canvas.getContext("2d");
-        if (!context) throw new Error("No canvas");
-        context.drawImage(image, 0, 0);
-        const pixels = context.getImageData(0, 0, image.width, image.height).data;
-        const on: boolean[] = [];
-        for (let i = 0; i < pixels.length; i += 4)
-          on.push(
-            (pixels[i] ?? 0) > 200 && (pixels[i + 1] ?? 0) < 130 && (pixels[i + 2] ?? 0) < 130,
-          );
-        return on;
-      };
-      const sum = await mask(sumData);
-      const note = await mask(noteData);
-      const ink = sum.filter(Boolean).length;
-      const covered = sum.filter((on, i) => on && note[i]).length;
-      return { ink, covered };
-    },
-    [sumShot.toString("base64"), noteShot.toString("base64")] as const,
+// Suma tapada por las notas (T-42.20). Mide todo el tablero sin repintar el texto: solo alterna
+// `visibility`, porque el suavizado depende del color. Cada captura cubre el tablero entero, y sus
+// píxeles se reparten entre las celdas por su centro.
+
+const BOARD_CELLS = 81;
+const BOARD_SIZE = 9;
+const INK_COVERAGE = 0.5;
+const INFO_COVERAGE = 0.25;
+const MIN_CHANNEL_SPAN = 32;
+const SUM_TEXTS = ["12", "16", "17", "21", "22"] as const;
+const NOTE_WEIGHTS = ["400", "800"] as const;
+const MEASURED_WIDTHS = [PHONE, { width: 375, height: 667 }] as const;
+const TOTAL_CASES = 40;
+
+interface Image {
+  readonly width: number;
+  readonly height: number;
+  /** Cuatro bytes por píxel: rojo, verde, azul y alfa. */
+  readonly data: Uint8Array;
+}
+
+interface TextColor {
+  readonly rgb: readonly number[];
+  readonly alpha: number;
+}
+
+/** Tinta de la suma y píxeles tapados de cada celda, con un umbral de cobertura. */
+interface InkLevel {
+  readonly ink: Int32Array;
+  readonly covered: Int32Array;
+}
+
+interface CaseResult {
+  readonly strict: InkLevel;
+  readonly info: InkLevel;
+  readonly outsideInk: number;
+  readonly recountGap: number;
+  readonly differsFromBoth: number;
+  readonly noValidChannel: number;
+}
+
+/** Decodifica una captura PNG sin gestión de color: los bytes son los que dibujó el navegador. */
+function decodePng(png: Buffer): Image {
+  const width = png.readUInt32BE(16);
+  const height = png.readUInt32BE(20);
+  const channels = png[25] === 6 ? 4 : 3;
+  if (png[24] !== 8 || png[28] !== 0 || (png[25] !== 6 && png[25] !== 2)) {
+    throw new Error("Unexpected PNG format");
+  }
+  const parts: Buffer[] = [];
+  for (let at = 8; at + 8 <= png.length;) {
+    const length = png.readUInt32BE(at);
+    if (png.toString("latin1", at + 4, at + 8) === "IDAT") {
+      parts.push(png.subarray(at + 8, at + 8 + length));
+    }
+    at += 12 + length;
+  }
+  const raw = inflateSync(Buffer.concat(parts));
+  const stride = width * channels;
+  const data = new Uint8Array(width * height * 4);
+  let previous = new Uint8Array(stride);
+  let at = 0;
+  for (let y = 0; y < height; y++) {
+    const filter = raw[at++] ?? 0;
+    const line = new Uint8Array(stride);
+    for (let x = 0; x < stride; x++) {
+      const left = x >= channels ? (line[x - channels] ?? 0) : 0;
+      const up = previous[x] ?? 0;
+      const corner = x >= channels ? (previous[x - channels] ?? 0) : 0;
+      const value = raw[at++] ?? 0;
+      let predicted = 0;
+      if (filter === 1) predicted = left;
+      else if (filter === 2) predicted = up;
+      else if (filter === 3) predicted = (left + up) >> 1;
+      else if (filter === 4) {
+        const estimate = left + up - corner;
+        const toLeft = Math.abs(estimate - left);
+        const toUp = Math.abs(estimate - up);
+        const toCorner = Math.abs(estimate - corner);
+        if (toLeft <= toUp && toLeft <= toCorner) predicted = left;
+        else predicted = toUp <= toCorner ? up : corner;
+      }
+      line[x] = (value + predicted) & 255;
+    }
+    for (let x = 0; x < width; x++) {
+      const target = 4 * (x + y * width);
+      data[target] = line[x * channels] ?? 0;
+      data[target + 1] = line[x * channels + 1] ?? 0;
+      data[target + 2] = line[x * channels + 2] ?? 0;
+      data[target + 3] = channels === 4 ? (line[x * channels + 3] ?? 0) : 255;
+    }
+    previous = line;
+  }
+  return { width, height, data };
+}
+
+/** El intervalo semiabierto [edge, siguiente) que contiene la posición; -1 si queda fuera. */
+function intervalOf(edges: readonly number[], position: number): number {
+  for (let index = 0; index + 1 < edges.length; index++) {
+    if ((edges[index] ?? 0) <= position && position < (edges[index + 1] ?? 0)) return index;
+  }
+  return -1;
+}
+
+/** A qué intervalo va el centro de cada píxel de una captura que empieza en `start` (CSS). */
+function pixelIntervals(edges: readonly number[], start: number, pixels: number, scale: number) {
+  return Array.from({ length: pixels }, (_, pixel) =>
+    intervalOf(edges, start + (pixel + 0.5) / scale),
   );
 }
 
-// Los máximos medidos en todo el tablero, por escala (docs/diseno.md §2.5).
-for (const [scale, limit] of [
-  [3, 4.6],
-  [2, 5.8],
+function parseColor(css: string): TextColor {
+  const match = /^rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)$/.exec(css);
+  if (!match) throw new Error(`Unexpected text colour: ${css}`);
+  return {
+    rgb: [Number(match[1]), Number(match[2]), Number(match[3])],
+    alpha: match[4] === undefined ? 1 : Number(match[4]),
+  };
+}
+
+/**
+ * Cuánto cubre el texto un píxel, en el canal de mayor cobertura: |captura − base| / |color − base|.
+ * Con transparencia, el color es el final, compuesto sobre la base. Ignora los canales con una
+ * diferencia menor que 32, y devuelve null si no queda ninguno.
+ */
+function coverage(image: Uint8Array, base: Uint8Array, at: number, text: TextColor): number | null {
+  let best: number | null = null;
+  for (let channel = 0; channel < 3; channel++) {
+    const under = base[at + channel] ?? 0;
+    const final = text.alpha * (text.rgb[channel] ?? 0) + (1 - text.alpha) * under;
+    const span = Math.abs(final - under);
+    if (span < MIN_CHANNEL_SPAN) continue;
+    const value = Math.abs((image[at + channel] ?? 0) - under) / span;
+    if (best === null || value > best) best = value;
+  }
+  return best;
+}
+
+function differs(first: Uint8Array, second: Uint8Array, at: number): boolean {
+  return (
+    first[at] !== second[at] || first[at + 1] !== second[at + 1] || first[at + 2] !== second[at + 2]
+  );
+}
+
+const emptyLevel = (): InkLevel => ({
+  ink: new Int32Array(BOARD_CELLS),
+  covered: new Int32Array(BOARD_CELLS),
+});
+
+/** Un recuento aparte de la tinta de toda la captura, sin pasar por el reparto entre celdas. */
+function countInk(image: Image, base: Image, text: TextColor): number {
+  let count = 0;
+  for (let at = 0; at < image.data.length; at += 4) {
+    if (!differs(image.data, base.data, at)) continue;
+    const value = coverage(image.data, base.data, at, text);
+    if (value !== null && value >= INK_COVERAGE) count++;
+  }
+  return count;
+}
+
+function analyzeCase(
+  shots: {
+    readonly base: Image;
+    readonly sum: Image;
+    readonly note: Image;
+    readonly both: Image;
+  },
+  columns: readonly number[],
+  rows: readonly number[],
+  colors: { readonly sum: TextColor; readonly note: TextColor },
+): CaseResult {
+  const base = shots.base.data;
+  const sum = shots.sum.data;
+  const note = shots.note.data;
+  const both = shots.both.data;
+  const strict = emptyLevel();
+  const info = emptyLevel();
+  let outsideInk = 0;
+  let outsideSum = 0;
+  let differsFromBoth = 0;
+  let noValidChannel = 0;
+  for (let y = 0; y < shots.base.height; y++) {
+    const row = rows[y] ?? -1;
+    for (let x = 0; x < shots.base.width; x++) {
+      const column = columns[x] ?? -1;
+      const at = 4 * (x + y * shots.base.width);
+      const sumChanged = differs(sum, base, at);
+      const noteChanged = differs(note, base, at);
+      // La captura con las dos debe ser idéntica a la que tiene el único texto de ese píxel.
+      if (!sumChanged && !noteChanged) {
+        if (differs(both, base, at)) differsFromBoth++;
+        continue;
+      }
+      if (sumChanged !== noteChanged && differs(both, sumChanged ? sum : note, at)) {
+        differsFromBoth++;
+      }
+      const sumCover = sumChanged ? coverage(sum, base, at, colors.sum) : 0;
+      const noteCover = noteChanged ? coverage(note, base, at, colors.note) : 0;
+      if (sumCover === null || noteCover === null) {
+        noValidChannel++;
+        continue;
+      }
+      if (row < 0 || column < 0) {
+        if (sumCover >= INK_COVERAGE) outsideSum++;
+        if (sumCover >= INK_COVERAGE || noteCover >= INK_COVERAGE) outsideInk++;
+        continue;
+      }
+      const index = row * BOARD_SIZE + column;
+      for (const [level, threshold] of [
+        [strict, INK_COVERAGE],
+        [info, INFO_COVERAGE],
+      ] as const) {
+        if (sumCover < threshold) continue;
+        level.ink[index] = (level.ink[index] ?? 0) + 1;
+        if (noteCover >= threshold) level.covered[index] = (level.covered[index] ?? 0) + 1;
+      }
+    }
+  }
+  const attributed = strict.ink.reduce((total, value) => total + value, 0) + outsideSum;
+  return {
+    strict,
+    info,
+    outsideInk,
+    recountGap: countInk(shots.sum, shots.base, colors.sum) - attributed,
+    differsFromBoth,
+    noValidChannel,
+  };
+}
+
+const cellName = (index: number) =>
+  `F${String(Math.floor(index / BOARD_SIZE) + 1)}C${String((index % BOARD_SIZE) + 1)}`;
+
+const percentOf = (level: InkLevel, index: number) => {
+  const ink = level.ink[index] ?? 0;
+  return ink === 0 ? 0 : (100 * (level.covered[index] ?? 0)) / ink;
+};
+
+/** Los valores por celda de un caso o de varios: el máximo y las celdas que lo alcanzan. */
+function worstOf(values: readonly number[]) {
+  const max = Math.max(...values);
+  const cells = values.flatMap((value, index) => (value === max ? [cellName(index)] : []));
+  return { max, cells };
+}
+
+/** Los bordes de filas y columnas, y cuánto se aparta de ellos la celda que más se aparta. */
+function edgesOf(boxes: readonly CellBox[]) {
+  const box = (index: number) => {
+    const found = boxes[index];
+    if (!found) throw new Error(`No cell ${String(index)}`);
+    return found;
+  };
+  const xs = Array.from({ length: BOARD_SIZE }, (_, column) => box(column).left);
+  xs.push(box(BOARD_SIZE - 1).right);
+  const ys = Array.from({ length: BOARD_SIZE }, (_, row) => box(row * BOARD_SIZE).top);
+  ys.push(box(BOARD_CELLS - BOARD_SIZE).bottom);
+  let gap = 0;
+  boxes.forEach((cellBox, index) => {
+    const row = Math.floor(index / BOARD_SIZE);
+    const column = index % BOARD_SIZE;
+    gap = Math.max(
+      gap,
+      Math.abs(cellBox.left - (xs[column] ?? 0)),
+      Math.abs(cellBox.right - (xs[column + 1] ?? 0)),
+      Math.abs(cellBox.top - (ys[row] ?? 0)),
+      Math.abs(cellBox.bottom - (ys[row + 1] ?? 0)),
+    );
+  });
+  return { xs, ys, gap };
+}
+
+interface CellBox {
+  readonly left: number;
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+}
+
+/** Deja el tablero con esa suma y ese peso, y cada texto visible u oculto. No cambia sus colores. */
+function paintBoard(
+  page: Page,
+  look: {
+    readonly text: string;
+    readonly weight: string;
+    readonly showSum: boolean;
+    readonly showNotes: boolean;
+  },
+) {
+  return page
+    .locator(".sk-board[role=grid]")
+    .evaluate((board, { text, weight, showSum, showNotes }) => {
+      for (const gridCell of board.querySelectorAll("[role=gridcell]")) {
+        let sum = gridCell.querySelector<HTMLElement>(".sum");
+        if (!sum) {
+          sum = document.createElement("span");
+          sum.className = "sum";
+          gridCell.prepend(sum);
+        }
+        sum.textContent = text;
+        // Todas las celdas como sin seleccionar: la selección tiñe su fila, su columna, su caja y su
+        // jaula, y ese fondo cambia la medida de esas celdas.
+        gridCell.classList.remove("sel", "rel");
+        for (const hidden of gridCell.querySelectorAll<HTMLElement>(".cg, .sk-selring")) {
+          hidden.style.visibility = "hidden";
+        }
+        sum.style.visibility = showSum ? "visible" : "hidden";
+        for (const note of gridCell.querySelectorAll<HTMLElement>(".n")) {
+          note.style.visibility = showNotes ? "visible" : "hidden";
+          note.style.textDecorationLine = "none";
+          note.style.fontWeight = weight;
+        }
+      }
+    }, look);
+}
+
+test("T-42.20 every pixel of the board goes to one cell, or to none", () => {
+  const edges = Array.from({ length: 10 }, (_, index) => (index * 112) / 3);
+  // Un centro justo en un borde va al intervalo siguiente.
+  expect(intervalOf([0, 2, 4], 2)).toBe(1);
+  expect(intervalOf([0, 2, 4], 0)).toBe(0);
+  // Fuera del tablero no va a ninguna celda.
+  expect(intervalOf([0, 2, 4], 4)).toBe(-1);
+  expect(intervalOf([0, 2, 4], -0.5)).toBe(-1);
+  for (const scale of [2, 3]) {
+    const pixels = pixelIntervals(edges, 0, 336 * scale, scale);
+    expect(pixels).toHaveLength(336 * scale);
+    expect(pixels).not.toContain(-1);
+    expect(new Set(pixels).size).toBe(BOARD_SIZE);
+    // Los índices solo avanzan: ningún píxel queda entre dos celdas ni en dos a la vez.
+    expect([...pixels].sort((first, second) => first - second)).toEqual(pixels);
+  }
+});
+
+test("T-42.20 coverage uses the final colour and refuses a pixel with no valid channel", () => {
+  const paper = new Uint8Array([250, 250, 250, 255]);
+  const half = new Uint8Array([150, 150, 150, 255]);
+  const opaque = { rgb: [50, 50, 50], alpha: 1 };
+  expect(coverage(half, paper, 0, opaque)).toBeCloseTo(0.5, 5);
+  // Con transparencia, el texto solo puede llegar a su color compuesto.
+  expect(coverage(half, paper, 0, { rgb: [50, 50, 50], alpha: 0.5 })).toBeCloseTo(1, 5);
+  // Un canal con poca diferencia no decide: aquí cuenta solo el azul.
+  const mixed = new Uint8Array([240, 240, 150, 255]);
+  expect(coverage(mixed, paper, 0, { rgb: [230, 230, 50], alpha: 1 })).toBeCloseTo(0.5, 5);
+  // Verificación negativa: sin ningún canal válido no hay cobertura.
+  expect(coverage(half, paper, 0, { rgb: [240, 240, 240], alpha: 1 })).toBeNull();
+  expect(coverage(half, paper, 0, { rgb: [50, 50, 50], alpha: 0.1 })).toBeNull();
+});
+
+test("T-42.20 negative check: the analysis marks a repaint, ink off the board and no channel", () => {
+  const paper = [250, 250, 250, 255];
+  const dark = [50, 50, 50, 255];
+  const image = (...pixels: readonly (readonly number[])[]): Image => ({
+    width: pixels.length,
+    height: 1,
+    data: new Uint8Array(pixels.flat()),
+  });
+  const colors = {
+    sum: { rgb: [50, 50, 50], alpha: 1 },
+    note: { rgb: [50, 50, 50], alpha: 1 },
+  };
+  const base = image(paper, paper, paper);
+  const sum = image(dark, dark, paper);
+  const note = image(paper, dark, paper);
+  const both = image(dark, dark, paper);
+  const clean = analyzeCase({ base, sum, note, both }, [0, 0, 0], [0], colors);
+  expect(percentOf(clean.strict, 0)).toBe(50);
+  expect(clean.differsFromBoth).toBe(0);
+  expect(clean.recountGap).toBe(0);
+  // Una captura con las dos que no coincide con lo que hay en cada una: se alteró el dibujo.
+  const repainted = image([60, 60, 60, 255], dark, [240, 240, 240, 255]);
+  const altered = analyzeCase({ base, sum, note, both: repainted }, [0, 0, 0], [0], colors);
+  expect(altered.differsFromBoth).toBe(2);
+  // Un píxel fuera del tablero no se pierde.
+  const outside = analyzeCase({ base, sum, note, both }, [0, 0, -1], [0], colors);
+  expect(outside.outsideInk).toBe(0);
+  const offBoard = analyzeCase({ base, sum, note, both }, [-1, 0, 0], [0], colors);
+  expect(offBoard.outsideInk).toBe(1);
+  expect(offBoard.recountGap).toBe(0);
+  // Sin canal válido no se cuenta nada, y queda registrado.
+  const flat = { rgb: [245, 245, 245], alpha: 1 };
+  const refused = analyzeCase({ base, sum, note, both }, [0, 0, 0], [0], {
+    sum: flat,
+    note: colors.note,
+  });
+  expect(refused.noValidChannel).toBe(2);
+});
+
+// Límites fijados con una medición anterior, hecha con otro método (docs/diseno.md §2.5).
+for (const [scale, limit, firstCase] of [
+  [3, 4.6, 0],
+  [2, 5.8, 20],
 ] as const) {
   test(`T-42.20 the note over the sum covers at most ${String(limit)} % of its ink at 360 px and scale ${String(scale)}, and nothing at 375 px`, async ({
     player,
@@ -788,82 +1147,223 @@ for (const [scale, limit] of [
   }) => {
     test.setTimeout(180_000);
     const context = await browser.newContext({ deviceScaleFactor: scale, viewport: PHONE });
-    const blank = await browser.newContext();
     try {
       const page = await player({ context });
-      const decoder = await blank.newPage();
-      const { empty } = await soloMatch(page, game);
-      const pick = (rows: readonly number[]) => {
-        const found = empty.find((index) => rows.includes(Math.floor(index / 9)));
-        if (found === undefined) throw new Error(`No empty cell in rows ${rows.join()}`);
-        return found;
-      };
-      const cells = { firstRow: pick([0]), boxBottom: pick([2, 5]), normal: pick([1, 3, 4, 6, 7]) };
-      await setMode(page, "Notas");
-      for (const index of Object.values(cells)) {
-        await cell(page, index).click();
-        for (const digit of [1, 2]) await page.keyboard.press(String(digit));
-      }
-      await cell(
-        page,
-        pick([3, 4, 6, 7, 8].filter((row) => row !== Math.floor(cells.normal / 9))),
-      ).click();
-      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+      const code = await createRoom(page, "Inés");
+      await page.getByRole("radio", { name: /Experto/ }).check();
+      await start(page, [page]);
+      expect(emptyCells(game, code)).toHaveLength(BOARD_CELLS);
 
-      const worstAt = async (viewport: { width: number; height: number }) => {
+      await setMode(page, "Notas");
+      for (let index = 0; index < BOARD_CELLS; index++) {
+        await cell(page, index).click();
+        await page.keyboard.press("1");
+        await page.keyboard.press("2");
+        await expect
+          .poll(() => playerOf(game, code, "Inés").personalNotes[index], {
+            message: `notes 1 and 2 of ${cellName(index)}`,
+          })
+          .toBe(digitBit(1) | digitBit(2));
+        // Dos comandos cada 110 ms: por debajo del tope de 20 por segundo (SPEC, §4.8).
+        await page.waitForTimeout(110);
+      }
+      await expect(page.locator(".sk-board[role=grid] .n.p")).toHaveCount(2 * BOARD_CELLS);
+      await page.mouse.move(0, 0);
+      await page.evaluate(() => {
+        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+        return document.fonts.ready.then(() => undefined);
+      });
+      const textColors = await page.locator(".sk-board[role=grid]").evaluate((board) => {
+        const colorsOf = (selector: string) => [
+          ...new Set(
+            [...board.querySelectorAll(selector)].map((item) => getComputedStyle(item).color),
+          ),
+        ];
+        return { notes: colorsOf(".n.p"), sums: colorsOf(".sum") };
+      });
+      const [noteCss] = textColors.notes;
+      const [sumCss] = textColors.sums;
+      expect(textColors.notes).toHaveLength(1);
+      expect(textColors.sums).toHaveLength(1);
+      if (noteCss === undefined || sumCss === undefined) throw new Error("No text colour");
+      const colors = { sum: parseColor(sumCss), note: parseColor(noteCss) };
+      console.log(`T-42.20 text colours: sum ${sumCss}, note ${noteCss}`);
+
+      const results: { width: number; result: CaseResult }[] = [];
+      let measured = 0;
+      for (const viewport of MEASURED_WIDTHS) {
         await page.setViewportSize(viewport);
         await expect
           .poll(async () => (await noteVars(page)).cell)
           .toBeCloseTo(
-            ((await page.locator(".sk-board[role=grid]").boundingBox())?.width ?? 0) / 9,
+            ((await page.locator(".sk-board[role=grid]").boundingBox())?.width ?? 0) / BOARD_SIZE,
             1,
           );
-        let worst = 0;
-        for (const index of Object.values(cells)) {
-          const gridCell = page.locator(".sk-board[role=grid] [role=gridcell]").nth(index);
-          for (const value of ["12", "16", "17", "21", "22"]) {
-            for (const weight of ["400", "800"]) {
-              const paint = (what: "sum" | "note") =>
-                gridCell.evaluate(
-                  (element, { text, show, heavy }) => {
-                    let sum = element.querySelector<HTMLElement>(".sum");
-                    if (!sum) {
-                      sum = document.createElement("span");
-                      sum.className = "sum";
-                      element.prepend(sum);
-                    }
-                    sum.textContent = text;
-                    sum.style.color = show === "sum" ? "#ff0000" : "transparent";
-                    sum.style.background = "transparent";
-                    for (const segment of element.querySelectorAll<HTMLElement>(".cg"))
-                      segment.style.visibility = "hidden";
-                    for (const note of element.querySelectorAll<HTMLElement>(".n")) {
-                      note.style.color = show === "note" ? "#ff0000" : "transparent";
-                      note.style.textDecorationLine = "none";
-                      note.style.fontWeight = heavy;
-                    }
-                  },
-                  { text: value, show: what, heavy: weight },
-                );
-              await paint("sum");
-              const sumShot = await gridCell.screenshot({ animations: "disabled" });
-              await paint("note");
-              const noteShot = await gridCell.screenshot({ animations: "disabled" });
-              const { ink, covered } = await sumCovered(decoder, sumShot, noteShot);
-              expect(ink).toBeGreaterThan(100);
-              worst = Math.max(worst, (100 * covered) / ink);
-            }
+        await page.locator(".sk-board[role=grid]").evaluate((board) => {
+          board.scrollIntoView({ block: "nearest" });
+        });
+        const boxes = await page
+          .locator(".sk-board[role=grid] [role=gridcell]")
+          .evaluateAll((cells) =>
+            cells.map((item): CellBox => {
+              const box = item.getBoundingClientRect();
+              return { left: box.left, top: box.top, right: box.right, bottom: box.bottom };
+            }),
+          );
+        expect(boxes).toHaveLength(BOARD_CELLS);
+        const { xs, ys, gap } = edgesOf(boxes);
+        expect(gap).toBeLessThanOrEqual(0.01);
+        const firstX = xs[0] ?? 0;
+        const firstY = ys[0] ?? 0;
+        const lastX = xs[BOARD_SIZE] ?? 0;
+        const lastY = ys[BOARD_SIZE] ?? 0;
+        expect(firstY).toBeGreaterThanOrEqual(0);
+        expect(lastY).toBeLessThanOrEqual(viewport.height);
+        const clip = {
+          x: Math.floor(firstX),
+          y: Math.floor(firstY),
+          width: Math.ceil(lastX) - Math.floor(firstX),
+          height: Math.ceil(lastY) - Math.floor(firstY),
+        };
+        const columns = pixelIntervals(xs, clip.x, clip.width * scale, scale);
+        const rows = pixelIntervals(ys, clip.y, clip.height * scale, scale);
+
+        const capture = async (look: {
+          readonly text: string;
+          readonly weight: string;
+          readonly showSum: boolean;
+          readonly showNotes: boolean;
+        }) => {
+          await paintBoard(page, look);
+          const image = decodePng(await page.screenshot({ clip, animations: "disabled" }));
+          expect([image.width, image.height]).toEqual([clip.width * scale, clip.height * scale]);
+          return image;
+        };
+
+        const first = SUM_TEXTS[0];
+        const base = await capture({
+          text: first,
+          weight: "400",
+          showSum: false,
+          showNotes: false,
+        });
+        const sumShots = new Map<string, Image>();
+        for (const text of SUM_TEXTS) {
+          sumShots.set(
+            text,
+            await capture({ text, weight: "400", showSum: true, showNotes: false }),
+          );
+        }
+        const noteShots = new Map<string, Image>();
+        for (const weight of NOTE_WEIGHTS) {
+          noteShots.set(
+            weight,
+            await capture({ text: first, weight, showSum: false, showNotes: true }),
+          );
+        }
+
+        const byWeight = new Map(
+          NOTE_WEIGHTS.map((weight) => [
+            weight,
+            { strict: [] as number[][], info: [] as number[][] },
+          ]),
+        );
+        for (const text of SUM_TEXTS) {
+          for (const weight of NOTE_WEIGHTS) {
+            const sum = sumShots.get(text);
+            const note = noteShots.get(weight);
+            if (!sum || !note) throw new Error("Missing capture");
+            const result = analyzeCase(
+              {
+                base,
+                sum,
+                note,
+                both: await capture({ text, weight, showSum: true, showNotes: true }),
+              },
+              columns,
+              rows,
+              colors,
+            );
+            results.push({ width: viewport.width, result });
+            measured++;
+            const strict = Array.from({ length: BOARD_CELLS }, (_, index) =>
+              percentOf(result.strict, index),
+            );
+            const info = Array.from({ length: BOARD_CELLS }, (_, index) =>
+              percentOf(result.info, index),
+            );
+            byWeight.get(weight)?.strict.push(strict);
+            byWeight.get(weight)?.info.push(info);
+            const worst = worstOf(strict);
+            const covered = strict.flatMap((_, index) =>
+              (result.strict.covered[index] ?? 0) > 0
+                ? [
+                    `${cellName(index)}:${String(result.strict.covered[index])}/${String(result.strict.ink[index])}`,
+                  ]
+                : [],
+            );
+            // Cada caso se registra al terminarlo: los datos se conservan si la prueba agota su plazo.
+            console.log(
+              `T-42.20 case ${String(firstCase + measured)} of ${String(TOTAL_CASES)}: width ${String(viewport.width)}, scale ${String(scale)}, sum ${text}, weight ${weight}; max ${worst.max.toFixed(2)} % at ${worst.cells.join(",")}; covered ${covered.join(" ") || "none"}; min ink ${String(Math.min(...result.strict.ink))}, outside ${String(result.outsideInk)}, recount gap ${String(result.recountGap)}, differs from both ${String(result.differsFromBoth)}, no valid channel ${String(result.noValidChannel)}`,
+            );
           }
         }
-        return worst;
-      };
 
-      const at360 = await worstAt(PHONE);
-      console.log(`T-42.20 sum covered at 360 px: ${at360.toFixed(2)} %`);
-      expect(Number(at360.toFixed(1))).toBeLessThanOrEqual(limit);
+        for (const weight of NOTE_WEIGHTS) {
+          const cases = byWeight.get(weight);
+          if (!cases) throw new Error("Missing weight");
+          const perCell = (values: readonly (readonly number[])[]) =>
+            Array.from({ length: BOARD_CELLS }, (_, index) =>
+              Math.max(...values.map((value) => value[index] ?? 0)),
+            );
+          const strict = perCell(cases.strict);
+          const worst = worstOf(strict);
+          const worstInfo = worstOf(perCell(cases.info));
+          const worstSum = SUM_TEXTS.filter((_, position) =>
+            (cases.strict[position] ?? []).some((value) => value === worst.max),
+          );
+          const grid = Array.from({ length: BOARD_SIZE }, (_, row) =>
+            strict
+              .slice(row * BOARD_SIZE, (row + 1) * BOARD_SIZE)
+              .map((value) => value.toFixed(2).padStart(5))
+              .join(" "),
+          );
+          console.log(
+            `T-42.20 summary: width ${String(viewport.width)}, scale ${String(scale)}, weight ${weight}: max ${worst.max.toFixed(2)} % at ${worst.cells.join(",")}, sum ${worstSum.join(",")}; information only, coverage ${String(INFO_COVERAGE)}: max ${worstInfo.max.toFixed(2)} % at ${worstInfo.cells.join(",")}\n${grid.join("\n")}`,
+          );
+        }
+      }
+      console.log(`T-42.20 cases measured: ${String(measured)} of 20 in this test`);
+
+      // Solo después de medir todos los casos.
+      const worstAt = (width: number) =>
+        Math.max(
+          ...results
+            .filter((entry) => entry.width === width)
+            .flatMap((entry) =>
+              Array.from({ length: BOARD_CELLS }, (_, index) =>
+                percentOf(entry.result.strict, index),
+              ),
+            ),
+        );
+      expect.soft(measured).toBe(20);
+      for (const { result } of results) {
+        expect.soft(Math.min(...result.strict.ink)).toBeGreaterThan(100);
+        expect.soft(result.outsideInk).toBe(0);
+        expect.soft(result.recountGap).toBe(0);
+        expect.soft(result.differsFromBoth).toBe(0);
+        expect
+          .soft(result.noValidChannel, "a changed pixel has no channel with enough difference")
+          .toBe(0);
+      }
+      const at360 = worstAt(PHONE.width);
+      const at375 = worstAt(375);
+      expect.soft(Number(at360.toFixed(1))).toBeLessThanOrEqual(limit);
       // Negativa: a 360 px sí tapa algo, así que el detector ve el solape.
-      expect(at360).toBeGreaterThan(0);
+      expect.soft(at360).toBeGreaterThan(0);
+      expect.soft(at375).toBe(0);
 
+      await page.setViewportSize(PHONE);
       const raised = await page
         .locator(".sk-board[role=grid] .notes")
         .first()
@@ -875,14 +1375,9 @@ for (const [scale, limit] of [
           sum.remove();
           return result.map(Number);
         });
-      expect(raised[0] ?? 0).toBeGreaterThan(raised[1] ?? 0);
-
-      const at375 = await worstAt({ width: 375, height: 667 });
-      console.log(`T-42.20 sum covered at 375 px: ${at375.toFixed(2)} %`);
-      expect(at375).toBe(0);
+      expect.soft(raised[0] ?? 0).toBeGreaterThan(raised[1] ?? 0);
     } finally {
       await context.close();
-      await blank.close();
     }
   });
 }
