@@ -58,3 +58,11 @@ El juego pasa a ser público: cualquiera con el enlace de una sala puede entrar.
 - **Prueba de humo:** `smoke.yml` recibe a mano el acceso esperado (`open` o `closed`).
 - **Plan de Neon confirmado en su consola (2026-11-03):** gratuito, con 1 GB de almacenamiento, 100 horas de cómputo al mes y autoscaling hasta 2 CU.
 - **Riesgos del plan gratuito con el acceso abierto:** `docs/seguridad.md` S-08 y S-09.
+
+## Nota del 2026-11-04: dominio propio de la web
+
+La web puede servirse también desde un dominio propio configurado en Render. El dominio no se escribe en el repositorio (R-41, `docs/seguridad.md` §3).
+
+- **Qué se mueve:** solo el sitio estático. El servidor de salas sigue en `onrender.com`, así que `VITE_SERVER_URL`, el WebSocket y la CSP no cambian, y el origen de `onrender.com` sigue de respaldo.
+- **Variables:** `ALLOWED_ORIGINS` pasa a `sync: false` y es obligatoria en producción. Lleva los orígenes de la web separados por comas, en punycode si tienen «ñ» o tildes.
+- **Sin orden de despliegue:** la variable se puede cambiar antes de configurar el DNS; mientras tanto, el origen nuevo no recibe tráfico.

@@ -11,7 +11,7 @@ Revisión del servidor de salas, del cliente y de las dependencias (2026-10-25),
 | Validación con Zod | Todo mensaje entrante pasa por `parseClientEnvelope` (`packages/protocol`): sobre, tipo conocido y `payload` con `z.strictObject`. JSON inválido, binario, tipo desconocido o campos de más reciben `bad_request` sin cambiar el estado; otra versión, `protocol.unsupported` y 4000. | Sin hallazgos. Pruebas: T-10.2, T-16.1, E-18, E-19 y los ejemplos válidos e inválidos de cada mensaje (SPEC §8.4). |
 | Límites de velocidad | Cubetas por conexión (§4.8), aplicadas **antes** de validar; presencia y ping con cubetas propias que descartan sin aviso. | Sin hallazgos en la conexión. **S-01:** no había tope de conexiones ni de salas por instancia (corregido). La prueba de carga en estrés (20 comandos por segundo por conexión) no recibió `rate_limited`, como corresponde. |
 | `maxPayload` | 16 KiB en `WebSocketServer`, cierre 1009; `perMessageDeflate` desactivado (sin bombas de compresión). | Sin hallazgos. Prueba E-18 (1009). |
-| Orígenes | `Origin` obligatorio y en la lista (`ALLOWED_ORIGINS`), si no 403; solo `/ws` acepta el handshake (404 en otra ruta). | Sin hallazgos como control de navegador. **S-02:** el origen no autentica (corregido con la clave del grupo). |
+| Orígenes | `Origin` obligatorio y en la lista (`ALLOWED_ORIGINS`, R-41), si no 403; solo `/ws` acepta el handshake (404 en otra ruta). | Sin hallazgos como control de navegador. **S-02:** el origen no autentica (corregido con la clave del grupo). |
 | Filtración de la solución | Inspector de filtración en todas las pruebas I y E2E (claves `solution`, `token` y `tokenHash`; la solución serializada; `value` de celdas no bloqueadas); `check-dist` en cada build (T-31.2). | Sin hallazgos. T-31.1, T-31.2, T-31.3, control del inspector en E2E y las pruebas de caos. |
 | Filtración de fichas | Fichas de 128 bits (`node:crypto`), solo `token` en el `room.welcome` de su dueño; el arnés de pruebas falla si una ficha o un hash aparecen en el log. | Sin hallazgos. T-13.4 (I) en memoria y en la base. |
 | Filtración de notas personales | Regla 4 del inspector: notas personales de un jugador en un mensaje a otro. | Sin hallazgos. R-29 y el inspector en I, E2E y caos. |
@@ -43,6 +43,15 @@ Revisión del servidor de salas, del cliente y de las dependencias (2026-10-25),
 - **Mitigación:** el respaldo semanal (`backup.yml`) se conecta y lee todas las tablas: cuenta como uso, igual que una partida.
 - **Comprobación:** tras el primer respaldo programado, la «última actividad» de la rama principal en la consola de Neon coincide con la hora del job. Se repite una vez al mes.
 - **Riesgo encadenado:** GitHub desactiva los workflows programados de un repositorio público tras 60 días sin actividad ([GitHub Docs](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows)). Quedarían 30 días antes de los 90 de Neon; la revisión mensual lo detecta.
+
+### Dominio propio de la web
+
+La web puede servirse también desde un dominio propio configurado en Render (R-41). El servidor de salas y la dirección de `onrender.com` no cambian, y esta sigue de respaldo.
+
+- **Dónde vive:** solo en el panel de Render (`ALLOWED_ORIGINS` y dominios del sitio estático) y en el DNS. No se escribe en ningún archivo del repositorio, y T-41.5 lo comprueba. Eso no lo hace secreto: es visible en el DNS y en los registros públicos de certificados.
+- **`ALLOWED_ORIGINS` con `sync: false`:** una sincronización del Blueprint sobrescribe lo que choque con `render.yaml`, así que un valor fijado allí podría quitar el dominio y dejar en 403 a quien entre por él. Si la variable faltara, o tuviera un valor que un navegador nunca envía, el arranque falla y Render conserva el despliegue anterior.
+- **Prueba de humo:** con `custom_domain`, `smoke.yml` repite la prueba desde el dominio. Su dirección es el secreto `SMOKE_CUSTOM_WEB_URL`, no una variable ni una entrada, porque los logs públicos muestran el `env` de cada paso y solo un secreto sale enmascarado.
+- **Al retirar el dominio:** se quita también de `ALLOWED_ORIGINS`. Si no, quien lo registrara después serviría una web desde un origen permitido.
 
 ### Logs públicos de Actions
 - **Riesgo:** el repositorio es público, y con él los logs de cada workflow. Un `pg_dump`, un error de conexión o un `set -x` pueden imprimir la cadena de conexión, una clave, un hash, apodos o filas de la base.

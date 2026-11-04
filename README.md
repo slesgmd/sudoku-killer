@@ -145,7 +145,7 @@ tests/         repository-level tests (lint rules, deployment config)
 
 ## Deployment
 
-The room server runs on a free Render web service, the static site on Render, and PostgreSQL on Neon, all described in [render.yaml](render.yaml). Access is open: anyone with a room link can join, with permissive per-address limits against bursts and abuse. An optional access key can close the server again (only its SHA-256 hash is configured on the server), and starting without one in production requires an explicit `ACCESS_OPEN=true`. The site sends a strict CSP and security headers, and weekly encrypted backups are checked with a restore drill ([ADR 0007](docs/adr/0007-hosting.md), [docs/seguridad.md](docs/seguridad.md)). This README does not link to the live instance.
+The room server runs on a free Render web service, the static site on Render, and PostgreSQL on Neon, all described in [render.yaml](render.yaml). Access is open: anyone with a room link can join, with permissive per-address limits against bursts and abuse. An optional access key can close the server again (only its SHA-256 hash is configured on the server), and starting without one in production requires an explicit `ACCESS_OPEN=true`. The site sends a strict CSP and security headers, and weekly encrypted backups are checked with a restore drill ([ADR 0007](docs/adr/0007-hosting.md), [docs/seguridad.md](docs/seguridad.md)). The site can also be served from a custom domain configured on Render. This README does not link to the live instance.
 
 ## Documentation
 

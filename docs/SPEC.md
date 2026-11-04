@@ -1,6 +1,6 @@
 # SPEC — Sudoku Killer Multijugador · v1
 
-- Versión del documento: 1.15 (2026-11-03), la del acceso abierto y los límites por IP (R-39 y R-40). Los cambios desde la 1.0 (2026-10-22) están en el historial de git de este archivo.
+- Versión del documento: 1.16 (2026-11-04), la de los orígenes de la web (R-41). Los cambios desde la 1.0 (2026-10-22) están en el historial de git de este archivo.
 - Versión del protocolo: **1**
 - Fuente de las reglas: la visión, las reglas y las decisiones de producto de la v1 (sección 1 de este documento).
 - Decisiones técnicas: `docs/adr/0001`–`0007`.
@@ -764,6 +764,17 @@ Entre corchetes va el nivel de cada prueba.
 - T-40.21 Una partida nueva empieza de cero, pero repetir partidas no esquiva el presupuesto por IP; la presencia y el ping no cuentan. [I]
 - T-40.22 La espera del presupuesto de 24 h tiene su propio contador (`eventsDayLocked`). Verificación negativa: la espera de 10 min, los topes por partida y los demás límites no suman a él. [I]
 
+**R-41 Orígenes de la web (`docs/seguridad.md` §3).** La web puede servirse desde más de un origen, por ejemplo la dirección del hosting y un dominio propio. El servidor solo acepta los de `ALLOWED_ORIGINS`, cada uno en la forma que envía el navegador: sin ruta ni credenciales y con el host en ASCII (un dominio con «ñ» va en punycode). Un valor en otra forma impide arrancar, porque nunca coincidiría con un `Origin` real. La variable es obligatoria en producción y se escribe en el panel del hosting; no se fija en `render.yaml`, ni tampoco un dominio propio, que no se escribe en ningún archivo del repositorio. La web funciona igual desde cualquiera de sus orígenes, y «Compartir» usa aquel desde el que se abrió la página. Los datos locales (ficha, apodo y preferencias) son de cada origen. El protocolo no cambia.
+- T-41.1 En producción, sin `ALLOWED_ORIGINS`, el servidor no arranca y nombra la variable. Verificación negativa: fuera de producción sigue el origen de desarrollo. [U]
+- T-41.2 Se aceptan varios orígenes, también en punycode. Verificación negativa: un host con «ñ», una ruta, una consulta o credenciales impiden arrancar, y el error no muestra el valor. [U]
+- T-41.3 El handshake, `POST` y `OPTIONS /access` funcionan desde cada origen permitido, con CORS solo para el recibido. Verificación negativa: un origen ajeno y la forma Unicode de uno permitido reciben 403 sin CORS. [I]
+- T-41.4 En `render.yaml`, `ALLOWED_ORIGINS` es `sync: false` y sin valor, no hay `domains` y el subdominio del hosting no está desactivado; la CSP no lleva el origen de la web. Verificación negativa: el detector marca un valor, un dominio y el subdominio desactivado. [U]
+- T-41.5 Ningún archivo versionado lleva un host en punycode ni con letras fuera de ASCII, salvo los `.example`. Verificación negativa: el detector marca las dos formas. [U]
+- T-41.6 En `smoke.yml`, la prueba desde el dominio propio lee su dirección solo de un secreto, corre con `quiet.ts` y solo cuando se pide, y la de siempre corre siempre. Verificación negativa: el detector marca un literal, una variable y un paso sin condición, y sin el secreto la prueba falla en lugar de omitirse. [U]
+- T-41.7 La prueba de humo pasa desde cualquier origen permitido. Verificación negativa: desde uno que falta en `ALLOWED_ORIGINS`, el handshake y las comprobaciones de acceso fallan. [I]
+- T-41.8 El enlace de «Compartir» conserva el origen abierto, también en punycode. Verificación negativa: no lleva el otro origen. [C]
+- T-41.9 En una ventana privada, dos personas juegan la misma sala, una desde cada origen; «Compartir» y un enlace antiguo funcionan, en Android, iPhone, Brave y una red de universidad o trabajo. [M]
+
 ---
 
 ## 7. Casos límite
@@ -809,7 +820,7 @@ Entre corchetes va el nivel de cada prueba.
 | E2E | Playwright (6 contextos de navegador) | Partida completa, clics simultáneos, reconexión |
 | Caos | Playwright con cortes de red | E-01, E-07, E-17 |
 | Carga | Script con muchos clientes WS | 50 salas, p95 menor a 150 ms y memoria |
-| Manual | Lista de revisión | T-18.1 |
+| Manual | Lista de revisión | T-18.1, T-41.9 |
 
 ### 8.2 Interfaces que hacen testeable al servidor
 - `Transport`: se implementa con `ws` en producción y en memoria para las pruebas.
@@ -847,4 +858,4 @@ El inspector está activo por defecto en todas las pruebas I. Las pruebas E2E us
 | Limpieza automática | R-17 | T-17.1–5 |
 | Diseño visual | R-18 | T-18.1 |
 
-Los límites por IP y los topes de eventos (R-40) tienen sus pruebas T-40.1 a T-40.22 junto a la regla. Todas las reglas de la visión (R-01 a R-07), las decisiones de producto (R-19 a R-34), el motor (R-35), la puntuación (R-36) y el arranque del cliente (R-37) y la actividad tras una reconexión (R-38) tienen también sus pruebas en la sección 6.
+Los límites por IP y los topes de eventos (R-40) tienen sus pruebas T-40.1 a T-40.22 junto a la regla, y los orígenes de la web (R-41), T-41.1 a T-41.9. Todas las reglas de la visión (R-01 a R-07), las decisiones de producto (R-19 a R-34), el motor (R-35), la puntuación (R-36) y el arranque del cliente (R-37) y la actividad tras una reconexión (R-38) tienen también sus pruebas en la sección 6.

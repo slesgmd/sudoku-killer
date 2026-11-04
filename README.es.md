@@ -145,7 +145,7 @@ tests/         pruebas del repositorio (reglas de lint, configuración del despl
 
 ## Despliegue
 
-El servidor de salas corre en un servicio web gratuito de Render, el sitio estático en Render y PostgreSQL en Neon, todo descrito en [render.yaml](render.yaml). El acceso es abierto: cualquiera con el enlace de una sala puede entrar, con límites por IP permisivos contra ráfagas y abusos. Una clave de acceso opcional puede volver a cerrar el servidor (solo tiene configurado su hash SHA-256), y arrancar sin ella en producción exige un `ACCESS_OPEN=true` explícito. El sitio envía una CSP estricta y cabeceras de seguridad, y los respaldos semanales cifrados se comprueban con un simulacro de restauración ([ADR 0007](docs/adr/0007-hosting.md), [docs/seguridad.md](docs/seguridad.md)). Este README no enlaza a la instancia en producción.
+El servidor de salas corre en un servicio web gratuito de Render, el sitio estático en Render y PostgreSQL en Neon, todo descrito en [render.yaml](render.yaml). El acceso es abierto: cualquiera con el enlace de una sala puede entrar, con límites por IP permisivos contra ráfagas y abusos. Una clave de acceso opcional puede volver a cerrar el servidor (solo tiene configurado su hash SHA-256), y arrancar sin ella en producción exige un `ACCESS_OPEN=true` explícito. El sitio envía una CSP estricta y cabeceras de seguridad, y los respaldos semanales cifrados se comprueban con un simulacro de restauración ([ADR 0007](docs/adr/0007-hosting.md), [docs/seguridad.md](docs/seguridad.md)). La web también puede servirse desde un dominio propio configurado en Render. Este README no enlaza a la instancia en producción.
 
 ## Documentación
 
