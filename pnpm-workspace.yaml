@@ -6,3 +6,8 @@ packages:
 # hace falta.
 allowBuilds:
   esbuild: false
+
+# drizzle-kit declara @esbuild-kit/esm-loader, pero no lo carga. Así, su esbuild vulnerable
+# (GHSA-67mh-4wv8-2f99) sale del lockfile. Se revisa cuando drizzle-kit pase a la 1.0.
+overrides:
+  "@esbuild-kit/core-utils>esbuild": 0.25.12
