@@ -2,6 +2,8 @@
 # web (sitio estático gratuito), los dos desde `main` y solo cuando pasan los checks del commit.
 # Sin secretos: DATABASE_URL, ACCESS_KEY_HASH y ACCESS_OPEN se escriben en el panel de Render
 # (`sync: false`). Sin clave, el servidor solo arranca con ACCESS_OPEN=true (docs/seguridad.md S-02).
+# ALLOWED_ORIGINS también se escribe allí, para que una sincronización del Blueprint no pise un dominio
+# propio de la web (R-41); sin ella, el servidor no arranca.
 # Si Render agrega un sufijo a algún nombre, hay que ajustar ALLOWED_ORIGINS, VITE_SERVER_URL y la
 # CSP de abajo (las comprueba tests/render-config.test.ts).
 services:
@@ -27,7 +29,7 @@ services:
       - key: LOG_LEVEL
         value: info
       - key: ALLOWED_ORIGINS
-        value: https://sudoku-killer-lima.onrender.com
+        sync: false
       # Render agrega una entrada a X-Forwarded-For (S-01), confirmado en producción.
       - key: TRUST_PROXY_HOPS
         value: "1"

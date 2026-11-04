@@ -26,6 +26,8 @@ interface Service {
   readonly startCommand?: string;
   readonly healthCheckPath?: string;
   readonly staticPublishPath?: string;
+  readonly domains?: readonly string[];
+  readonly renderSubdomainPolicy?: string;
   readonly headers?: readonly {
     readonly path: string;
     readonly name: string;
@@ -47,7 +49,23 @@ export function service(runtime: string): Service {
 const env = (s: Service, key: string) => s.envVars?.find((v) => v.key === key);
 
 /** Las variables que solo se escriben en el panel de Render. */
-const SECRETS = ["DATABASE_URL", "ACCESS_KEY_HASH", "ACCESS_OPEN"];
+const SECRETS = ["DATABASE_URL", "ACCESS_KEY_HASH", "ACCESS_OPEN", "ALLOWED_ORIGINS"];
+
+/**
+ * Lo que fijaría en el Blueprint un dominio propio de la web o dejaría sin el respaldo de
+ * `onrender.com` (R-41): el dominio vive solo en el panel de Render y en el DNS.
+ */
+export function customDomainViolations(services: readonly Service[]): string[] {
+  const found: string[] = [];
+  for (const s of services) {
+    if (s.domains !== undefined) found.push(`${s.name}: domains`);
+    if (s.renderSubdomainPolicy === "disabled") found.push(`${s.name}: subdomain disabled`);
+    const origins = env(s, "ALLOWED_ORIGINS");
+    if (origins !== undefined && (origins.value !== undefined || origins.sync !== false))
+      found.push(`${s.name}: ALLOWED_ORIGINS with a value`);
+  }
+  return found;
+}
 
 /** Los comandos que llaman a `corepack enable` o a un `pnpm` suelto (en Render /usr/bin es de solo lectura). */
 export function badPnpmCommands(commands: readonly string[]): string[] {
@@ -112,10 +130,36 @@ describe("F12 render.yaml (ADR 0007)", () => {
     expect(csp).toContain("frame-ancestors 'none'");
   });
 
-  it("points the web to the server over wss:// and allows only the web origin", () => {
+  it("points the web to the server over wss://", () => {
     expect(web.staticPublishPath).toBe("apps/web/dist");
     const url = env(web, "VITE_SERVER_URL")?.value;
     expect(checkServerUrl(url)).toBe(`wss://${server.name}.onrender.com/ws`);
-    expect(env(server, "ALLOWED_ORIGINS")?.value).toBe(`https://${web.name}.onrender.com`);
+  });
+
+  it("T-41.4 keeps the origins of the web in the panel, with no custom domain in the Blueprint", () => {
+    expect(env(server, "ALLOWED_ORIGINS")).toEqual({ key: "ALLOWED_ORIGINS", sync: false });
+    expect(customDomainViolations(render.services)).toEqual([]);
+    // La CSP no depende del origen de la web: `'self'` sirve desde cualquier dominio.
+    const csp = web.headers?.find((h) => h.name === "Content-Security-Policy")?.value ?? "";
+    expect(csp).toContain("connect-src 'self' ");
+    expect(csp).not.toContain(`https://${web.name}.onrender.com`);
+  });
+
+  it("T-41.4 negative check: the detector flags a value, a domain and the disabled subdomain", () => {
+    const broken = parse(`
+- name: con-valor
+  envVars:
+    - key: ALLOWED_ORIGINS
+      value: https://web.example
+- name: con-dominio
+  domains: [web.example]
+- name: sin-subdominio
+  renderSubdomainPolicy: disabled
+`) as Service[];
+    expect(customDomainViolations(broken)).toEqual([
+      "con-valor: ALLOWED_ORIGINS with a value",
+      "con-dominio: domains",
+      "sin-subdominio: subdomain disabled",
+    ]);
   });
 });
