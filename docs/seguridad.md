@@ -32,8 +32,8 @@ Revisión del servidor de salas, del cliente y de las dependencias (2026-10-25),
 | S-05 | Baja | **La ficha vive en `localStorage`**: un XSS la podría leer. Hoy no hay sumideros de HTML ni contenido de terceros. | **Corregido:** el sitio estático sirve una CSP restrictiva (`default-src 'none'`; scripts, estilos, imágenes y fuentes solo del sitio; `connect-src` solo del sitio y del servidor de salas; `frame-ancestors 'none'`, `base-uri` y `form-action` en `'none'`), HSTS (en `onrender.com`, Render la reemplaza por la suya, más estricta: diez años, `includeSubdomains` y `preload`; la prueba de humo acepta una igual o más estricta), `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, COOP y `Permissions-Policy`. Una sola fuente (`apps/web/scripts/security-headers.ts`) para `render.yaml`, `vite preview` y `smoke`; todas las E2E fallan ante una violación de la CSP, con una prueba de control (un script en línea bloqueado). Un XSS no podría leer y enviar la ficha a otro sitio. |
 | S-06 | Baja | **Plazos del HTTP por defecto de Node** (60 s para las cabeceras): conexiones lentas a propósito ocupan sockets antes del handshake. El tope de S-01 acota el daño. | **Corregido:** `headersTimeout` y `requestTimeout` de 10 s (408), revisados cada segundo; no cortan un WebSocket abierto. Pruebas con verificación negativa. |
 | S-07 | Informativa | Sin TLS en desarrollo (`ws://`). | **Resuelto en el despliegue:** HTTPS y WSS con el TLS de Render; el build de producción solo acepta `VITE_SERVER_URL` con `wss://`. |
-| S-08 | Media | **Abuso de recursos del plan gratuito con el acceso abierto.** Sin clave, cualquiera puede abrir conexiones y crear salas, y consumir la CPU (0,1), la memoria (512 MB) y las horas de Render, o agotar el cómputo mensual de Neon. | **Mitigado y aceptado:** límites por IP (sección 5). Frenan, no impiden: con muchas IP se pueden llenar las 500 salas. La salida es volver a acceso cerrado (ADR 0007). |
-| S-09 | Media | **Crecimiento de la base.** El registro solo agrega filas (ADR 0003 y 0004) y no hay purga. Sin topes, un bot con una IP escribiría unos 248 KB/s y llenaría 1 GB en unos 70 min. | **Mitigado:** topes de eventos por partida y presupuesto de comandos por IP (sección 6), con aviso por correo al 70 % del plan. La purga queda en `docs/IDEAS_FUTURAS.md`. |
+| S-08 | Media | **Abuso de recursos del plan gratuito con el acceso abierto.** Sin clave, cualquiera puede abrir conexiones y crear salas, y consumir la CPU (0,1), la memoria (512 MB) y las horas de Render, o agotar el cómputo mensual de Neon (sección 7). | **Mitigado y aceptado:** límites por IP (sección 5) y revisión manual del cómputo la primera semana (sección 7). Frenan, no impiden: con muchas IP se pueden llenar las 500 salas. La salida es volver a acceso cerrado (ADR 0007). |
+| S-09 | Media | **Crecimiento de la base.** El registro solo agrega filas (ADR 0003 y 0004) y no hay purga. Sin topes, un bot con una IP escribiría unos 272 KB/s y llegaría al umbral de 700 MB en unos 41 min. | **Mitigado:** topes de eventos por partida y presupuesto de comandos por IP (sección 6), con aviso por correo al 70 % del plan. La purga queda en `docs/IDEAS_FUTURAS.md`. |
 | S-10 | Baja | **Un extraño que entra a una sala no puede ser expulsado (R-10).** Quien tenga el enlace o el código ocupa un asiento, puede poner notas grupales y fallar a propósito. No hay moderación ni cuentas. | **Limitación aceptada:** el grupo puede crear otra sala con otro código. El tope por jugador evita que agote el de los demás (T-40.17). |
 
 ## 3. Despliegue
@@ -114,17 +114,31 @@ En la línea `metrics` (`docs/carga.md` §7) se revisan `joinLocked`, `createLoc
 | `joinLocked` | 0, con algún caso aislado | Valores bajos (1 a 5 por minuto) en varios momentos del día, con `playersConnected` > 0, o alguien avisa | Decenas o cientos por minuto, sostenidos, con `connections` creciendo | Personas: subir la ráfaga en `IP_LIMITS`. Bot: mantener. |
 | `createLocked` | 0 | Cualquier valor repetido a horas de juego: nadie crea tantas salas | Sostenido, con `rooms` subiendo | Igual. |
 | `connectLocked` | 0 | Mayor que 0 con `connections` / `addresses` > 10: muchas personas tras una IP compartida, como una red móvil | Mayor que 0 con pocas conexiones abiertas y aperturas continuas | Personas: subir el umbral **y** el tope de 40 abiertas. |
+| `eventsDayLocked` | 0 | Cualquier valor con partidas normales: una casa no debería llegar a 60 000 comandos al día, pero esa espera dura hasta el fin de la ventana, así que se revisa de inmediato | Sostenido, con `events` alto y pocos jugadores | Personas: subir el presupuesto en `IP_LIMITS`. |
 | `addressUnknown` | 0 | No aplica: nadie se bloquea, pero esas conexiones **no tienen límites** | No aplica | Revisar `TRUST_PROXY_HOPS`. |
 
 Las redes móviles suelen compartir una IP entre muchos teléfonos. El límite de joins y el de creación solo suman fallos y salas creadas, así que el uso normal no los acerca; el de aperturas y el tope de 40 abiertas son los primeros que notarían una IP muy compartida.
 
 ## 6. Crecimiento de la base (S-09)
 
-**Medido (2026-11-03).** En la base local, 406 eventos de 10 partidas: 243 B por fila, unos 310 B con el índice. Esas partidas tienen pocas notas (como máximo 17 notas y 21 cambios de conexión), así que no representan una partida intensa. El escenario realista de la prueba de carga da unas 0,07 notas/s por jugador, unas 260 por hora.
+**Medido en producción (`db-admin status`, 2026-11-03).**
+
+| Línea | Valor |
+|---|---|
+| `db.matches` | 26 |
+| `db.match_events` | 3 397 |
+| `db.match_events_bytes` | 1 155 072 (1,16 MB, con índices) |
+| `db.total_bytes` | 12 361 728 (12,36 MB) |
+
+Son unos **340 B por evento**, 131 eventos por partida y 44 KB por partida. Son sobre todo las partidas de la beta cerrada, no un uso público. En la base local, una partida tuvo como máximo 17 notas y 21 cambios de conexión, y el escenario realista de la prueba de carga da unas 0,07 notas/s por jugador, unas 260 por hora.
+
+**Plan confirmado en la consola de Neon (2026-11-03):** gratuito, con 1 GB de almacenamiento, 100 horas de cómputo al mes y autoscaling hasta 2 CU. Uso actual: 36,36 MB y 0,78 CU-h. **El umbral de 700 MB (70 %) queda confirmado.**
+
+**Las dos medidas de tamaño no son la misma.** La consola marca 36,36 MB y `db.total_bytes` (`pg_database_size`), 12,36 MB. El límite del plan se mide con la cifra de la consola, y el aviso del respaldo lee `db.total_bytes`. Hoy la diferencia es de unos 24 MB, y no se ha medido cómo crece. Por eso el aviso automático no reemplaza a la revisión de la consola (sección 7). Los tiempos de abajo parten de la cifra de la consola.
 
 **Modelo de una partida intensa:** rellenar y corregir a mano las notas de un tablero difícil, en las dos capas, da unos 1 500 eventos por jugador. El límite físico (3 teclas/s durante 1 h) son 10 800.
 
-**Capacidad.** Una partida de 6 con unos 400 eventos ocupa unos 124 KB: unas 8 000 partidas por GB. Son cifras preliminares; se reemplazan por las reales con `db-admin status` (`db.total_bytes`, `db.match_events_bytes`, `db.match_events`, `db.matches`).
+**Capacidad hasta el umbral.** Quedan 663,64 MB (700 − 36,36). Al promedio medido de 44 KB son unas 15 000 partidas; con partidas de 6 intensas (unos 400 eventos, 136 KB), unas 4 900.
 
 **Tipos del registro.** De los 10, tienen tope natural `match.started` y `match.ended` (uno), `cell.solved` (uno por celda), `hint.used` (las pistas del equipo), `cell.mistake` (las vidas de cada jugador) y `starter.changed` (una por salida). No lo tienen, y por eso llevan tope por partida:
 
@@ -138,12 +152,27 @@ Se eligió contar eventos por jugador frente a un tope de bytes por sala, que ca
 
 **Presupuesto por IP.** Un tope por partida no basta: con 3 errores, un bot pierde, vuelve al lobby y empieza otra, sin perder ritmo. Por eso, los comandos de quien está en una sala (salvo `sys.ping` y `presence.select`) tienen además un presupuesto: más de 12 000 en 10 min, espera de 5 min; más de 60 000 en 24 h, espera hasta el final de la ventana. Una casa de 6 con 5 partidas intensas al día son unos 45 000.
 
-| Escenario | Solo con notas | Peor mezcla (entradas y salidas, ~620 B por comando) |
+Tiempo hasta llegar a los 700 MB, a 340 B por evento (la peor mezcla, con entradas y salidas, son unos 2 eventos por comando). Sin el presupuesto, una IP llegaría en unos 41 min (40 conexiones × 20 comandos/s × 340 B ≈ 272 KB/s).
+
+| Escenario | Solo con notas | Peor mezcla |
 |---|---|---|
-| 1 IP | 18,6 MB/día: 1 GB en 54 días | 37 MB/día: 1 GB en 27 días |
-| 13 IP | 242 MB/día: 1 GB en 4 días | 484 MB/día: 1 GB en 2 días |
+| 1 IP | 20,4 MB/día: **32,5 días** | 40,8 MB/día: **16,3 días** |
+| 13 IP | 265 MB/día: **2,5 días** | 530 MB/día: **1,25 días** (30 h) |
 
 Los límites por IP no detienen a una red de bots; dan tiempo para reaccionar.
 
-**Cómo reaccionar.** Umbral de aviso: **70 % del plan** (700 MB, con el 1 GB de ADR 0007; se confirma en la consola de Neon). El respaldo semanal escribe `backup.total_bytes` y, si pasa el umbral, falla después de subir el respaldo, y GitHub avisa por correo (`DB_ALERT_BYTES` lo cambia). Al 85 %, revisar y decidir. Un aviso semanal puede llegar tarde en el peor caso; entre tanto se vigilan `events` y `eventsLocked` en `metrics`. La salida inmediata es volver a acceso cerrado (ADR 0007). No hay purga en esta versión (ADR 0003).
+**Cómo reaccionar.** Umbral de aviso: **70 % del plan** (700 MB). El respaldo semanal escribe `backup.total_bytes` y, si pasa el umbral, falla después de subir el respaldo, y GitHub avisa por correo (`DB_ALERT_BYTES` lo cambia). Al 85 %, revisar y decidir. Ese aviso es semanal y lee la medida más baja, así que puede llegar tarde en el peor caso; entre tanto se vigilan `events`, `eventsLocked` y `eventsDayLocked` en `metrics` y la consola de Neon. La salida inmediata es volver a acceso cerrado (ADR 0007). No hay purga en esta versión (ADR 0003).
 
+## 7. Cómputo de Neon (S-08)
+
+**Riesgo.** El plan incluye 100 horas de cómputo al mes, medidas en CU-h. Con la base despierta, eso da unas **400 h a 0,25 CU** y unas **50 h a 2 CU** (estimado). El uso actual es de 0,78 CU-h. La base se duerme a los 5 min sin actividad, pero un tráfico continuo la mantiene despierta y el autoscaling puede subir hasta 2 CU: con carga sostenida, las 100 horas podrían durar unos 2 días, y sin cómputo el juego deja de escribir hasta el mes siguiente. Los límites por IP reducen ese tráfico, no lo impiden.
+
+**Revisión manual, la primera semana con el servidor abierto.** Cada 1 o 2 días:
+1. En la consola de Neon: almacenamiento y CU-h usados.
+2. `db-admin status` (`db-admin.yml`, solo recuentos): `db.total_bytes`, `db.match_events_bytes`, `db.match_events` y `db.matches`.
+
+Si las CU-h suben mucho más rápido que las partidas (`db.matches`), hay que mirar `metrics` en busca de tráfico anómalo.
+
+**Opciones de emergencia.** Ninguna está implementada ni activa:
+- Volver a acceso cerrado poniendo otra vez `ACCESS_KEY_HASH` (ADR 0007). No cuesta nada y corta el tráfico ajeno, pero también deja fuera a quien no tenga la clave.
+- El complemento «Increase your limits» de Neon: 5 GB y 250 h por 10 USD al mes. Da margen sin cerrar el juego, pero abandona el objetivo de 0 USD (ADR 0007).

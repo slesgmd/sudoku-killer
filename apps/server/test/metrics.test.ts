@@ -52,7 +52,10 @@ describe("F12h metrics", () => {
     running = await startWsServer({ accessKey: KEY });
     const r = running;
     const lines: string[] = [];
-    const limits = createIpLimits(r.clock, IP_LIMITS);
+    const limits = createIpLimits(r.clock, {
+      ...IP_LIMITS,
+      events: [{ max: 1, windowMs: 86_400_000 }],
+    });
     const stop = startMetrics({
       sources: {
         transport: r.transport,
@@ -114,6 +117,7 @@ describe("F12h metrics", () => {
         createLocked: 0,
         connectLocked: 0,
         eventsLocked: 0,
+        eventsDayLocked: 0,
       });
       for (const field of ["commits", "events", "commitP95Ms", "commitMaxMs", "eventLoopP95Ms"])
         expect(typeof entry[field], field).toBe("number");
@@ -125,6 +129,10 @@ describe("F12h metrics", () => {
       limits.create.locked += 2;
       limits.connect.locked += 1;
       limits.events.locked += 4;
+      // T-40.22: una espera de 24 h real, con su propio contador.
+      limits.events.hit("203.0.113.7");
+      limits.events.hit("203.0.113.7");
+      limits.events.rejected("203.0.113.7");
       await r.clock.advance(10_000, () => new Promise<void>((resolve) => setImmediate(resolve)));
       expect(lines).toHaveLength(2);
       expect(JSON.parse(lines[1] ?? "{}")).toMatchObject({
@@ -132,10 +140,15 @@ describe("F12h metrics", () => {
         joinLocked: 3,
         createLocked: 2,
         connectLocked: 1,
-        eventsLocked: 4,
+        eventsLocked: 5,
+        eventsDayLocked: 1,
       });
       await r.clock.advance(10_000, () => new Promise<void>((resolve) => setImmediate(resolve)));
-      expect(JSON.parse(lines[2] ?? "{}")).toMatchObject({ joinLocked: 0, eventsLocked: 0 });
+      expect(JSON.parse(lines[2] ?? "{}")).toMatchObject({
+        joinLocked: 0,
+        eventsLocked: 0,
+        eventsDayLocked: 0,
+      });
       ana.close();
     } finally {
       stop();

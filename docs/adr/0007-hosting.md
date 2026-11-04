@@ -56,4 +56,5 @@ El juego pasa a ser público: cualquiera con el enlace de una sala puede entrar.
 - **Cómo abrir:** con `ACCESS_OPEN=true` ya puesto, se borra `ACCESS_KEY_HASH` y Render redespliega. Si se borrara sin `ACCESS_OPEN`, el arranque falla y Render conserva el despliegue anterior.
 - **Cómo volver a acceso cerrado:** se pone otra vez `ACCESS_KEY_HASH`. No hace falta quitar `ACCESS_OPEN`.
 - **Prueba de humo:** `smoke.yml` recibe a mano el acceso esperado (`open` o `closed`).
+- **Plan de Neon confirmado en su consola (2026-11-03):** gratuito, con 1 GB de almacenamiento, 100 horas de cómputo al mes y autoscaling hasta 2 CU.
 - **Riesgos del plan gratuito con el acceso abierto:** `docs/seguridad.md` S-08 y S-09.

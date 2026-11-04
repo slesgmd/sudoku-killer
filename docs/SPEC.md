@@ -749,7 +749,7 @@ Entre corchetes va el nivel de cada prueba.
 - T-40.6 La apertura 41 recibe un 503 real con `Retry-After`; escribir otra dirección a la izquierda de `X-Forwarded-For` no cambia nada; otra IP entra y la espera termina. Verificación negativa: una IP desconocida, o el servidor sin límites, nunca espera. [I]
 - T-40.7 `GET /ws` dice la espera de las aperturas (503) y, con `?entry=`, la de cada tipo de entrada (429), con `Retry-After` legible desde otro origen; una espera de un tipo no afecta a los demás y una IP desconocida no espera. [I]
 - T-40.8 Cien fallos con una IP desconocida no bloquean a nadie (la lección de T-39.7 y T-39.8). [I]
-- T-40.9 La línea `metrics` suma `joinLocked`, `createLocked`, `connectLocked` y `eventsLocked` como diferencias del período, sin datos de personas. [I]
+- T-40.9 La línea `metrics` suma `joinLocked`, `createLocked`, `connectLocked`, `eventsLocked` y `eventsDayLocked` como diferencias del período, sin datos de personas. [I]
 - T-40.10 Un 503 con espera deja `throttled`, sin reintentar antes de tiempo, tampoco al volver a primer plano, y salir cancela la espera. Verificación negativa: un 503 sin espera sigue la espera exponencial. `httpProbe` lee `Retry-After`. [U]
 - T-40.11 Una entrada rechazada muestra la espera con cuenta atrás desde `Retry-After`, conserva lo escrito, desactiva solo ese botón y termina; sin respuesta, espera 30 s. Verificación negativa: otros errores no empiezan una espera. [C]
 - T-40.12 Con demasiadas conexiones no aparece «Despertando el servidor…» ni «Clave del grupo»: hay cuenta atrás y la entrada sigue sola. [C]
@@ -762,6 +762,7 @@ Entre corchetes va el nivel de cada prueba.
 - T-40.19 Superado el tope de cambios de conexión, el jugador no puede volver hasta que termine la partida; reemplazar una conexión viva (E-08) no cuenta, y los demás no se ven afectados. [I]
 - T-40.20 Tras un reinicio, los contadores se reconstruyen desde el registro, para notas, entradas y conexiones (T-32.2). [I]
 - T-40.21 Una partida nueva empieza de cero, pero repetir partidas no esquiva el presupuesto por IP; la presencia y el ping no cuentan. [I]
+- T-40.22 La espera del presupuesto de 24 h tiene su propio contador (`eventsDayLocked`). Verificación negativa: la espera de 10 min, los topes por partida y los demás límites no suman a él. [I]
 
 ---
 
@@ -846,4 +847,4 @@ El inspector está activo por defecto en todas las pruebas I. Las pruebas E2E us
 | Limpieza automática | R-17 | T-17.1–5 |
 | Diseño visual | R-18 | T-18.1 |
 
-Los límites por IP y los topes de eventos (R-40) tienen sus pruebas T-40.1 a T-40.21 junto a la regla. Todas las reglas de la visión (R-01 a R-07), las decisiones de producto (R-19 a R-34), el motor (R-35), la puntuación (R-36) y el arranque del cliente (R-37) y la actividad tras una reconexión (R-38) tienen también sus pruebas en la sección 6.
+Los límites por IP y los topes de eventos (R-40) tienen sus pruebas T-40.1 a T-40.22 junto a la regla. Todas las reglas de la visión (R-01 a R-07), las decisiones de producto (R-19 a R-34), el motor (R-35), la puntuación (R-36) y el arranque del cliente (R-37) y la actividad tras una reconexión (R-38) tienen también sus pruebas en la sección 6.

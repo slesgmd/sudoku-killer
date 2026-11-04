@@ -65,7 +65,7 @@ function idOf(input: unknown): string | undefined {
 function refused(limiter: IpLimiter | undefined, address: string | null): boolean {
   if (!limiter) return false;
   if (limiter.lockedFor(address) === 0 && limiter.hit(address) === 0) return false;
-  limiter.locked++;
+  limiter.rejected(address);
   return true;
 }
 
