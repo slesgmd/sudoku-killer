@@ -67,7 +67,17 @@ export const es = {
     "La primera vez del día puede tardar hasta 1 minuto. Se sigue intentando solo.",
 
   // Clave de acceso del grupo (R-39)
+  "enter.limitTitle": "Demasiados intentos.",
+  "enter.limitJoin":
+    "Desde tu red se probaron muchos códigos que no existen. Podrás volver a intentarlo en",
+  "enter.limitCreate": "Desde tu red se crearon muchas salas seguidas. Podrás crear otra en",
+  "enter.throttledTitle": "Demasiadas conexiones desde tu red.",
+  "enter.throttledText": "Se vuelve a intentar solo en",
+  "enter.joinWaiting": "Entrar: disponible cuando termine la espera",
+  "enter.createWaiting": "Crear sala nueva: disponible cuando termine la espera",
+
   "access.title": "Clave del grupo",
+  "access.verifying": "Comprobando el enlace…",
   "access.leadMissing":
     "Este juego es privado. Escribe la clave del grupo una sola vez: queda guardada en este dispositivo.",
   "access.leadInvalid":
@@ -346,6 +356,8 @@ export const es = {
   "net.reconnectingRoom": "Lo que pase en la sala se verá al volver.",
   "net.unavailable": "El servidor no responde.",
   "net.unavailableText": "Lo que hagas no se registrará hasta que vuelva. Reintentando…",
+  "net.throttled": "Demasiadas conexiones desde tu red.",
+  "net.throttledText": "Tu asiento se conserva. Se vuelve a intentar solo en",
   "net.replacedTitle": "La sala está abierta en otra pestaña",
   "net.replacedText":
     "Solo una pestaña puede jugar a la vez, y esta quedó desconectada. Tus vidas, puntos y notas siguen intactos.",

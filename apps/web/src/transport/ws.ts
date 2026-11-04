@@ -10,7 +10,8 @@
 // - El navegador no deja leer el estado de un handshake rechazado: lo ve como un cierre 1006, igual
 //   que un servidor dormido. Tras un intento que no llegó a abrir, `probe` pregunta por HTTP qué
 //   recibe el handshake (`GET /ws`, T-39.9): 429 deja `locked` y 403, `refused`, sin reintentar solos;
-//   cualquier otra respuesta, o ninguna, sigue con la espera exponencial (T-39.10).
+//   503 con `Retry-After` deja `throttled`, que reintenta solo cuando pasa esa espera (R-40); cualquier
+//   otra respuesta, o ninguna, sigue con la espera exponencial (T-39.10).
 // - Cada intento ofrece los subprotocolos de `protocols` (`sk.v1` y la clave del grupo), que se
 //   leen en el momento: una clave recién escrita vale en el intento siguiente.
 // - Con `access`, antes de abrir cada WebSocket se comprueba la clave guardada por HTTP
@@ -27,12 +28,19 @@ import {
   CLOSE_NO_ROOM,
   CLOSE_REPLACED,
   CLOSE_UNSUPPORTED,
+  ENTRY_QUERY,
   encodeAccessKey,
   parseServerEnvelope,
   type ServerEnvelope,
 } from "@sudoku-killer/protocol";
 import { probeUrl } from "./server-url.ts";
-import { Listeners, type Transport, type TransportStatus } from "./types.ts";
+import { Listeners, type EntryKind, type Transport, type TransportStatus } from "./types.ts";
+
+/** La respuesta a una pregunta por HTTP: el estado y la espera de `Retry-After`, si vino. */
+export interface ProbeAnswer {
+  readonly status: number;
+  readonly waitMs: number | null;
+}
 
 /** Lo que el transporte usa de un WebSocket (el del navegador y el de `ws` lo cumplen). */
 export interface SocketLike {
@@ -75,7 +83,11 @@ export interface WsTransportOptions {
    * El estado HTTP que recibiría ahora el handshake, o `null` si no se pudo saber (por defecto, no
    * se pregunta). Nunca rechaza.
    */
-  readonly probe?: () => Promise<number | null>;
+  readonly probe?: () => Promise<ProbeAnswer | null>;
+  /** Lo mismo para repetir una entrada rechazada (`GET /ws?entry=`, R-40). Nunca rechaza. */
+  readonly entryProbe?: (kind: EntryKind) => Promise<ProbeAnswer | null>;
+  /** La hora de este dispositivo, en ms (por defecto, `Date.now`). */
+  readonly now?: () => number;
   /**
    * Comprueba una clave por HTTP: el estado de `POST /access`, o `null` si no hubo respuesta (por
    * defecto, no se comprueba). Nunca rechaza.
@@ -92,23 +104,45 @@ export const UNAVAILABLE_AFTER_MS = 10_000;
 export const PROBE_TIMEOUT_MS = 3000;
 /** Plazo de `POST /access`: más largo, porque el navegador puede hacer antes la consulta de CORS. */
 export const ACCESS_TIMEOUT_MS = 10_000;
+/** Azar que se suma a la espera de `throttled`. */
+export const THROTTLE_JITTER_MS = 2000;
+
+/** `Retry-After` en ms, o `null` si falta o no son segundos enteros. */
+function retryAfterMs(response: Response): number | null {
+  const value = response.headers.get("retry-after");
+  return value !== null && /^\d{1,6}$/.test(value) ? Number(value) * 1000 : null;
+}
+
+async function askHttp(url: string, fetcher: typeof fetch): Promise<ProbeAnswer | null> {
+  try {
+    const response = await fetcher(url, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    });
+    return { status: response.status, waitMs: retryAfterMs(response) };
+  } catch {
+    return null;
+  }
+}
 
 /** `probe` sobre `GET /ws` del mismo servidor que `wsUrl` (`ws` → `http`, `wss` → `https`). */
 export function httpProbe(
   wsUrl: string,
   fetcher: typeof fetch = (input, init) => globalThis.fetch(input, init),
-): () => Promise<number | null> {
+): () => Promise<ProbeAnswer | null> {
   const url = probeUrl(wsUrl);
-  return async () => {
-    try {
-      const response = await fetcher(url, {
-        cache: "no-store",
-        signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
-      });
-      return response.status;
-    } catch {
-      return null;
-    }
+  return () => askHttp(url, fetcher);
+}
+
+/** `entryProbe` sobre `GET /ws?entry=join|create` del mismo servidor que `wsUrl` (R-40). */
+export function httpEntryProbe(
+  wsUrl: string,
+  fetcher: typeof fetch = (input, init) => globalThis.fetch(input, init),
+): (kind: EntryKind) => Promise<ProbeAnswer | null> {
+  return (kind) => {
+    const url = new URL(probeUrl(wsUrl));
+    url.searchParams.set(ENTRY_QUERY, kind);
+    return askHttp(url.href, fetcher);
   };
 }
 
@@ -170,6 +204,8 @@ export function createWsTransport(options: WsTransportOptions): Transport {
     random = Math.random,
     debug = () => undefined,
     probe,
+    entryProbe,
+    now = () => Date.now(),
     access,
     accessKey = () => null,
   } = options;
@@ -178,6 +214,7 @@ export function createWsTransport(options: WsTransportOptions): Transport {
   const messages = new Listeners<ServerEnvelope>();
   const statuses = new Listeners<TransportStatus>();
   let status: TransportStatus = "idle";
+  let throttledUntil: number | null = null;
   let socket: SocketLike | null = null;
   /** Si se quiere estar conectado (entre `connect` y `disconnect`). */
   let wanted = false;
@@ -201,6 +238,7 @@ export function createWsTransport(options: WsTransportOptions): Transport {
     if (unavailableTimer !== null) scheduler.clearTimeout(unavailableTimer);
     retryTimer = null;
     unavailableTimer = null;
+    throttledUntil = null;
   };
 
   /** Suelta el socket actual sin que su cierre dispare nada. */
@@ -239,6 +277,24 @@ export function createWsTransport(options: WsTransportOptions): Transport {
     attempt++;
   };
 
+  /**
+   * Demasiadas aperturas desde esta red (R-40): se espera lo que dijo el servidor y se reintenta
+   * solo, con algo de azar para que varias pestañas no vuelvan a la vez.
+   */
+  const throttle = (waitMs: number) => {
+    clearTimers();
+    throttledUntil = now() + waitMs;
+    setStatus("throttled");
+    retryTimer = scheduler.setTimeout(
+      () => {
+        retryTimer = null;
+        throttledUntil = null;
+        openNow();
+      },
+      waitMs + Math.round(THROTTLE_JITTER_MS * random()),
+    );
+  };
+
   /** Un estado del que no se sale solo: se deja de reintentar. */
   const stop = (next: TransportStatus) => {
     wanted = false;
@@ -247,13 +303,14 @@ export function createWsTransport(options: WsTransportOptions): Transport {
   };
 
   /** El intento no llegó a abrir: si el servidor lo rechazó, se para; si no, se reintenta. */
-  const askWhy = (ask: () => Promise<number | null>) => {
+  const askWhy = (ask: () => Promise<ProbeAnswer | null>) => {
     const asked = ++probes;
     void ask().then((answer) => {
       // Mientras tanto se salió, se abrió otro intento o llegó otra respuesta: esta ya no vale.
       if (asked !== probes || disposed || !wanted || socket !== null) return;
-      if (answer === 429) stop("locked");
-      else if (answer === 403) stop("refused");
+      if (answer?.status === 429) stop("locked");
+      else if (answer?.status === 403) stop("refused");
+      else if (answer?.status === 503 && answer.waitMs !== null) throttle(answer.waitMs);
       else scheduleRetry();
     });
   };
@@ -346,7 +403,8 @@ export function createWsTransport(options: WsTransportOptions): Transport {
 
   /** Vuelta a primer plano, página restaurada o red recuperada: si no hay socket abierto, ya. */
   const wake = () => {
-    if (disposed || !wanted || status === "open") return;
+    // En `throttled` se respeta la espera que pidió el servidor.
+    if (disposed || !wanted || status === "open" || status === "throttled") return;
     // Un intento que quedó colgado mientras la página dormía también se descarta.
     attempt = 0;
     openNow();
@@ -365,6 +423,17 @@ export function createWsTransport(options: WsTransportOptions): Transport {
     get status() {
       return status;
     },
+    get throttledUntil() {
+      return throttledUntil;
+    },
+    ...(entryProbe
+      ? {
+          entryWait: async (kind: EntryKind) => {
+            const answer = await entryProbe(kind);
+            return answer?.status === 429 ? answer.waitMs : null;
+          },
+        }
+      : {}),
     send(message) {
       if (socket?.readyState !== OPEN || status !== "open") {
         debug(`[ws] not connected, dropped ${message.type}`);
@@ -378,7 +447,7 @@ export function createWsTransport(options: WsTransportOptions): Transport {
     connect() {
       if (disposed) return;
       wanted = true;
-      if (status === "open" || status === "connecting") return;
+      if (status === "open" || status === "connecting" || status === "throttled") return;
       if (status === "reconnecting" || status === "unavailable") {
         wake();
         return;
@@ -387,7 +456,7 @@ export function createWsTransport(options: WsTransportOptions): Transport {
       openNow();
     },
     reconnect() {
-      if (disposed) return;
+      if (disposed || status === "throttled") return;
       wanted = true;
       attempt = 0;
       clearTimers();

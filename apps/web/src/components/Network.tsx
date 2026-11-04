@@ -4,6 +4,7 @@
 import { useRef } from "react";
 import type { ClientState } from "../game/state.ts";
 import { t } from "../i18n/index.ts";
+import { Countdown } from "./Countdown.tsx";
 import { Dialog } from "./Dialog.tsx";
 import { Icon } from "./Icon.tsx";
 
@@ -28,6 +29,17 @@ export function NetworkBanner({
           <i />
           <i />
           <i />
+        </span>
+      </div>
+    );
+  }
+  if (status === "throttled") {
+    return (
+      <div className="banner" role="status">
+        <Icon name="info" />
+        <span className="banner-text">
+          <strong className="strong">{t("net.throttled")}</strong> {t("net.throttledText")}{" "}
+          <Countdown until={state.throttledUntil ?? 0} />
         </span>
       </div>
     );
