@@ -1,0 +1,14 @@
+{
+  "name": "Sudoku Killer",
+  "short_name": "Sudoku Killer",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#f3f0e8",
+  "background_color": "#f3f0e8",
+  "display": "browser"
+}

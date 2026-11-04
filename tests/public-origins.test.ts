@@ -4,18 +4,9 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { customHosts } from "./custom-hosts.ts";
 
 const ROOT = new URL("../", import.meta.url);
-const RESERVED = /\.example$/i;
-
-/** Los hosts internacionalizados de un texto que no son de ejemplo. */
-export function customHosts(text: string): string[] {
-  const punycode = text.match(/\bxn--[a-z0-9-]+(?:\.[a-z0-9-]+)+/gi) ?? [];
-  const unicode = [...text.matchAll(/\b(?:https?|wss?):\/\/([\p{L}\p{N}.-]+)/gu)]
-    .map((match) => match[1] ?? "")
-    .filter((host) => /\P{ASCII}/u.test(host));
-  return [...punycode, ...unicode].filter((host) => !RESERVED.test(host));
-}
 
 describe("T-41.5 no custom domain in the public repository", () => {
   it("no tracked file carries one", () => {
