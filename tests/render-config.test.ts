@@ -47,7 +47,7 @@ export function service(runtime: string): Service {
 const env = (s: Service, key: string) => s.envVars?.find((v) => v.key === key);
 
 /** Las variables que solo se escriben en el panel de Render. */
-const SECRETS = ["DATABASE_URL", "ACCESS_KEY_HASH"];
+const SECRETS = ["DATABASE_URL", "ACCESS_KEY_HASH", "ACCESS_OPEN"];
 
 /** Los comandos que llaman a `corepack enable` o a un `pnpm` suelto (en Render /usr/bin es de solo lectura). */
 export function badPnpmCommands(commands: readonly string[]): string[] {

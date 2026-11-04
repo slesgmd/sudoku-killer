@@ -23,8 +23,10 @@ import {
   MAX_ACCESS_FAILURES,
   hashAccessKey,
 } from "../src/infra/access.ts";
+import { createIpLimits } from "../src/infra/ip-limiter.ts";
 import { DENY_GRACE_MS, HEALTH_PATH, WS_PATH, WsTransport } from "../src/infra/ws-transport.ts";
 import { createLogger } from "../src/log/logger.ts";
+import { IP_LIMITS } from "../src/rooms/limits.ts";
 import { FakeClock } from "./helpers/clock.ts";
 import { lossyProxy } from "./helpers/lossy-proxy.ts";
 import { testBank } from "./helpers/server.ts";
@@ -644,6 +646,117 @@ describe("F12 health check", () => {
     }
     expect((await fetch(`${base}${HEALTH_PATH}`, { method: "POST" })).status).toBe(404);
     expect((await fetch(`${base}/`)).status).toBe(404);
+  });
+});
+
+describe("R-40 limits per address on the real transport", () => {
+  const withLimits = {
+    trustProxyHops: 1,
+    limits: (clock: FakeClock) => createIpLimits(clock, IP_LIMITS),
+  };
+  const HOME = "203.0.113.7";
+
+  /** Abre y cierra `count` conexiones, una por vez, sin llegar al tope de abiertas. */
+  async function openAndClose(r: Running, count: number, forwardedFor: string): Promise<void> {
+    for (let i = 0; i < count; i++) {
+      const client = connect(r, { forwardedFor });
+      await client.opened;
+      client.ws.close();
+      await client.closed;
+    }
+  }
+
+  const refusal = (r: Running, forwardedFor: string): Promise<{ status: number; wait: string }> =>
+    new Promise((resolve, reject) => {
+      const ws = new WebSocket(`ws://127.0.0.1:${String(r.port)}${WS_PATH}`, {
+        origin: ORIGIN,
+        headers: { "x-forwarded-for": forwardedFor },
+      });
+      ws.on("unexpected-response", (_request, response) => {
+        resolve({
+          status: response.statusCode ?? 0,
+          wait: response.headers["retry-after"] ?? "",
+        });
+        ws.terminate();
+      });
+      ws.on("open", () => {
+        reject(new Error("opened"));
+      });
+      ws.on("error", () => undefined);
+    });
+
+  it("T-40.6 opening more than 40 in 10 s gets a real 503 with Retry-After; another address and a spoofed entry behave as they should, and the wait ends", async () => {
+    const r = await start(withLimits);
+    await openAndClose(r, 40, HOME);
+    expect(await refusal(r, HOME)).toEqual({ status: 503, wait: "30" });
+    expect(await refusal(r, `192.0.2.1, ${HOME}`)).toEqual({ status: 503, wait: "30" });
+    await openAndClose(r, 1, "203.0.113.8");
+    await r.clock.advance(30_000, () => new Promise<void>((resolve) => setImmediate(resolve)));
+    await openAndClose(r, 1, HOME);
+  }, 30_000);
+
+  it("T-40.6 an unknown address opens without any limit, and without limits nothing waits (negative checks)", async () => {
+    const r = await start(withLimits);
+    for (let i = 0; i < 45; i++) {
+      const client = connect(r);
+      await client.opened;
+      client.ws.close();
+      await client.closed;
+    }
+    await r.stop();
+    running = null;
+    const open = await start({ trustProxyHops: 1 });
+    await openAndClose(open, 45, HOME);
+  }, 30_000);
+
+  it("T-40.7 GET /ws says the wait of the opens (503), and with ?entry= the wait of each kind of entry (429), readable across origins", async () => {
+    const limits = { current: createIpLimits(new FakeClock(), IP_LIMITS) };
+    const r = await start({
+      trustProxyHops: 1,
+      limits: (clock) => (limits.current = createIpLimits(clock, IP_LIMITS)),
+    });
+    const probe = (query: string, forwardedFor = HOME) =>
+      fetch(`http://127.0.0.1:${String(r.port)}${WS_PATH}${query}`, {
+        headers: { origin: ORIGIN, "x-forwarded-for": forwardedFor },
+      });
+    expect((await probe("?entry=join")).status).toBe(204);
+    for (let i = 0; i < 13; i++) limits.current.join.hit(HOME);
+    const join = await probe("?entry=join");
+    expect(join.status).toBe(429);
+    expect(join.headers.get("retry-after")).toBe("30");
+    expect(join.headers.get("access-control-allow-origin")).toBe("*");
+    expect(join.headers.get("access-control-expose-headers")).toMatch(/retry-after/i);
+    // Una espera de entradas no molesta a lo demás.
+    expect((await probe("")).status).toBe(204);
+    expect((await probe("?entry=create")).status).toBe(204);
+    expect((await probe("?entry=otra")).status).toBe(204);
+    expect((await probe("?entry=join", "203.0.113.8")).status).toBe(204);
+    for (let i = 0; i < 7; i++) limits.current.create.hit(HOME);
+    expect((await probe("?entry=create")).status).toBe(429);
+    for (let i = 0; i < 41; i++) limits.current.connect.hit(HOME);
+    const opens = await probe("");
+    expect(opens.status).toBe(503);
+    expect(opens.headers.get("retry-after")).toBe("30");
+    // Sin IP conocida, nada espera.
+    const unknown = await fetch(`http://127.0.0.1:${String(r.port)}${WS_PATH}?entry=join`, {
+      headers: { origin: ORIGIN },
+    });
+    expect(unknown.status).toBe(204);
+  });
+
+  it("T-40.2 the rejection over the WebSocket is the existing error, with no new field", async () => {
+    const r = await start(withLimits);
+    const client = connect(r, { forwardedFor: HOME });
+    await client.opened;
+    const answers: ServerEnvelope[] = [];
+    for (let i = 0; i < 14; i++) {
+      client.send("room.join", { code: "ZZZZZZ", nickname: "Ana" });
+      answers.push(await client.next("error"));
+    }
+    expect(answers.at(-2)?.payload).toEqual({ code: "room.not_found" });
+    expect(answers.at(-1)?.payload).toEqual({ code: "rate_limited" });
+    client.ws.close();
+    await client.closed;
   });
 });
 

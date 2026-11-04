@@ -8,6 +8,8 @@ export interface Link {
   /** Bytes encolados que el cliente todavía no recibió (control de saturación, E-17). */
   readonly bufferedAmount: number;
   close(code: number, reason: string): void;
+  /** La IP del cliente, si se sabe (límites por IP, R-40). */
+  readonly address?: string | null;
 }
 
 /** Lo que el servidor hace con cada conexión nueva. */

@@ -6,8 +6,12 @@ import { PUBLIC_LINE } from "../../../scripts/ci/quiet.ts";
 import { latestArtifact } from "../scripts/restore-drill.ts";
 import {
   bootOn,
+  DB_ALERT_BYTES,
   countProblems,
+  databaseSizes,
+  overDatabaseAlert,
   printCounts,
+  printSizes,
   tableCounts,
   type TableCounts,
 } from "../scripts/db/restore-check.ts";
@@ -23,6 +27,36 @@ afterEach(() => {
 });
 
 const base: TableCounts = { puzzles: 8, puzzlesActive: 8, matches: 3, matchEvents: 40 };
+
+describe("T-40.15 the size of the database (S-09)", () => {
+  it("measures the whole database and match_events, in lines that pass quiet.ts", async () => {
+    const h = await createTestServer();
+    await started(h, ["Ana", "Bea"]);
+    await h.sink.drain();
+    const { db } = await testBank();
+    const sizes = await databaseSizes(db);
+    expect(sizes.totalBytes).toBeGreaterThan(sizes.matchEventsBytes);
+    expect(sizes.matchEventsBytes).toBeGreaterThan(0);
+    const lines: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((line: string) => {
+      lines.push(line);
+    });
+    printSizes("db", sizes);
+    printSizes("backup", sizes);
+    expect(lines).toHaveLength(4);
+    for (const line of lines) expect(line).toMatch(PUBLIC_LINE);
+  });
+
+  it("the alert fires from the threshold on, which is 70 % of 1 GB; below it, it does not (negative check)", () => {
+    const below = { totalBytes: DB_ALERT_BYTES - 1, matchEventsBytes: 1 };
+    const at = { totalBytes: DB_ALERT_BYTES, matchEventsBytes: 1 };
+    expect(DB_ALERT_BYTES).toBe(700_000_000);
+    expect(overDatabaseAlert(below)).toBe(false);
+    expect(overDatabaseAlert(at)).toBe(true);
+    expect(overDatabaseAlert(below, 100)).toBe(true);
+    expect("backup.size_alert: fail").toMatch(PUBLIC_LINE);
+  });
+});
 
 describe("F12i restore check", () => {
   it("counts the tables and boots the server on the database, rebuilding the match in progress", async () => {

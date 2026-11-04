@@ -12,6 +12,7 @@ import {
   type ServerEnvelope,
 } from "@sudoku-killer/protocol";
 import type { Clock } from "../infra/clock.ts";
+import type { IpLimiter, IpLimits } from "../infra/ip-limiter.ts";
 import type { IdGenerator } from "../infra/random.ts";
 import type { Link, LinkHandlers, Transport } from "../infra/transport.ts";
 import type { Logger } from "../log/logger.ts";
@@ -28,6 +29,7 @@ import {
   PING_BUCKET,
   PRESENCE_BUCKET,
 } from "./limits.ts";
+import type { MatchCaps } from "./match-usage.ts";
 import { Room, type RoomDeps, type Session } from "./room.ts";
 import { MemoryRoomStore, type RoomStore } from "./store.ts";
 import { TokenBucket } from "./token-bucket.ts";
@@ -46,6 +48,10 @@ export interface RoomServerOptions {
   readonly store?: RoomStore;
   /** Tope de salas a la vez (por defecto `MAX_ROOMS`). */
   readonly maxRooms?: number;
+  /** Límites por IP (R-40); sin ellos, no se aplica ninguno. */
+  readonly limits?: IpLimits;
+  /** Topes de eventos por partida (por defecto `MATCH_CAPS`). */
+  readonly caps?: MatchCaps;
 }
 
 /** `clientMsgId` de un mensaje que no pasó la validación, si tiene la forma correcta. */
@@ -53,6 +59,14 @@ function idOf(input: unknown): string | undefined {
   if (typeof input !== "object" || input === null || !("id" in input)) return undefined;
   const id = input.id;
   return typeof id === "string" && id.length >= 1 && id.length <= 64 ? id : undefined;
+}
+
+/** Cuenta un intento y dice si hay que rechazarlo: está en espera, o este intento pasa el límite. */
+function refused(limiter: IpLimiter | undefined, address: string | null): boolean {
+  if (!limiter) return false;
+  if (limiter.lockedFor(address) === 0 && limiter.hit(address) === 0) return false;
+  limiter.locked++;
+  return true;
 }
 
 function typeOf(input: unknown): unknown {
@@ -67,6 +81,8 @@ class Connection implements Session {
   readonly commands: TokenBucket;
   readonly presence: TokenBucket;
   readonly pings: TokenBucket;
+  /** La IP del cliente, si se sabe (R-40). */
+  readonly address: string | null;
   private readonly link: Link;
   private readonly clock: Clock;
   private cancelIdle: (() => void) | null = null;
@@ -74,6 +90,7 @@ class Connection implements Session {
   constructor(id: number, link: Link, clock: Clock) {
     this.id = id;
     this.link = link;
+    this.address = link.address ?? null;
     this.clock = clock;
     this.commands = new TokenBucket(COMMAND_BUCKET, clock);
     this.presence = new TokenBucket(PRESENCE_BUCKET, clock);
@@ -140,6 +157,8 @@ export class RoomServer {
   readonly rooms: RoomStore;
   /** Códigos de las salas que se están reconstruyendo tras E-16: no se reparten. */
   readonly rebuilding = new Set<string>();
+  /** Comandos y entradas rechazados por un tope de eventos por partida (métricas). */
+  eventsCapped = 0;
   private readonly options: RoomServerOptions;
   private nextConnection = 1;
 
@@ -233,8 +252,12 @@ export class RoomServer {
   }
 
   private deps(): RoomDeps {
-    const { clock, random, ids, catalog, sink, logger, mode } = this.options;
+    const { clock, random, ids, catalog, sink, logger, mode, caps } = this.options;
     return {
+      ...(caps === undefined ? {} : { caps }),
+      onCapped: () => {
+        this.eventsCapped++;
+      },
       clock,
       random,
       ids,
@@ -311,6 +334,11 @@ export class RoomServer {
           connection.error(message.id, "nickname.invalid");
           return;
         }
+        // Un apodo no válido no cuenta (R-40). El intento que pasa el límite tampoco crea la sala.
+        if (refused(this.options.limits?.create, connection.address)) {
+          connection.error(message.id, "rate_limited");
+          return;
+        }
         if (this.rooms.size + this.rebuilding.size >= (this.options.maxRooms ?? MAX_ROOMS)) {
           this.options.logger.warn("room limit reached", { rooms: this.rooms.size });
           connection.error(message.id, "server.unavailable");
@@ -328,17 +356,32 @@ export class RoomServer {
           return;
         }
         const code = message.payload.code.toUpperCase();
+        const room = this.rooms.get(code);
+        const joins = this.options.limits?.join;
+        // En espera solo entra una ficha válida. Lo demás recibe lo mismo, exista o no la sala: si la
+        // espera dejara pasar los códigos reales, se podrían seguir buscando salas (T-40.4).
+        if (joins && joins.lockedFor(connection.address) > 0) {
+          const token = message.payload.token;
+          if (token === undefined || !room || room.deleted || !room.hasToken(token)) {
+            joins.locked++;
+            connection.error(message.id, "rate_limited");
+            return;
+          }
+        }
         if (this.rebuilding.has(code)) {
           connection.error(message.id, "server.unavailable");
           return;
         }
-        const room = this.rooms.get(code);
-        if (!room || room.deleted) {
+        const notFound = () => {
+          joins?.hit(connection.address);
           connection.error(message.id, "room.not_found");
+        };
+        if (!room || room.deleted) {
+          notFound();
           return;
         }
         room.enqueue(() => {
-          if (room.deleted) connection.error(message.id, "room.not_found");
+          if (room.deleted) notFound();
           else room.join(connection, message);
         }, onError);
         return;
@@ -347,6 +390,15 @@ export class RoomServer {
         const room = connection.room;
         if (!room) {
           connection.error(message.id, "room.not_found");
+          return;
+        }
+        // Presupuesto por IP (R-40, S-09): repetir partidas no esquiva los topes por partida. La
+        // presencia no escribe en el registro.
+        if (
+          message.type !== "presence.select" &&
+          refused(this.options.limits?.events, connection.address)
+        ) {
+          connection.error(message.id, "rate_limited");
           return;
         }
         room.enqueue(() => room.command(connection, message), onError);

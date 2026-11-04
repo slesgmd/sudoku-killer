@@ -1,7 +1,7 @@
 // Comprobación de una base restaurada: los recuentos de cada tabla y el arranque real del
 // servidor sobre ella (migraciones con la guarda, banco de cada dificultad y reconstrucción de las
 // partidas en curso, ADR 0003). Lo usan el respaldo semanal y el simulacro de restauración.
-import { count, isNull } from "drizzle-orm";
+import { count, isNull, sql } from "drizzle-orm";
 import { startApp } from "../../src/app.ts";
 import { migrateDatabase } from "../../src/db/connect.ts";
 import type { Database } from "../../src/db/database.ts";
@@ -25,6 +25,39 @@ export async function tableCounts(db: Database): Promise<TableCounts> {
     matches: await total(matches),
     matchEvents: await total(matchEvents),
   };
+}
+
+export interface DatabaseSizes {
+  /** La base entera, en bytes. */
+  readonly totalBytes: number;
+  /** `match_events` con sus índices, en bytes. */
+  readonly matchEventsBytes: number;
+}
+
+/**
+ * El tamaño a partir del cual el respaldo semanal falla para avisar por correo (S-09): el 70 % del
+ * almacenamiento de 1 GB del plan gratuito de Neon (ADR 0007). Con `DB_ALERT_BYTES` se puede cambiar.
+ */
+export const DB_ALERT_BYTES = 700_000_000;
+
+export async function databaseSizes(db: Database): Promise<DatabaseSizes> {
+  const result: unknown = await db.execute(
+    sql`select pg_database_size(current_database()) as total, pg_total_relation_size('match_events') as events`,
+  );
+  const rows = Array.isArray(result) ? (result as unknown[]) : (result as { rows: unknown[] }).rows;
+  const row = rows[0] as { total: string | number; events: string | number };
+  return { totalBytes: Number(row.total), matchEventsBytes: Number(row.events) };
+}
+
+/** Si la base pasó el umbral de aviso. */
+export function overDatabaseAlert(sizes: DatabaseSizes, alertBytes = DB_ALERT_BYTES): boolean {
+  return sizes.totalBytes >= alertBytes;
+}
+
+/** Escribe los tamaños con un prefijo, en la forma de `quiet.ts`. */
+export function printSizes(prefix: string, sizes: DatabaseSizes): void {
+  console.log(`${prefix}.total_bytes: ${String(sizes.totalBytes)}`);
+  console.log(`${prefix}.match_events_bytes: ${String(sizes.matchEventsBytes)}`);
 }
 
 /**

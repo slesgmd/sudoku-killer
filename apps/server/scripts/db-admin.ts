@@ -1,6 +1,6 @@
 // Administración de la base de producción desde Actions (`db-admin.yml`, a mano). Con
 // DB_ADMIN_ACTION:
-// - `status`: recuentos de las tablas y migraciones pendientes;
+// - `status`: recuentos y tamaños de las tablas y migraciones pendientes;
 // - `migrate`: aplica las migraciones con la guarda de migraciones destructivas (MIGRATIONS_ALLOW para una destructiva);
 // - `bank-load`: migra y carga el banco del manifiesto (ADR 0006; unos minutos).
 // Solo escribe recuentos (`db.*`), nunca la cadena de conexión ni filas (docs/seguridad.md §3).
@@ -14,7 +14,7 @@ import {
   planMigrations,
 } from "../src/db/migration-guard.ts";
 import { loadBank } from "../src/puzzles/load-bank.ts";
-import { printCounts, tableCounts } from "./db/restore-check.ts";
+import { databaseSizes, printCounts, printSizes, tableCounts } from "./db/restore-check.ts";
 
 const ACTIONS = ["status", "migrate", "bank-load"] as const;
 type Action = (typeof ACTIONS)[number];
@@ -50,6 +50,7 @@ async function main(): Promise<void> {
     console.log(`db.migrations_pending: ${String(pending.pending.length)}`);
     console.log(`db.migrations_blocked: ${String(pending.blocked.length)}`);
     printCounts("db", await tableCounts(db));
+    printSizes("db", await databaseSizes(db));
     console.log(`db.${chosen.replace("-", "_")}: ok`);
   } finally {
     await connection.close();

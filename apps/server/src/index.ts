@@ -2,7 +2,7 @@
 // reconstrucción de las partidas en curso y WebSocket en /ws. Apagado ordenado con SIGINT y SIGTERM.
 // Con `--lan` (`pnpm dev:lan`), acepta también la web servida en las IP de la red local.
 import { startApp } from "./app.ts";
-import { ConfigError, loadConfig } from "./config/config.ts";
+import { ConfigError, loadConfig, logAccessMode } from "./config/config.ts";
 import { connect, migrateDatabase } from "./db/connect.ts";
 import { DestructiveMigrationError } from "./db/migration-guard.ts";
 import { WS_PATH } from "./infra/ws-transport.ts";
@@ -35,6 +35,7 @@ try {
     logger.warn("destructive migrations applied outside production", {
       migrations: migrations.blocked,
     });
+  logAccessMode(config, logger);
   const app = await startApp({ ...config, db: connection.db, logger });
   logger.info("room server listening", {
     host: config.host,

@@ -2,8 +2,8 @@ name: Humo del despliegue
 
 # Prueba de humo del despliegue (ADR 0007), a mano: TLS de la web y del servidor, la
 # redirección de http a https, `/healthz` (espera hasta 2 min a que el servidor despierte) y el
-# handshake del WebSocket con un origen ajeno (403), con el de la web y sin clave (4003, T-39.11).
-# Los logs de Actions son
+# handshake del WebSocket con un origen ajeno (403) y con el de la web, y `POST /access` según el
+# acceso esperado (T-39.17 y T-39.22). Los logs de Actions son
 # públicos: todo paso corre con `scripts/ci/quiet.ts`, que solo deja pasar `smoke.<prueba>: ok|fail`
 # (docs/seguridad.md §3; lo comprueba tests/workflow-logs.test.ts).
 
@@ -18,6 +18,14 @@ on:
         description: "Servidor (wss://…/ws)"
         required: true
         default: "wss://sudoku-killer-lima-ws.onrender.com/ws"
+      access:
+        description: "Acceso esperado: closed (con clave) u open"
+        required: true
+        default: "open"
+        type: choice
+        options:
+          - open
+          - closed
 
 permissions:
   contents: read
@@ -39,3 +47,4 @@ jobs:
         env:
           SMOKE_WEB_URL: ${{ inputs.web_url }}
           SMOKE_SERVER_URL: ${{ inputs.server_url }}
+          SMOKE_ACCESS: ${{ inputs.access }}

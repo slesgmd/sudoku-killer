@@ -3,6 +3,7 @@
 // y las del cliente contra el servidor real.
 import { createRng } from "@sudoku-killer/engine";
 import { AccessGate, hashAccessKey } from "../../src/infra/access.ts";
+import type { IpLimits } from "../../src/infra/ip-limiter.ts";
 import { seededIds } from "../../src/infra/random.ts";
 import { WsTransport } from "../../src/infra/ws-transport.ts";
 import { silentLogger } from "../../src/log/logger.ts";
@@ -37,6 +38,8 @@ export interface WsServerOptions {
   readonly trustProxyHops?: number;
   readonly maxConnectionsPerIp?: number;
   readonly httpTimeoutMs?: number;
+  /** Límites por IP (R-40), con su reloj. */
+  readonly limits?: (clock: FakeClock) => IpLimits;
 }
 
 export async function startWsServer({
@@ -46,10 +49,12 @@ export async function startWsServer({
   trustProxyHops,
   maxConnectionsPerIp,
   httpTimeoutMs,
+  limits,
 }: WsServerOptions = {}): Promise<RunningWsServer> {
   const { db, client, catalog, solutions } = await testBank();
   await client.query("TRUNCATE match_events, matches");
   const clock = new FakeClock();
+  const ipLimits = limits?.(clock);
   const repository = createMatchRepository(db);
   const access = new AccessGate({
     hash: accessKey === undefined ? null : hashAccessKey(accessKey),
@@ -66,6 +71,7 @@ export async function startWsServer({
     ...(trustProxyHops === undefined ? {} : { trustProxyHops }),
     ...(maxConnectionsPerIp === undefined ? {} : { maxConnectionsPerIp }),
     ...(httpTimeoutMs === undefined ? {} : { httpTimeoutMs }),
+    ...(ipLimits === undefined ? {} : { limits: ipLimits }),
   });
   const sink = new EventWriter({
     repository,
@@ -86,6 +92,7 @@ export async function startWsServer({
     logger: silentLogger,
     mode,
     ...(maxRooms === undefined ? {} : { maxRooms }),
+    ...(ipLimits === undefined ? {} : { limits: ipLimits }),
   });
   await server.start();
   const inspector = new LeakInspector({

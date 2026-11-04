@@ -39,12 +39,12 @@ export class MemoryTransport implements Transport {
     return Promise.resolve();
   }
 
-  /** Abre una conexión nueva. */
-  connect(): MemoryClient {
+  /** Abre una conexión nueva, desde la IP indicada (por defecto, una que no se sabe). */
+  connect(address: string | null = null): MemoryClient {
     const accept = this.accept;
     if (!accept) throw new Error("The transport is not started");
     const id = this.nextId++;
-    const client = new Client(id, this.onOutgoing, () => {
+    const client = new Client(id, address, this.onOutgoing, () => {
       const entry = this.open.get(id);
       this.open.delete(id);
       entry?.handlers.closed();
@@ -67,10 +67,16 @@ class Client implements MemoryClient {
   readonly link: Link;
   private readonly onClosed: () => void;
 
-  constructor(id: number, onOutgoing: OutgoingHook | undefined, onClosed: () => void) {
+  constructor(
+    id: number,
+    address: string | null,
+    onOutgoing: OutgoingHook | undefined,
+    onClosed: () => void,
+  ) {
     this.id = id;
     this.onClosed = onClosed;
     this.link = {
+      address,
       send: (text) => {
         if (this.closed) return;
         onOutgoing?.(id, text);

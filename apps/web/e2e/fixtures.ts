@@ -15,6 +15,11 @@ import {
   hashAccessKey,
 } from "../../server/src/infra/access.ts";
 import type { Clock } from "../../server/src/infra/clock.ts";
+import {
+  createIpLimits,
+  type IpLimitSpecs,
+  type IpLimits,
+} from "../../server/src/infra/ip-limiter.ts";
 import type { Link, LinkHandlers, Transport } from "../../server/src/infra/transport.ts";
 import { WsTransport } from "../../server/src/infra/ws-transport.ts";
 import { silentLogger } from "../../server/src/log/logger.ts";
@@ -63,6 +68,13 @@ export interface GameServer {
   loseServerClose(lose: boolean): void;
   /** Olvida las claves que no valieron y las esperas por IP (pasa la ventana de `AccessGate`). */
   forgetAccessFailures(): void;
+  /**
+   * Aplica límites por IP (R-40), que empiezan de cero; lo no indicado, y `null`, no limita. Las E2E
+   * llegan todas desde 127.0.0.1: sin esto, las pruebas se bloquearían entre sí.
+   */
+  setIpLimits(specs: Partial<IpLimitSpecs> | null): void;
+  /** Los límites por IP vigentes (para leer sus rechazos). */
+  readonly ipLimits: IpLimits;
   /** El servidor «se duerme»: deja de escuchar en su puerto hasta `wake`. */
   sleep(): Promise<void>;
   /** Vuelve a arrancar sobre la misma base y el mismo puerto (si estaba dormido). */
@@ -94,6 +106,10 @@ export class TappedLink implements Link {
 
   get bufferedAmount(): number {
     return this.inner.bufferedAmount + this.extraBuffered;
+  }
+
+  get address(): string | null {
+    return this.inner.address ?? null;
   }
 
   close(code: number, reason: string): void {
@@ -161,6 +177,23 @@ async function startGameServer(): Promise<GameServer> {
   let skew = 0;
   const accessClock: Clock = { ...systemClock, now: () => systemClock.now() + skew };
   const access = new AccessGate({ hash: null, clock: accessClock });
+  const noLimits = (specs: Partial<IpLimitSpecs> = {}) =>
+    createIpLimits(systemClock, { join: [], create: [], connect: [], events: [], ...specs });
+  let currentLimits = noLimits();
+  const limits: IpLimits = {
+    get join() {
+      return currentLimits.join;
+    },
+    get create() {
+      return currentLimits.create;
+    },
+    get connect() {
+      return currentLimits.connect;
+    },
+    get events() {
+      return currentLimits.events;
+    },
+  };
   let asleep = false;
   let losing = false;
   let proxy: LossyProxy | null = null;
@@ -184,6 +217,7 @@ async function startGameServer(): Promise<GameServer> {
         clock: systemClock,
         logger: silentLogger,
         access,
+        limits,
       }),
     );
     const sink = new EventWriter({ repository, clock: systemClock, logger: silentLogger });
@@ -197,6 +231,7 @@ async function startGameServer(): Promise<GameServer> {
       repository,
       logger: silentLogger,
       mode: createNormalMode(PARAMS_V1),
+      limits,
     });
     live = { server, transport, sink };
     return server.start();
@@ -251,6 +286,12 @@ async function startGameServer(): Promise<GameServer> {
     },
     forgetAccessFailures() {
       skew += ACCESS_FAILURE_WINDOW_MS;
+    },
+    setIpLimits(specs) {
+      currentLimits = noLimits(specs ?? {});
+    },
+    get ipLimits() {
+      return limits;
     },
     async sleep() {
       if (asleep) return;

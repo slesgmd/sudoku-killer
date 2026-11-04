@@ -20,6 +20,10 @@
 //   conexión sigue sin tope por IP ni bloqueo, en lugar de compartir uno con todos (T-39.8).
 // - Plazos del HTTP (S-06): 10 s para recibir las cabeceras y la petición entera (Node trae
 //   60 s y 300 s); no afectan a un WebSocket ya abierto. Tope de conexiones por IP (S-01).
+// - Límite de aperturas por IP (R-40): la que lo pasa, y las siguientes durante la espera, reciben 503
+//   con `Retry-After`, como el tope de conexiones por IP. `GET /ws` lo dice también; con
+//   `?entry=join` o `?entry=create`, dice además cuánto falta para volver a entrar a una sala o crear
+//   una (429 con `Retry-After`), porque esos rechazos llegan por el WebSocket, sin cabeceras.
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { isIP } from "node:net";
 import type { Duplex } from "node:stream";
@@ -28,11 +32,13 @@ import {
   ACCESS_PATH,
   ACCESS_PROTOCOL,
   CLOSE_ACCESS_DENIED,
+  ENTRY_QUERY,
 } from "@sudoku-killer/protocol";
 import { WebSocketServer, type WebSocket } from "ws";
 import type { Logger } from "../log/logger.ts";
 import { offersKey, type AccessGate } from "./access.ts";
 import type { Clock } from "./clock.ts";
+import type { IpLimits } from "./ip-limiter.ts";
 import type { Link, LinkHandlers, Transport } from "./transport.ts";
 
 export const WS_PATH = "/ws";
@@ -75,6 +81,8 @@ export interface WsTransportOptions {
   readonly maxConnectionsPerIp?: number;
   /** Plazo del HTTP (por defecto `HTTP_TIMEOUT_MS`); las pruebas lo bajan. */
   readonly httpTimeoutMs?: number;
+  /** Límites por IP (R-40); sin ellos, no se aplica ninguno. */
+  readonly limits?: Pick<IpLimits, "connect" | "join" | "create">;
 }
 
 /**
@@ -267,6 +275,13 @@ export class WsTransport implements Transport {
         reject(socket, 429, { "Retry-After": retryAfter(wait) });
         return;
       }
+      const opens = this.options.limits?.connect;
+      const waitOpen = opens?.lockedFor(ip) ?? 0;
+      if (opens && waitOpen > 0) {
+        opens.locked++;
+        reject(socket, 503, { "Retry-After": retryAfter(waitOpen) });
+        return;
+      }
       if (this.alive.size >= (this.options.maxConnections ?? MAX_CONNECTIONS)) {
         logger.warn("websocket connection limit reached", { open: this.alive.size });
         reject(socket, 503);
@@ -278,6 +293,13 @@ export class WsTransport implements Transport {
       ) {
         logger.warn("websocket per-address connection limit reached");
         reject(socket, 503);
+        return;
+      }
+      const tripped = opens?.hit(ip) ?? 0;
+      if (opens && tripped > 0) {
+        opens.locked++;
+        logger.warn("websocket opens limit reached for an address");
+        reject(socket, 503, { "Retry-After": retryAfter(tripped) });
         return;
       }
       wss.handleUpgrade(request, socket, head, (ws) => {
@@ -320,17 +342,24 @@ export class WsTransport implements Transport {
 
   /** Lo que recibiría ahora el handshake de esta petición (`GET /ws`, T-39.9). */
   private probe(request: IncomingMessage): {
-    status: 204 | 403 | 429;
+    status: 204 | 403 | 429 | 503;
     headers: Record<string, string>;
   } {
     // Un `fetch` del mismo origen puede no mandar `Origin`; el handshake siempre lo manda.
     const origin = request.headers.origin;
     if (origin !== undefined && !this.allowed.has(normalizeOrigin(origin)))
       return { status: 403, headers: {} };
-    const wait =
-      this.options.access?.lockedFor(clientAddress(request, this.options.trustProxyHops ?? 0)) ?? 0;
-    return wait > 0
-      ? { status: 429, headers: { "retry-after": retryAfter(wait) } }
+    const ip = clientAddress(request, this.options.trustProxyHops ?? 0);
+    const wait = this.options.access?.lockedFor(ip) ?? 0;
+    if (wait > 0) return { status: 429, headers: { "retry-after": retryAfter(wait) } };
+    const limits = this.options.limits;
+    const waitOpen = limits?.connect.lockedFor(ip) ?? 0;
+    if (waitOpen > 0) return { status: 503, headers: { "retry-after": retryAfter(waitOpen) } };
+    const entry = new URL(request.url ?? "/", "http://localhost").searchParams.get(ENTRY_QUERY);
+    const limiter = entry === "join" ? limits?.join : entry === "create" ? limits?.create : null;
+    const waitEntry = limiter?.lockedFor(ip) ?? 0;
+    return waitEntry > 0
+      ? { status: 429, headers: { "retry-after": retryAfter(waitEntry) } }
       : { status: 204, headers: {} };
   }
 
@@ -417,6 +446,7 @@ export class WsTransport implements Transport {
     this.alive.set(ws, true);
     if (ip !== null) this.perIp.set(ip, (this.perIp.get(ip) ?? 0) + 1);
     const link: Link = {
+      address: ip,
       send: (text) => {
         if (ws.readyState === ws.OPEN) ws.send(text);
       },
