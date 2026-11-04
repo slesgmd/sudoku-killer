@@ -31,6 +31,7 @@ describe("F12 secrets never reach the server output", () => {
       // Un puerto cerrado: la conexión falla en el acto.
       DATABASE_URL: `postgres://sudoku_killer:${PASSWORD}@127.0.0.1:1/sudoku_killer`,
       ACCESS_KEY_HASH: HASH,
+      ALLOWED_ORIGINS: "https://sk.example",
       PORT: "0",
     });
     expect(code).toBe(1);
@@ -43,6 +44,7 @@ describe("F12 secrets never reach the server output", () => {
     const { code, output } = await run({
       NODE_ENV: "production",
       DATABASE_URL: `postgres://sudoku_killer:${PASSWORD}@127.0.0.1:1/sudoku_killer`,
+      ALLOWED_ORIGINS: "https://sk.example",
     });
     expect(code).toBe(1);
     expect(output).toMatch(/falta ACCESS_KEY_HASH/);
