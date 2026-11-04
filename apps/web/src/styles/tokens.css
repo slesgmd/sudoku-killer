@@ -40,12 +40,12 @@
   --pal-1: #b41955; /* frambuesa */
   --pal-2: #a04b00; /* cobre */
   --pal-3: #5f460f; /* bronce */
-  --pal-4: #0f3714; /* bosque */
+  --pal-4: #30482a; /* musgo */
   --pal-5: #00695a; /* jade */
   --pal-6: #2d5fb4; /* azul */
-  --pal-7: #00286e; /* marino */
+  --pal-7: #3c3393; /* índigo */
   --pal-8: #7d467d; /* ciruela */
-  --pal-9: #5f003c; /* vino */
+  --pal-9: #06485d; /* petróleo */
 
   /* Foco */
   --focus: var(--ink);

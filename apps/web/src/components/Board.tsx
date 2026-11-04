@@ -9,6 +9,15 @@ import type { ColorPrefs } from "../game/color-prefs.ts";
 import { layerShown, me, playerName, viewNotes, type ClientState } from "../game/state.ts";
 import { joinNames, t } from "../i18n/index.ts";
 
+/** Por debajo, las filas de notas no dejan sitio para separar la raya: va pegada a su nota (R-44). */
+const NOTE_LINE_TIGHT_BELOW = 48;
+/** Por debajo, tampoco hay sitio para la raya sin subir la cuadrícula de notas. */
+const NOTE_GRID_RAISED_BELOW = 40;
+const NOTE_GRID_RAISE = 3;
+/** Subida, la cuadrícula toca la franja de la suma: la nota va encima, para que su fondo no la corte. */
+const NOTE_GRID_RAISED_LAYER = 4;
+const NOTE_GRID_LAYER = 2;
+
 /** Medidas que salen de la celda (§3, «Tablero»; mismas fórmulas que el prototipo). */
 export function cellVars(cellPx: number): CSSProperties {
   const sumFs = Math.max(10, Math.round(cellPx * 0.17));
@@ -24,6 +33,9 @@ export function cellVars(cellPx: number): CSSProperties {
     "--dg-fs": px(Math.round(cellPx * 0.52)),
     "--dg-top": px(sumH),
     "--n-fs": px(nFs),
+    "--n-top": px(sumH + 1 - (cellPx < NOTE_GRID_RAISED_BELOW ? NOTE_GRID_RAISE : 0)),
+    "--n-z": cellPx < NOTE_GRID_RAISED_BELOW ? NOTE_GRID_RAISED_LAYER : NOTE_GRID_LAYER,
+    "--n-offset": px(cellPx < NOTE_LINE_TIGHT_BELOW ? 0 : Math.max(1, nFs * 0.14)),
     "--band": px(sumH),
     "--badge": px(badge),
     "--badge-fs": px(Math.max(9, Math.round(badge * 0.68))),

@@ -128,6 +128,7 @@ const MIN_DEUTERANOPIA = 10;
 const MIN_NORMAL = 15;
 const MIN_RESERVED = 12;
 const MIN_PROTANOPIA = 5;
+const MIN_INK_DEUTERANOPIA = 10;
 
 /** Las parejas de colores que incumplen una distancia mínima. */
 function closePairs(colors: readonly string[], minimum: number, matrix?: Matrix): string[] {
@@ -160,13 +161,32 @@ function broken(colors: readonly string[]): string[] {
   if (closePairs(colors, MIN_PROTANOPIA, PROTANOPIA).length > 0) rules.push("protanopia");
   if (colors.some((c) => RESERVED.some((r) => distance(c, r) < MIN_RESERVED)))
     rules.push("reserved");
+  if (colors.some((c) => distance(c, token("ink"), DEUTERANOPIA) < MIN_INK_DEUTERANOPIA))
+    rules.push("ink");
   return rules;
 }
 
 /** Los seis colores comunes a las dos variantes de la paleta. */
 const COMMON = ["#B41955", "#A04B00", "#5F460F", "#00695A", "#2D5FB4", "#7D467D"];
 
+/** La paleta elegida, color por color: T-42.3 deja a Petróleo e Índigo con un margen de 0,0141. */
+const CHOSEN = [
+  "#b41955", // Frambuesa
+  "#a04b00", // Cobre
+  "#5f460f", // Bronce
+  "#30482a", // Musgo
+  "#00695a", // Jade
+  "#2d5fb4", // Azul
+  "#3c3393", // Índigo
+  "#7d467d", // Ciruela
+  "#06485d", // Petróleo
+];
+
 describe("T-42.2 every colour of the palette is readable on the four cell backgrounds", () => {
+  it("tokens.css has exactly the chosen palette, colour by colour", () => {
+    expect(PALETTE.map((color) => color.toLowerCase())).toEqual(CHOSEN);
+  });
+
   it("reads nine distinct colours from tokens.css", () => {
     expect(new Set(PALETTE.map((c) => c.toLowerCase())).size).toBe(9);
     expect(BACKGROUNDS).toHaveLength(4);
@@ -191,9 +211,14 @@ describe("T-42.3 the colours of the palette stay apart", () => {
     expect(closePairs(PALETTE, MIN_DEUTERANOPIA, DEUTERANOPIA)).toEqual([]);
     expect(closePairs(PALETTE, MIN_NORMAL)).toEqual([]);
     expect(closePairs(PALETTE, MIN_PROTANOPIA, PROTANOPIA)).toEqual([]);
-    for (const color of PALETTE)
+    for (const color of PALETTE) {
       for (const reserved of RESERVED)
         expect(distance(color, reserved)).toBeGreaterThanOrEqual(MIN_RESERVED);
+      // La línea de caja y los dígitos: contra ink, también en deuteranopía.
+      expect(distance(color, token("ink"), DEUTERANOPIA)).toBeGreaterThanOrEqual(
+        MIN_INK_DEUTERANOPIA,
+      );
+    }
   });
 
   // Los valores de la medición con la que se eligió la paleta. Si fallan, esta fórmula ya no es la
@@ -203,6 +228,9 @@ describe("T-42.3 the colours of the palette stay apart", () => {
     ["#06485D", "#3C3393", DEUTERANOPIA, 10.0141],
     ["#A04B00", "#5F460F", PROTANOPIA, 6.5384],
     ["#B41955", "#06485D", PROTANOPIA, 5.2787],
+    ["#30482A", "#25251F", DEUTERANOPIA, 11.5411],
+    ["#0F3714", "#25251F", DEUTERANOPIA, 8.7883],
+    ["#5F003C", "#25251F", DEUTERANOPIA, 9.1869],
   ] as const)("%s and %s measure as they did when chosen", (a, b, matrix, expected) => {
     expect(Math.abs(distance(a, b, matrix) - expected)).toBeLessThanOrEqual(0.00005);
   });
@@ -226,8 +254,33 @@ describe("T-42.3 the colours of the palette stay apart", () => {
     expect(broken([...COMMON, "#00512A", "#33427B", "#364854"])).toEqual(["normal", "protanopia"]);
   });
 
-  it("control: both variants of the palette keep every rule", () => {
-    expect(broken([...COMMON, "#0F3714", "#00286E", "#5F003C"])).toEqual([]);
+  it("control: the chosen palette keeps every rule", () => {
+    expect(broken(PALETTE)).toEqual([]);
     expect(broken([...COMMON, "#06485D", "#30482A", "#3C3393"])).toEqual([]);
+  });
+
+  it("negative check: the discarded palette fails against ink, with Bosque and Vino", () => {
+    expect(broken([...COMMON, "#0F3714", "#00286E", "#5F003C"])).toEqual(["ink"]);
+  });
+
+  // Límite conocido (docs/diseno.md §2.5): la regla es entre colores de la paleta y contra ink. Si
+  // esta lista cambia, el documento deja de ser cierto.
+  it("known limit: only these pairs stay below 10 against accent and danger in deuteranopia", () => {
+    const below: [string, string, number][] = [];
+    for (const name of ["accent", "danger"]) {
+      for (const color of PALETTE) {
+        const measured = distance(color, token(name), DEUTERANOPIA);
+        if (measured < MIN_DEUTERANOPIA) below.push([color.toLowerCase(), name, measured]);
+      }
+    }
+    expect(below.map(([color, name]) => [color, name])).toEqual([
+      ["#b41955", "accent"],
+      ["#b41955", "danger"],
+      ["#a04b00", "danger"],
+    ]);
+    const [accent, danger, copper] = below;
+    expect(Math.abs((accent?.[2] ?? 0) - 2.9931)).toBeLessThanOrEqual(0.00005);
+    expect(Math.abs((danger?.[2] ?? 0) - 7.9576)).toBeLessThanOrEqual(0.00005);
+    expect(Math.abs((copper?.[2] ?? 0) - 8.0205)).toBeLessThanOrEqual(0.00005);
   });
 });

@@ -314,7 +314,7 @@ describe("T-42.13 with the preference off, personal notes are kept out of sight"
     expect(preview?.querySelector(".n.g")).not.toBeNull();
 
     const chosen = within(field("Personal")).getByRole<HTMLInputElement>("radio", {
-      name: "Bosque",
+      name: "Musgo",
     });
     expect(chosen.checked).toBe(true);
   });
