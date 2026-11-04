@@ -98,7 +98,31 @@ Medidos con la fórmula de luminancia relativa de WCAG 2.2. Mínimos: texto 4,5:
 | paper sobre danger | Acción destructiva | 5,55 |
 | paper sobre jugador | Monogramas e iniciales | 5,28–6,34 |
 
-**Colores personales (`--pal-1` a `--pal-9`).** Frambuesa, Cobre, Bronce, Musgo, Jade, Azul, Índigo, Ciruela y Petróleo: al menos 4,5:1 sobre los cuatro fondos de celda (T-42.2). En deuteranopía, ΔE00 ≥ 10 entre colores de la paleta y contra ink (T-42.3).
+**Colores personales (`--pal-1` a `--pal-9`).** Son opcionales: Predeterminado conserva ink y accent. Al menos 4,5:1 sobre los cuatro fondos de celda (T-42.2), porque una nota también se dibuja sobre la celda seleccionada, la relacionada y la de error.
+
+| Color | Valor | paper | relación | selección | error |
+|---|---|---|---|---|---|
+| Frambuesa | `#B41955` | 6,16 | 5,57 | 5,15 | 5,41 |
+| Cobre | `#A04B00` | 5,65 | 5,11 | 4,72 | 4,96 |
+| Bronce | `#5F460F` | 8,35 | 7,55 | 6,98 | 7,33 |
+| Musgo | `#30482A` | 9,48 | 8,57 | 7,93 | 8,32 |
+| Jade | `#00695A` | 6,24 | 5,64 | 5,22 | 5,48 |
+| Azul | `#2D5FB4` | 5,80 | 5,25 | 4,85 | 5,09 |
+| Índigo | `#3C3393` | 9,47 | 8,57 | 7,92 | 8,32 |
+| Ciruela | `#7D467D` | 6,50 | 5,87 | 5,43 | 5,70 |
+| Petróleo | `#06485D` | 9,45 | 8,54 | 7,90 | 8,30 |
+
+Distancia ΔE00, con la simulación de Machado 2009 a severidad 1 (T-42.3):
+
+| Comparación | Mínimo exigido | Mínimo medido |
+|---|---|---|
+| Entre colores, deuteranopía | 10 | 10,0141 (Petróleo e Índigo) |
+| Con ink, deuteranopía | 10 | 11,5411 (Musgo) |
+| Entre colores, visión normal | 15 | 15,6301 (Jade y Musgo) |
+| Con ink, accent y danger, visión normal | 12 | 12,4 (Musgo y accent) |
+| Entre colores, protanopía | 5 | 5,2787 (Frambuesa y Petróleo) |
+
+El margen en deuteranopía es de 0,0141: cualquier ajuste de un color exige volver a medir.
 
 **Límite conocido.** Esa regla no se cumple con el resto de colores reservados. Con ΔE00 < 10 en deuteranopía quedan Frambuesa frente a accent (2,9931), Frambuesa frente a danger (7,9576) y Cobre frente a danger (8,0205). Por eso esos estados no dependen solo del color: la selección es una línea continua con fondo y el error va tachado, mientras la jaula es discontinua.
 
@@ -117,7 +141,7 @@ La prueba a mano (T-42.21) revisa la suma a 360 px, el salto al redimensionar un
 | `--t-error-flash` | 1500 ms | Destello del error en la celda (T-04.3; el cliente usa el mismo valor) |
 | `--t-fast` | 120 ms | Transiciones cortas |
 
-Además, en el CSS: sacudida del dígito erróneo de 320 ms (`sk-shake`) y puntos de espera con un ciclo de 1,2 s (`sk-wait`). Los avisos breves duran 6 s (decisión 4, sección 10).
+Además, en el CSS: sacudida del dígito erróneo de 320 ms (`sk-shake`), puntos de espera con un ciclo de 1,2 s (`sk-wait`) y transiciones de 180 ms solo dentro de Ajustes (T-42.19). Los avisos breves duran 6 s (decisión 4, sección 10).
 
 ## 3. Tipografía
 
@@ -145,7 +169,7 @@ Tablero:
 | Número inicial | 37 | 19 | 600 |
 | Resuelto y pista | 37 | 19 | 400 |
 | Suma de jaula | 12 | 10 | 600 |
-| Notas | 14 | 8 | 400 personal · 600 grupal |
+| Notas | 14 | 8 | 400 personal · 600 grupal · 800 las del dígito seleccionado |
 | Notas en la lupa | — | 17 | 400 · 600 |
 | Tecla del teclado | 22 | 20 | 500 |
 | Contador de la tecla | 12 | 12 | 500 |
@@ -187,6 +211,10 @@ Disposición: 3 × 3 en 1280; 9 en fila en 768; 5 + 4 escalonadas en 360 y en ho
 - **Capa de escritura:** Personal / Grupal (atajo G), activa solo en modo Notas.
 - **Visibilidad:** un botón de ojo por capa (`.vis`). Oculta: ojo tachado, borde discontinuo y `aria-pressed="false"`. En escritorio se ve la forma corta («Personales», «Grupales») bajo «Mostrar notas»; el nombre accesible es el completo («Notas personales»). Desde 320 px y por debajo de 360, la capa y su ojo van en dos filas.
 - **«Usar notas» (preferencia local):** un interruptor de Ajustes, activado por defecto, que se guarda solo en el navegador (`localStorage`, `sk:pref:useNotes`) y no viaja por el protocolo (SPEC, R-06). Desactivado, se ocultan el selector Número / Notas, la capa de escritura, la visibilidad, la lupa y «Borrar»; el tablero no dibuja notas, N, G y Supr no hacen nada, y las teclas 1–9 solo colocan números. «Usar notas» va primero en Ajustes y recibe el foco inicial.
+- **«Notas personales» (preferencia local):** un interruptor de Ajustes, activado por defecto (`sk:pref:personalNotes`), distinto del ojo, que dura solo la sesión (SPEC, R-42). Apagado, se ocultan el ojo personal, el botón «Personal» y la marca «G», y a 360 px la capa grupal y su ojo ocupan una sola fila a todo el ancho. Las notas personales no se borran y, al reencenderlo, se vuelve a la capa que había.
+- **Capa oculta:** si la capa de escritura está oculta y hay una celda editable seleccionada, no se escribe ni se borra, y aparece un aviso que nombra la capa y la salida (sección 9). El ojo que hace falta siempre está en pantalla.
+- **Marca de cada caso:** personal, peso 400 y raya de 1 px; grupal, peso 600 sin raya; en las dos capas, dígito en color grupal, peso 600 y raya de 1 px en color personal. Si Personal y Grupal tienen el mismo color de la paleta, la raya de «en las dos capas» es punteada. Predeterminado usa accent e ink, que no están en la paleta, así que nunca coincide.
+- **Negrita:** las notas visibles del dígito colocado seleccionado pasan a peso 800, sin moverse (R-44). Inter se sirve con el rango de pesos de 400 a 800.
 
 ### 5.5 Jugadores
 - **Monograma** (`.mono`, 32 px; 24 y 20 px en tamaños menores): círculo con el color del jugador y la inicial en paper. **Desconectado:** fondo paper, inicial y **contorno discontinuo** de su color. **Asiento libre:** círculo discontinuo border y «Asiento libre» / «N asientos libres».
@@ -207,6 +235,11 @@ Ubicación del aviso breve: en la línea de estado (360 y 768), bajo los jugador
 
 ### 5.7 Diálogos (`.scrim` + `.dialog`)
 Fondo ink al 45 %; panel paper de hasta 440 px, radio 10, sombra flotante. Título 18/600, cuerpo 15/22, acciones a la derecha (en móvil, apiladas a todo el ancho con la principal arriba). `role="dialog"` o `alertdialog`, `aria-modal`, foco atrapado, Esc cancela cuando hay cancelar, foco inicial en la acción segura («Cancelar», «Quedarme»). Sin botón de cancelar, el diálogo es bloqueante.
+
+**Ajustes (`.dialog.wide`)** mide hasta 520 px y tiene altura máxima con desplazamiento interno. Orden: los tres interruptores («Usar notas», «Notas personales» y «Limpiar notas personales automáticamente»), el título «Colores», la vista previa en vivo, «Aleatorio» y cuatro selectores (Jaula, Suma, Personal y Grupal). Acciones: «Restablecer», que solo afecta a los colores, y «Cerrar».
+- **Selector:** `<fieldset>` con radios nativos, nombre encima y 10 círculos en una fila (Predeterminado y los 9 colores); por debajo de 600 px, en dos filas de cinco. Cada círculo mide 28 px dentro de un objetivo de 44 px, y el elegido lleva anillo y marca.
+- **Vista previa:** dos jaulas con su suma y notas de ambas capas, una en negrita; solo muestra las notas visibles. Por debajo de 600 px va primero y queda fija al desplazar, salvo en pantallas de menos de 480 px de alto.
+- **Atenuados, con su valor conservado:** Jaula y Suma con «Aleatorio»; el selector Personal con «Notas personales» apagada; los dos de notas y el interruptor «Notas personales» con «Usar notas» desactivado.
 
 ### 5.8 Formularios
 - **Campo** (`.input`): alto 48, borde cage-line de 1 px, radio 6, 16 px. **Inválido:** borde danger de 2 px y `aria-invalid`. **Inactivo:** fondo surface y texto muted.
@@ -232,7 +265,7 @@ Fondo ink al 45 %; panel paper de hasta 440 px, radio 10, sombra flotante. Títu
   - **Grosores enteros:** Chromium redondea hacia abajo el ancho de un borde fraccionario a píxeles enteros en cualquier densidad (medido: 1,5 px se dibuja como 1 px y 2,5 px como 2 px). WebKit lo hace solo con densidad 1. Por eso los dos grosores son enteros: con 2,5 px, la jaula seleccionada habría quedado igual que las demás en Chrome. El contraste de `--cage-line` no cambia: 4,05 sobre paper, 3,39 sobre selección, 3,66 sobre relación y 3,55 sobre error (mínimo 3:1).
 - **Suma:** arriba a la izquierda de la celda ancla (la de menor índice), con el fondo de la celda para cortar la línea.
 - **Variante A (elegida): franja superior reservada.** Todas las celdas reservan arriba la altura de la suma. Las notas ocupan el resto en una cuadrícula 3 × 3 con **posición fija por dígito** en todo el tablero.
-- **Notas:** grupales en ink 600; personales en accent 400 subrayadas; en las dos capas, ink 600 subrayado en accent.
+- **Notas:** por defecto, grupales en ink 600; personales en accent 400 subrayadas; en las dos capas, ink 600 subrayado en accent. Los colores se pueden cambiar en Ajustes (sección 5.7). Por debajo de 48 px de celda la raya va pegada a su nota, y por debajo de 40 px la cuadrícula sube 3 px y la nota va encima de la suma (sección 2.5).
 - **Lupa** (móvil y horizontal): la celda seleccionada ampliada a 88 px (94 en horizontal), con «Lupa · F2 C7» debajo en 360.
 
 ### 6.2 Estados
@@ -261,22 +294,24 @@ Fondo ink al 45 %; panel paper de hasta 440 px, radio 10, sombra flotante. Títu
 | 5 | Dígito bloqueado | Inicial 600, resuelto 400, pista 400 con esquina doblada. Oculta notas. |
 | 6 | Mismo dígito | Anillo ink de 1,5 px alrededor de los dígitos bloqueados iguales al de la celda seleccionada. Sin color ni fondo; compatible con relación y presencia. |
 | 7 | Presencia | Contorno de 1,5 px y la inicial arriba a la derecha; «+N» si hay varios. Ocupa la franja libre de la variante A. Nunca tapa un dígito: el dígito se centra bajo la suma. |
-| 8 | Suma de jaula | Siempre visible, con el fondo de la celda para cortar la línea. |
-| 9 | Notas | Debajo de todo lo anterior. La capa oculta no se dibuja. |
+| 8 | Suma de jaula | Siempre visible, con el fondo de la celda para cortar la línea. Por debajo de 40 px de celda, la nota va encima de la suma (sección 2.5). |
+| 9 | Notas | Debajo de todo lo anterior, salvo esa excepción. La capa oculta no se dibuja. La negrita solo cambia el peso. |
 | 10 | Línea de jaula | 3 px en la jaula seleccionada, 2 px en el resto. |
 | 11 | Fondo | danger-tint, luego selection-tint, luego related-tint, luego paper. |
+
+Los colores personales no cambian esta prioridad: la jaula seleccionada se marca por grosor con cualquier color, y el anillo, el error y la selección conservan los suyos (T-42.8).
 
 ## 7. Accesibilidad
 
 - **Contraste AA** medido para cada par usado (sección 2.5); los pares que fallan están prohibidos.
-- **Nunca solo color:** error (tachado, inicial y aviso con texto), notas (negrita frente a subrayado), pista (esquina doblada), pendiente (puntos), presencia (contorno e inicial), desconectado (contorno discontinuo y etiqueta), inactivo (borde discontinuo), capa oculta (ojo tachado), mismo dígito (anillo).
+- **Nunca solo color:** error (tachado, inicial y aviso con texto), notas (peso y raya, y raya punteada con el mismo color), pista (esquina doblada), pendiente (puntos), presencia (contorno e inicial), desconectado (contorno discontinuo y etiqueta), inactivo (borde discontinuo), capa oculta (ojo tachado), mismo dígito (anillo).
 - **Teclado:** flechas para mover la selección; 1–9 para número o nota según el modo; N alterna Número y Notas; G alterna la capa; Supr borra las notas de la capa activa en la celda; Ctrl+Z deshace tus últimas notas (agrupadas); H pide pista (abre la confirmación); Esc cierra un diálogo o un menú. Se ignoran mientras el foco está en un campo de texto. Se listan en la Ayuda.
 - **Foco itinerante en el tablero:** solo la celda seleccionada entra en el orden de tabulación (`tabindex` 0; el resto −1). El tablero es `role="grid"` con filas y `gridcell` y `aria-selected`.
 - **Etiqueta de cada celda:** «Fila 2, columna 7, jaula de 10, vacía, notas grupales 1 y 2, notas personales 2 y 4», «…, 3, resuelta por Rafa», «…, pista usada por Valeria», «…, pendiente de confirmación», «…, vacía; Tomás acaba de fallar con un 3», más «mismo número que la celda seleccionada» y «Valeria está aquí».
 - **Regiones vivas:** avisos con `role="status"` (polite) o `role="alert"` (assertive) según la tabla de estados; región oculta `aria-live` con la última actividad; `aria-busy` durante las cargas; cronómetro `role="timer"` con `aria-live="off"`.
 - **Diálogos:** foco atrapado, Esc, foco inicial en la acción segura y vuelta al control que lo abrió (con prueba de componente).
 - **Foco inicial de Ajustes:** en el primer interruptor («Usar notas»), en el lobby y en la partida, porque los interruptores son los controles del diálogo y la razón de abrirlo. Activarlo exige Espacio o Intro, así que no hay cambios por accidente. «Cerrar» y la X cierran, igual que Esc.
-- **Movimiento reducido:** con `prefers-reduced-motion`, sin sacudida del error ni animación de los puntos.
+- **Movimiento reducido:** con `prefers-reduced-motion`, sin sacudida del error, animación de los puntos ni transiciones en Ajustes.
 - **Texto oculto** donde la forma no basta: puntos, vidas, «Puesto 2, empate», código deletreado («H P Q 6 N Z»).
 - **Áreas táctiles** de 44 px, salvo la celda del tablero a 360 px (37,3 px; sección 4).
 - **Avisos breves de 6 s:** se aceptan frente a WCAG 2.2.1 (decisión 4, sección 10).
@@ -323,6 +358,7 @@ Cuatro tipos:
 | «Ya resuelta» | Aviso, solo al autor | «Valeria resolvió F1 C3 un instante antes. Tu jugada no cuenta y no pierdes vida.» | Polite; sin destello. |
 | Error propio | Aviso de error + destello | «El 3 no va en F7 C3. Te quedan 2 vidas.» | Assertive; destello de 1500 ms con tu inicial, que ven todos. |
 | Paso a espectador | Aviso de error + aviso fijo | «Te quedaste sin vidas. Ahora eres espectador: puedes seguir escribiendo notas.» | Aviso fijo «Eres espectador: solo puedes escribir notas»; Número y Pista inactivos. |
+| Capa de escritura oculta | Aviso | «Las notas personales están ocultas. Muéstralas con el ojo para escribir.» (o «grupales») | Solo con una celda editable seleccionada. No se escribe ni se borra. No se repite mientras siga en pantalla. Polite. |
 | Se recuperaron X de Y notas | Aviso | «Se recuperaron 3 de 5 notas. Las otras 2 cambiaron después de que las borraras.» | Tras deshacer un «Borrar notas» (decisión 5). Polite. |
 | No se pudo deshacer | Aviso | «No se pudo deshacer: otra persona cambió esa nota grupal después.» | También «…: la celda ya está resuelta». Polite. |
 | Traspaso del derecho de iniciar | Aviso integrado | «Inés salió de la sala. Ahora inicia la partida Tomás.» | En el lobby. `role=status`. |
@@ -376,5 +412,15 @@ El HTML del prototipo no se corrigió: estas decisiones lo enmiendan y se aplica
 - **«Usar notas»:** es una preferencia local que oculta las notas por capas, que la referencia no tiene. No se parece a sus ajustes de resaltado, que no se replican.
 - **Dígito pendiente inmediato** y **aviso con «Reintentar» al no poder empezar:** son estados propios, dibujados con los componentes del prototipo.
 - **Enlace al repositorio en el inicio:** es la marca de GitHub según sus pautas, no un recurso de la referencia.
+
+Ningún cambio acerca la interfaz a la de la referencia. T-18.1 sigue cumplida.
+
+**Repaso del 2026-11-04.** Preferencias visuales, Aleatorio, negrita e icono del sitio, revisados con la misma lista. Como en la primera revisión, se revisa lo propio: no se volvió a cargar la referencia ni se guardó material visual suyo.
+- **Paleta de 9 colores:** se eligió por contraste y distancia medidos (sección 2.5), sin tomar ningún color de la referencia. Es opcional: Predeterminado conserva la gama tierra y piedra con su acento.
+- **Panel de Ajustes:** interruptores, vista previa y círculos dibujados con los componentes propios. «Notas personales» actúa sobre las capas de notas, que la referencia no tiene, y no se parece a sus ajustes de resaltado, que siguen sin replicarse.
+- **Aleatorio:** colorea las jaulas de un tablero cuya forma ya es propia, y ninguna jaula vecina comparte color.
+- **Negrita de las notas:** usa las notas por capas y el mismo estado que el anillo del mismo dígito, ambos propios.
+- **Raya pegada, punteada y aviso de capa oculta:** detalles de la marca tipográfica de las capas y un aviso con el componente de siempre.
+- **Icono del sitio:** una letra U clara sobre fondo marrón, con una barra dorada en diagonal en la parte baja. No lleva retícula, dígitos ni texto, y se aportó para este juego.
 
 Ningún cambio acerca la interfaz a la de la referencia. T-18.1 sigue cumplida.

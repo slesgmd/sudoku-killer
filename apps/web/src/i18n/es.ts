@@ -195,9 +195,9 @@ export const es = {
     "Con 0 vidas pasas a espectador: sigues viendo la partida y puedes escribir notas, pero ya no colocas números ni usas pistas. Conservas tus puntos. Si no queda nadie activo (con vidas y conectado, o dentro de los 2 minutos de margen), el equipo pierde.",
   "help.notes": "Capas de notas",
   "help.notes.1":
-    "Hay dos capas de notas. Las personales solo las ves tú; las grupales las ve todo el equipo. En modo Notas eliges en qué capa escribes y, con el ojo, qué capas se muestran.",
+    "Hay dos capas de notas. Las personales solo las ves tú; las grupales las ve todo el equipo. En modo Notas eliges en qué capa escribes y, con el ojo, qué capas se muestran. Si la capa en la que escribes está oculta, no se escribe ni se borra nada y te lo avisamos. Si no quieres notas personales, apaga «Notas personales» en Ajustes: las que tengas no se borran.",
   "help.notes.2":
-    "Las grupales se ven en negrita; las personales, subrayadas y en verde oliva; una nota en las dos capas, en negrita y subrayada.",
+    "Las grupales se ven en negrita; las personales, subrayadas y, por defecto, en verde oliva; una nota en las dos capas, en negrita y subrayada. Puedes cambiar los colores en Ajustes.",
   "help.notes.3":
     "Deshacer solo afecta a tus propias notas. Si otra persona cambió esa nota después, no se deshace y te lo decimos.",
   "help.notes.4":
