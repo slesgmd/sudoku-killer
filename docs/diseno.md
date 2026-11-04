@@ -128,7 +128,10 @@ El margen en deuteranopía es de 0,0141: cualquier ajuste de un color exige volv
 
 **Límites conocidos de las notas en teléfonos estrechos.** Las notas siguen en 8 px y en 3 × 3. Por debajo de 48 px de celda la raya va pegada a su nota, y por debajo de 40 px la cuadrícula sube 3 px y la nota va encima de la suma.
 
-- **Suma a 360 px:** la nota entra 1 px en la suma, solo en la primera fila y abajo de caja, y tapa hasta el 3,35 % de su tinta sin negrita y el 4,58 % con negrita a escala 3, y hasta el 3,54 % y el 5,79 % a escala 2 (medido en las 81 celdas). A 375 px no tapa nada. Una medición anterior dio 3,8 %; era errónea porque solo cubría tres celdas, y el resultado depende de la posición en el tablero.
+- **Suma a 360 px:** la nota entra 1 px en la suma, en las filas 1, 3, 6 y 9. Con colores reales y umbral de cobertura de 0,5, tapa hasta el 3,92 % de su tinta a escala 3 y el 5,59 % a escala 2 en Windows, y hasta el 5,60 % a escala 3 y el 4,88 % a escala 2 en Linux. Límite: 6,0 % (T-42.20).
+- **Suma a 375 px:** 0 % con umbral de 0,5. Con 0,25, Linux llega a 0,47 % a escala 3.
+- **Cómo se mide:** en las 81 celdas, sin selección, con las notas 1 y 2 y las sumas 12, 16, 17, 21 y 22. La raya se quita al medir la suma.
+- **Sin medir:** teléfonos, otros colores, celdas seleccionadas o relacionadas, otras notas y otras sumas.
 - **Umbral de 48 px:** la raya salta 1,26 px y la nota 0,08 px; solo se vería al redimensionar una ventana de escritorio.
 - **Raya punteada** («en ambas capas» con el mismo color): solo está medida en píxeles, sin verla en un teléfono real.
 
@@ -421,6 +424,6 @@ Ningún cambio acerca la interfaz a la de la referencia. T-18.1 sigue cumplida.
 - **Aleatorio:** colorea las jaulas de un tablero cuya forma ya es propia, y ninguna jaula vecina comparte color.
 - **Negrita de las notas:** usa las notas por capas y el mismo estado que el anillo del mismo dígito, ambos propios.
 - **Raya pegada, punteada y aviso de capa oculta:** detalles de la marca tipográfica de las capas y un aviso con el componente de siempre.
-- **Icono del sitio:** una letra U clara sobre fondo marrón, con una barra dorada en diagonal en la parte baja. No lleva retícula, dígitos ni texto, y se aportó para este juego.
+- **Icono del sitio:** una letra U clara sobre fondo marrón, con una barra dorada en diagonal en la parte baja. No lleva retícula ni dígitos.
 
 Ningún cambio acerca la interfaz a la de la referencia. T-18.1 sigue cumplida.
