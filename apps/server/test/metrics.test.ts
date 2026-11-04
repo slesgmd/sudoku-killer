@@ -4,8 +4,10 @@
 import { accessProtocols } from "@sudoku-killer/protocol";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import WebSocket from "ws";
+import { createIpLimits } from "../src/infra/ip-limiter.ts";
 import { createLogger } from "../src/log/logger.ts";
 import { startMetrics } from "../src/log/metrics.ts";
+import { IP_LIMITS } from "../src/rooms/limits.ts";
 import { testBank } from "./helpers/server.ts";
 import { TEST_ORIGIN, startWsServer, type RunningWsServer } from "./helpers/ws-server.ts";
 
@@ -50,8 +52,16 @@ describe("F12h metrics", () => {
     running = await startWsServer({ accessKey: KEY });
     const r = running;
     const lines: string[] = [];
+    const limits = createIpLimits(r.clock, IP_LIMITS);
     const stop = startMetrics({
-      sources: { transport: r.transport, rooms: r.server.rooms, writer: r.sink, access: r.access },
+      sources: {
+        transport: r.transport,
+        rooms: r.server.rooms,
+        writer: r.sink,
+        access: r.access,
+        limits,
+        caps: r.server,
+      },
       clock: r.clock,
       logger: createLogger({ write: (line) => lines.push(line) }),
       // Menos que el heartbeat (15 s): el reloj falso no espera los pong.
@@ -99,6 +109,11 @@ describe("F12h metrics", () => {
         accessMissing: 1,
         accessLocked: 0,
         addressUnknown: 0,
+        // T-40.9: lo rechazado por los límites del período, sin decir de quién.
+        joinLocked: 0,
+        createLocked: 0,
+        connectLocked: 0,
+        eventsLocked: 0,
       });
       for (const field of ["commits", "events", "commitP95Ms", "commitMaxMs", "eventLoopP95Ms"])
         expect(typeof entry[field], field).toBe("number");
@@ -106,9 +121,21 @@ describe("F12h metrics", () => {
         expect(lines[0], secret).not.toContain(secret);
 
       // El período siguiente empieza de cero: ningún rechazo nuevo.
+      limits.join.locked += 3;
+      limits.create.locked += 2;
+      limits.connect.locked += 1;
+      limits.events.locked += 4;
       await r.clock.advance(10_000, () => new Promise<void>((resolve) => setImmediate(resolve)));
       expect(lines).toHaveLength(2);
-      expect(JSON.parse(lines[1] ?? "{}")).toMatchObject({ accessDenied: 0 });
+      expect(JSON.parse(lines[1] ?? "{}")).toMatchObject({
+        accessDenied: 0,
+        joinLocked: 3,
+        createLocked: 2,
+        connectLocked: 1,
+        eventsLocked: 4,
+      });
+      await r.clock.advance(10_000, () => new Promise<void>((resolve) => setImmediate(resolve)));
+      expect(JSON.parse(lines[2] ?? "{}")).toMatchObject({ joinLocked: 0, eventsLocked: 0 });
       ana.close();
     } finally {
       stop();

@@ -5,7 +5,7 @@
 import { ACCESS_PROTOCOL, CLOSE_ACCESS_DENIED, accessProtocols } from "@sudoku-killer/protocol";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { securityHeaders } from "../../web/scripts/security-headers.ts";
-import { checkAccess, checkSecurityHeaders, tryWebSocket } from "../scripts/smoke.ts";
+import { checkAccess, checkSecurityHeaders, smokeAccess, tryWebSocket } from "../scripts/smoke.ts";
 import { lossyProxy } from "./helpers/lossy-proxy.ts";
 import { testBank } from "./helpers/server.ts";
 import { TEST_ORIGIN, startWsServer, type RunningWsServer } from "./helpers/ws-server.ts";
@@ -68,6 +68,36 @@ describe("F12 smoke test", () => {
       ["access_wrong_key_401", false],
       ["access_foreign_origin_403", true],
     ]);
+  });
+});
+
+describe("T-39.22 smoke test with the access open", () => {
+  it("expects 204 without a key and with a random one, and still 403 from a foreign origin", async () => {
+    running = await startWsServer();
+    const url = `ws://127.0.0.1:${String(running.port)}/ws`;
+    expect(await checkAccess(url, TEST_ORIGIN, "open")).toEqual([
+      ["access_keyless_204", true],
+      ["access_wrong_key_204", true],
+      ["access_foreign_origin_403", true],
+    ]);
+  });
+
+  it("negative check: against a server that asks for a key, the open mode fails", async () => {
+    running = await startWsServer({ accessKey: "ABCD-EFGH-JKMN-PQRS" });
+    const url = `ws://127.0.0.1:${String(running.port)}/ws`;
+    expect(await checkAccess(url, TEST_ORIGIN, "open")).toEqual([
+      ["access_keyless_204", false],
+      ["access_wrong_key_204", false],
+      ["access_foreign_origin_403", true],
+    ]);
+  });
+
+  it("the mode is chosen by hand: closed by default, and anything else is an error", () => {
+    expect(smokeAccess(undefined)).toBe("closed");
+    expect(smokeAccess("")).toBe("closed");
+    expect(smokeAccess("closed")).toBe("closed");
+    expect(smokeAccess("open")).toBe("open");
+    expect(() => smokeAccess("abierto")).toThrow("SMOKE_ACCESS");
   });
 });
 

@@ -1,6 +1,8 @@
 // Límites y plazos del servidor (SPEC §3, §4.6 y §4.8; ADR 0002). La prueba de carga los confirmó
 // (`docs/carga.md`).
 import { NORMAL_RULES } from "@sudoku-killer/game";
+import type { IpLimitSpecs } from "../infra/ip-limiter.ts";
+import type { MatchCaps } from "./match-usage.ts";
 import type { BucketSpec } from "./token-bucket.ts";
 
 /** Plazo de gracia de una desconexión y de una sala sin nadie conectado (R-13, R-14). */
@@ -25,6 +27,40 @@ export const COMMAND_BUCKET: BucketSpec = { rate: 20, burst: 40 };
 export const PRESENCE_BUCKET: BucketSpec = { rate: 50, burst: 50 };
 /** `sys.ping` del cliente (uno cada 5 s): lo que sobra se descarta sin aviso. */
 export const PING_BUCKET: BucketSpec = { rate: 2, burst: 5 };
+
+const SECOND = 1_000;
+const MINUTE = 60 * SECOND;
+
+/**
+ * Límites por IP (R-40): valores permisivos, justificados con sus cuentas en `docs/seguridad.md`
+ * §5. Con espera de 30 s tras una ráfaga y de 5 min tras un exceso sostenido.
+ */
+export const IP_LIMITS: IpLimitSpecs = {
+  join: [
+    { max: 12, windowMs: 10 * SECOND, waitMs: 30 * SECOND },
+    { max: 30, windowMs: 10 * MINUTE, waitMs: 5 * MINUTE },
+  ],
+  create: [
+    { max: 6, windowMs: 10 * SECOND, waitMs: 30 * SECOND },
+    { max: 15, windowMs: 10 * MINUTE, waitMs: 5 * MINUTE },
+  ],
+  // No supera al tope de 40 abiertas: una ronda completa de reconexión nunca lo dispara.
+  connect: [{ max: 40, windowMs: 10 * SECOND, waitMs: 30 * SECOND }],
+  events: [
+    { max: 12_000, windowMs: 10 * MINUTE, waitMs: 5 * MINUTE },
+    { max: 60_000, windowMs: 24 * 60 * MINUTE },
+  ],
+};
+
+/**
+ * Topes de eventos por partida (R-40, S-09): muy por encima de una partida intensa (unos 1 500
+ * eventos de notas por jugador y como máximo 21 de conexión en las partidas medidas).
+ */
+export const MATCH_CAPS: MatchCaps = {
+  notesPerPlayer: 5_000,
+  joinsPerMatch: 24,
+  connectionsPerPlayer: 500,
+};
 
 /** Saturación (E-17): por encima, se descarta la presencia; por encima del segundo, se cierra. */
 export const DROP_PRESENCE_BYTES = 256 * 1024;

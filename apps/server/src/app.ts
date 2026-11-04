@@ -6,6 +6,7 @@ import { PARAMS_V1 } from "@sudoku-killer/scoring";
 import type { Database } from "./db/database.ts";
 import { AccessGate } from "./infra/access.ts";
 import { systemClock, type Clock } from "./infra/clock.ts";
+import { createIpLimits } from "./infra/ip-limiter.ts";
 import { systemIds, systemRandom } from "./infra/random.ts";
 import { WsTransport } from "./infra/ws-transport.ts";
 import type { Logger } from "./log/logger.ts";
@@ -14,7 +15,7 @@ import { createMatchRepository } from "./match/repository.ts";
 import { EventWriter } from "./match/sink.ts";
 import { createPuzzleCatalog } from "./puzzles/catalog.ts";
 import { createPuzzleRepository } from "./puzzles/repository.ts";
-import { CLOSE_GOING_AWAY } from "./rooms/limits.ts";
+import { CLOSE_GOING_AWAY, IP_LIMITS } from "./rooms/limits.ts";
 import { RoomServer } from "./rooms/server.ts";
 
 export interface AppOptions {
@@ -24,7 +25,7 @@ export interface AppOptions {
   readonly allowedOrigins: readonly string[];
   readonly logger: Logger;
   readonly clock?: Clock;
-  /** El hash de la clave de acceso del grupo; `null` o ausente, sin clave. */
+  /** El hash de la clave de acceso del grupo; `null` o ausente, acceso abierto. */
   readonly accessKeyHash?: string | null;
   /** Proxies de confianza delante del servidor. */
   readonly trustProxyHops?: number;
@@ -57,6 +58,7 @@ export async function startApp({
   const repository = createMatchRepository(db);
   const sink = new EventWriter({ repository, clock, logger });
   const access = new AccessGate({ hash: accessKeyHash, clock });
+  const limits = createIpLimits(clock, IP_LIMITS);
   const transport = new WsTransport({
     host,
     port,
@@ -65,6 +67,7 @@ export async function startApp({
     logger,
     access,
     trustProxyHops,
+    limits,
   });
   const server = new RoomServer({
     transport,
@@ -76,12 +79,13 @@ export async function startApp({
     repository,
     logger,
     mode: createNormalMode(PARAMS_V1),
+    limits,
   });
   const restored = await server.start();
   const stopMetrics =
     metricsIntervalMs > 0
       ? startMetrics({
-          sources: { transport, rooms: server.rooms, writer: sink, access },
+          sources: { transport, rooms: server.rooms, writer: sink, access, limits, caps: server },
           clock,
           logger,
           intervalMs: metricsIntervalMs,

@@ -17,12 +17,27 @@ import {
   restoreDump,
   run,
 } from "./db/pg-tools.ts";
-import { bootOn, countProblems, printCounts, tableCounts } from "./db/restore-check.ts";
+import {
+  DB_ALERT_BYTES,
+  bootOn,
+  countProblems,
+  databaseSizes,
+  overDatabaseAlert,
+  printCounts,
+  printSizes,
+  tableCounts,
+} from "./db/restore-check.ts";
 
 function env(name: string): string {
   const value = process.env[name];
   if (value === undefined || value === "") throw new StepError(`env_${name.toLowerCase()}`);
   return value;
+}
+
+/** El umbral de aviso: `DB_ALERT_BYTES` en el entorno, o el de la documentación (S-09). */
+function alertBytes(): number {
+  const value = Number(process.env["DB_ALERT_BYTES"]);
+  return Number.isInteger(value) && value > 0 ? value : DB_ALERT_BYTES;
 }
 
 async function main(): Promise<void> {
@@ -41,8 +56,10 @@ async function main(): Promise<void> {
       `--dbname=${libpqUrl(source)}`,
     ]);
     const origin = connect(source);
-    const sourceCounts = await tableCounts(origin.db).finally(() => origin.close());
+    const sourceCounts = await tableCounts(origin.db);
+    const sizes = await databaseSizes(origin.db).finally(() => origin.close());
     printCounts("backup", sourceCounts);
+    printSizes("backup", sizes);
 
     const target = await freshDatabase(restoreAdmin, RESTORE_DATABASE);
     await restoreDump(dump, target);
@@ -61,6 +78,11 @@ async function main(): Promise<void> {
     await run("age_encrypt", "age", ["--recipient", recipient, "--output", out, dump]);
     console.log(`backup.encrypted_bytes: ${String(statSync(out).size)}`);
     console.log("backup.done: ok");
+    // El respaldo ya está hecho: el job falla solo para avisar por correo (S-09).
+    if (overDatabaseAlert(sizes, alertBytes())) {
+      console.log("backup.size_alert: fail");
+      process.exitCode = 1;
+    }
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

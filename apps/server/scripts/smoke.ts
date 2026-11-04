@@ -1,6 +1,7 @@
 // Prueba de humo del despliegue: se corre desde Actions (`smoke.yml`) contra la web y el
 // servidor publicados. Solo imprime `smoke.<prueba>: ok|fail` (docs/seguridad.md §3); nunca el
-// contenido de una respuesta. Variables: SMOKE_WEB_URL (https://…) y SMOKE_SERVER_URL (wss://…/ws).
+// contenido de una respuesta. Variables: SMOKE_WEB_URL (https://…), SMOKE_SERVER_URL (wss://…/ws) y
+// SMOKE_ACCESS (`closed` por defecto, u `open` con el servidor sin clave).
 import { randomBytes } from "node:crypto";
 import { ACCESS_KEY_HEADER, ACCESS_PATH, encodeAccessKey } from "@sudoku-killer/protocol";
 import WebSocket from "ws";
@@ -48,12 +49,27 @@ export function tryWebSocket(
   });
 }
 
+/** Cómo se espera encontrar el acceso: con clave o abierto (R-39). */
+export type SmokeAccess = "closed" | "open";
+
+export function smokeAccess(value: string | undefined): SmokeAccess {
+  if (value === undefined || value === "" || value === "closed") return "closed";
+  if (value === "open") return "open";
+  throw new Error("SMOKE_ACCESS");
+}
+
 /**
  * El camino real de la clave (T-39.17): `POST /access` sin clave y con una inválida, generada al azar
  * en cada corrida (nunca la real), tienen que dar 401, con CORS para el origen de la web; desde un
- * origen ajeno, 403. Con el 4003 no se puede contar: el proxy de Render lo pierde (T-39.16).
+ * origen ajeno, 403. Con el 4003 no se puede contar: el proxy de Render lo pierde (T-39.16). Con el
+ * acceso abierto (T-39.22), las dos primeras dan 204: el modo se elige a mano, para que un servidor
+ * abierto por error no pase por uno cerrado.
  */
-export async function checkAccess(serverUrl: string, origin: string): Promise<[string, boolean][]> {
+export async function checkAccess(
+  serverUrl: string,
+  origin: string,
+  access: SmokeAccess = "closed",
+): Promise<[string, boolean][]> {
   const url = new URL(serverUrl);
   url.protocol = url.protocol === "wss:" ? "https:" : "http:";
   url.pathname = ACCESS_PATH;
@@ -73,10 +89,20 @@ export async function checkAccess(serverUrl: string, origin: string): Promise<[s
   const keyless = await post(origin, null);
   const wrong = await post(origin, randomBytes(16).toString("hex"));
   const foreign = await post("https://otro-sitio.example", null);
+  const foreignRefused: [string, boolean] = [
+    "access_foreign_origin_403",
+    foreign.status === 403 && foreign.cors === null,
+  ];
+  if (access === "open")
+    return [
+      ["access_keyless_204", keyless.status === 204 && keyless.cors === origin],
+      ["access_wrong_key_204", wrong.status === 204 && wrong.cors === origin],
+      foreignRefused,
+    ];
   return [
     ["access_keyless_401", keyless.status === 401 && keyless.cors === origin],
     ["access_wrong_key_401", wrong.status === 401 && wrong.cors === origin],
-    ["access_foreign_origin_403", foreign.status === 403 && foreign.cors === null],
+    foreignRefused,
   ];
 }
 
@@ -122,6 +148,7 @@ async function waitForHealth(url: string): Promise<boolean> {
 }
 
 export async function smoke(): Promise<boolean> {
+  const access = smokeAccess(process.env["SMOKE_ACCESS"]);
   const web = new URL(env("SMOKE_WEB_URL"));
   const server = new URL(env("SMOKE_SERVER_URL"));
   const origin = web.origin;
@@ -158,9 +185,9 @@ export async function smoke(): Promise<boolean> {
   record("ws_foreign_origin_403", foreign.status === 403);
   const allowed = await tryWebSocket(server.href, origin);
   record("ws_allowed_origin_opens", allowed.opened);
-  // Sin clave, el navegador muestra «Clave del grupo» por el 401 de `POST /access` (T-39.17). Si el
-  // servidor no pide clave, responde 204 y la prueba lo dice.
-  for (const [name, ok] of await checkAccess(server.href, origin)) record(name, ok);
+  // Con clave, sin ella el navegador muestra «Clave del grupo» por el 401 de `POST /access` (T-39.17).
+  // Si eso no coincide con el modo pedido (T-39.22), la prueba lo dice.
+  for (const [name, ok] of await checkAccess(server.href, origin, access)) record(name, ok);
 
   return results.every(([, ok]) => ok);
 }

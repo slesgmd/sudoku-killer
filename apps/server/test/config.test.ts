@@ -8,6 +8,7 @@ import {
   isPrivateIPv4,
   lanOrigins,
   loadConfig,
+  logAccessMode,
 } from "../src/config/config.ts";
 import { table } from "./helpers/play.ts";
 import { createTestServer, testBank } from "./helpers/server.ts";
@@ -29,6 +30,7 @@ describe("server configuration", () => {
       logLevel: "info",
       production: false,
       accessKeyHash: null,
+      accessOpenIgnored: false,
       trustProxyHops: 0,
       migrationsAllow: [],
     });
@@ -59,6 +61,45 @@ describe("server configuration", () => {
     expect(message).toMatch(/ACCESS_KEY_HASH no es válida/);
     expect(message).toMatch(/TRUST_PROXY_HOPS no es válida/);
     expect(message).not.toContain("s3cr3t");
+  });
+
+  it("T-39.18 production without a key needs ACCESS_OPEN=true; with both, the key wins", () => {
+    const production = { DATABASE_URL: URL_WITH_SECRET, NODE_ENV: "production" };
+    // Una variable olvidada no abre el servidor.
+    expect(() => loadConfig(production)).toThrow(/falta ACCESS_KEY_HASH/);
+    expect(() => loadConfig({ ...production, ACCESS_OPEN: "false" })).toThrow(
+      /falta ACCESS_KEY_HASH/,
+    );
+    expect(() => loadConfig({ ...production, ACCESS_OPEN: "1" })).toThrow(
+      /ACCESS_OPEN no es válida/,
+    );
+    expect(loadConfig({ ...production, ACCESS_OPEN: "true" })).toMatchObject({
+      accessKeyHash: null,
+      accessOpenIgnored: false,
+    });
+    expect(loadConfig({ ...production, ACCESS_OPEN: "true", ACCESS_KEY_HASH: HASH })).toMatchObject(
+      { accessKeyHash: HASH, accessOpenIgnored: true },
+    );
+    // Fuera de producción, sin clave sigue sin pedirse.
+    expect(loadConfig({ DATABASE_URL: URL_WITH_SECRET }).accessKeyHash).toBeNull();
+  });
+
+  it("T-39.19 the startup says the access is open, with no sensitive data", () => {
+    const logged = (config: Parameters<typeof logAccessMode>[0]) => {
+      const lines: string[] = [];
+      logAccessMode(config, {
+        warn: (message, fields) => {
+          lines.push(`${message} ${JSON.stringify(fields ?? {})}`);
+        },
+      });
+      return lines;
+    };
+    expect(logged({ accessKeyHash: null, accessOpenIgnored: false })).toEqual(["access open {}"]);
+    // Verificación negativa: con clave no lo dice, y nunca escribe el hash.
+    expect(logged({ accessKeyHash: HASH, accessOpenIgnored: false })).toEqual([]);
+    const ignored = logged({ accessKeyHash: HASH, accessOpenIgnored: true });
+    expect(ignored).toHaveLength(1);
+    expect(ignored.join()).not.toContain(HASH.slice("sha256:".length));
   });
 
   it("a missing DATABASE_URL names the variable and the .env path", () => {

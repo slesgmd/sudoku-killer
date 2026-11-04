@@ -4,7 +4,7 @@
 import { networkInterfaces, type NetworkInterfaceInfo } from "node:os";
 import { z } from "zod";
 import { normalizeOrigin } from "../infra/ws-transport.ts";
-import type { LogLevel } from "../log/logger.ts";
+import type { LogLevel, Logger } from "../log/logger.ts";
 
 export const ENV_FILE = "apps/server/.env";
 
@@ -14,10 +14,12 @@ export interface Config {
   readonly port: number;
   readonly allowedOrigins: readonly string[];
   readonly logLevel: LogLevel;
-  /** `NODE_ENV=production`: la clave de acceso es obligatoria (S-02). */
+  /** `NODE_ENV=production`: sin clave de acceso, hay que pedir el acceso abierto (S-02). */
   readonly production: boolean;
-  /** El hash de la clave de acceso del grupo (`sha256:…`), o `null` sin clave (solo en desarrollo). */
+  /** El hash de la clave de acceso del grupo (`sha256:…`), o `null` con el acceso abierto. */
   readonly accessKeyHash: string | null;
+  /** `ACCESS_OPEN=true` junto con una clave: gana la clave (R-39). */
+  readonly accessOpenIgnored: boolean;
   /** Proxies de confianza delante del servidor, para la IP del cliente (S-01). */
   readonly trustProxyHops: number;
   /** Migraciones destructivas que este despliegue puede aplicar (`MIGRATIONS_ALLOW`). */
@@ -80,6 +82,7 @@ const schema = z.object({
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   NODE_ENV: z.string().optional(),
   ACCESS_KEY_HASH: z.string().regex(ACCESS_KEY_HASH_PATTERN).optional(),
+  ACCESS_OPEN: z.enum(["true", "false"]).optional(),
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(3).default(0),
   MIGRATIONS_ALLOW: z
     .string()
@@ -129,6 +132,7 @@ export function loadConfig(
     LOG_LEVEL,
     NODE_ENV,
     ACCESS_KEY_HASH,
+    ACCESS_OPEN,
     TRUST_PROXY_HOPS,
     MIGRATIONS_ALLOW,
   } = parsed.data;
@@ -138,9 +142,9 @@ export function loadConfig(
       "Configuración inválida: --lan (pnpm dev:lan) es solo para desarrollo en la red de casa, no para producción.",
     );
   }
-  if (production && ACCESS_KEY_HASH === undefined) {
+  if (production && ACCESS_KEY_HASH === undefined && ACCESS_OPEN !== "true") {
     throw new ConfigError(
-      "Configuración inválida: falta ACCESS_KEY_HASH, obligatoria en producción (la clave de acceso del grupo, docs/seguridad.md S-02).",
+      "Configuración inválida: falta ACCESS_KEY_HASH en producción (la clave de acceso del grupo). Para abrir el acceso a propósito, define ACCESS_OPEN=true (docs/seguridad.md S-02).",
     );
   }
   return {
@@ -153,7 +157,17 @@ export function loadConfig(
     logLevel: LOG_LEVEL,
     production,
     accessKeyHash: ACCESS_KEY_HASH ?? null,
+    accessOpenIgnored: ACCESS_KEY_HASH !== undefined && ACCESS_OPEN === "true",
     trustProxyHops: TRUST_PROXY_HOPS,
     migrationsAllow: MIGRATIONS_ALLOW,
   };
+}
+
+/** Deja constancia en el log de cómo arrancó el acceso (R-39), sin ningún dato sensible. */
+export function logAccessMode(
+  { accessKeyHash, accessOpenIgnored }: Pick<Config, "accessKeyHash" | "accessOpenIgnored">,
+  logger: Pick<Logger, "warn">,
+): void {
+  if (accessKeyHash === null) logger.warn("access open");
+  else if (accessOpenIgnored) logger.warn("access key configured: ACCESS_OPEN ignored");
 }

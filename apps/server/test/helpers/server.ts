@@ -8,6 +8,7 @@ import { createNormalMode, type MatchEvent, type MatchState } from "@sudoku-kill
 import type { ClientMessage, ClientMessageType, ServerEnvelope } from "@sudoku-killer/protocol";
 import { PARAMS_V1 } from "@sudoku-killer/scoring";
 import { expect, onTestFinished } from "vitest";
+import type { IpLimits } from "../../src/infra/ip-limiter.ts";
 import { MemoryTransport, type MemoryClient } from "../../src/infra/memory-transport.ts";
 import { seededIds } from "../../src/infra/random.ts";
 import { createLogger } from "../../src/log/logger.ts";
@@ -21,6 +22,7 @@ import { EventWriter } from "../../src/match/sink.ts";
 import { createPuzzleCatalog, type PuzzleCatalog } from "../../src/puzzles/catalog.ts";
 import { loadBank } from "../../src/puzzles/load-bank.ts";
 import { createPuzzleRepository } from "../../src/puzzles/repository.ts";
+import type { MatchCaps } from "../../src/rooms/match-usage.ts";
 import type { Room } from "../../src/rooms/room.ts";
 import { RoomServer } from "../../src/rooms/server.ts";
 import type { Database } from "../../src/db/database.ts";
@@ -103,17 +105,21 @@ export class FaultyRepository implements MatchRepository {
 
 export interface TestServerOptions {
   readonly seed?: number;
+  /** Límites por IP (R-40), con su reloj: `(clock) => createIpLimits(clock, …)`. */
+  readonly limits?: (clock: FakeClock) => IpLimits;
+  readonly caps?: MatchCaps;
 }
 
 export type TestServer = Awaited<ReturnType<typeof createTestServer>>;
 
-export async function createTestServer({ seed = 1 }: TestServerOptions = {}) {
+export async function createTestServer({ seed = 1, limits, caps }: TestServerOptions = {}) {
   const { db, client, catalog, solutions } = await testBank();
   // Las pruebas de un archivo comparten la base: cada servidor nuevo empieza sin partidas, para no
   // reconstruir las de otra prueba. (TRUNCATE no pasa por el trigger de UPDATE y DELETE.)
   await client.query("TRUNCATE match_events, matches");
   const repository = new FaultyRepository(createMatchRepository(db));
   const clock = new FakeClock();
+  const ipLimits = limits?.(clock);
   const logs: string[] = [];
   const logger = createLogger({
     level: "debug",
@@ -165,6 +171,8 @@ export async function createTestServer({ seed = 1 }: TestServerOptions = {}) {
       repository,
       logger,
       mode,
+      ...(ipLimits === undefined ? {} : { limits: ipLimits }),
+      ...(caps === undefined ? {} : { caps }),
     });
     return live.start();
   };
@@ -229,11 +237,12 @@ export async function createTestServer({ seed = 1 }: TestServerOptions = {}) {
       if (!match) throw new Error(`No match in ${code}`);
       return match.solution;
     },
-    client(): TestClient {
+    limits: ipLimits,
+    client(address: string | null = null): TestClient {
       // Tras un reinicio, el transporte nuevo vuelve a numerar las conexiones desde 1: la generación
       // en el `id` evita repetir uno de antes, que la deduplicación (guardada en el registro) daría
       // por ya aplicado. Los clientes reales usan `id` al azar.
-      return new TestClient(transport.connect(), settle, tokens, generation);
+      return new TestClient(transport.connect(address), settle, tokens, generation);
     },
   };
   return harness;

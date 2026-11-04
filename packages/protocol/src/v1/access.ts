@@ -10,6 +10,11 @@ export const ACCESS_PROTOCOL = "sk.v1";
 export const KEY_PROTOCOL_PREFIX = "sk.k.";
 /** La ruta HTTP que comprueba una clave (T-39.12): 204, 401 o 429. */
 export const ACCESS_PATH = "/access";
+/**
+ * El parámetro de `GET /ws` que pregunta cuánto falta para volver a entrar (`join`) o crear (`create`)
+ * una sala (R-40). Es HTTP: ningún mensaje del protocolo cambia.
+ */
+export const ENTRY_QUERY = "entry";
 /** La cabecera de `POST /access` que lleva la clave, en base64url. */
 export const ACCESS_KEY_HEADER = "x-sk-access-key";
 export const ACCESS_KEY_MIN_LENGTH = 12;

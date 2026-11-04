@@ -1,6 +1,7 @@
 # Despliegue en Render (ADR 0007): el servidor de salas (servicio web gratuito, Virginia) y la
 # web (sitio estático gratuito), los dos desde `main` y solo cuando pasan los checks del commit.
-# Sin secretos: DATABASE_URL y ACCESS_KEY_HASH se escriben en el panel de Render (`sync: false`).
+# Sin secretos: DATABASE_URL, ACCESS_KEY_HASH y ACCESS_OPEN se escriben en el panel de Render
+# (`sync: false`). Sin clave, el servidor solo arranca con ACCESS_OPEN=true (docs/seguridad.md S-02).
 # Si Render agrega un sufijo a algún nombre, hay que ajustar ALLOWED_ORIGINS, VITE_SERVER_URL y la
 # CSP de abajo (las comprueba tests/render-config.test.ts).
 services:
@@ -33,6 +34,8 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: ACCESS_KEY_HASH
+        sync: false
+      - key: ACCESS_OPEN
         sync: false
 
   - type: web

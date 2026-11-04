@@ -5,6 +5,7 @@
 import { monitorEventLoopDelay } from "node:perf_hooks";
 import type { AccessGate } from "../infra/access.ts";
 import type { Clock } from "../infra/clock.ts";
+import type { IpLimits } from "../infra/ip-limiter.ts";
 import type { CommitStats } from "../match/sink.ts";
 import type { RoomStore } from "../rooms/store.ts";
 import type { Logger } from "./logger.ts";
@@ -23,6 +24,10 @@ export interface MetricsSources {
   readonly rooms: RoomStore;
   readonly writer: { takeStats(): CommitStats };
   readonly access: Pick<AccessGate, "denied" | "missing">;
+  /** Límites por IP (R-40): intentos rechazados desde que arrancó. */
+  readonly limits: IpLimits;
+  /** Rechazos por los topes de eventos por partida desde que arrancó. */
+  readonly caps: { readonly eventsCapped: number };
 }
 
 export interface MetricsOptions {
@@ -51,6 +56,11 @@ export function startMetrics({
   let missing = sources.access.missing;
   let locked = sources.transport.locked;
   let unknown = sources.transport.unknownAddresses;
+  const eventsRejected = () => sources.limits.events.locked + sources.caps.eventsCapped;
+  let joinLocked = sources.limits.join.locked;
+  let createLocked = sources.limits.create.locked;
+  let connectLocked = sources.limits.connect.locked;
+  let eventsLocked = eventsRejected();
   let cancel: (() => void) | null = null;
 
   const report = () => {
@@ -84,11 +94,19 @@ export function startMetrics({
       accessMissing: sources.access.missing - missing,
       accessLocked: sources.transport.locked - locked,
       addressUnknown: sources.transport.unknownAddresses - unknown,
+      joinLocked: sources.limits.join.locked - joinLocked,
+      createLocked: sources.limits.create.locked - createLocked,
+      connectLocked: sources.limits.connect.locked - connectLocked,
+      eventsLocked: eventsRejected() - eventsLocked,
     });
     denied = sources.access.denied;
     missing = sources.access.missing;
     locked = sources.transport.locked;
     unknown = sources.transport.unknownAddresses;
+    joinLocked = sources.limits.join.locked;
+    createLocked = sources.limits.create.locked;
+    connectLocked = sources.limits.connect.locked;
+    eventsLocked = eventsRejected();
   };
 
   const schedule = () => {

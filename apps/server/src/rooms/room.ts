@@ -58,9 +58,11 @@ import {
   CLOSE_SERVICE_RESTART,
   GRACE_MS,
   IDEMPOTENCY_ENTRIES,
+  MATCH_CAPS,
   PRESENCE_WINDOW_MS,
 } from "./limits.ts";
 import { Lru } from "./lru.ts";
+import { MatchUsage, type MatchCaps } from "./match-usage.ts";
 
 /** La conexión de un cliente, como la ve una sala (la implementa `RoomServer`). */
 export interface Session {
@@ -86,6 +88,10 @@ export interface RoomDeps {
   readonly onDeleted: (room: Room) => void;
   /** Se perdieron eventos sin confirmar (E-16): la sala se cerró y hay que reconstruirla. */
   readonly onLost: (room: Room) => void;
+  /** Topes de eventos por partida (por defecto `MATCH_CAPS`). */
+  readonly caps?: MatchCaps;
+  /** Se rechazó algo por un tope de eventos (métricas). */
+  readonly onCapped?: () => void;
 }
 
 interface Member {
@@ -112,6 +118,7 @@ interface LiveMatch {
   state: MatchState;
   readonly puzzle: PublicPuzzle;
   readonly solution: readonly number[];
+  readonly usage: MatchUsage;
 }
 
 interface Author {
@@ -129,6 +136,9 @@ const GAME_COMMANDS = new Set<string>([
   "note.remove",
   "note.undo",
 ]);
+
+/** Los comandos que escriben `note.op` o `settings.changed`, sin tope natural (S-09). */
+const NOTE_COMMANDS = new Set<string>(["note.add", "note.remove", "note.undo", "settings.update"]);
 
 export class Room {
   readonly code: string;
@@ -311,6 +321,7 @@ export class Room {
     for (const event of events) {
       const { state, effects } = applyWithEffects(match.state, event, this.context);
       match.state = state;
+      match.usage.count(event);
       outgoing.push(...messagesOf(event, state, effects, this.deps.mode));
       if (event.type === "match.ended") ended = true;
     }
@@ -342,6 +353,27 @@ export class Room {
     for (const member of [...this.members.values()]) {
       if (member.connection === "left" || member.connection === "expired") this.purge(member);
     }
+  }
+
+  // --- Topes de eventos por partida (R-40, S-09) ---
+
+  private get caps(): MatchCaps {
+    return this.deps.caps ?? MATCH_CAPS;
+  }
+
+  private capped(session: Session, replyTo: string): void {
+    this.deps.onCapped?.();
+    this.answer(session, replyTo, { type: "error", payload: { code: "rate_limited" } });
+  }
+
+  /** Si un jugador ya llegó al tope de cambios de conexión de la partida en curso. */
+  private atConnectionCap(member: Member): boolean {
+    const match = this.match;
+    return (
+      match !== null &&
+      this.inMatch(member) &&
+      match.usage.connectionsOf(member.id) >= this.caps.connectionsPerPlayer
+    );
   }
 
   // --- Vista ---
@@ -428,6 +460,14 @@ export class Room {
       this.answer(session, message.id, { type: "error", payload: { code: "nickname.taken" } });
       return;
     }
+    if (
+      this.state === "running" &&
+      this.match &&
+      this.match.usage.joins >= this.caps.joinsPerMatch
+    ) {
+      this.capped(session, message.id);
+      return;
+    }
     const fresh = newToken();
     const member: Member = {
       id: this.deps.ids(),
@@ -460,8 +500,19 @@ export class Room {
     this.checkEmpty();
   }
 
+  /** Si una ficha es la de algún jugador de la sala (R-40: esa vuelta no espera). */
+  hasToken(token: string): boolean {
+    const tokenHash = hashToken(token);
+    return [...this.members.values()].some((m) => m.tokenHash === tokenHash);
+  }
+
   /** Vuelta con ficha (D3, D3', E-08). */
   private resume(session: Session, member: Member, replyTo: string): void {
+    // Reemplazar la conexión (E-08) no escribe ningún evento; volver, sí.
+    if (member.connection !== "connected" && this.atConnectionCap(member)) {
+      this.capped(session, replyTo);
+      return;
+    }
     switch (member.connection) {
       case "connected": {
         // E-08: la conexión nueva reemplaza a la anterior.
@@ -634,9 +685,11 @@ export class Room {
     const context = { mode: deps.mode, puzzle: puzzle.puzzle };
     let state = initialState(first, context);
     const replies = new Map<string, Map<string, readonly ServerEnvelope[]>>();
+    const usage = new MatchUsage();
     for (const event of rest) {
       const applied = applyWithEffects(state, event, context);
       state = applied.state;
+      usage.count(event);
       const author = authorOf(event);
       if (!author) continue;
       const outgoing = messagesOf(event, state, applied.effects, deps.mode);
@@ -652,7 +705,7 @@ export class Room {
     room.difficulty = stored.match.difficulty;
     room.starterId = state.starterId;
     room.playedPuzzleIds.push(puzzle.puzzle.id);
-    room.match = { state, puzzle: puzzle.puzzle, solution: puzzle.solution };
+    room.match = { state, puzzle: puzzle.puzzle, solution: puzzle.solution, usage };
     for (const player of state.players.values()) {
       const cache = new Lru<string, readonly ServerEnvelope[]>(IDEMPOTENCY_ENTRIES);
       for (const [id, copies] of replies.get(player.id) ?? []) cache.set(id, copies);
@@ -709,6 +762,16 @@ export class Room {
     }
     const author: Author = { playerId: member.id, clientMsgId: message.id };
     const isStarter = this.starterId === member.id;
+    if (
+      NOTE_COMMANDS.has(message.type) &&
+      this.inMatch(member) &&
+      this.match &&
+      this.match.usage.notesOf(member.id) >= this.caps.notesPerPlayer
+    ) {
+      this.deps.onCapped?.();
+      this.fail(author, "rate_limited");
+      return;
+    }
     switch (message.type) {
       case "room.leave":
         this.leave(session, member, message.id);
@@ -822,7 +885,7 @@ export class Room {
       at,
     });
     const state = initialState(started, { mode, puzzle });
-    this.match = { state, puzzle, solution };
+    this.match = { state, puzzle, solution, usage: new MatchUsage() };
     this.state = "running";
     this.playedPuzzleIds.push(puzzle.id);
     const record: MatchRecord = {
