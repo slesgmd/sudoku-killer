@@ -61,6 +61,7 @@ export function startMetrics({
   let createLocked = sources.limits.create.locked;
   let connectLocked = sources.limits.connect.locked;
   let eventsLocked = eventsRejected();
+  let eventsDayLocked = sources.limits.events.lockedToWindowEnd;
   let cancel: (() => void) | null = null;
 
   const report = () => {
@@ -98,6 +99,7 @@ export function startMetrics({
       createLocked: sources.limits.create.locked - createLocked,
       connectLocked: sources.limits.connect.locked - connectLocked,
       eventsLocked: eventsRejected() - eventsLocked,
+      eventsDayLocked: sources.limits.events.lockedToWindowEnd - eventsDayLocked,
     });
     denied = sources.access.denied;
     missing = sources.access.missing;
@@ -107,6 +109,7 @@ export function startMetrics({
     createLocked = sources.limits.create.locked;
     connectLocked = sources.limits.connect.locked;
     eventsLocked = eventsRejected();
+    eventsDayLocked = sources.limits.events.lockedToWindowEnd;
   };
 
   const schedule = () => {

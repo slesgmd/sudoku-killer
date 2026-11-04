@@ -38,6 +38,8 @@ export function limitKey(ip: string): string {
 interface Entry {
   readonly windows: { count: number; resetAt: number }[];
   lockedUntil: number;
+  /** Si la espera vigente es la de una ventana sin `waitMs`, que dura hasta que esta termina. */
+  untilWindowEnd: boolean;
 }
 
 export interface IpLimiterOptions {
@@ -49,6 +51,8 @@ export interface IpLimiterOptions {
 export class IpLimiter {
   /** Intentos rechazados desde que arrancó (métricas). */
   locked = 0;
+  /** De esos, los rechazados por una espera hasta el fin de su ventana (métricas). */
+  lockedToWindowEnd = 0;
   private readonly spec: LimitSpec;
   private readonly clock: Clock;
   private readonly maxTracked: number;
@@ -72,6 +76,13 @@ export class IpLimiter {
     return entry ? Math.max(0, entry.lockedUntil - this.clock.now()) : 0;
   }
 
+  /** Anota un intento rechazado, según la espera vigente de la IP. */
+  rejected(ip: string | null): void {
+    this.locked++;
+    if (ip !== null && this.entries.get(limitKey(ip))?.untilWindowEnd === true)
+      this.lockedToWindowEnd++;
+  }
+
   /**
    * Cuenta un intento. Devuelve la espera que empieza con él (en ms), o 0 si no se pasó ningún
    * límite. Al pasarse, esa ventana y las más cortas vuelven a cero, y las más largas siguen sumando.
@@ -92,6 +103,7 @@ export class IpLimiter {
       const window = entry.windows[index];
       if (!limit || !window || window.count <= limit.max) continue;
       const until = limit.waitMs === undefined ? window.resetAt : now + limit.waitMs;
+      if (until >= entry.lockedUntil) entry.untilWindowEnd = limit.waitMs === undefined;
       entry.lockedUntil = Math.max(entry.lockedUntil, until);
       for (const shorter of entry.windows.slice(0, index + 1)) shorter.count = 0;
       return entry.lockedUntil - now;
@@ -106,6 +118,7 @@ export class IpLimiter {
     const entry: Entry = {
       windows: this.spec.map(() => ({ count: 0, resetAt: 0 })),
       lockedUntil: 0,
+      untilWindowEnd: false,
     };
     this.entries.set(key, entry);
     return entry;

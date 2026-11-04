@@ -373,4 +373,54 @@ describe("R-40 event caps per match (S-09)", () => {
     await h.settle();
     expect(h.limits?.events.locked).toBe(lockedBefore);
   });
+
+  it("T-40.22 the wait of the 24 h budget has its own counter; the 10 min wait, the caps per match and the other limits do not add to it", async () => {
+    const budget = {
+      ...IP_LIMITS,
+      events: [
+        { max: 3, windowMs: 600_000, waitMs: 300_000 },
+        { max: 5, windowMs: 86_400_000 },
+      ],
+    };
+    const h = await createTestServer({
+      caps: { ...LOW_CAPS, notesPerPlayer: 1_000 },
+      limits: (clock) => createIpLimits(clock, budget),
+    });
+    const ana = h.client(HOME);
+    const code = welcomeOf(await ana.create("Ana")).payload.snapshot.room.code;
+    expect(errorOf(await ana.send("match.start", {}))).toBeUndefined();
+    const [cell = 0] = emptyCells(h, code);
+    const events = h.limits?.events;
+
+    // El cuarto comando pasa el límite de 10 min. Verificación negativa: no es el de 24 h.
+    expect(await noteOps(ana, cell, 3)).toEqual(["none", "none", "rate_limited"]);
+    expect(await noteOps(ana, cell, 1)).toEqual(["rate_limited"]);
+    expect(events?.locked).toBe(2);
+    expect(events?.lockedToWindowEnd).toBe(0);
+    await missJoins(h, HOME, 14);
+    expect(h.limits?.join.locked).toBe(1);
+    expect(events?.lockedToWindowEnd).toBe(0);
+
+    // Pasada esa espera, el total del día se agota: espera hasta el fin de la ventana.
+    await h.advance(300_000);
+    expect(await noteOps(ana, cell, 2)).toEqual(["none", "rate_limited"]);
+    expect(events?.lockedToWindowEnd).toBe(1);
+    expect(await noteOps(ana, cell, 1)).toEqual(["rate_limited"]);
+    expect(events?.lockedToWindowEnd).toBe(2);
+    expect(events?.lockedFor(HOME)).toBeGreaterThan(300_000);
+  });
+
+  it("T-40.22 a cap per match adds to eventsLocked's source, not to the 24 h counter", async () => {
+    const h = await createTestServer({
+      caps: LOW_CAPS,
+      limits: (clock) => createIpLimits(clock, IP_LIMITS),
+    });
+    const ana = h.client(HOME);
+    const code = welcomeOf(await ana.create("Ana")).payload.snapshot.room.code;
+    await ana.send("match.start", {});
+    const [cell = 0] = emptyCells(h, code);
+    expect(await noteOps(ana, cell, 5)).toContain("rate_limited");
+    expect(h.server.eventsCapped).toBe(1);
+    expect(h.limits?.events.lockedToWindowEnd).toBe(0);
+  });
 });

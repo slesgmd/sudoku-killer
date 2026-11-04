@@ -24,6 +24,8 @@ pnpm --filter @sudoku-killer/server load --scenario realistic|stress [--rooms 50
 - **Generador:** el retraso del bucle de eventos del proceso de los clientes (`monitorEventLoopDelay`, resolución de 10 ms), para saber si el propio generador inflaba la latencia.
 - El azar de los clientes (ritmo, celdas, acciones) sale de la semilla. El puzzle de cada partida lo elige el servidor con su propio azar, así que dos corridas con la misma semilla no son idénticas.
 
+**Presupuesto de comandos por IP (R-40).** Cada sala entra desde su propia IP simulada: en estrés, 6 jugadores × 20 comandos/s = 120 comandos/s por IP. Un estrés de más de unos 100 s por IP chocaría con el presupuesto de 12 000 comandos en 10 min, y sus comandos recibirían `rate_limited`. Los 75 s del escenario (15 de calentamiento y 60 de medición) quedan por debajo, en unos 9 000; una corrida más larga, como la de memoria de la sección 6, mediría también esas esperas.
+
 ### Escenarios (`params.json`, versión 1)
 
 | Escenario | Ritmo por jugador | Mezcla de acciones |
@@ -114,6 +116,7 @@ El servidor escribe una línea JSON por entrada en la salida estándar, que el p
 | `accessLocked` | Handshakes y `POST /access` con 429 en el período: una red que agotó sus 10 intentos y vuelve a ofrecer una clave (T-39.3). |
 | `joinLocked` / `createLocked` / `connectLocked` | Intentos rechazados en el período por los límites por IP de entradas fallidas, de creación y de aperturas (R-40). Cómo leerlos: `docs/seguridad.md` §5. |
 | `eventsLocked` | Comandos y entradas rechazados en el período por el presupuesto por IP o por los topes de eventos por partida (R-40, S-09): una persona real no debería llegar nunca. |
+| `eventsDayLocked` | De esos, los rechazados por la espera del presupuesto de 24 h (T-40.22): esa espera es la más larga, hasta el fin de la ventana. |
 | `addressUnknown` | Handshakes en el período cuya IP no se pudo saber (T-39.8): si no es 0, `TRUST_PROXY_HOPS` no coincide con lo que manda el proxy (el primer caso deja en el log `client address unknown` con el número de entradas de `X-Forwarded-For`, nunca su contenido). |
 
 En producción, estas líneas reemplazan la prueba de carga en el hosting (sección 8).
