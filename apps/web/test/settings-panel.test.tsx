@@ -81,7 +81,7 @@ describe("T-42.4 the colour selectors work with the keyboard and name each colou
     openSettings();
     swatch("Jaula", "Predeterminado").focus();
     await user.keyboard("{ArrowLeft}");
-    expect(document.activeElement).toBe(swatch("Jaula", "Vino"));
+    expect(document.activeElement).toBe(swatch("Jaula", "Petróleo"));
     expect(client.getState().colors).toMatchObject({ cage: 9, sum: 0, personal: 0, group: 0 });
     await user.keyboard("{ArrowRight}");
     expect(document.activeElement).toBe(swatch("Jaula", "Predeterminado"));

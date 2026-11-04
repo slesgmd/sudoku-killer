@@ -775,6 +775,11 @@ Entre corchetes va el nivel de cada prueba.
 - T-41.8 El enlace de «Compartir» conserva el origen abierto, también en punycode. Verificación negativa: no lleva el otro origen. [C]
 - T-41.9 En una ventana privada, dos personas juegan la misma sala, una desde cada origen; «Compartir» y un enlace antiguo funcionan, en Android, iPhone, Brave y una red de universidad o trabajo. [M]
 
+**R-42 Colores personales.** Cada jugador elige en Ajustes los colores de su tablero, entre 9 de una paleta fija. Se guardan solo en su navegador.
+- T-42.3 La distancia ΔE00 en deuteranopía es ≥ 10 entre colores de la paleta y contra ink; en visión normal, ≥ 15 entre ellos y ≥ 12 con ink, accent y danger; en protanopía, ≥ 5 entre ellos. Es una regla entre colores de la paleta y contra ink, no con el resto de colores reservados. Límite conocido en deuteranopía, con ΔE00 < 10: Frambuesa frente a accent (2,9931), Frambuesa frente a danger (7,9576) y Cobre frente a danger (8,0205). [U]
+- T-42.20 La raya de una nota personal no entra en la nota de abajo, de 360 a 430 px, con cuadrícula 3 × 3 y notas de 8 px o más. Por debajo de 48 px de celda la raya va pegada a su nota; por debajo de 40 px la cuadrícula sube 3 px y la nota va encima de la suma, tapando como mucho el 4,6 % de su tinta a 360 px y escala 3, el 5,8 % a escala 2, y nada a 375 px. A 768 y 1280 px no cambia nada. Límites conocidos de las notas a 360 px: la nota entra 1 px en la suma, solo en la primera fila y abajo de caja, y tapa hasta el 3,35 % de su tinta sin negrita y el 4,58 % con negrita a escala 3, y hasta el 3,54 % y el 5,79 % a escala 2 (medido en 72 de las 81 celdas). A 375 px no tapa nada. Al pasar por 48 px de celda, la raya salta 1,26 px y la nota 0,08 px; solo se vería al redimensionar una ventana de escritorio. La raya punteada solo está medida en píxeles. [E]
+- T-42.21 En un teléfono real y en una ventana de escritorio se revisan la suma a 360 px, el salto de la raya al redimensionar la ventana y la raya punteada. [M]
+
 ---
 
 ## 7. Casos límite
@@ -820,7 +825,7 @@ Entre corchetes va el nivel de cada prueba.
 | E2E | Playwright (6 contextos de navegador) | Partida completa, clics simultáneos, reconexión |
 | Caos | Playwright con cortes de red | E-01, E-07, E-17 |
 | Carga | Script con muchos clientes WS | 50 salas, p95 menor a 150 ms y memoria |
-| Manual | Lista de revisión | T-18.1, T-41.9 |
+| Manual | Lista de revisión | T-18.1, T-41.9, T-42.21 |
 
 ### 8.2 Interfaces que hacen testeable al servidor
 - `Transport`: se implementa con `ws` en producción y en memoria para las pruebas.

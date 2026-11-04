@@ -659,6 +659,36 @@ fieldset {
   }
 }
 
+/* Transiciones solo en Ajustes, y solo si la persona no pidió reducir el movimiento. */
+@media (prefers-reduced-motion: no-preference) {
+  .dialog.wide {
+    --t-panel: 180ms;
+  }
+  .dialog.wide .switch,
+  .dialog.wide .colorfield {
+    transition: opacity var(--t-panel) ease;
+  }
+  .dialog.wide .switch .track {
+    transition:
+      background-color var(--t-panel) ease,
+      border-color var(--t-panel) ease;
+  }
+  .dialog.wide .switch .track::after {
+    transition:
+      left var(--t-panel) ease,
+      background-color var(--t-panel) ease;
+  }
+  .dialog.wide .swatch .dot {
+    transition: box-shadow var(--t-panel) ease;
+  }
+  .dialog.wide .btn {
+    transition:
+      background-color var(--t-panel) ease,
+      border-color var(--t-panel) ease,
+      color var(--t-panel) ease;
+  }
+}
+
 /* Formularios (§5.8) */
 .field {
   display: flex;

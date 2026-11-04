@@ -1,6 +1,6 @@
 /* Tablero y celdas (docs/diseno.md §6), de board.css del prototipo, variante A. Las medidas salen de
-   la celda: el componente Board fija --cell, --sum-fs, --sum-h, --dg-fs, --dg-top, --n-fs, --band,
-   --badge, --badge-fs y --ear según el tamaño del tablero. */
+   la celda: el componente Board fija --cell, --sum-fs, --sum-h, --dg-fs, --dg-top, --n-fs, --n-top,
+   --n-offset, --n-z, --band, --badge, --badge-fs y --ear según el tamaño del tablero. */
 
 .sk-board {
   --sum-color: var(--ink);
@@ -395,8 +395,8 @@
   left: 5px;
   right: 5px;
   bottom: 5px;
-  top: calc(var(--band) + 1px);
-  z-index: 2;
+  top: var(--n-top);
+  z-index: var(--n-z);
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: repeat(3, minmax(0, 1fr));
@@ -420,7 +420,7 @@
   font-weight: var(--fw-regular);
   text-decoration: underline;
   text-decoration-thickness: 1px;
-  text-underline-offset: max(1px, calc(var(--n-fs) * 0.14));
+  text-underline-offset: var(--n-offset);
 }
 .n.gp {
   color: var(--note-group);
@@ -428,11 +428,11 @@
   text-decoration: underline;
   text-decoration-color: var(--note-personal);
   text-decoration-thickness: 1px;
-  text-underline-offset: max(1px, calc(var(--n-fs) * 0.14));
+  text-underline-offset: var(--n-offset);
 }
-/* Mismo color en las dos capas: en ambas, el subrayado pasa a 2 px para distinguirla de la personal. */
+/* Mismo color en las dos capas: en ambas, la raya es punteada para distinguirla de la personal. */
 .sk-board[data-notes-same] .n.gp {
-  text-decoration-thickness: 2px;
+  text-decoration-style: dotted;
 }
 /* Notas del dígito colocado que está seleccionado (R-44). */
 .n.strong {

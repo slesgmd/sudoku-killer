@@ -1,8 +1,10 @@
 // E2E de los colores personales y la negrita contra el servidor real, en Chromium (SPEC, R-42 y R-44):
 // - el color se ve en el tablero, no cambia para otro jugador y no sale ningún mensaje (T-42.6);
-// - personal, grupal y ambas se distinguen también con el mismo color (T-42.7);
+// - personal, grupal y ambas se distinguen también con el mismo color (T-42.7), y la raya no entra en
+//   la nota de abajo (T-42.20);
 // - los estados del tablero no dependen del color elegido (T-42.8);
 // - el panel cabe a 360, 640 × 360 y 1280 px (T-42.9), y sus radios funcionan con el teclado (T-42.4);
+// - las transiciones viven solo en Ajustes y respetan el movimiento reducido (T-42.19);
 // - la negrita no mueve las notas (T-44.3) y usa el peso real de la fuente (T-44.4).
 import type { Page } from "@playwright/test";
 import { cell, createRoom, expect, joinRoom, test, type GameServer } from "./fixtures.ts";
@@ -141,6 +143,7 @@ async function underlineOf(page: Page, index: number, note: string, digit: numbe
       color: style.color,
       weight: style.fontWeight,
       line: style.textDecorationLine,
+      lineStyle: style.textDecorationStyle,
       lineColor: style.textDecorationColor,
       thickness: style.textDecorationThickness,
     };
@@ -183,11 +186,11 @@ for (const same of [false, true]) {
 
     expect(p).toMatchObject({ color: personalColor, weight: "400", line: "underline" });
     expect(p.lineColor).toBe(personalColor);
-    expect(p.thickness).toBe("1px");
+    expect(p).toMatchObject({ thickness: "1px", lineStyle: "solid" });
     expect(g).toMatchObject({ color: groupColor, weight: "600", line: "none" });
     expect(gp).toMatchObject({ color: groupColor, weight: "600", line: "underline" });
     expect(gp.lineColor).toBe(personalColor);
-    expect(gp.thickness).toBe(same ? "2px" : "1px");
+    expect(gp).toMatchObject({ thickness: "1px", lineStyle: same ? "dotted" : "solid" });
 
     // En negrita, los tres pasan a 800 y siguen distinguiéndose.
     await cell(page, placed).click();
@@ -202,9 +205,10 @@ for (const same of [false, true]) {
     expect(gpS.line).toBe("underline");
     if (same) {
       expect(pS.color).toBe(gpS.color);
-      expect(pS.thickness).not.toBe(gpS.thickness);
+      expect([pS.lineStyle, gpS.lineStyle]).toEqual(["solid", "dotted"]);
     } else {
       expect(pS.color).not.toBe(gpS.color);
+      expect([pS.lineStyle, gpS.lineStyle]).toEqual(["solid", "solid"]);
     }
   });
 }
@@ -340,21 +344,21 @@ test("T-42.4 in a real browser: arrows stay in the group, and the chosen colour 
     page.getByRole("group", { name: "Suma", exact: true }).getByRole("radio").first(),
   ).toBeFocused();
 
-  const decoration = (index: number) =>
-    jaula.nth(index).evaluate((input) => {
-      const dot = input.nextElementSibling;
-      if (!dot) throw new Error("No dot");
-      return {
-        ring: getComputedStyle(dot).boxShadow,
-        mark: getComputedStyle(dot, "::after").content,
-      };
-    });
-  const chosen = await decoration(1);
-  expect(chosen.ring).not.toBe("none");
-  expect(chosen.mark).not.toBe("none");
-  const other = await decoration(2);
-  expect(other.ring).toBe("none");
-  expect(other.mark).toBe("none");
+  // El anillo se anima: se espera su valor final, con un plazo. Si no llega, la prueba falla.
+  const dot = (index: number) => page.locator('.swatch[data-color="' + String(index) + '"] .dot');
+  const RING_DONE = 2_000;
+  const chosen = dot(1).first();
+  await expect(chosen).toHaveCSS("box-shadow", /0px 0px 0px 2px.*0px 0px 0px 4px/, {
+    timeout: RING_DONE,
+  });
+  const mark = (target: typeof chosen) =>
+    target.evaluate((element) => getComputedStyle(element, "::after").content);
+  expect(await mark(chosen)).not.toBe("none");
+  const other = dot(2).first();
+  await expect(other).toHaveCSS("box-shadow", "none", { timeout: RING_DONE });
+  expect(await mark(other)).toBe("none");
+  // El que deja de estar elegido también llega a su estado final.
+  await expect(dot(0).first()).toHaveCSS("box-shadow", "none", { timeout: RING_DONE });
   await expect(page.locator('.swatch[data-color="1"]').first()).toHaveAttribute(
     "title",
     "Frambuesa",
@@ -488,14 +492,29 @@ for (const viewport of [PHONE, DESKTOP, LANDSCAPE]) {
   });
 }
 
+/** Lee las medidas que el tablero fijó para sus notas. */
+function noteVars(page: Page) {
+  return page.locator(".sk-board[role=grid]").evaluate((board) => {
+    const value = (name: string) => (board as HTMLElement).style.getPropertyValue(name);
+    return {
+      cell: parseFloat(value("--cell")),
+      sumH: parseFloat(value("--sum-h")),
+      fontSize: parseFloat(value("--n-fs")),
+      top: parseFloat(value("--n-top")),
+      offset: parseFloat(value("--n-offset")),
+      layer: parseFloat(value("--n-z")),
+    };
+  });
+}
+
 for (const viewport of [PHONE, DESKTOP]) {
-  test(`T-44.3 bold does not move the notes at ${String(viewport.width)} px`, async ({
+  test(`T-44.3 bold and the dotted line do not move the notes at ${String(viewport.width)} px`, async ({
     player,
     game,
   }) => {
     const page = await player();
     await page.setViewportSize(viewport);
-    const { empty, solution } = await soloMatch(page, game);
+    const { empty, solution } = await soloMatch(page, game, { personal: 5, group: 5 });
     const [placed, target] = empty;
     if (placed === undefined || target === undefined) throw new Error("Not enough empty cells");
     const digit = solution[placed] ?? 0;
@@ -509,26 +528,448 @@ for (const viewport of [PHONE, DESKTOP]) {
     await expect(noteIn(page, target, ".n.gp", digit)).toBeVisible();
     await page.evaluate(() => document.fonts.ready.then(() => undefined));
 
+    const gridCell = page.locator(".sk-board[role=grid] [role=gridcell]").nth(target);
     const boxes = () =>
-      page
-        .locator(".sk-board[role=grid] [role=gridcell]")
-        .nth(target)
-        .locator(".n")
-        .evaluateAll((items) =>
-          items.map((item) => {
-            const box = item.getBoundingClientRect();
-            return [box.x, box.y, box.width, box.height];
-          }),
-        );
+      gridCell.locator(".n").evaluateAll((items) =>
+        items.map((item) => {
+          const box = item.getBoundingClientRect();
+          return [box.x, box.y, box.width, box.height];
+        }),
+      );
     const plain = await boxes();
     expect(plain).toHaveLength(9);
+    // Siguen en 3 filas y 3 columnas.
+    expect(new Set(plain.map(([x]) => x)).size).toBe(3);
+    expect(new Set(plain.map(([, y]) => y)).size).toBe(3);
 
+    // La cuadrícula está donde dice su medida; a 360 px, subida, y a 1280 px, como antes.
+    const vars = await noteVars(page);
+    const raised = viewport === PHONE;
+    expect(vars.top).toBe(vars.sumH + 1 - (raised ? 3 : 0));
+    expect(vars.offset).toBeCloseTo(raised ? 0 : Math.max(1, vars.fontSize * 0.14), 5);
+    const placedTop = await gridCell.evaluate((element) => {
+      const notes = element.querySelector(".notes");
+      if (!notes) throw new Error("No notes");
+      return (
+        notes.getBoundingClientRect().top - element.getBoundingClientRect().top - element.clientTop
+      );
+    });
+    expect(Math.abs(placedTop - vars.top)).toBeLessThanOrEqual(0.5);
+
+    // Con negrita.
     await cell(page, placed).click();
     const strong = noteIn(page, target, ".n.gp.strong", digit);
     await expect(strong).toHaveCSS("font-weight", "800");
     expect(await boxes()).toEqual(plain);
+
+    // La punteada no mueve nada frente a la continua.
+    await expect(strong).toHaveCSS("text-decoration-style", "dotted");
+    await page.locator(".sk-board[role=grid]").evaluate((board) => {
+      board.removeAttribute("data-notes-same");
+    });
+    await expect(strong).toHaveCSS("text-decoration-style", "solid");
+    expect(await boxes()).toEqual(plain);
   });
 }
+
+/** Lee en otra página, sin CSP, dónde está la tinta roja de una captura, en píxeles CSS. */
+async function redInk(decoder: Page, shot: Buffer, scale: number) {
+  return decoder.evaluate(
+    async ({ data, factor }) => {
+      const response = await fetch(`data:image/png;base64,${data}`);
+      const image = await createImageBitmap(await response.blob());
+      const canvas = new OffscreenCanvas(image.width, image.height);
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("No canvas");
+      context.drawImage(image, 0, 0);
+      const pixels = context.getImageData(0, 0, image.width, image.height).data;
+      let top = Infinity;
+      let bottom = -Infinity;
+      for (let y = 0; y < image.height; y++) {
+        for (let x = 0; x < image.width; x++) {
+          const i = (y * image.width + x) * 4;
+          const [r, g, b] = [pixels[i] ?? 0, pixels[i + 1] ?? 0, pixels[i + 2] ?? 0];
+          // Rojo puro: el suavizado de color del texto oscuro de la suma no llega a este umbral.
+          if (r > 200 && g < 130 && b < 130) {
+            if (y < top) top = y;
+            if (y > bottom) bottom = y;
+          }
+        }
+      }
+      return { top: top / factor, bottom: (bottom + 1) / factor };
+    },
+    { data: shot.toString("base64"), factor: scale },
+  );
+}
+
+/**
+ * Cuánto entra la raya de una nota en la de la fila de abajo, en la columna izquierda de una celda:
+ * positivo, entra; 0, la toca; negativo, hay hueco.
+ */
+async function lineOverNext(page: Page, decoder: Page, index: number, scale: number) {
+  const gridCell = page.locator(".sk-board[role=grid] [role=gridcell]").nth(index);
+  const paint = (show: number, kind: "line" | "digit" | "none") =>
+    gridCell.locator(".n").evaluateAll(
+      (items, { which, how }) => {
+        items.forEach((item, i) => {
+          const style = (item as HTMLElement).style;
+          style.color = "transparent";
+          style.textDecorationLine = "none";
+          if (i !== which) return;
+          if (how === "digit") style.color = "#ff0000";
+          if (how === "line") {
+            style.textDecorationLine = "underline";
+            style.textDecorationColor = "#ff0000";
+            style.textDecorationSkipInk = "none";
+          }
+        });
+      },
+      { which: show, how: kind },
+    );
+  const measure = async (show: number, kind: "line" | "digit") => {
+    await paint(show, kind);
+    return redInk(decoder, await gridCell.screenshot({ animations: "disabled" }), scale);
+  };
+  // Solo la nota medida: el borde de color del número de la suma también parece rojo.
+  const others = gridCell.locator(".sum, .cg");
+  await others.evaluateAll((items) => {
+    for (const item of items) (item as HTMLElement).style.visibility = "hidden";
+  });
+  const results: number[] = [];
+  for (const [upper, lower] of [
+    [0, 3],
+    [3, 6],
+  ] as const) {
+    const line = await measure(upper, "line");
+    const next = await measure(lower, "digit");
+    results.push(line.bottom - next.top);
+  }
+  await gridCell.locator(".n, .sum, .cg").evaluateAll((items) => {
+    for (const item of items) item.removeAttribute("style");
+  });
+  return Math.max(...results);
+}
+
+const SIZES = [
+  { width: 320, height: 568, check: "report" },
+  { width: 360, height: 640, check: "tight" },
+  { width: 375, height: 667, check: "tight" },
+  { width: 390, height: 844, check: "tight" },
+  { width: 412, height: 915, check: "tight" },
+  { width: 430, height: 932, check: "tight" },
+  { width: 768, height: 1024, check: "unchanged" },
+  { width: 1280, height: 800, check: "unchanged" },
+] as const;
+
+for (const scale of [2, 3]) {
+  test(`T-42.20 the line of a personal note stays out of the note below, at scale ${String(scale)}`, async ({
+    player,
+    browser,
+    game,
+  }) => {
+    test.setTimeout(180_000);
+    const context = await browser.newContext({ deviceScaleFactor: scale, viewport: PHONE });
+    const blank = await browser.newContext();
+    try {
+      const page = await player({ context });
+      const decoder = await blank.newPage();
+      const { empty } = await soloMatch(page, game);
+      const rowOf = (index: number) => Math.floor(index / 9);
+      const pick = (rows: readonly number[]) => {
+        const found = empty.find((index) => rows.includes(rowOf(index)));
+        if (found === undefined) throw new Error(`No empty cell in rows ${rows.join()}`);
+        return found;
+      };
+      const cells = {
+        firstRow: pick([0]),
+        boxBottom: pick([2, 5]),
+        normal: pick([1, 3, 4, 6, 7]),
+      };
+      await setMode(page, "Notas");
+      for (const index of Object.values(cells)) {
+        await cell(page, index).click();
+        for (const digit of [1, 4, 7]) await page.keyboard.press(String(digit));
+        await expect(
+          page.locator(".sk-board[role=grid] [role=gridcell]").nth(index).locator(".n.p"),
+        ).toHaveCount(3);
+      }
+      await cell(
+        page,
+        pick([1, 3, 4, 6, 7, 8].filter((row) => row !== rowOf(cells.normal))),
+      ).click();
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+
+      for (const size of SIZES) {
+        await page.setViewportSize(size);
+        const expected = (await page.locator(".sk-board[role=grid]").boundingBox())?.width ?? 0;
+        await expect.poll(async () => (await noteVars(page)).cell).toBeCloseTo(expected / 9, 1);
+        const vars = await noteVars(page);
+        const crossing = {
+          firstRow: await lineOverNext(page, decoder, cells.firstRow, scale),
+          boxBottom: await lineOverNext(page, decoder, cells.boxBottom, scale),
+          normal: await lineOverNext(page, decoder, cells.normal, scale),
+        };
+        console.log(
+          `T-42.20 scale ${String(scale)} ${String(size.width)} px: cell ${vars.cell.toFixed(2)}, font ${String(vars.fontSize)}, top ${String(vars.top)} (sum ${String(vars.sumH)}), offset ${vars.offset.toFixed(2)}, line over next ${JSON.stringify(crossing)}`,
+        );
+        // La regla de cada ancho: raya pegada por debajo de 48 px de celda; subida y encima de la
+        // suma, por debajo de 40 px.
+        const raised = vars.cell < 40;
+        expect(vars.top, `top at ${String(size.width)}`).toBe(vars.sumH + 1 - (raised ? 3 : 0));
+        expect(vars.layer, `layer at ${String(size.width)}`).toBe(raised ? 4 : 2);
+        expect(vars.offset, `offset at ${String(size.width)}`).toBeCloseTo(
+          vars.cell < 48 ? 0 : Math.max(1, vars.fontSize * 0.14),
+          5,
+        );
+        if (size.check === "report") continue;
+        const worst = Math.max(crossing.firstRow, crossing.boxBottom, crossing.normal);
+        expect(worst, `${String(size.width)} px at scale ${String(scale)}`).toBeLessThanOrEqual(0);
+        if (size.check === "unchanged") {
+          expect(vars.cell).toBeGreaterThanOrEqual(48);
+          expect(vars.top).toBe(vars.sumH + 1);
+          expect(vars.offset).toBeCloseTo(Math.max(1, vars.fontSize * 0.14), 5);
+        }
+      }
+
+      // Negativa: con la posición y la raya de antes, el detector marca el cruce a 360 px.
+      await page.setViewportSize(PHONE);
+      await expect.poll(async () => (await noteVars(page)).top).toBe(9);
+      await page.locator(".sk-board[role=grid]").evaluate((board) => {
+        const style = (board as HTMLElement).style;
+        style.setProperty("--n-top", "12px");
+        style.setProperty("--n-offset", "1.12px");
+      });
+      expect(await lineOverNext(page, decoder, cells.normal, scale)).toBeGreaterThan(0);
+    } finally {
+      await context.close();
+      await blank.close();
+    }
+  });
+}
+
+/** Cuántos píxeles de la tinta de la suma tapan las notas 1 y 2 de una celda. */
+async function sumCovered(decoder: Page, sumShot: Buffer, noteShot: Buffer) {
+  return decoder.evaluate(
+    async ([sumData, noteData]) => {
+      const mask = async (data: string) => {
+        const response = await fetch(`data:image/png;base64,${data}`);
+        const image = await createImageBitmap(await response.blob());
+        const canvas = new OffscreenCanvas(image.width, image.height);
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("No canvas");
+        context.drawImage(image, 0, 0);
+        const pixels = context.getImageData(0, 0, image.width, image.height).data;
+        const on: boolean[] = [];
+        for (let i = 0; i < pixels.length; i += 4)
+          on.push(
+            (pixels[i] ?? 0) > 200 && (pixels[i + 1] ?? 0) < 130 && (pixels[i + 2] ?? 0) < 130,
+          );
+        return on;
+      };
+      const sum = await mask(sumData);
+      const note = await mask(noteData);
+      const ink = sum.filter(Boolean).length;
+      const covered = sum.filter((on, i) => on && note[i]).length;
+      return { ink, covered };
+    },
+    [sumShot.toString("base64"), noteShot.toString("base64")] as const,
+  );
+}
+
+// Los máximos medidos en todo el tablero, por escala (docs/diseno.md §2.5).
+for (const [scale, limit] of [
+  [3, 4.6],
+  [2, 5.8],
+] as const) {
+  test(`T-42.20 the note over the sum covers at most ${String(limit)} % of its ink at 360 px and scale ${String(scale)}, and nothing at 375 px`, async ({
+    player,
+    browser,
+    game,
+  }) => {
+    test.setTimeout(180_000);
+    const context = await browser.newContext({ deviceScaleFactor: scale, viewport: PHONE });
+    const blank = await browser.newContext();
+    try {
+      const page = await player({ context });
+      const decoder = await blank.newPage();
+      const { empty } = await soloMatch(page, game);
+      const pick = (rows: readonly number[]) => {
+        const found = empty.find((index) => rows.includes(Math.floor(index / 9)));
+        if (found === undefined) throw new Error(`No empty cell in rows ${rows.join()}`);
+        return found;
+      };
+      const cells = { firstRow: pick([0]), boxBottom: pick([2, 5]), normal: pick([1, 3, 4, 6, 7]) };
+      await setMode(page, "Notas");
+      for (const index of Object.values(cells)) {
+        await cell(page, index).click();
+        for (const digit of [1, 2]) await page.keyboard.press(String(digit));
+      }
+      await cell(
+        page,
+        pick([3, 4, 6, 7, 8].filter((row) => row !== Math.floor(cells.normal / 9))),
+      ).click();
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+
+      const worstAt = async (viewport: { width: number; height: number }) => {
+        await page.setViewportSize(viewport);
+        await expect
+          .poll(async () => (await noteVars(page)).cell)
+          .toBeCloseTo(
+            ((await page.locator(".sk-board[role=grid]").boundingBox())?.width ?? 0) / 9,
+            1,
+          );
+        let worst = 0;
+        for (const index of Object.values(cells)) {
+          const gridCell = page.locator(".sk-board[role=grid] [role=gridcell]").nth(index);
+          for (const value of ["12", "16", "17", "21", "22"]) {
+            for (const weight of ["400", "800"]) {
+              const paint = (what: "sum" | "note") =>
+                gridCell.evaluate(
+                  (element, { text, show, heavy }) => {
+                    let sum = element.querySelector<HTMLElement>(".sum");
+                    if (!sum) {
+                      sum = document.createElement("span");
+                      sum.className = "sum";
+                      element.prepend(sum);
+                    }
+                    sum.textContent = text;
+                    sum.style.color = show === "sum" ? "#ff0000" : "transparent";
+                    sum.style.background = "transparent";
+                    for (const segment of element.querySelectorAll<HTMLElement>(".cg"))
+                      segment.style.visibility = "hidden";
+                    for (const note of element.querySelectorAll<HTMLElement>(".n")) {
+                      note.style.color = show === "note" ? "#ff0000" : "transparent";
+                      note.style.textDecorationLine = "none";
+                      note.style.fontWeight = heavy;
+                    }
+                  },
+                  { text: value, show: what, heavy: weight },
+                );
+              await paint("sum");
+              const sumShot = await gridCell.screenshot({ animations: "disabled" });
+              await paint("note");
+              const noteShot = await gridCell.screenshot({ animations: "disabled" });
+              const { ink, covered } = await sumCovered(decoder, sumShot, noteShot);
+              expect(ink).toBeGreaterThan(100);
+              worst = Math.max(worst, (100 * covered) / ink);
+            }
+          }
+        }
+        return worst;
+      };
+
+      const at360 = await worstAt(PHONE);
+      console.log(`T-42.20 sum covered at 360 px: ${at360.toFixed(2)} %`);
+      expect(Number(at360.toFixed(1))).toBeLessThanOrEqual(limit);
+      // Negativa: a 360 px sí tapa algo, así que el detector ve el solape.
+      expect(at360).toBeGreaterThan(0);
+
+      const raised = await page
+        .locator(".sk-board[role=grid] .notes")
+        .first()
+        .evaluate((notes) => {
+          const sum = document.createElement("span");
+          sum.className = "sum";
+          notes.parentElement?.append(sum);
+          const result = [getComputedStyle(notes).zIndex, getComputedStyle(sum).zIndex];
+          sum.remove();
+          return result.map(Number);
+        });
+      expect(raised[0] ?? 0).toBeGreaterThan(raised[1] ?? 0);
+
+      const at375 = await worstAt({ width: 375, height: 667 });
+      console.log(`T-42.20 sum covered at 375 px: ${at375.toFixed(2)} %`);
+      expect(at375).toBe(0);
+    } finally {
+      await context.close();
+      await blank.close();
+    }
+  });
+}
+
+test("T-42.19 the transitions live only in Ajustes, and respect reduced motion", async ({
+  player,
+  game,
+}) => {
+  const page = await player();
+  await soloMatch(page, game);
+  const duration = (selector: string, pseudo?: string) =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate((element, after) => {
+        const style = getComputedStyle(element, after);
+        return (
+          Math.max(...style.transitionDuration.split(",").map((value) => parseFloat(value))) * 1000
+        );
+      }, pseudo);
+  const PANEL: readonly (readonly [string, string?])[] = [
+    [".dialog.wide .switch"],
+    [".dialog.wide .colorfield"],
+    [".dialog.wide .switch .track"],
+    [".dialog.wide .switch .track", "::after"],
+    [".dialog.wide .swatch .dot"],
+    [".dialog.wide .dactions .btn"],
+    [".dialog.wide .dhead .btn"],
+  ];
+  const OUTSIDE = [
+    ".sk-board[role=grid] .sk-gc",
+    ".sk-board[role=grid] .cg",
+    ".sk-board.preview .sk-gc",
+    ".pg-nav .btn",
+    ".pg-keys .key",
+    ".pg-tools .btn",
+  ];
+
+  await openSettings(page);
+  await expect(page.getByRole("dialog", { name: "Ajustes" })).toBeVisible();
+  for (const [selector, pseudo] of PANEL) {
+    const ms = await duration(selector, pseudo);
+    expect(ms, `${selector}${pseudo ?? ""}`).toBeGreaterThanOrEqual(150);
+    expect(ms, `${selector}${pseudo ?? ""}`).toBeLessThanOrEqual(200);
+  }
+  // Negativa: fuera del panel no hay transición.
+  for (const selector of OUTSIDE) expect(await duration(selector), selector).toBe(0);
+
+  // La transición corre de verdad y termina en su estado final.
+  const toggle = page.getByRole("switch", { name: /^Aleatorio/ });
+  await toggle.click();
+  expect(
+    await page.evaluate(() => document.getAnimations().some((a) => a instanceof CSSTransition)),
+  ).toBe(true);
+  await expect(toggle).toHaveAttribute("aria-checked", "true");
+  await expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(0);
+  await closeSettings(page);
+
+  // Negativa: otro diálogo no se anima.
+  await page.getByRole("button", { name: "Salir", exact: true }).click();
+  await expect(page.getByRole("alertdialog")).toBeVisible();
+  expect(await duration(".dialog:not(.wide) .btn")).toBe(0);
+  await page.getByRole("button", { name: "Quedarme" }).click();
+
+  // Con el movimiento reducido no queda ninguna transición en el panel.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openSettings(page);
+  for (const [selector, pseudo] of PANEL) {
+    expect(await duration(selector, pseudo), selector).toBeLessThan(1);
+    // Ni siquiera se declara: la duración mínima es de la regla global de movimiento reducido.
+    expect(
+      await page
+        .locator(selector)
+        .first()
+        .evaluate((element, after) => getComputedStyle(element, after).transitionProperty, pseudo),
+      selector,
+    ).toBe("all");
+  }
+  await page.getByRole("switch", { name: /^Aleatorio/ }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.getAnimations().filter((a) => a instanceof CSSTransition).length,
+      ),
+    )
+    .toBe(0);
+});
 
 test("T-44.4 bold uses the real weight of the font", async ({ player, game }) => {
   const page = await player();

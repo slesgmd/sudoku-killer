@@ -98,6 +98,18 @@ Medidos con la fórmula de luminancia relativa de WCAG 2.2. Mínimos: texto 4,5:
 | paper sobre danger | Acción destructiva | 5,55 |
 | paper sobre jugador | Monogramas e iniciales | 5,28–6,34 |
 
+**Colores personales (`--pal-1` a `--pal-9`).** Frambuesa, Cobre, Bronce, Musgo, Jade, Azul, Índigo, Ciruela y Petróleo: al menos 4,5:1 sobre los cuatro fondos de celda (T-42.2). En deuteranopía, ΔE00 ≥ 10 entre colores de la paleta y contra ink (T-42.3).
+
+**Límite conocido.** Esa regla no se cumple con el resto de colores reservados. Con ΔE00 < 10 en deuteranopía quedan Frambuesa frente a accent (2,9931), Frambuesa frente a danger (7,9576) y Cobre frente a danger (8,0205). Por eso esos estados no dependen solo del color: la selección es una línea continua con fondo y el error va tachado, mientras la jaula es discontinua.
+
+**Límites conocidos de las notas en teléfonos estrechos.** Las notas siguen en 8 px y en 3 × 3. Por debajo de 48 px de celda la raya va pegada a su nota, y por debajo de 40 px la cuadrícula sube 3 px y la nota va encima de la suma.
+
+- **Suma a 360 px:** la nota entra 1 px en la suma, solo en la primera fila y abajo de caja, y tapa hasta el 3,35 % de su tinta sin negrita y el 4,58 % con negrita a escala 3, y hasta el 3,54 % y el 5,79 % a escala 2 (medido en 72 de las 81 celdas). A 375 px no tapa nada.
+- **Umbral de 48 px:** la raya salta 1,26 px y la nota 0,08 px; solo se vería al redimensionar una ventana de escritorio.
+- **Raya punteada** («en ambas capas» con el mismo color): solo está medida en píxeles, sin verla en un teléfono real.
+
+La prueba a mano (T-42.21) revisa la suma a 360 px, el salto al redimensionar una ventana y la punteada en un teléfono.
+
 ### 2.6 Tiempos
 
 | Token | Valor | Uso |
